@@ -254,6 +254,61 @@ func TestParseFfprobeJSON_SubtitleStreamIndexZero(t *testing.T) {
 	assert.Equal(t, 0, info.SubtitleTracks[0].StreamIndex)
 }
 
+func TestParseFfprobeJSON_SubtitleDispositions_RealShape(t *testing.T) {
+	// Rule 28: recorded from ffprobe 8.1.2 (`-v quiet -print_format json
+	// -show_streams -show_format`, the exact flags Probe uses) over a small mkv
+	// muxed with three English text tracks — plain, `hearing_impaired`, `forced`.
+	// The disposition object carries 0/1 integers, not booleans.
+	raw, err := os.ReadFile(filepath.Join("testdata", "ffprobe-subtitle-dispositions.json"))
+	require.NoError(t, err)
+
+	info, err := parseFfprobeJSON(raw)
+	require.NoError(t, err)
+	require.Len(t, info.SubtitleTracks, 3)
+
+	plain, sdh, forced := info.SubtitleTracks[0], info.SubtitleTracks[1], info.SubtitleTracks[2]
+	assert.Equal(t, "English", plain.Title)
+	assert.False(t, plain.Forced)
+	assert.False(t, plain.HearingImpaired)
+
+	assert.Equal(t, "English [SDH]", sdh.Title)
+	assert.False(t, sdh.Forced)
+	assert.True(t, sdh.HearingImpaired)
+
+	assert.Equal(t, "Forced", forced.Title)
+	assert.True(t, forced.Forced)
+	assert.False(t, forced.HearingImpaired)
+}
+
+func TestParseFfprobeJSON_SubtitleWithoutDisposition(t *testing.T) {
+	// Older probes / hand-made JSON carry no disposition object: both flags
+	// stay false and nothing else changes.
+	input := []byte(`{
+		"streams": [
+			{"index":2,"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"eng"}}
+		],
+		"format": {}
+	}`)
+
+	info, err := parseFfprobeJSON(input)
+	require.NoError(t, err)
+	require.Len(t, info.SubtitleTracks, 1)
+	assert.False(t, info.SubtitleTracks[0].Forced)
+	assert.False(t, info.SubtitleTracks[0].HearingImpaired)
+}
+
+func TestSubtitleTrack_DispositionFlagsAreOmittedWhenFalse(t *testing.T) {
+	// The persisted subtitle_tracks column must stay byte-identical for the
+	// common (unflagged) track — the new keys appear only when set.
+	raw, err := json.Marshal(SubtitleTrack{Language: "eng", Format: "subrip", StreamIndex: 3})
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"language":"eng","format":"subrip","external":false,"stream_index":3}`, string(raw))
+
+	raw, err = json.Marshal(SubtitleTrack{Language: "eng", Format: "subrip", StreamIndex: 4, Forced: true, HearingImpaired: true})
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"language":"eng","format":"subrip","external":false,"stream_index":4,"forced":true,"hearing_impaired":true}`, string(raw))
+}
+
 func TestSubtitleTrack_StreamIndexJSONRoundTrip(t *testing.T) {
 	// The persisted subtitle_tracks column is this struct marshalled. stream_index
 	// must be emitted even when 0 (no omitempty) so a re-read is lossless, and the

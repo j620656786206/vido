@@ -46,6 +46,14 @@ type SubtitleTrack struct {
 	// tracks are separate files and leave it at 0. No omitempty — index 0 is a
 	// legal embedded index, so it must survive a JSON round-trip (story sub-1-4).
 	StreamIndex int `json:"stream_index"`
+	// Forced and HearingImpaired are ffprobe's `disposition.forced` /
+	// `disposition.hearing_impaired` flags for an embedded track — the muxer's
+	// own word that a track is the forced-narrative one (on-screen text,
+	// foreign-language lines) or the SDH one. Not every release sets them, so
+	// the subtitle router also reads Title. omitempty keeps the persisted
+	// subtitle_tracks JSON byte-identical for an unflagged track.
+	Forced          bool `json:"forced,omitempty"`
+	HearingImpaired bool `json:"hearing_impaired,omitempty"`
 }
 
 // FFprobeService extracts technical metadata from video files using ffprobe
@@ -164,6 +172,9 @@ type ffprobeStream struct {
 	ColorTransfer string            `json:"color_transfer,omitempty"`
 	SideDataList  []ffprobeSideData `json:"side_data_list,omitempty"`
 	Tags          map[string]string `json:"tags,omitempty"`
+	// Disposition is ffprobe's per-stream flag object; values are 0/1 integers
+	// (`"forced": 1`), not booleans.
+	Disposition map[string]int `json:"disposition,omitempty"`
 }
 
 // ffprobeSideData represents side_data entries (used for Dolby Vision detection)
@@ -212,11 +223,13 @@ func parseFfprobeJSON(output []byte) (*MediaTechInfo, error) {
 				lang = "und"
 			}
 			info.SubtitleTracks = append(info.SubtitleTracks, SubtitleTrack{
-				Language:    lang,
-				Format:      stream.CodecName,
-				External:    false,
-				Title:       strings.TrimSpace(stream.Tags["title"]),
-				StreamIndex: stream.Index,
+				Language:        lang,
+				Format:          stream.CodecName,
+				External:        false,
+				Title:           strings.TrimSpace(stream.Tags["title"]),
+				StreamIndex:     stream.Index,
+				Forced:          stream.Disposition["forced"] == 1,
+				HearingImpaired: stream.Disposition["hearing_impaired"] == 1,
 			})
 		}
 	}

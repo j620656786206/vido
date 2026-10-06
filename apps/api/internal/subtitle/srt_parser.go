@@ -108,3 +108,14 @@ func SerializeSRT(blocks []SubtitleBlock) string {
 	}
 	return sb.String()
 }
+
+// SRTTimestampMS parses an SRT timestamp ("00:01:02,345", a dot also accepted)
+// into milliseconds. ok is false when the string is not a timestamp.
+func SRTTimestampMS(ts string) (int, bool) {
+	ts = strings.TrimSpace(strings.ReplaceAll(ts, ".", ","))
+	var h, m, s, ms int
+	if _, err := fmt.Sscanf(ts, "%d:%d:%d,%d", &h, &m, &s, &ms); err != nil {
+		return 0, false
+	}
+	return ((h*60+m)*60+s)*1000 + ms, true
+}

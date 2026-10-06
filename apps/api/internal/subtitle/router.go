@@ -11,9 +11,13 @@ import (
 )
 
 // RouteKind classifies what the pipeline should do with a media item.
-// [@contract-v1] — consumed by sub-1-5a (RouteTranslate), sub-1-5b (delivery
+// [@contract-v2] — consumed by sub-1-5a (RouteTranslate), sub-1-5b (delivery
 // of RouteDeliverDirect/RouteConvertThenDeliver + terminal status writes),
 // sub-1-6 (orchestration). Changing kinds/fields = Rule 20 bump + stale-mark.
+// v1→v2 (disc-2026-10-english-track-selection): on RouteTranslate,
+// ExtractedTrack.Blocks may also carry the file's forced-track cues, numbered
+// above the main track's highest Index — types unchanged; Blocks is no longer
+// guaranteed to come from the single stream at Path.
 //
 // Deliberately NOT models.SubtitleStatus: routing is a decision, persistence is
 // a side effect. The orchestrator maps RouteSkip → SubtitleStatusSkipped and
@@ -43,7 +47,7 @@ type ExtractedTrack struct {
 	Language    string          // the ffprobe tag that admitted it ("chi"/"zho"/…/"eng"/"en")
 	Codec       string          // source codec (subrip/ass/mov_text/…)
 	Path        string          // extracted .srt in the caller-owned temp dir
-	Blocks      []SubtitleBlock // parsed + SDH-filtered cues (original numbering — P7)
+	Blocks      []SubtitleBlock // parsed + SDH-filtered cues (original numbering — P7); on RouteTranslate also merged forced cues, Index above the main track's max, time-ordered
 }
 
 // TechProber is the narrow port the router needs from services.FFprobeService,
@@ -113,12 +117,18 @@ func (r *Router) SelectAndRoute(ctx context.Context, mediaPath, tmpDir string) (
 		return RouteDecision{}, fmt.Errorf("subtitle route: extract %s: %w", mediaPath, err)
 	}
 
-	best, variant, ok := r.pickBestCandidate(candidates, outputs)
-	if !ok {
+	parsed := r.parseCandidates(candidates, outputs)
+	if len(parsed) == 0 {
 		return RouteDecision{}, fmt.Errorf(
 			"%w: no candidate track of %s could be parsed (%d attempted)",
 			ErrSubtitleExtractFailed, mediaPath, len(candidates))
 	}
+	var durationSeconds float64
+	if info != nil {
+		durationSeconds = info.DurationSeconds
+	}
+	main, qualified := r.chooseMain(mediaPath, parsed, durationSeconds)
+	best, variant := main.track, main.variant
 
 	if len(best.Blocks) == 0 {
 		// FR5's word is *usable*: a track whose every cue was an SDH annotation
@@ -131,9 +141,31 @@ func (r *Router) SelectAndRoute(ctx context.Context, mediaPath, tmpDir string) (
 
 	kind, reason := routeForVariant(variant, best.StreamIndex, best.Language)
 
+	// The forced track rides along only on the English translate route: a
+	// Chinese forced track may be Simplified under a Traditional main track,
+	// and mixing the two needs its own conversion rules.
+	// A fallback main that is itself the forced track never merges: there is
+	// no full track to fold it into.
+	if kind == RouteTranslate && main.kind != trackForced {
+		var merged, dropped int
+		var skipped []int
+		best.Blocks, merged, dropped, skipped = mergeForcedCues(best.Blocks, best.StreamIndex, parsed)
+		if merged > 0 || dropped > 0 {
+			r.logger.Info("forced subtitle cues merged into the translate track",
+				"media", mediaPath, "stream_index", best.StreamIndex,
+				"forced_merged", merged, "forced_duplicates_dropped", dropped)
+		}
+		if len(skipped) > 0 {
+			r.logger.Warn("forced-flagged track is as long as the main track — not merged (a full track marked forced)",
+				"media", mediaPath, "stream_index", best.StreamIndex, "skipped_streams", skipped)
+		}
+	}
+
 	r.logger.Debug("subtitle route decided",
 		"media", mediaPath,
 		"stream_index", best.StreamIndex,
+		"track_kind", main.kind.String(),
+		"qualified_main", qualified,
 		"language_tag", best.Language,
 		"detected_variant", variant,
 		"cue_count", len(best.Blocks),
@@ -182,21 +214,22 @@ func (r *Router) verdictWithoutTrack(tracks []services.SubtitleTrack) RouteDecis
 	}
 }
 
-// pickBestCandidate parses and SDH-filters every extracted candidate, then picks
-// the one with the highest surviving cue count — forced-narrative tracks have
-// few cues, and SDH variants converge with full tracks once filtered. Equal cue
-// counts break on the content variant (an already-Traditional track beats one
-// that would need converting), and finally on the lowest stream index so the
-// choice is deterministic. It returns the winner's detected variant so
-// SelectAndRoute does not re-run detection.
+// parsedCandidate is one extracted track after parsing, SDH filtering and
+// content detection, plus what the muxer says the track is.
+type parsedCandidate struct {
+	track   ExtractedTrack
+	variant string
+	kind    trackKind
+}
+
+// parseCandidates parses, SDH-filters and content-detects every extracted
+// candidate, in probe order.
 //
 // A candidate that produced no file, cannot be read, or does not parse is logged
 // and skipped (Rule 13 — the error informs the fallback, it is never swallowed
-// silently). ok is false only when EVERY candidate failed.
-func (r *Router) pickBestCandidate(candidates []services.SubtitleTrack, outputs map[int]string) (ExtractedTrack, string, bool) {
-	var best ExtractedTrack
-	bestVariant := ""
-	found := false
+// silently). The result is empty only when EVERY candidate failed.
+func (r *Router) parseCandidates(candidates []services.SubtitleTrack, outputs map[int]string) []parsedCandidate {
+	parsed := make([]parsedCandidate, 0, len(candidates))
 
 	for _, c := range candidates {
 		// Defensive against the TrackExtractor port contract: the production
@@ -226,26 +259,95 @@ func (r *Router) pickBestCandidate(candidates []services.SubtitleTrack, outputs 
 		}
 
 		kept, removed := FilterSDH(blocks)
+		kind := classifyTrack(c)
 		r.logger.Debug("subtitle candidate filtered",
-			"stream_index", c.StreamIndex, "cues_parsed", len(blocks), "cues_removed", removed, "cues_kept", len(kept))
+			"stream_index", c.StreamIndex, "kind", kind.String(), "title", c.Title,
+			"cues_parsed", len(blocks), "cues_removed", removed, "cues_kept", len(kept))
 
-		candidate := ExtractedTrack{
-			StreamIndex: c.StreamIndex,
-			Language:    c.Language,
-			Codec:       c.Format,
-			Path:        path,
-			Blocks:      kept,
-		}
-		variant := Detect([]byte(cueText(kept))).Language
+		parsed = append(parsed, parsedCandidate{
+			track: ExtractedTrack{
+				StreamIndex: c.StreamIndex,
+				Language:    c.Language,
+				Codec:       c.Format,
+				Path:        path,
+				Blocks:      kept,
+			},
+			variant: Detect([]byte(cueText(kept))).Language,
+			kind:    kind,
+		})
+	}
 
-		if !found || betterCandidate(candidate, variant, best, bestVariant) {
-			best = candidate
-			bestVariant = variant
-			found = true
+	return parsed
+}
+
+// chooseMain picks the track to deliver or translate (disc-2026-10-english-
+// track-selection). A track may be the main one only when it is not forced,
+// keeps at least half the cues of the fullest candidate (an unlabelled forced
+// track is still a forced track), and — when the file's length is known —
+// runs past half of it. Among those, a regular track beats an SDH one, then
+// the original cue-count / variant / stream-index order decides.
+//
+// The cue-count-first order alone (sub-1-4 AC #5) assumed SDH tracks
+// "converge with full tracks once filtered"; they do not — SDH splits lines,
+// so a filtered SDH track can out-count the regular one and win. And it threw
+// away the forced track, which is where on-screen text lives (See S01E02:
+// "We are not alone" exists nowhere else in the file).
+//
+// qualified is false when no candidate passed and the original pick was used
+// instead: the verdict is then never worse than before this rule existed.
+func (r *Router) chooseMain(mediaPath string, parsed []parsedCandidate, durationSeconds float64) (main parsedCandidate, qualified bool) {
+	maxCues := 0
+	for _, p := range parsed {
+		maxCues = max(maxCues, len(p.track.Blocks))
+	}
+
+	var eligible []parsedCandidate
+	var rejected []string
+	if maxCues > 0 {
+		for _, p := range parsed {
+			switch {
+			case p.kind == trackForced:
+				rejected = append(rejected, fmt.Sprintf("stream %d: forced", p.track.StreamIndex))
+			case len(p.track.Blocks)*2 < maxCues:
+				rejected = append(rejected, fmt.Sprintf("stream %d: %d of %d cues", p.track.StreamIndex, len(p.track.Blocks), maxCues))
+			case !coversHalf(p.track.Blocks, durationSeconds):
+				rejected = append(rejected, fmt.Sprintf("stream %d: ends before half of %.0fs", p.track.StreamIndex, durationSeconds))
+			default:
+				eligible = append(eligible, p)
+			}
 		}
 	}
 
-	return best, bestVariant, found
+	if len(eligible) == 0 {
+		if maxCues > 0 {
+			r.logger.Warn("no subtitle track qualifies as the main track — falling back to the cue-count pick",
+				"media", mediaPath, "candidates", len(parsed), "rejected", strings.Join(rejected, "; "))
+		}
+		best := parsed[0]
+		for _, p := range parsed[1:] {
+			if betterCandidate(p.track, p.variant, best.track, best.variant) {
+				best = p
+			}
+		}
+		return best, false
+	}
+
+	best := eligible[0]
+	for _, p := range eligible[1:] {
+		// Regular-over-SDH is an English-tier rule. Between Chinese tracks the
+		// script decides first (the 2026-07-31 Apple TV+ ruling): a Traditional
+		// SDH track still beats a Simplified regular one that needs converting.
+		if p.kind != best.kind && p.variant == LangUndetermined && best.variant == LangUndetermined {
+			if p.kind < best.kind {
+				best = p
+			}
+			continue
+		}
+		if betterCandidate(p.track, p.variant, best.track, best.variant) {
+			best = p
+		}
+	}
+	return best, true
 }
 
 // variantRank orders content variants by how much work (and how much loss) the
