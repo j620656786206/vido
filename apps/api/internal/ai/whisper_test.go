@@ -151,12 +151,12 @@ func TestFormatSRTTimestamp(t *testing.T) {
 
 func TestMergeSRTChunks_SingleChunk(t *testing.T) {
 	srt := "1\n00:00:01,000 --> 00:00:03,000\nHello\n\n"
-	result := MergeSRTChunks([]string{srt}, WhisperChunkDuration)
+	result := MergeSRTChunks([]string{srt}, []int{0})
 	assert.Equal(t, srt, result)
 }
 
 func TestMergeSRTChunks_Empty(t *testing.T) {
-	result := MergeSRTChunks(nil, WhisperChunkDuration)
+	result := MergeSRTChunks(nil, nil)
 	assert.Equal(t, "", result)
 }
 
@@ -164,7 +164,7 @@ func TestMergeSRTChunks_TwoChunks(t *testing.T) {
 	chunk1 := "1\n00:00:01,000 --> 00:00:03,000\nHello\n\n2\n00:00:05,000 --> 00:00:08,000\nWorld\n\n"
 	chunk2 := "1\n00:00:01,000 --> 00:00:04,000\nFoo\n\n"
 
-	result := MergeSRTChunks([]string{chunk1, chunk2}, 600)
+	result := MergeSRTChunks([]string{chunk1, chunk2}, []int{0, 600_000})
 
 	// chunk1: seqs 1,2 with original timestamps
 	assert.Contains(t, result, "1\n00:00:01,000 --> 00:00:03,000\nHello\n")
@@ -191,7 +191,7 @@ func TestIsSequenceNumber(t *testing.T) {
 
 func TestOffsetTimestampLine(t *testing.T) {
 	line := "00:00:01,000 --> 00:00:03,000"
-	result := offsetTimestampLine(line, 600)
+	result := offsetTimestampLine(line, 600_000)
 	assert.Equal(t, "00:10:01,000 --> 00:10:03,000", result)
 }
 
@@ -262,7 +262,9 @@ func TestSplitAudioChunks_SmallFile(t *testing.T) {
 	chunks, chunkSeconds, err := SplitAudioChunks(context.Background(), tmpFile.Name())
 	require.NoError(t, err)
 	require.Len(t, chunks, 1)
-	assert.Equal(t, tmpFile.Name(), chunks[0])
+	assert.Equal(t, tmpFile.Name(), chunks[0].Path)
+	assert.Equal(t, 0, chunks[0].StartMS)
+	assert.Equal(t, 10_000, chunks[0].DurationMS)
 	assert.Equal(t, WhisperChunkDuration, chunkSeconds)
 }
 
@@ -332,7 +334,7 @@ func TestMergeSRTChunks_ThreeChunks(t *testing.T) {
 	chunk2 := "1\n00:00:02,000 --> 00:00:05,000\nB\n\n"
 	chunk3 := "1\n00:00:01,500 --> 00:00:04,000\nC\n\n"
 
-	result := MergeSRTChunks([]string{chunk1, chunk2, chunk3}, 600)
+	result := MergeSRTChunks([]string{chunk1, chunk2, chunk3}, []int{0, 600_000, 1_200_000})
 
 	// chunk1: seq 1, no offset
 	assert.Contains(t, result, "1\n00:00:01,000 --> 00:00:03,000\nA\n")
@@ -494,7 +496,7 @@ func TestSplitAudioChunks_LargeFile_ChunksUnderLimit(t *testing.T) {
 	f, err := os.CreateTemp(t.TempDir(), "big-*.wav")
 	require.NoError(t, err)
 	byteRate := uint32(32000)
-	dataSize := uint32(26 * 1024 * 1024) // ~852s at 32KB/s → 2 chunks of 600s
+	dataSize := uint32(26 * 1024 * 1024) // ~852s at 32KB/s → 7 chunks on the 120 s grid (the 12 s tail rides along)
 	writeWAVWithChunks(t, f, byteRate, dataSize, true)
 
 	// Stub ffmpeg: write a small fake chunk file per call.
@@ -510,40 +512,42 @@ func TestSplitAudioChunks_LargeFile_ChunksUnderLimit(t *testing.T) {
 	require.NoError(t, err)
 	defer func() {
 		for _, c := range chunks {
-			os.Remove(c)
+			os.Remove(c.Path)
 		}
 	}()
 
 	assert.Equal(t, WhisperChunkDuration, chunkSeconds)
-	require.Len(t, chunks, 2, "852s at 600s chunks → 2 chunks")
+	require.Len(t, chunks, 7, "852s on a 120s grid → 7 chunks (12 s tail folded into the last)")
 	for _, c := range chunks {
-		info, err := os.Stat(c)
+		info, err := os.Stat(c.Path)
 		require.NoError(t, err)
 		assert.Less(t, info.Size(), int64(WhisperMaxFileSize))
 	}
-	// ffmpeg must be invoked with -t <chunkSeconds> and contiguous -ss offsets.
-	require.Len(t, ffmpegCalls, 2)
-	assert.Contains(t, ffmpegCalls[0], "-ss")
-	assert.Contains(t, ffmpegCalls[0], "0")
-	assert.Contains(t, ffmpegCalls[1], "600")
+	// One silencedetect pass, then one cut per chunk; with no silences
+	// reported the cuts sit on the bare grid.
+	require.Len(t, ffmpegCalls, 8)
+	assert.Contains(t, strings.Join(ffmpegCalls[0], " "), "silencedetect=noise=-35dB:d=0.400")
+	assert.Equal(t, []string{"ffmpeg", "-ss", "0.000", "-i"}, ffmpegCalls[1][:4], "input seeking: -ss before -i")
+	assert.Contains(t, ffmpegCalls[2], "120.000")
+	assert.Equal(t, 120_000, chunks[1].StartMS)
 
-	// Contiguous timestamps on merge, driven by the RETURNED chunkSeconds.
+	// Contiguous timestamps on merge, driven by the chunks' own offsets.
 	merged := MergeSRTChunks([]string{
 		"1\n00:00:00,000 --> 00:00:01,000\nfirst\n\n",
 		"1\n00:00:00,000 --> 00:00:01,000\nsecond\n\n",
-	}, chunkSeconds)
+	}, ChunkStarts(chunks[:2]))
 	assert.Contains(t, merged, "00:00:00,000 --> 00:00:01,000")
-	assert.Contains(t, merged, "00:10:00,000 --> 00:10:01,000",
-		"second chunk must be offset by exactly chunkSeconds")
+	assert.Contains(t, merged, "00:02:00,000 --> 00:02:01,000",
+		"second chunk must be offset by exactly its StartMS")
 }
 
 func TestSplitAudioChunks_HighByteRate_ShrinksChunkSeconds(t *testing.T) {
-	// 48kHz stereo (192KB/s): 600s would be ~115MiB per chunk → chunkSeconds
-	// must shrink so duration*byteRate stays under the 24MiB budget.
+	// 48kHz stereo 32-bit (384KB/s): 120s would be ~44MiB per chunk →
+	// chunkSeconds must shrink so duration*byteRate stays under the 24MiB budget.
 	f, err := os.CreateTemp(t.TempDir(), "hbr-*.wav")
 	require.NoError(t, err)
-	byteRate := uint32(192000)
-	dataSize := uint32(192000 * 10) // 10s — small file, no split needed
+	byteRate := uint32(384000)
+	dataSize := uint32(384000 * 10) // 10s — small file, no split needed
 	writeWAVWithChunks(t, f, byteRate, dataSize, false)
 
 	chunks, chunkSeconds, err := SplitAudioChunks(context.Background(), f.Name())
@@ -554,11 +558,16 @@ func TestSplitAudioChunks_HighByteRate_ShrinksChunkSeconds(t *testing.T) {
 }
 
 type fakeChunkCmd struct {
-	args []string
+	args     []string
+	silences string // silencedetect stderr to hand back (empty = none found)
 }
 
 func (c fakeChunkCmd) CombinedOutput() ([]byte, error) {
-	// Last arg is the chunk output path — write a small fake WAV there.
+	// The silencedetect pass has no output file — answer "no silences".
+	if c.args[len(c.args)-1] == "-" {
+		return []byte(c.silences), nil
+	}
+	// Otherwise the last arg is the chunk output path — write a small fake WAV there.
 	out := c.args[len(c.args)-1]
 	return nil, os.WriteFile(out, []byte("RIFFfake"), 0o644)
 }
@@ -1042,7 +1051,7 @@ func TestMergeSRTChunks_HandlesAFullyFilteredChunk(t *testing.T) {
 	emptied := "" // an entire ten minutes of hallucinated credits
 	third := segmentsToSRT([]whisperSegment{speech(5, 6, "Three")})
 
-	merged := MergeSRTChunks([]string{first, emptied, third}, 600)
+	merged := MergeSRTChunks([]string{first, emptied, third}, []int{0, 600_000, 1_200_000})
 
 	assert.Contains(t, merged, "1\n00:00:01,000 --> 00:00:02,000\nOne")
 	assert.Contains(t, merged, "2\n00:00:03,000 --> 00:00:04,000\nTwo")
@@ -1092,4 +1101,114 @@ func TestWhisperClient_PromptFieldFollowsTheContext(t *testing.T) {
 	if got := prompts[1]; len(got) != 1 || got[0] != "Jerlamarel, Baba Voss, Paris, Maghra" {
 		t.Fatalf("expected the ctx prompt in the multipart body, got %v", got)
 	}
+}
+
+// --- disc-2026-10-asr-chunk-at-silence ---
+
+func TestParseSilenceDetect(t *testing.T) {
+	stderr := "ffmpeg version 6.1.2\n" +
+		"[silencedetect @ 0x55] silence_start: -0.0001\n" + // the hair of negative time at file start
+		"[silencedetect @ 0x55] silence_end: 1.5 | silence_duration: 1.5001\n" +
+		"[silencedetect @ 0x55] silence_start: 118.5\n" +
+		"[silencedetect @ 0x55] silence_end: 121.25 | silence_duration: 2.75\n" +
+		"[silencedetect @ 0x55] silence_start: 300\n" + // unterminated (file ends in silence)
+		"size=N/A time=00:10:00.00\n"
+	spans := parseSilenceDetect(stderr)
+	require.Len(t, spans, 2)
+	assert.Equal(t, silenceSpan{StartMS: 0, EndMS: 1_500}, spans[0], "negative start clamps to 0")
+	assert.Equal(t, silenceSpan{StartMS: 118_500, EndMS: 121_250}, spans[1])
+	v, ok := parseSecondsField(" 1e-05 | silence_duration: 2")
+	assert.True(t, ok)
+	assert.Equal(t, 0, v, "scientific notation is read as a float, not as '1'")
+	assert.Nil(t, parseSilenceDetect(""))
+}
+
+func TestPlanCuts(t *testing.T) {
+	t.Run("no silences → bare grid, ceil(duration/grid) chunks", func(t *testing.T) {
+		assert.Equal(t, []int{0, 120_000, 240_000, 360_000, 480_000}, planCuts(600_141, 120, nil))
+		assert.Equal(t, []int{0}, planCuts(90_000, 120, nil))
+	})
+	t.Run("a cut snaps to the middle of the nearest silence inside the window", func(t *testing.T) {
+		cuts := planCuts(600_000, 120, []silenceSpan{
+			{StartMS: 118_500, EndMS: 121_250}, // straddles 120 s → mid 119 875
+			{StartMS: 230_000, EndMS: 231_000}, // 9.5 s before 240 s → mid 230 500
+			{StartMS: 255_000, EndMS: 256_000}, // 15.5 s after 240 s — farther, loses
+			{StartMS: 100_000, EndMS: 101_000}, // outside every window — ignored
+		})
+		assert.Equal(t, []int{0, 119_875, 230_500, 360_000, 480_000}, cuts)
+	})
+	t.Run("a long silence straddling the window edge is clamped to the window", func(t *testing.T) {
+		cuts := planCuts(300_000, 120, []silenceSpan{{StartMS: 60_000, EndMS: 150_000}})
+		assert.Equal(t, []int{0, 105_000, 240_000}, cuts, "mid would be 105 000, inside the ±20 s window")
+		cuts = planCuts(300_000, 120, []silenceSpan{{StartMS: 20_000, EndMS: 110_000}})
+		assert.Equal(t, []int{0, 100_000, 240_000}, cuts, "mid 65 000 is before the window → clamped to 100 000")
+	})
+	t.Run("cuts stay strictly increasing and inside the audio", func(t *testing.T) {
+		cuts := planCuts(290_000, 120, []silenceSpan{{StartMS: 239_000, EndMS: 251_000}})
+		assert.Equal(t, []int{0, 120_000, 245_000}, cuts)
+		for i := 1; i < len(cuts); i++ {
+			assert.Greater(t, cuts[i], cuts[i-1])
+			assert.Less(t, cuts[i], 290_000)
+		}
+	})
+	t.Run("a tiny grid shrinks the window so cuts stay increasing", func(t *testing.T) {
+		cuts := planCuts(100_000, 10, []silenceSpan{{StartMS: 0, EndMS: 100_000}})
+		for i := 1; i < len(cuts); i++ {
+			assert.Greater(t, cuts[i], cuts[i-1]+silenceMinDurMS-1)
+			assert.Less(t, cuts[i], 100_000)
+		}
+		assert.GreaterOrEqual(t, len(cuts), 8)
+	})
+	t.Run("a tail under 30 s rides with the previous chunk", func(t *testing.T) {
+		assert.Equal(t, []int{0, 120_000}, planCuts(250_000, 120, nil), "250 s → 2 chunks, not 3 + a 10 s scrap")
+		assert.Equal(t, []int{0, 120_000, 240_000}, planCuts(275_000, 120, nil), "a 35 s tail is its own chunk")
+	})
+}
+
+func TestNeedsChunking_ByDurationToo(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "long-*.wav")
+	require.NoError(t, err)
+	writeWAVWithChunks(t, f, 32000, 32000*130, false) // 130 s, 4 MB — under the byte budget
+	needs, err := NeedsChunking(f.Name())
+	require.NoError(t, err)
+	assert.True(t, needs, "longer than the grid splits even when small")
+}
+
+func TestSplitAudioChunks_CutsFollowTheSilences(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "sil-*.wav")
+	require.NoError(t, err)
+	writeWAVWithChunks(t, f, 32000, 32000*300, false) // 300 s → 3 chunks
+
+	origExec := execCommandContext
+	var ssArgs []string
+	execCommandContext = func(ctx context.Context, name string, args ...string) command {
+		for i, a := range args {
+			if a == "-ss" {
+				ssArgs = append(ssArgs, args[i+1])
+			}
+		}
+		return fakeChunkCmd{args: args, silences: "[silencedetect @ 0x1] silence_start: 118.5\n[silencedetect @ 0x1] silence_end: 121.25 | silence_duration: 2.75\n"}
+	}
+	defer func() { execCommandContext = origExec }()
+
+	chunks, _, err := SplitAudioChunks(context.Background(), f.Name())
+	require.NoError(t, err)
+	defer func() {
+		for _, c := range chunks {
+			os.Remove(c.Path)
+		}
+	}()
+	require.Len(t, chunks, 3)
+	assert.Equal(t, []int{0, 119_875, 240_000}, ChunkStarts(chunks))
+	assert.Equal(t, []string{"0.000", "119.875", "240.000"}, ssArgs)
+	assert.Equal(t, 119_875, chunks[0].DurationMS)
+	assert.Equal(t, 60_000, chunks[2].DurationMS)
+}
+
+func TestMergeSRTChunks_MillisecondOffsets(t *testing.T) {
+	merged := MergeSRTChunks([]string{
+		"1\n00:00:01,000 --> 00:00:02,000\nA\n\n",
+		"1\n00:00:00,500 --> 00:00:01,000\nB\n\n",
+	}, []int{0, 119_875})
+	assert.Contains(t, merged, "2\n00:02:00,375 --> 00:02:00,875\nB")
 }

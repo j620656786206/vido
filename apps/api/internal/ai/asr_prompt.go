@@ -71,3 +71,20 @@ func BuildASRPrompt(names []string) string {
 	}
 	return strings.Join(kept, ", ")
 }
+
+// midFileChunkKey marks a ctx whose upload is NOT the last piece of the file.
+type midFileChunkKey struct{}
+
+// WithMidFileChunk tells the engine client this upload has more audio after
+// it, so the end-of-film tail rule must not run on it
+// (disc-2026-10-asr-chunk-at-silence).
+func WithMidFileChunk(ctx context.Context) context.Context {
+	return context.WithValue(ctx, midFileChunkKey{}, true)
+}
+
+// IsMidFileChunk reports whether WithMidFileChunk was set. Unset = the whole
+// file (or its last chunk), which is the pre-chunking behaviour.
+func IsMidFileChunk(ctx context.Context) bool {
+	v, _ := ctx.Value(midFileChunkKey{}).(bool)
+	return v
+}

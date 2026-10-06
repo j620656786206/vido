@@ -318,6 +318,16 @@ type droppedSegment struct {
 // empty result belongs at the whole-FILE level, where "everything vanished"
 // really is a bug (see TranscriptionDetail / transcribeAudio).
 func filterHallucinations(segs []whisperSegment) (kept []whisperSegment, dropped []droppedSegment) {
+	return filterHallucinationsWith(segs, true)
+}
+
+// filterHallucinationsWith is filterHallucinations with the R3 tail rule
+// switchable: R3 is written for the END OF THE FILM (credits over score), and
+// on a chunked run only the last upload is that
+// (disc-2026-10-asr-chunk-at-silence, CR 1 — on a 120 s grid every cut sits
+// in a pause, so every chunk's last lines are "quiet speech before a pause",
+// exactly what the looser tail bar would eat).
+func filterHallucinationsWith(segs []whisperSegment, applyTail bool) (kept []whisperSegment, dropped []droppedSegment) {
 	if len(segs) == 0 {
 		return nil, nil
 	}
@@ -361,10 +371,10 @@ func filterHallucinations(segs []whisperSegment) (kept []whisperSegment, dropped
 	// quiet lines out with it. The looser bar is only defensible where every
 	// member earns it.
 	tailStart := len(segs)
-	for tailStart > 0 && segs[tailStart-1].NoSpeechProb > hallucinationTailNoSpeechThreshold {
+	for applyTail && tailStart > 0 && segs[tailStart-1].NoSpeechProb > hallucinationTailNoSpeechThreshold {
 		tailStart--
 	}
-	if len(segs)-tailStart >= hallucinationTailMinRun {
+	if applyTail && len(segs)-tailStart >= hallucinationTailMinRun {
 		for i := tailStart; i < len(segs); i++ {
 			if reasons[i] == "" {
 				reasons[i] = dropReasonTail

@@ -127,9 +127,12 @@ func installFakeMediaTools(t *testing.T, wavFixture string) {
 	ffprobe := `#!/bin/sh
 echo '{"streams":[{"index":1,"codec_name":"aac","channels":2,"tags":{"language":"eng"}}]}'
 `
+	// The silencedetect pass ends in "-" (no output file) — answer it with
+	// nothing so the chunk cuts fall on the bare grid.
 	ffmpeg := fmt.Sprintf(`#!/bin/sh
 out=""
 for a in "$@"; do out="$a"; done
+[ "$out" = "-" ] && exit 0
 cp %q "$out"
 `, wavFixture)
 	require.NoError(t, os.WriteFile(filepath.Join(bin, "ffprobe"), []byte(ffprobe), 0o755))
@@ -205,8 +208,12 @@ func failedEventError(t *testing.T, client *sse.Client) string {
 // The budget comes from the WAV's length, not a constant: a floor far too
 // short for the ASR call still completes because the media is long.
 func TestRunTranscription_BudgetFollowsTheMediaLength(t *testing.T) {
-	svc, _ := runBudgetService(t, 9425 /* the NAS film */, &slowASR{delay: 300 * time.Millisecond, srt: genTestSRT},
-		50*time.Millisecond /* floor */, 10*time.Millisecond /* per media minute → ~1.57 s */)
+	// 157 min on the 120 s grid is 79 chunks (disc-2026-10-asr-chunk-at-silence),
+	// each one an ASR call plus a shim spawn — the per-call delay and the
+	// per-minute knob are sized so the whole run fits the derived budget while
+	// still dwarfing the 50 ms floor.
+	svc, _ := runBudgetService(t, 9425 /* the NAS film */, &slowASR{delay: 10 * time.Millisecond, srt: genTestSRT},
+		50*time.Millisecond /* floor */, 30*time.Millisecond /* per media minute → ~4.7 s */)
 	media := filepath.Join(t.TempDir(), "m.mkv")
 	require.NoError(t, os.WriteFile(media, []byte("x"), 0o600))
 

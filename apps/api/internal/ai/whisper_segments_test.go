@@ -41,7 +41,7 @@ func TestSegmentsToSRT_OutputIsRecognisedByTheMergePath(t *testing.T) {
 	require.True(t, isTimestampLine(lines[1]), "line 1 must parse as a timestamp line")
 
 	// And a real round-trip through the merge helper keeps it well-formed.
-	merged := MergeSRTChunks([]string{srt, srt}, 600)
+	merged := MergeSRTChunks([]string{srt, srt}, []int{0, 600_000})
 	assert.Contains(t, merged, "3\n00:10:01,000 --> 00:10:02,000\nOne")
 	assert.Contains(t, merged, "4\n00:10:03,000 --> 00:10:04,000\nTwo")
 }
@@ -384,4 +384,24 @@ func TestFilterHallucinations_R3TailRunIsNotBridgedByAnAlreadyDroppedSegment(t *
 	require.Len(t, kept, 4)
 	assert.Equal(t, "Quiet close one", kept[2].Text, "a 2-segment tail is under the minimum and must survive")
 	assert.Equal(t, "Quiet close two", kept[3].Text)
+}
+
+// disc-2026-10-asr-chunk-at-silence CR 1: the end-of-film tail rule must not
+// run on a mid-file upload — on a 120 s grid every cut sits in a pause, so
+// every chunk ends with quiet lines that the looser tail bar would eat.
+func TestFilterHallucinationsWith_TailRuleOnlyAtTheFileEnd(t *testing.T) {
+	quiet := func(start, end float64, text string) whisperSegment {
+		s := speech(start, end, text)
+		s.NoSpeechProb = 0.5 // above the tail bar, below the normal silence bar
+		return s
+	}
+	segs := []whisperSegment{speech(1, 2, "Loud line"), quiet(3, 4, "soft one"), quiet(4, 5, "soft two"), quiet(5, 6, "soft three")}
+
+	kept, dropped := filterHallucinationsWith(segs, true)
+	assert.Len(t, kept, 1, "at the end of the film the quiet run is credits over score")
+	assert.Len(t, dropped, 3)
+
+	kept, dropped = filterHallucinationsWith(segs, false)
+	assert.Len(t, kept, 4, "mid-file the same run is dialogue before a pause")
+	assert.Empty(t, dropped)
 }
