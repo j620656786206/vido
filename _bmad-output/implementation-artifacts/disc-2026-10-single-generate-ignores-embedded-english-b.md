@@ -81,6 +81,48 @@ Status: backlog
 - E2E：`manage-subtitle-mobile.spec.ts`／`glossary-mobile.spec.ts` 的 estimate stub 補 `route`；跑那兩支。
 - 視覺回歸：進度條新變體要新基準（`-linux` 由 CI bootstrap PR 產生，照 CLAUDE.md）。
 
+## Sally 裁定（T0，2026-10-06）
+
+查過的事實：`generateCostView.ts:48-58` 的既有字串；`GenerationProgressV2.tsx:32-39`／`:72-76`；`currency.ts:48-61`（`usd(0)` 會顯示 `$0.00`，不是空白）；`.pen` 元件 `XkGvG` 結構（六格 `gp-st1`…`gp-st5`，連接線 `gp-cn1`…`gp-cn-ai`；完成態＝`$success-tint` 圓＋lucide `check`，進行中＝`$accent-tint` 圓＋`loader-circle`＋600 字重＋Mono 百分比，待辦＝`$bg-tertiary` 圓＋6px `$text-muted` 圓點）；`XkGvG` 有 4 個實例（F3 stepper、F4 stepper-failed、生成工作區 item-active、gallery sample）；Flow J 最後一張是 `J11-D`（x 28860），下一張 `J12-D` 放 x 30200。
+
+**A. 說明文案（§2）——定稿**
+
+| 鍵 | 字串 | 備註 |
+|---|---|---|
+| `EXTRACT_LINE`（新） | 使用片內字幕：中文直接套用，英文由 AI 翻譯 | 不寫「約需數分鐘」——直接套用只要幾秒，寫了會失信 |
+| `EXTRACT_NO_KEY_LINE`（新） | 尚未設定翻譯金鑰：片內中文字幕可直接套用，英文字幕需金鑰才能翻譯 | ＋「前往設定」連結；**按鈕可按**（降級≠封鎖，sub-2-2d 原則） |
+| `DEFAULT_LINE`（既有） | 語音辨識＋AI 翻譯，約需數分鐘 | 只在 `route` 是 `asr`／`skip`、或沒有 `route`（legacy）時用；對這兩條路線「語音辨識」這個動詞仍然正確，所以 2026-08-06 的字不用改，只是適用範圍縮小 |
+| `TRANSLATE_ONLY_LINE`／`ASR_NOT_CONFIGURED_LINE`／其餘 | 不變 | |
+
+**B. 免費路線的費用（§5）——定稿：不另造字串。** 「本次用量」維持 `$0.00 / $X`（數字就是數字，`usd(0)` 本來就會顯示 `$0.00`）；後端的結果句已經寫了「沒有花錢」，兩處合起來就是完整的意思。多一句「沒有花錢」的字串只是重複。
+
+**C. 進度條依路線切換（§4）——定稿**
+
+1. **新元件 `Component/GenerationProgress-v2/Extract`**（五格）：「抽取字幕 → 翻譯中 → 簡轉繁 → AI校正 → 完成」。由 `XkGvG` 複製、刪掉 `gp-st2`（轉錄中）與其後的連接線 `gp-cn1`，`gp-st1-lb` 改「抽取字幕」。其他樣式全部沿用，不重畫。
+2. **「略過」狀態**（`deliver_direct`／`convert_then_deliver` 跑完時的「翻譯中」格）：圓底 `$bg-tertiary`、圓內 lucide **`minus`** 14px `$text-muted`、標籤文字維持「翻譯中」但 `$text-muted`。這跟待辦（6px 圓點）、完成（綠 `check`）、進行中（藍 `loader-circle`）都看得出不同——不會重蹈 sub-1-7b「兩個狀態畫面一樣」的錯。
+3. **失敗文案**：抽字幕路線第一格失敗顯示「抽取字幕失敗」；「翻譯失敗」照舊；語音辨識路線的「提取音訊失敗／轉錄失敗」不變。
+4. **切換依據**：有 `route`（起點事件的 `predicted_route=extract`，或終點／估價的 route）就用五格；`asr`／`skip`／沒有 route → 六格現狀。
+5. **spec 畫面 `J12-D · 生成進度條依路線切換`**（Flow J，x 30200 / y 48253，1240 寬，沿用 J11-D 的 head／states／rules 三段結構）：三列並排示範——①語音辨識路線（六格，進行中在「轉錄中」）②抽字幕路線（五格，進行中在「翻譯中」）③直接套用跑完（五格，「翻譯中」為略過樣式、其餘完成）——再加 rules 區寫上第 2、4 點。
+
+**D. 給 Pencil Inline AI Agent 的提示詞**（照 [[feedback-pen-inline-agent-workflow]]：Alexyu 執行、⌘S、重出截圖、只 stage 真變更；Sally 之後用 MCP 唯讀複審）——見本 story 下方「Inline Agent 提示詞」。執行後要補 `scripts/export-pen-screenshots.py` 的 `SCREENS`（新 J12-D 節點 id → `("flow-j-specs", "j12-d")`）。
+
+### Inline Agent 提示詞
+
+**提示詞 1（元件變體）**
+
+> 在 `Component/GenerationProgress-v2`（節點 id `XkGvG`）右邊 60px 處，複製一份這個元件，命名為 `Component/GenerationProgress-v2/Extract`，設為 reusable component。在複製出來的那份裡：刪掉名為 `gp-st2` 的格子（標籤「轉錄中」）和緊接在它前面、名為 `gp-cn1` 的連接線；把第一格 `gp-st1-lb` 的文字從「提取音訊」改成「抽取字幕」。其他節點、顏色、字型、間距一律不要動。完成後元件應該是五格：抽取字幕、翻譯中、簡轉繁、AI校正、完成。不要修改原本的 `XkGvG`。
+
+**提示詞 2（J12-D spec 畫面）**
+
+> 在群組「Flow J · 設計決策 Spec」（節點 id `rqu8n`）裡新增一張 spec 畫面，放在 `J11-D`（節點 id `w2Opax`）右邊：frame 名稱 `J12-D`，x 30200、y 48253，寬 1240，`layout: vertical`、`gap: $Space/xl-plus`、`padding: $Space/2xl`、`fill: $bg-primary`，結構照抄 `J11-D` 的 head／states／rules 三段。在 frame 上方 y 48223 放一個 caption 文字，內容「J12 · 生成進度條依路線切換」，樣式照抄 `Caption J11-D`（節點 id `pA0PQ`）。
+> head：標題「生成進度條依路線切換」（Text/H2 樣式），副標「同一個對話框，依這部片走哪條路切換格子；不確定路線時用六格」（`$text-secondary`）。
+> states：三列，每列左邊一個標籤文字（`$text-secondary`、Label 樣式）、右邊放一個進度條實例：
+> ① 標籤「語音辨識路線（六格，現狀）」→ `Component/GenerationProgress-v2`（`XkGvG`）的實例，維持元件預設（進行中在「轉錄中」）。
+> ② 標籤「抽字幕路線（五格）」→ `Component/GenerationProgress-v2/Extract` 的實例，覆寫成：第一格「抽取字幕」完成態（圓底 `$success-tint`、`check` `$success`、標籤 `$text-secondary`）、第二格「翻譯中」進行中（圓底 `$accent-tint`、`loader-circle` `$accent-text`、標籤 `$accent-text` 600 字重、百分比顯示「62%」）、其餘待辦。
+> ③ 標籤「直接套用片內中文（五格，翻譯略過）」→ `Component/GenerationProgress-v2/Extract` 的實例，覆寫成：全部格子完成態，但第二格「翻譯中」改成**略過樣式**：圓底 `$bg-tertiary`、圓內換成 lucide `minus` 圖示 14×14 `$text-muted`、標籤「翻譯中」`$text-muted`、不顯示百分比。
+> rules（`fill: $bg-secondary`、`cornerRadius: $radius-lg`、`padding: $Space/lg`）三行文字（`$text-secondary`、Body 樣式）：「略過＝圓內一條橫線，和待辦的小圓點、完成的勾都不一樣」「有 route 才用五格；asr、skip 或沒有 route 一律六格」「失敗文案：抽字幕路線第一格失敗顯示『抽取字幕失敗』，翻譯失敗照舊」。
+> 所有顏色、字型、間距都用現有變數（`$…`），不要寫死數字；`padding` 需要 0 的地方用 `$Space/none`。
+
 ## Acceptance Criteria
 
 1. **型別與 ack：** `plan` union 含 `'extract'`、`route`、`jobId` 型別更新，註解寫 `confirmed against [@contract-v2] (Story dsr-6a AC #2)`。
@@ -96,7 +138,7 @@ Status: backlog
 
 ## Tasks / Subtasks
 
-- [ ] T0 Sally：核定 §2 文案、§4 進度條五格變體（含 .pen 變體＋截圖）、§5「沒有花錢」文案（AC #8、#4）
+- [ ] T0 Sally：核定 §2 文案、§4 進度條五格變體（含 .pen 變體＋截圖）、§5「沒有花錢」文案（AC #8、#4）—— **裁定已出（見「Sally 裁定」）；待 Alexyu 跑兩段 Inline Agent 提示詞 → ⌘S → 重出截圖 → Sally MCP 複審**
 - [ ] T1 型別與 service（AC #1）
 - [ ] T2 `generateCostView` 路線規則（AC #2）
 - [ ] T3 `useGenerationProgress` job_id 終點判定＋`route`（AC #3、#6）
@@ -148,3 +190,4 @@ N/A — no wall-clock-reading components touched（進度條與對話框不讀 `
 | 日期 | 內容 |
 |---|---|
 | 2026-10-06 | Bob create-story（-b 前端半張，依賴 -a）。 |
+| 2026-10-06 | Sally T0 裁定：§2 兩個新字串定稿、`DEFAULT_LINE` 不改字只縮範圍；§5 不另造字串（`$0.00` 就是誠實數字）；§4 新元件 `GenerationProgress-v2/Extract` 五格＋「略過」用 `minus`＋J12-D spec 畫面；兩段 Inline Agent 提示詞寫在 story 裡，等 Alexyu 執行。 |
