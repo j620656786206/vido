@@ -10,29 +10,47 @@ import (
 	"github.com/vido/api/internal/models"
 )
 
-// Plans a single-item run can take (story dsr-6a AC #2 [@contract-v1]).
+// Plans a single-item run can take (story dsr-6a AC #2 [@contract-v2]).
 const (
 	// TranscriptionPlanFull — extract audio, speech recognition, then translate.
 	TranscriptionPlanFull = "full"
 	// TranscriptionPlanTranslateOnly — the row is `untranslated` and its English
 	// SRT is still on disk, so the run skips extract + ASR (sub-2-2a AC #3).
 	TranscriptionPlanTranslateOnly = "translate_only"
+	// TranscriptionPlanExtract — the file carries a usable embedded text track,
+	// so the click routes through the subtitle pipeline without speech
+	// recognition: a Chinese track is delivered (free), an English one is
+	// translated (disc-2026-10-single-generate-ignores-embedded-english-a).
+	// Only reported in pipeline mode.
+	TranscriptionPlanExtract = "extract"
 )
 
 // TranscriptionEstimate is the price the 管理字幕 dialog shows on its paid
-// buttons (story dsr-6a AC #2 [@contract-v1]).
+// buttons (story dsr-6a AC #2 [@contract-v2]).
 //
 // It prices what POST /movies/:id/transcribe?translate=true and
-// POST /episodes/:id/transcribe will ACTUALLY do — speech recognition +
-// translation, or translate-only on resume — and deliberately NOT the
-// candidate list's extract/asr/skip routes: the single-item button never reads
-// embedded subtitle tracks (⚖️ 2026-08-06 ruling A). Quoting the extract route
-// here would under-price every file that has one.
+// POST /episodes/:id/transcribe will ACTUALLY do. In pipeline mode (a route
+// predictor is wired) the click routes like the batch, so the quote names the
+// predicted lane in Route and prices it: extract → the candidate list's
+// extract price (LLM translation; a Chinese track turns out free, so this is
+// the honest UPPER bound), asr / skip → speech recognition + translation, or
+// translate-only on resume. In legacy mode Route is absent and the quote is
+// the speech-recognition one — which is what that mode's click still does.
+//
+// v1→v2: `plan` gained the value `extract`, `route` was added. ⚖️ 2026-08-06
+// ruling A ("the single-item button never reads embedded tracks") was reversed
+// by Alexyu on 2026-10-06 after the See S01E02 eval.
 type TranscriptionEstimate struct {
 	MediaID   string `json:"media_id"`
 	MediaType string `json:"media_type"`
-	// Plan is TranscriptionPlanFull or TranscriptionPlanTranslateOnly.
+	// Plan is TranscriptionPlanFull, TranscriptionPlanTranslateOnly or
+	// TranscriptionPlanExtract.
 	Plan string `json:"plan"`
+	// Route is the probe-only prediction of the lane the click will take —
+	// "extract" | "asr" | "skip" (RoutePrediction) — absent in legacy mode and
+	// when the file could not be classified. Not a RouteKind: deliver /
+	// convert / translate cannot be told apart before extraction.
+	Route string `json:"route,omitempty"`
 	// ASRAvailable mirrors the trigger's availability gate. false with
 	// Plan=full means the click would 503 — the dialog disables the button
 	// before it gets that far (J9-D ⑥).
@@ -61,6 +79,10 @@ type TranscriptionEstimateTarget struct {
 	FilePath        string
 	DurationSeconds models.NullInt64
 	Runtime         models.NullInt64
+	// SubtitleTracksJSON is the movie row's persisted scan-time probe
+	// (`subtitle_tracks`); empty for episodes and unenriched movies. When it
+	// parses, the route is read from it without touching the file.
+	SubtitleTracksJSON string
 }
 
 // transcriptionPlanSource is the part of TranscriptionService the estimate must
@@ -86,7 +108,10 @@ type TranscriptionEstimateService struct {
 	// the ladder continues to TMDb and then the stated assumption.
 	prober           RouteDurationPredictor
 	episodeDurations CandidateEpisodeDurationWriter
-	logger           *slog.Logger
+	// routes classifies the file for the pipeline-mode quote. nil = legacy
+	// mode: no route is reported and the speech-recognition quote stands.
+	routes RoutePredictor
+	logger *slog.Logger
 }
 
 // NewTranscriptionEstimateService wires the estimator. plan is the
@@ -117,16 +142,20 @@ func (s *TranscriptionEstimateService) SetEpisodeDurationWriter(w CandidateEpiso
 	s.episodeDurations = w
 }
 
+// SetRoutePredictor turns on the pipeline-mode quote: the click routes
+// through the subtitle pipeline, so the estimate predicts the lane and prices
+// it. main.go wires it only when the pipeline is enabled; production passes
+// the same adapter SetDurationProber received, so a file is probed once.
+func (s *TranscriptionEstimateService) SetRoutePredictor(p RoutePredictor) {
+	s.routes = p
+}
+
 // Estimate prices the run a click on 生成字幕 would start for target.
 //
 // The dialog's movie trigger always sends ?translate=true and the episode
 // route always translates, so the estimate assumes translation is requested;
 // whether it RUNS is the run's own translationEnabled check.
 func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target TranscriptionEstimateTarget) TranscriptionEstimate {
-	plan := TranscriptionPlanFull
-	if s.plan.canResumeTranslateOnly(ctx, target.MediaType, target.MediaID) {
-		plan = TranscriptionPlanTranslateOnly
-	}
 	translate := s.plan.translationEnabled()
 
 	model := ""
@@ -134,13 +163,38 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 		model = s.effectiveModel()
 	}
 
-	minutes, known, source := s.runtimeMinutes(ctx, target)
+	// Route first from what is already known (the persisted track list), then
+	// from the ladder's own probe when it runs, and only then with a probe of
+	// our own — one ffprobe at most.
+	route := s.routeFromTracks(target)
+	minutes, known, source, probed, ladderProbed := s.runtimeMinutes(ctx, target)
+	if route == "" {
+		route = probed
+	}
+	// Our own probe only when the ladder did not touch the file at all: a
+	// ladder probe that FAILED must not be repeated — the dialog would wait
+	// out two timeouts on a sleeping disk (CR L2).
+	if route == "" && !ladderProbed && s.routes != nil && target.FilePath != "" {
+		route = s.probeRoute(ctx, target)
+	}
+
+	plan := TranscriptionPlanFull
+	switch {
+	case route == RouteExtract:
+		// The embedded track is translated (or delivered); the `untranslated`
+		// row's English SRT is not what this lane reads, so no resume.
+		plan = TranscriptionPlanExtract
+	case s.plan.canResumeTranslateOnly(ctx, target.MediaType, target.MediaID):
+		plan = TranscriptionPlanTranslateOnly
+	}
+
 	usd := s.priceUSD(plan, translate, minutes, model)
 
 	return TranscriptionEstimate{
 		MediaID:               target.MediaID,
 		MediaType:             target.MediaType,
 		Plan:                  plan,
+		Route:                 string(route),
 		ASRAvailable:          s.plan.IsAvailable(),
 		SelfHostedASR:         s.selfHostedASR,
 		TranslationConfigured: translate,
@@ -157,6 +211,15 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, minutes float64, model string) decimal.Decimal {
 	asrRate := ai.EstimatedASRPerMinute(s.selfHostedASR)
 	switch {
+	case plan == TranscriptionPlanExtract && translate:
+		// The batch consent list's extract price — LLM translation of the
+		// track, no speech recognition. A Chinese track ends up free; quoting
+		// the translation is the honest upper bound ("寧可往上給").
+		return estimateUSD(RouteExtract, minutes, asrRate, model)
+	case plan == TranscriptionPlanExtract:
+		// Deliver / convert are free, and a translate verdict fails before any
+		// paid call without a key — nothing is billed either way.
+		return decimal.Zero
 	case plan == TranscriptionPlanFull && translate:
 		return estimateUSD(RouteASR, minutes, asrRate, model)
 	case plan == TranscriptionPlanFull:
@@ -176,7 +239,11 @@ func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, min
 // runtimeMinutes walks the sweep's ladder (stored measurement → TMDb → 45 min)
 // with one extra rung before TMDb: a live probe when nothing is stored, so an
 // episode — which has no TMDb runtime writer — is not quoted at the assumption.
-func (s *TranscriptionEstimateService) runtimeMinutes(ctx context.Context, target TranscriptionEstimateTarget) (float64, bool, string) {
+//
+// The probe also classifies the file; that route is returned alongside (""
+// when no probe ran or it failed) so Estimate never probes twice, and
+// ladderProbed says whether the file was touched at all.
+func (s *TranscriptionEstimateService) runtimeMinutes(ctx context.Context, target TranscriptionEstimateTarget) (minutes float64, known bool, source string, probedRoute RoutePrediction, ladderProbed bool) {
 	row := candidateRow{
 		id:              target.MediaID,
 		mediaType:       target.MediaType,
@@ -186,7 +253,11 @@ func (s *TranscriptionEstimateService) runtimeMinutes(ctx context.Context, targe
 	}
 	stored := row.durationSeconds.Valid && row.durationSeconds.Int64 > 0
 	if !stored && s.prober != nil && target.FilePath != "" {
-		_, seconds, err := s.prober.ProbeWithDuration(ctx, target.FilePath)
+		ladderProbed = true
+		route, seconds, err := s.prober.ProbeWithDuration(ctx, target.FilePath)
+		if err == nil && s.routes != nil {
+			probedRoute = route
+		}
 		switch {
 		case err != nil && ctx.Err() != nil:
 			// The caller went away (the dialog closed mid-probe) — routine, not a
@@ -203,7 +274,37 @@ func (s *TranscriptionEstimateService) runtimeMinutes(ctx context.Context, targe
 			s.rememberEpisodeDuration(ctx, target, measured)
 		}
 	}
-	return row.runtimeMinutes()
+	minutes, known, source = row.runtimeMinutes()
+	return minutes, known, source, probedRoute, ladderProbed
+}
+
+// routeFromTracks classifies the persisted track list, when there is one and
+// routing is on. "" = not decidable from the row alone.
+func (s *TranscriptionEstimateService) routeFromTracks(target TranscriptionEstimateTarget) RoutePrediction {
+	if s.routes == nil {
+		return ""
+	}
+	tracks, ok := parsePersistedTracks(target.SubtitleTracksJSON)
+	if !ok {
+		return ""
+	}
+	return s.routes.FromTracks(tracks)
+}
+
+// probeRoute is the one extra ffprobe a routed quote may need: a stored
+// duration kept the ladder from probing, and the row had no track list. A
+// failure leaves the route unknown — the quote then stays the speech-
+// recognition one, which is the safe (higher) direction.
+func (s *TranscriptionEstimateService) probeRoute(ctx context.Context, target TranscriptionEstimateTarget) RoutePrediction {
+	route, err := s.routes.Probe(ctx, target.FilePath)
+	if err != nil {
+		if ctx.Err() == nil {
+			s.logger.Warn("route probe failed — quoting the speech-recognition lane",
+				"media_id", target.MediaID, "media_type", target.MediaType, "error", err)
+		}
+		return ""
+	}
+	return route
 }
 
 // rememberEpisodeDuration mirrors GenerationCandidateService's rule: episodes

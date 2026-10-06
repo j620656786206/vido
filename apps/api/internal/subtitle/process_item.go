@@ -205,7 +205,9 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	// reason the FreeOnly brake does — routing is free, and only routing knows
 	// whether anything will be written at all: RouteSkip writes nothing and
 	// must keep reaching its terminal `skipped` verdict on a read-only share
-	// (CR H2). Every other verdict ends in a sidecar, so a refusal here stops
+	// (CR H2). With TranscribeWhenSkipped a RouteSkip verdict does go on to
+	// the ASR leg, which probes the folder itself (checkTargetWritable) — and
+	// the solo click that sets it already probed synchronously before paying. Every other verdict ends in a sidecar, so a refusal here stops
 	// the paid legs (LLM, ASR) before their first call. eval-1 paid for two
 	// full translations this way.
 	//
@@ -230,8 +232,15 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		// sub-3-1: no longer an unconditional recordSkip — the ASR fallback
 		// leg runs when the optional port can serve this item, and degrades to
 		// today's `no_text_source` record when it cannot (AC #4).
-		return p.transcribeFallback(ctx, ref, run, decision, item)
+		return p.transcribeFallback(ctx, ref, run, decision, item, models.SubtitleStatusNoTextSource)
 	case RouteSkip:
+		// A declined text track is a deliberate verdict for the batch and the
+		// auto lane. The detail-page click opts into speech recognition
+		// instead (TranscribeWhenSkipped); when ASR cannot serve, the verdict
+		// stays the honest `skipped` — a text track DID exist.
+		if opts.TranscribeWhenSkipped {
+			return p.transcribeFallback(ctx, ref, run, decision, item, models.SubtitleStatusSkipped)
+		}
 		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusSkipped)
 	case RouteDeliverDirect, RouteConvertThenDeliver, RouteTranslate:
 		// handled below
@@ -526,16 +535,21 @@ func (p *Pipeline) translateWithCache(
 // RunTranscription's resolveBudget reuses a ctx budget when one is present and
 // creates the per-run envelope otherwise, so ASR and LLM always share one
 // ceiling.
+//
+// skipStatus is the media verdict when speech recognition cannot serve the
+// item: `no_text_source` for a RouteNoTextSource decision, `skipped` for a
+// RouteSkip one routed here by TranscribeWhenSkipped.
 func (p *Pipeline) transcribeFallback(
 	ctx context.Context,
 	ref MediaRef,
 	run *models.SubtitleRun,
 	decision RouteDecision,
 	item *MediaItem,
+	skipStatus models.SubtitleStatus,
 ) (*ProcessOutcome, error) {
 	transcribable := ref.MediaType == models.SubtitleRunMediaMovie || ref.MediaType == models.SubtitleRunMediaEpisode
 	if p.asr == nil || !transcribable {
-		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusNoTextSource)
+		return p.recordSkip(ctx, ref, run, decision, skipStatus)
 	}
 
 	// The D6 stage stays inside the existing 12-value set: the media row
@@ -561,7 +575,7 @@ func (p *Pipeline) transcribeFallback(
 	case err == nil:
 		// fall through to the provenance record below
 	case errors.Is(err, services.ErrTranscriptionDisabled):
-		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusNoTextSource)
+		return p.recordSkip(ctx, ref, run, decision, skipStatus)
 	case errors.Is(err, ai.ErrBudgetExceeded):
 		return p.pauseASRItem(ctx, ref, run, err)
 	default:

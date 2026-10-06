@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -777,6 +778,10 @@ func main() {
 		// Hoisted so the graceful-shutdown block can Stop() it
 		// (bugfix-autogenerator-no-timeout-or-shutdown AC #6). nil in legacy mode.
 		autoGenerator *subtitle.AutoGenerator
+		// subtitleSoloRunner is the detail-page 生成字幕 click over the pipeline
+		// (disc-2026-10-single-generate-ignores-embedded-english-a). nil in
+		// legacy mode, where the click keeps going to TranscriptionService.
+		subtitleSoloRunner *subtitle.SoloRunner
 	)
 	// Built unconditionally: the FR12 endpoint uses it to answer 404 for an
 	// unknown media id, and it is three struct fields — nothing is started.
@@ -840,6 +845,38 @@ func main() {
 			subtitle.WithCandidateFinders(repos.Movies, repos.Episodes),
 			subtitle.WithCapabilityGate(subtitleCapabilityGate),
 			subtitle.WithASRAvailability(pipelineASR.Available),
+		)
+		// The single click shares the pool's in-flight set (one generation per
+		// item across workers, batch and clicks), the same route classifier the
+		// estimate uses, the ASR capability fact, and the service's own
+		// translate-only resume answer (CR sub-2-2a M2) so a 503 is never
+		// issued for a run that needs no speech recognition.
+		subtitleSoloRunner = subtitle.NewSoloRunner(subtitlePipeline, subtitlePipelinePool, sseHub, slog.Default(),
+			subtitle.WithSoloRoutePredictor(subtitleRouter.PredictRoute),
+			subtitle.WithSoloASRAvailability(pipelineASR.Available),
+			subtitle.WithSoloResumeCheck(func(ctx context.Context, ref subtitle.MediaRef) bool {
+				if ref.MediaType == models.SubtitleRunMediaEpisode {
+					return transcriptionService.CanResumeEpisodeTranslateOnly(ctx, ref.ID)
+				}
+				return transcriptionService.CanResumeTranslateOnly(ctx, ref.ID)
+			}),
+			// The Activity row / workspace title, composed the way the legacy
+			// solo run composes it (TranscriptionService.resolveActivityTitle):
+			// 「劇名 S01E02」 for an episode, the title for a movie.
+			subtitle.WithSoloTitle(func(ctx context.Context, ref subtitle.MediaRef, item *subtitle.MediaItem) string {
+				if ref.MediaType == models.SubtitleRunMediaEpisode {
+					if ep, err := repos.Episodes.FindByID(ctx, ref.ID); err == nil && ep != nil && ep.SeriesID != "" {
+						if series, err := repos.Series.FindByID(ctx, ep.SeriesID); err == nil && series != nil {
+							return fmt.Sprintf("%s S%02dE%02d", series.Title, ep.SeasonNumber, ep.EpisodeNumber)
+						}
+					}
+				}
+				if item != nil {
+					return item.Context.Title
+				}
+				return ""
+			}),
+			subtitle.WithSoloRunBudgetUSD(cfg.AIRunBudgetUSD),
 		)
 		// sub-4-1 AC #1: a completed scan does NOT enqueue subtitle generation.
 		// sub-1-6 AC #2 (FR13) wired the library-wide sweep here; the first
@@ -1048,6 +1085,12 @@ func main() {
 	transcriptionEstimateService.SetDurationProber(routePredictor)
 	transcriptionEstimateService.SetEpisodeDurationWriter(repos.Episodes)
 	transcriptionHandler.SetEstimator(transcriptionEstimateService)
+	// Pipeline mode: the click routes through the pipeline and the quote names
+	// the lane it will take. Legacy mode leaves both exactly as they were.
+	if subtitleSoloRunner != nil {
+		transcriptionHandler.SetSoloGenerator(subtitleSoloRunner)
+		transcriptionEstimateService.SetRoutePredictor(routePredictor)
+	}
 
 	// 9R-13: .nfo metadata localizer (movies) — additive zh-TW .nfo via the
 	// shared translation + glossary infra. nil when no translation provider.
@@ -1196,7 +1239,15 @@ func main() {
 	// since it reads them. Fail-soft per section (B1/F3). transcriptionService
 	// (disc-2026-07-transcription-active-jobs) surfaces ad-hoc single-episode/movie
 	// jobs that were previously invisible once their progress modal was closed.
-	activityService := services.NewActivityService(scannerService, batchProcessor, generationBatchProcessor, transcriptionService, downloadService, repos.ParseJobs)
+	// In pipeline mode the click's jobs live in the SoloRunner, so the Activity
+	// row and the live-spend readout compose both sources (legacy solo runs
+	// stay in transcriptionService; the ASR leg of a pipeline run registers
+	// there as Solo=false, so nothing is counted twice).
+	var soloJobs soloJobSource = transcriptionService
+	if subtitleSoloRunner != nil {
+		soloJobs = composedSoloJobs{transcriptionService, subtitleSoloRunner}
+	}
+	activityService := services.NewActivityService(scannerService, batchProcessor, generationBatchProcessor, soloJobs, downloadService, repos.ParseJobs)
 	activityHandler := handlers.NewActivityHandler(activityService)
 
 	// Home v3 readout-band aggregate (ux3-1-6, tech-spec D1). The four in-flight
@@ -1322,7 +1373,7 @@ func main() {
 		generationBatchHandler.RegisterRoutes(apiV1) // /api/v1/subtitles/generation-batch group (Story 9R-16)
 		// Story 9R-17: GET /api/v1/ai/usage — live spend of the paid run in
 		// progress (generation batch or solo transcription).
-		handlers.NewAIUsageHandler(generationBatchProcessor, transcriptionService).RegisterRoutes(apiV1)
+		handlers.NewAIUsageHandler(generationBatchProcessor, soloJobs).RegisterRoutes(apiV1)
 		generationCandidatesHandler.RegisterRoutes(apiV1) // /api/v1/subtitles/generation-candidates (story sub-4-1)
 		subtitlePipelineHandler.RegisterRoutes(apiV1)     // POST /api/v1/subtitles/pipeline/run (Story sub-1-6, FR12)
 		keySettingsHandler.RegisterRoutes(apiV1)          // GET/PUT /api/v1/settings/keys + POST /test (Story sub-2-1a, FR25)
