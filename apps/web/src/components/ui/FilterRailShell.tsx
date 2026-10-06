@@ -4,7 +4,7 @@
 // shell (264px, $bg-primary, right hairline, 篩選 header + Mono active-count badge
 // + collapse chevron, scrollable body, pinned footer) instead of forking a copy.
 // The body (a FilterPanel) and the footer content stay rail-specific via slots.
-import { useId, type ReactNode } from 'react';
+import { useId, type ReactNode, type Ref } from 'react';
 import { PanelLeftClose } from 'lucide-react';
 
 interface FilterRailShellProps {
@@ -17,6 +17,11 @@ interface FilterRailShellProps {
   /** testid for the collapse button (e.g. `discover-rail-collapse`). */
   collapseTestId: string;
   onCollapse: () => void;
+  /**
+   * The collapse button — where focus lands after the rail expands (I11-D:
+   * 再按一次 Enter 就能收回). Forwarded from the page through the rail wrapper.
+   */
+  collapseButtonRef?: Ref<HTMLButtonElement>;
   /** Scrollable filter body — the FilterPanel. */
   children: ReactNode;
   /**
@@ -33,6 +38,7 @@ export function FilterRailShell({
   activeCountTestId,
   collapseTestId,
   onCollapse,
+  collapseButtonRef,
   children,
   footer,
 }: FilterRailShellProps) {
@@ -43,15 +49,21 @@ export function FilterRailShell({
 
   // top-14 / 3.5rem: pinned directly under AppShellV2's h-14 (56px) header. top-16 left a
   // permanent 8px slot that page content scrolled through (dsr-8 AC #6).
+  // data-rail-vt: hooks for the I11-D collapse/expand motion. They name nothing on
+  // their own — styles.css only turns them into view-transition-names while
+  // <html data-rail-motion> is set (useFilterRailTransition).
   return (
     <aside
       data-testid={testId}
+      data-rail-vt="rail"
       aria-labelledby={headingId}
       className="sticky top-14 flex h-[calc(100vh-3.5rem)] w-[264px] flex-shrink-0 flex-col border-r border-[var(--border-subtle)]"
     >
       {/* Rail header */}
       <div className="flex items-center justify-between px-5 pb-3 pt-5">
-        <div className="flex items-center gap-2">
+        {/* The 「篩選 N」 group morphs into the toolbar's 篩選 button on collapse (I11-D ②);
+            the page's expand button carries the same data-rail-vt="trigger". */}
+        <div data-rail-vt="trigger" className="flex items-center gap-2">
           {/* h2 on BodyLg 16 (dsr-8 AC #6): the page h1 sits above the rail, so an h3
               skipped a level; 15px was on no step of the type scale. */}
           <h2 id={headingId} className="text-base font-bold text-[var(--text-primary)]">
@@ -69,11 +81,15 @@ export function FilterRailShell({
             </span>
           )}
         </div>
+        {/* aria-expanded: the button lives inside the rail, so whenever it exists the rail is
+            open. No aria-controls — collapsed, the rail is unmounted and the id would dangle. */}
         <button
           type="button"
+          ref={collapseButtonRef}
           onClick={onCollapse}
           data-testid={collapseTestId}
           aria-label="收合篩選"
+          aria-expanded={true}
           className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
         >
           <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden="true" />

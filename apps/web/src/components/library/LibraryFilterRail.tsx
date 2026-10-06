@@ -9,6 +9,7 @@
  * stays pinned even with many genres (UX review watch-out #1). Mobile (<lg) keeps the
  * existing LibraryFilterSheetV2 bottom sheet — this rail is never rendered there.
  */
+import type { Ref } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { FilterPanel } from './FilterPanel';
 import { FilterRailShell } from '../ui/FilterRailShell';
@@ -25,6 +26,8 @@ interface LibraryFilterRailProps {
   onClear: () => void;
   onTypeChange: (type: LibraryMediaType) => void;
   onCollapse: () => void;
+  /** Forwarded to FilterRailShell's collapse button — the post-expand focus target (I11-D). */
+  collapseButtonRef?: Ref<HTMLButtonElement>;
 }
 
 export function LibraryFilterRail({
@@ -36,6 +39,7 @@ export function LibraryFilterRail({
   onClear,
   onTypeChange,
   onCollapse,
+  collapseButtonRef,
 }: LibraryFilterRailProps) {
   return (
     <FilterRailShell
@@ -44,6 +48,7 @@ export function LibraryFilterRail({
       activeCountTestId="library-rail-active-count"
       collapseTestId="library-rail-collapse"
       onCollapse={onCollapse}
+      collapseButtonRef={collapseButtonRef}
       footer={
         activeCount > 0 ? (
           <button

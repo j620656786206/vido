@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, onTestFinished } from 'vitest';
 import {
   createRootRoute,
   createRoute,
@@ -208,6 +208,33 @@ describe('LibraryBrowseV2 — desktop filter rail (ux3-0-7)', () => {
     expect(await screen.findByTestId('library-filter-rail')).toBeInTheDocument();
   });
 
+  // disc-2026-10-filter-rail-toggle-no-motion AC #6/#7: the collapse button unmounts with
+  // the rail, so focus used to fall to <body>. It now lands on the toolbar 篩選 button,
+  // and coming back lands on the collapse button (再按一次 Enter 就能收回).
+  it('[P0] collapse moves focus to the toolbar 篩選 button; expand moves it back to 收合篩選', async () => {
+    renderBrowse();
+    const collapseBtn = await screen.findByTestId('library-rail-collapse');
+    expect(collapseBtn).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(collapseBtn);
+
+    const expandBtn = screen.getByTestId('library-rail-expand');
+    expect(document.activeElement).toBe(expandBtn);
+    expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(expandBtn).not.toHaveAttribute('aria-controls');
+    // same hook as the rail's 「篩選 N」 group, so the two morph into each other
+    expect(expandBtn).toHaveAttribute('data-rail-vt', 'trigger');
+
+    await userEvent.click(expandBtn);
+    expect(document.activeElement).toBe(screen.getByTestId('library-rail-collapse'));
+  });
+
+  it('[P1] the tablet sheet button keeps its own aria-expanded (it talks about the sheet)', async () => {
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('library-rail-collapse'));
+    expect(screen.getByTestId('library-filter-open')).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByTestId('library-filter-open')).not.toHaveAttribute('data-rail-vt');
+  });
+
   it('rail active-count counts genres + decade-range as one, not type', async () => {
     renderBrowse('/library?genres=動作,科幻&yearMin=2020&yearMax=2029');
     // 2 genres + 1 decade range = 3 (type=全部 not counted)
@@ -285,6 +312,20 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     // toggle off
     await userEvent.click(screen.getByTestId('poster-v2-a'));
     expect(screen.getByTestId('selected-count')).toHaveTextContent('已選取 0 項');
+  });
+
+  // disc-2026-10-filter-rail-toggle-no-motion AC #6: selecting swaps the toolbar for
+  // SelectionToolbar, so there is no 篩選 button to land on — fall back to the page title
+  // (the same tabIndex=-1 target the sort+filter sheet already uses).
+  it('[P0] collapsing the rail while selecting moves focus to the page title', async () => {
+    // this describe does not reset localStorage — don't leak 'collapsed' into later suites
+    onTestFinished(() => localStorage.removeItem('vido:library:rail-collapsed'));
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.click(screen.getByTestId('library-rail-collapse'));
+    expect(screen.queryByTestId('library-filter-rail')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('library-rail-expand')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByTestId('library-page-title'));
   });
 
   it('全選 selects all loaded items; 取消 exits and clears', async () => {

@@ -17,6 +17,7 @@ import { getRouteApi } from '@tanstack/react-router';
 import { CheckSquare, SlidersHorizontal } from 'lucide-react';
 import { useLibraryInfinite } from '../../hooks/useLibraryInfinite';
 import { useEnrichmentRefresh } from '../../hooks/useEnrichmentRefresh';
+import { useFilterRailTransition } from '../../hooks/useFilterRailTransition';
 import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
 import { useMediaLibraries } from '../../hooks/useMediaLibrary';
 import {
@@ -180,6 +181,17 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
       /* ignore */
     }
   }, []);
+  // disc-2026-10-filter-rail-toggle-no-motion (I11-D): clicks go through the shared hook,
+  // which animates (View Transitions) and moves focus; the initial state above never does.
+  const railExpandBtnRef = useRef<HTMLButtonElement>(null);
+  const railCollapseBtnRef = useRef<HTMLButtonElement>(null);
+  const { collapse: collapseRail, expand: expandRail } = useFilterRailTransition({
+    setRailCollapsed,
+    // In selection mode SelectionToolbar replaces the toolbar, so there is no 篩選
+    // button to land on — fall back to the page title (AC #6, same as the sheet's).
+    getCollapsedFocusTarget: useCallback(() => railExpandBtnRef.current ?? headingRef.current, []),
+    getExpandedFocusTarget: useCallback(() => railCollapseBtnRef.current, []),
+  });
 
   const filters: FilterValues = useMemo(
     () => ({
@@ -619,7 +631,8 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
               onApply={applyFilters}
               onClear={clearFilters}
               onTypeChange={handleTypeChange}
-              onCollapse={() => setRailCollapsed(true)}
+              onCollapse={collapseRail}
+              collapseButtonRef={railCollapseBtnRef}
             />
           </div>
         )}
@@ -687,11 +700,16 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
                 <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                 篩選
               </button>
-              {/* Desktop (lg+): re-open the rail when collapsed */}
+              {/* Desktop (lg+): re-open the rail when collapsed. aria-expanded talks about the
+                  RAIL (always false here — the button only exists while it is collapsed);
+                  data-rail-vt="trigger" pairs it with the rail's 「篩選 N」 for the I11-D morph. */}
               {railCollapsed && (
                 <button
                   type="button"
-                  onClick={() => setRailCollapsed(false)}
+                  ref={railExpandBtnRef}
+                  onClick={expandRail}
+                  aria-expanded={false}
+                  data-rail-vt="trigger"
                   data-testid="library-rail-expand"
                   className={`hidden min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors lg:flex ${
                     activeFilterCount > 0

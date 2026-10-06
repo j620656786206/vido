@@ -590,3 +590,92 @@
     }
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Filter rail collapse / expand — I11-D (`Qaz1x`), disc-2026-10-filter-rail-toggle-no-motion.
+ *
+ * Driven by View Transitions: hooks/useFilterRailTransition.ts sets
+ * `data-rail-motion="collapse"|"expand"` on <html> and flips the state inside
+ * `document.startViewTransition`. EVERY rule below hangs off that attribute, so
+ * outside one click's transition nothing here applies — in particular no element
+ * carries a `view-transition-name` (a permanent name makes its own stacking
+ * context, which would fight the sticky rail and the overlays above it).
+ *
+ * What moves (動的東西＝正在發生的事 — licence ② 解釋改變):
+ *   - filter-rail          the <aside>: slides out left + fades on collapse
+ *                          (--motion-leave / --ease-leave), slides in on expand
+ *                          (--motion-move / --ease-settle). Exit is faster than entrance.
+ *   - filter-rail-trigger  the rail's 「篩選 N」 title group ⇄ the toolbar 篩選 button;
+ *                          the two never coexist, so one name lets the browser morph
+ *                          one into the other.
+ *   - root                 everything else, the poster grid included, only CROSS-FADES
+ *                          (--motion-state). The grid and the content column are NOT
+ *                          named on purpose: a named box is scaled as one picture
+ *                          between its old and new size, i.e. the posters would stretch.
+ *                          No width animation, no FLIP — the column width lands in one step.
+ *
+ * ⚠️ Reduced motion is guarded in JS, not here: the hook never calls
+ * startViewTransition under `prefers-reduced-motion: reduce`. The `*` safety net
+ * in @layer base (*, *::before, *::after) does NOT match `::view-transition-*`
+ * pseudo-elements, so CSS alone could not stop this. (The tokens are also 1ms
+ * under reduce — a second layer, not the mechanism.)
+ * ------------------------------------------------------------------------- */
+@keyframes rail-leave {
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes rail-enter {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+:root[data-rail-motion] [data-rail-vt='rail'] {
+  view-transition-name: filter-rail;
+}
+
+:root[data-rail-motion] [data-rail-vt='trigger'] {
+  view-transition-name: filter-rail-trigger;
+}
+
+/* The poster grid's only motion: the whole page cross-fades. */
+:root[data-rail-motion]::view-transition-group(root),
+:root[data-rail-motion]::view-transition-old(root),
+:root[data-rail-motion]::view-transition-new(root) {
+  animation-duration: var(--motion-state);
+}
+
+/* The rail travels its own width. Clipping the group to the rail's box makes it
+   slide away behind its own left edge (I11-D: 從側欄底下退場) instead of sliding
+   across the sidebar nav — named groups paint ABOVE the root snapshot, so an
+   unclipped rail would cover the nav for the whole exit. */
+:root[data-rail-motion]::view-transition-group(filter-rail) {
+  overflow: clip;
+}
+
+:root[data-rail-motion]::view-transition-old(filter-rail) {
+  animation: rail-leave var(--motion-leave) var(--ease-leave) both;
+}
+
+:root[data-rail-motion]::view-transition-new(filter-rail) {
+  animation: rail-enter var(--motion-move) var(--ease-settle) both;
+}
+
+/* Title ⇄ button morph takes the timing of the half it belongs to. */
+:root[data-rail-motion='collapse']::view-transition-group(filter-rail-trigger),
+:root[data-rail-motion='collapse']::view-transition-old(filter-rail-trigger),
+:root[data-rail-motion='collapse']::view-transition-new(filter-rail-trigger) {
+  animation-duration: var(--motion-leave);
+  animation-timing-function: var(--ease-leave);
+}
+
+:root[data-rail-motion='expand']::view-transition-group(filter-rail-trigger),
+:root[data-rail-motion='expand']::view-transition-old(filter-rail-trigger),
+:root[data-rail-motion='expand']::view-transition-new(filter-rail-trigger) {
+  animation-duration: var(--motion-move);
+  animation-timing-function: var(--ease-settle);
+}
