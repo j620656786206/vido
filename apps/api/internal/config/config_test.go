@@ -298,6 +298,7 @@ func TestLoad_Defaults(t *testing.T) {
 
 	assert.Equal(t, "8080", cfg.Port)
 	assert.Equal(t, "development", cfg.Env)
+	assert.True(t, cfg.ASRWordTimestamps, "disc-2026-10-asr-word-timestamps-default-on: per-word timing is on unless switched off")
 	assert.Equal(t, "/vido-data", cfg.DataDir)
 	assert.Equal(t, []string{"/media"}, cfg.MediaDirs)
 	assert.Equal(t, "info", cfg.LogLevel)
@@ -1152,4 +1153,12 @@ func TestLoad_TranscriptionRunBudget(t *testing.T) {
 			assert.Equal(t, 30, cfg.TranscriptionSecondsPerMediaMinute, "raw=%q", raw)
 		}
 	})
+}
+
+func TestLoad_ASRWordTimestamps_CanBeSwitchedOff(t *testing.T) {
+	os.Clearenv()
+	t.Setenv("VIDO_ASR_WORD_TIMESTAMPS", "false")
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.False(t, cfg.ASRWordTimestamps)
 }

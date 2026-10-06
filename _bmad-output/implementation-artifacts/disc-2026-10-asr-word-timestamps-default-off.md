@@ -1,6 +1,6 @@
 # Disc：「每個字的時間」改成要開才送，預設不送——配樂長的片段才不會整段聽不到對白
 
-Status: review
+Status: done
 
 **Source:** 2026-10-06／07 第三次實測（`eval-see-s01e02-asr-vs-official.md` 第三節）：同一段 10 分鐘音訊，帶 `timestamp_granularities[]` 的請求 4 次崩 3 次（0、0、30 句對白），不帶的 4 次都正常（66～84 句）。Alexyu 2026-10-07 裁定選 A：不 revert、預設關、留開關。
 
@@ -54,6 +54,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **2026-10-07 後續：** 切短（#701）實測 4/4 沒崩，開關預設改回 true（`disc-2026-10-asr-word-timestamps-default-on`）；開關本身保留。
 - 🔗 AC Drift: FOUND — `disc-2026-10-asr-coarse-timestamps` AC #1「verbose_json 請求帶兩個 granularity」改為「開啟時才帶」；理由與數據見 eval 第三節。
 - 📎 Contract Stamps: NONE。
 - 🎭 A11y Pre-Flight: N/A (100% backend)
