@@ -58,6 +58,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **2026-10-07 第五次實測（演員表補上後）：** 41 個名字反而讓 Whisper 把名單念進字幕、對白剩三分之一，Jerlamarel 仍錯 → `disc-2026-10-asr-name-prompt-too-long`（角色名、拉丁字母、≤12）。
 - **實測（2026-10-06／07，10 分鐘片段）：沒測到。** See 的 `series.credits` 在 DB 是空的，只送了 3 個演員名、0 個角色名（`asr prompt built names=3 runes=42`）；Jerlamarel 仍聽成 Trilla Morel。程式路徑有跑、有 log；效果要等 `disc-2026-10-series-credits-empty` 把演員表存進來再量。
 - **Adversarial CR（2026-10-06，fresh agent）2M/3L＋nits，全部修掉：**
   - M1 影集整季跑（`series`）時原本的守門 `glossaryKey != mediaID` 會把它自己擋掉、拿不到演員表 → 改成只擋「找不到母劇的單集」（跟 `mediaMetadataFor` 一樣），加 `TestASRPromptFor_ReadsCreditsPerMediaType` 五個案例。

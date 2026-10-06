@@ -36,9 +36,15 @@ func ASRPromptFromContext(ctx context.Context) string {
 // a long list is silently truncated from the FRONT, so the cap keeps the
 // whole list inside the window and the caller must put the important names
 // first (characters before actors).
+//
+// Was 40 names / 700 runes (disc-2026-10-asr-name-prompt-too-long): on See
+// S01E02 a 41-name list made the hosted engine read the LIST back over the
+// score (five cues of actor names), hear a third of the dialogue it heard
+// without a prompt, and still mishear the one name that mattered. A short
+// list of the characters actually spoken is what the prompt is for.
 const (
-	ASRPromptMaxNames = 40
-	ASRPromptMaxRunes = 700
+	ASRPromptMaxNames = 12
+	ASRPromptMaxRunes = 200
 )
 
 // BuildASRPrompt renders a name list as whisper conditioning text: trimmed,
@@ -58,9 +64,14 @@ func BuildASRPrompt(names []string) string {
 		if _, dup := seen[key]; dup {
 			continue
 		}
-		next := runes + len([]rune(n)) + 2 // ", "
-		if len(kept) >= ASRPromptMaxNames || next > ASRPromptMaxRunes {
+		if len(kept) >= ASRPromptMaxNames {
 			break
+		}
+		next := runes + len([]rune(n)) + 2 // ", "
+		if next > ASRPromptMaxRunes {
+			// One long phrase must not shut the door on the short names
+			// behind it (CR 4): skip it and keep filling.
+			continue
 		}
 		seen[key] = struct{}{}
 		kept = append(kept, n)

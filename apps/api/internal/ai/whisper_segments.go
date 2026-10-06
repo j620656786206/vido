@@ -271,15 +271,69 @@ func filterPromptEcho(segs []whisperSegment, prompt string) (kept []whisperSegme
 	if norm == "" {
 		return segs, nil
 	}
+	names := promptNameSet(prompt)
 	for _, seg := range segs {
 		text := normalizeForEcho(seg.Text)
-		if len([]rune(text)) >= promptEchoMinRunes && strings.Contains(norm, text) {
+		if (len([]rune(text)) >= promptEchoMinRunes && strings.Contains(norm, text)) || isNameList(seg.Text, names) {
 			dropped = append(dropped, droppedSegment{Segment: seg, Reason: dropReasonPromptEcho})
 			continue
 		}
 		kept = append(kept, seg)
 	}
 	return kept, dropped
+}
+
+// promptNameSet is the prompt's comma-separated names, normalized.
+func promptNameSet(prompt string) map[string]struct{} {
+	set := map[string]struct{}{}
+	for _, n := range strings.Split(prompt, ",") {
+		if k := normalizeForEcho(n); k != "" {
+			set[k] = struct{}{}
+		}
+	}
+	return set
+}
+
+// isNameList catches the echo the substring rule misses: whisper reading the
+// list back out of order, with repeats or a dangling fragment ("The Bank,
+// Lord Diego, Oloman, Shiloh, …, The Bank, Lord"). The mark of an echo is
+// that EVERY comma-separated item is a prompt name or the cut-off start of
+// one — the moment a free word appears ("Baba Voss, Maghra, come.") it is a
+// line of dialogue and stays (CR 1). Two names at least; one alone is a line.
+func isNameList(text string, names map[string]struct{}) bool {
+	if len(names) == 0 {
+		return false
+	}
+	items := strings.FieldsFunc(text, func(r rune) bool { return r == ',' || r == '、' || r == ';' })
+	if len(items) < 2 {
+		return false
+	}
+	matched := 0
+	for _, it := range items {
+		k := normalizeForEcho(it)
+		if k == "" {
+			continue
+		}
+		if _, ok := names[k]; ok {
+			matched++
+			continue
+		}
+		if !isNamePrefix(k, names) {
+			return false
+		}
+	}
+	return matched >= 2
+}
+
+// isNamePrefix is true when k is the beginning of some prompt name (a
+// fragment whisper cut mid-name: "Mag" of "Maghra", "Lord" of "Lord Diego").
+func isNamePrefix(k string, names map[string]struct{}) bool {
+	for n := range names {
+		if len(k) < len(n) && strings.HasPrefix(n, k) {
+			return true
+		}
+	}
+	return false
 }
 
 // normalizeForEcho lower-cases and keeps only letters, digits and single
