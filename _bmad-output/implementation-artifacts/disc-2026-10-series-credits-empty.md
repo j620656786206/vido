@@ -64,6 +64,12 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **Adversarial CR（2026-10-07，fresh agent）1 MH／1 M／3 L，修了 MH、M、兩個 L：**
+  - MH 只填過「導演」的手動列（`{"cast":[],"crew":[導演]}`）會被當成空名單、被 TMDb 蓋掉 → 有任何 cast 或 crew 都不補；加「只有導演 → 不抓不寫」測試。
+  - M `RunAfter` 用的是永不取消的 `context.Background()`，關機時可能還在對已關閉的 DB 寫 → 自己的 `WithCancel` ctx，跟其他背景服務一樣。
+  - L 型別斷言失敗會無聲關掉 backfill → 加 Warn。
+  - L 兩個查詢 `is_removed` 寫法不一致 → 統一 `is_removed = 0`（兩表都 NOT NULL DEFAULT 0）。
+  - L 不修：`FetchCredits` 會打 zh＋en 兩次（en 給名詞表用）；都走 TMDb 快取＋40 req/10s 限流，136 列第一次約 70 秒，之後命中快取。
 - 🔗 AC Drift: NONE（sub-7-3 的「比對時存演員表」不變，只是補上「舊列也要有」）。
 - 📎 Contract Stamps: NONE。
 - 🎭 A11y Pre-Flight: N/A (100% backend)
@@ -85,5 +91,6 @@ N/A — no out-of-scope work discovered
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | CR 1MH/1M/2L 修掉：導演也算有名單、可取消 ctx、斷言 Warn、SQL 統一。 |
 | 2026-10-07 | 根因查完（Explore agent＋NAS DB）；同日 dev：backfill 服務＋手動列補抓；全綠，狀態 review，待正式機實測。 |
 

@@ -244,7 +244,7 @@ func (r *SeriesRepository) FindMissingCredits(ctx context.Context, limit int) ([
 	query := fmt.Sprintf(`SELECT %s FROM series
 		WHERE tmdb_id IS NOT NULL AND tmdb_id > 0
 		  AND (credits IS NULL OR credits = '')
-		  AND (is_removed = 0 OR is_removed IS NULL)
+		  AND is_removed = 0
 		ORDER BY updated_at ASC LIMIT ?`, seriesSelectColumns)
 	rows, err := r.db.QueryContext(ctx, query, limit)
 	if err != nil {
