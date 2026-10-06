@@ -385,7 +385,7 @@ func (c *WhisperClient) readAudioForUpload(audioPath string) ([]byte, error) {
 // buildTranscribeBody assembles the multipart payload for one response format.
 // Built per format because response_format is a form field: the verbose→srt
 // fallback needs a second body, not a second file read.
-func (c *WhisperClient) buildTranscribeBody(audio []byte, filename, lang, format string) ([]byte, string, error) {
+func (c *WhisperClient) buildTranscribeBody(audio []byte, filename, lang, format, prompt string) ([]byte, string, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -410,6 +410,14 @@ func (c *WhisperClient) buildTranscribeBody(audio []byte, filename, lang, format
 			return nil, "", fmt.Errorf("whisper: write language field: %w", err)
 		}
 	}
+	// Conditioning text (character / actor names) so the decoder spells them
+	// the way the credits do (disc-2026-10-asr-proper-names-inconsistent).
+	// Absent = the field is not sent at all, byte-identical to before.
+	if prompt != "" {
+		if err := writer.WriteField("prompt", prompt); err != nil {
+			return nil, "", fmt.Errorf("whisper: write prompt field: %w", err)
+		}
+	}
 
 	if err := writer.Close(); err != nil {
 		return nil, "", fmt.Errorf("whisper: close writer: %w", err)
@@ -423,7 +431,7 @@ func (c *WhisperClient) buildTranscribeBody(audio []byte, filename, lang, format
 // got a response), which is how the caller tells "this engine does not support
 // verbose_json" (4xx) from "the network hiccuped" (5xx / timeout).
 func (c *WhisperClient) postTranscription(ctx context.Context, audio []byte, filename, lang, format string) (string, int, error) {
-	bodyBytes, contentType, err := c.buildTranscribeBody(audio, filename, lang, format)
+	bodyBytes, contentType, err := c.buildTranscribeBody(audio, filename, lang, format, ASRPromptFromContext(ctx))
 	if err != nil {
 		return "", 0, err
 	}

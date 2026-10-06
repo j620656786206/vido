@@ -1050,3 +1050,40 @@ func TestMergeSRTChunks_HandlesAFullyFilteredChunk(t *testing.T) {
 		"the third chunk keeps its 2x600s offset and continues the numbering")
 	assert.NotContains(t, merged, "4\n")
 }
+
+// --- disc-2026-10-asr-proper-names-inconsistent: the name prompt rides the ctx ---
+
+func TestWhisperClient_PromptFieldFollowsTheContext(t *testing.T) {
+	var prompts [][]string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			t.Fatalf("parse multipart: %v", err)
+		}
+		prompts = append(prompts, r.MultipartForm.Value["prompt"])
+		w.Write([]byte("1\n00:00:00,000 --> 00:00:01,000\nhello\n"))
+	}))
+	defer server.Close()
+
+	audio := writeTempAudio(t)
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+
+	// No prompt on the ctx → the field is not sent (byte-identical to before).
+	if _, err := c.TranscribeWithLanguage(context.Background(), audio, "en"); err != nil {
+		t.Fatalf("transcribe: %v", err)
+	}
+	// A prompt on the ctx → sent verbatim.
+	ctx := WithASRPrompt(context.Background(), "Jerlamarel, Baba Voss, Paris, Maghra")
+	if _, err := c.TranscribeWithLanguage(ctx, audio, "en"); err != nil {
+		t.Fatalf("transcribe with prompt: %v", err)
+	}
+
+	if len(prompts) < 2 {
+		t.Fatalf("expected two requests, got %d", len(prompts))
+	}
+	if len(prompts[len(prompts)-2]) != 0 {
+		t.Fatalf("expected no prompt field without a ctx prompt, got %v", prompts[len(prompts)-2])
+	}
+	if got := prompts[len(prompts)-1]; len(got) != 1 || got[0] != "Jerlamarel, Baba Voss, Paris, Maghra" {
+		t.Fatalf("expected the ctx prompt in the multipart body, got %v", got)
+	}
+}
