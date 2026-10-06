@@ -25,6 +25,11 @@ func IsMusicOnlyText(text string) bool {
 		switch {
 		case unicode.IsSpace(r) || r == '\u200b' || r == '\u200c' || r == '\ufeff':
 			continue
+		case r == '-' || r == '–' || r == '—':
+			// SDH speaker dash ("-♪♪"): See S01E02's 10-minute clip came back
+			// with 38 such cues and 10 slipped past the rule
+			// (disc-2026-10-asr-music-only-dash).
+			continue
 		case strings.ContainsRune(MusicMarks, r):
 			seenMark = true
 		default:

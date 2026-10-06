@@ -121,6 +121,11 @@ type Config struct {
 	// = OpenAI Whisper. ASRModel is that engine's model id.
 	ASRBaseURL string
 	ASRModel   string
+	// ASRWordTimestamps asks the engine for per-word times so cues open when
+	// the word is spoken (disc-2026-10-asr-coarse-timestamps). Off by default:
+	// the hosted engine collapsed to "♪♪ only" on score-heavy audio when it was
+	// set (disc-2026-10-asr-word-timestamps-default-off).
+	ASRWordTimestamps bool
 
 	// TMDb configuration
 	TMDbDefaultLanguage   string
@@ -181,6 +186,7 @@ func Load() (*Config, error) {
 	// ASR engine (9R-9): empty base URL = OpenAI Whisper default.
 	cfg.ASRBaseURL = cfg.loadString("ASR_BASE_URL", "")
 	cfg.ASRModel = cfg.loadString("ASR_MODEL", "")
+	cfg.ASRWordTimestamps = cfg.loadBool("VIDO_ASR_WORD_TIMESTAMPS", false)
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 	// Auth password gate (V0.1.1). Empty = auth disabled (LAN-only posture).

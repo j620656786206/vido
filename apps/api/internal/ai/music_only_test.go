@@ -8,10 +8,10 @@ import (
 )
 
 func TestIsMusicOnlyText(t *testing.T) {
-	for _, s := range []string{"♪", "♪♪", "♪ ♪", "♫", "♬", "#", " ♪♪ ", "\u200b♪\ufeff", "♪\n♪"} {
+	for _, s := range []string{"♪", "♪♪", "♪ ♪", "♫", "♬", "#", " ♪♪ ", "\u200b♪\ufeff", "♪\n♪", "-♪♪", "- ♪♪", "—♪", "♪♪-"} {
 		assert.True(t, IsMusicOnlyText(s), "%q", s)
 	}
-	for _, s := range []string{"", "   ", "♪ lyrics ♪", "Hello", "♪ 1", "# comment"} {
+	for _, s := range []string{"", "   ", "-", "- -", "♪ lyrics ♪", "Hello", "♪ 1", "# comment", "-Hello"} {
 		assert.False(t, IsMusicOnlyText(s), "%q", s)
 	}
 }

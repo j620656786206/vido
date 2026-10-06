@@ -1,6 +1,6 @@
 # Disc：聽聲音時，劇情裡真的連喊三四次的台詞不再被當成幻聽刪掉
 
-Status: review
+Status: done
 
 **Source:** See S01E02 10/5 聽聲音實測：3:48「拜託哭吧」、4:21–4:37 連續「轉過來看我」、7:46–7:58 連喊三次「謝拉馬威」都沒字幕；第 1 段 log `dropped_by_reason=map[repeat_run:28]`、drop_ratio 0.26。10/6 走片內字幕後都在；只能聽聲音的片仍會被刪。
 
@@ -52,6 +52,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **AC #5 實測（2026-10-06／07，10 分鐘片段）：** 「Face me!」×2 在字級時間正常那次出現了（舊版沒有）；代價：配樂幻聽每 30 秒一句、剛好 4 句時留了下來（人名提示那次）。已記在 `disc-2026-10-asr-repeat-run-bridging`。
 - **測試夾具調整（刻意）：** `TestFilterHallucinations_R2RepeatRunKeepsTheFirst` 的夾具從 4 段「Thank you」改成 6 段，期望（第一段留、其餘 `repeat_run`）不變。
 - 🔗 AC Drift: FOUND — 9R-5 AC #3「連續相同 ≥3 視為迴圈」→ 本單改為 ≥5；理由與證據見上。
 - 📎 Contract Stamps: NONE。
@@ -72,5 +73,6 @@ Claude Fable 5.1（claude-fable-5-1）
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 實測：連喊保留成立；30 秒一句的幻聽 4 連會留下，記入 bridging 單。 |
 | 2026-10-06 | CR 1M/2L：夾具改成真的 3 連、加剛好 5 連測試；L1／L2 立 disc-2026-10-asr-repeat-run-bridging。 |
 | 2026-10-06 | create-story＋dev 同日：門檻 3 → 5；夾具調整＋新測試；全綠，狀態 review。 |
