@@ -1,3 +1,4 @@
+import { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterRailShell } from './FilterRailShell';
@@ -58,5 +59,44 @@ describe('FilterRailShell', () => {
     // AppShellV2's header is h-14 (56px); top-16 left a permanent 8px slot.
     expect(rail.className).toContain('top-14');
     expect(rail.className).toContain('h-[calc(100vh-3.5rem)]');
+  });
+
+  // disc-2026-10-filter-rail-toggle-no-motion AC #7: the button only exists while the
+  // rail is open, so it always says so. No aria-controls — collapsed, the rail is
+  // unmounted and the id would point at nothing.
+  it('the collapse button announces the rail as expanded, with no dangling aria-controls', () => {
+    renderRail();
+    const btn = screen.getByTestId('test-rail-collapse');
+    expect(btn).toHaveAttribute('aria-expanded', 'true');
+    expect(btn).not.toHaveAttribute('aria-controls');
+  });
+
+  // AC #6: after expanding, focus lands on this button — the page reaches it via this ref.
+  it('hands the collapse button to the caller through collapseButtonRef', () => {
+    const ref = createRef<HTMLButtonElement>();
+    render(
+      <FilterRailShell
+        testId="test-filter-rail"
+        activeCountTestId="test-rail-active-count"
+        collapseTestId="test-rail-collapse"
+        activeCount={0}
+        onCollapse={vi.fn()}
+        collapseButtonRef={ref}
+      >
+        <div>filters</div>
+      </FilterRailShell>
+    );
+    expect(ref.current).toBe(screen.getByTestId('test-rail-collapse'));
+  });
+
+  // I11-D: styles.css names these only while <html data-rail-motion> is set; the rail
+  // and the 「篩選 N」 group (which morphs into the toolbar button) carry the hooks.
+  it('marks the rail and its 篩選 title group for the collapse/expand transition', () => {
+    renderRail(3);
+    expect(screen.getByTestId('test-filter-rail')).toHaveAttribute('data-rail-vt', 'rail');
+    const trigger = screen.getByRole('heading', { level: 2, name: '篩選' }).parentElement!;
+    expect(trigger).toHaveAttribute('data-rail-vt', 'trigger');
+    // the group holds the badge too, so 「篩選 3」 travels as one piece
+    expect(trigger).toContainElement(screen.getByTestId('test-rail-active-count'));
   });
 });

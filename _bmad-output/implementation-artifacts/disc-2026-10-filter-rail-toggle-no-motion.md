@@ -1,6 +1,6 @@
 # Bugfix: 電腦版收合／展開篩選欄時，畫面會滑動過去，不再「突然少一塊、突然多一塊」
 
-Status: ready-for-dev
+Status: review
 
 **Source:** Alexyu 2026-10-06 回報（sprint-status `disc-2026-10-filter-rail-toggle-no-motion`，P3・動態）。Sally 2026-10-06 提出做法（View Transitions），⚖️ **Alexyu 2026-10-06：「同意方案、探索頁一起做」**（兩頁抽同一個共用 hook）。設計稿：`ux-design.pen` 節點 `Qaz1x`「I11-D · 篩選 Rail 收合／展開動態 spec（桌面）」，截圖 `_bmad-output/screenshots/flow-i-advanced-search/i11-d.png`（`scripts/export-pen-screenshots.py:227` 已登記）。
 
@@ -102,34 +102,34 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 共用 hook ＋ 動畫 CSS**（AC #1–#5, #8）
-  - [ ] 新增 `apps/web/src/hooks/useFilterRailTransition.ts`：輸入 `setRailCollapsed`、兩個焦點目標的取得函式（收合後要聚焦誰、展開後要聚焦誰）；回傳 `collapse()`／`expand()`。內部用 `prefersReducedMotion()`（`lib/motion.ts:21`）、`typeof document.startViewTransition === 'function'`、`flushSync`（`react-dom`）。
-  - [ ] 動畫期間在 `document.documentElement` 設 `data-rail-motion`，`transition.finished.finally(...)` 移除；同一時間又點一次（前一個被瀏覽器跳過）也要能正確清掉。
-  - [ ] `styles.css`：新增 `@keyframes`（例：`rail-leave`、`rail-enter`）與 `:root[data-rail-motion]` 底下的 `view-transition-name` 與 `::view-transition-*` 規則，時長／曲線只用 token。放在 `@layer base` 之外或之內都可以，但要有一段註解說明「為什麼 JS 端擋減少動態」（`:582` 的保險網抓不到偽元素）。
-- [ ] **T2 `FilterRailShell` 加無障礙與掛名點**（AC #1, #2, #6, #7）
-  - [ ] 收合鈕加 `aria-expanded="true"`，並接受一個 ref（`collapseButtonRef` prop 或 `forwardRef` 皆可；React 19 可直接把 `ref` 當 prop）。
-  - [ ] `<aside>` 與標題組 div 加上給 CSS 選的屬性（例：`data-rail-vt="rail"`／`data-rail-vt="trigger"`），名字本身只在 `:root[data-rail-motion]` 下由 CSS 套上。
-  - [ ] `LibraryFilterRail`、`DiscoverFilterRail` 轉傳 ref。
-- [ ] **T3 媒體庫接上**（AC #1–#7）
-  - [ ] `LibraryBrowseV2`：展開鈕（`:690-709`）加 ref、`aria-expanded={false}`、與標題組相同的 `data-rail-vt="trigger"`；`onCollapse`（`:621`）與展開鈕 `onClick`（`:693`）改走 hook。
-  - [ ] 收合後焦點：展開鈕存在就聚焦它；不存在（選取模式）就聚焦 `headingRef`（`:561-563`）。
-- [ ] **T4 探索頁接上**（AC #1–#8）
-  - [ ] `DiscoverBrowseV2`：展開鈕（`:211-226`）同 T3 處理；`onCollapse`（`:183`）與展開鈕 `onClick`（`:214`）改走 hook。探索頁沒有選取模式，展開鈕在收合後一定存在。
-- [ ] **T5 測試**（AC #9）
-  - [ ] `hooks/useFilterRailTransition.spec.ts(x)`：
+- [x] **T1 共用 hook ＋ 動畫 CSS**（AC #1–#5, #8）
+  - [x] 新增 `apps/web/src/hooks/useFilterRailTransition.ts`：輸入 `setRailCollapsed`、兩個焦點目標的取得函式（收合後要聚焦誰、展開後要聚焦誰）；回傳 `collapse()`／`expand()`。內部用 `prefersReducedMotion()`（`lib/motion.ts:21`）、`typeof document.startViewTransition === 'function'`、`flushSync`（`react-dom`）。
+  - [x] 動畫期間在 `document.documentElement` 設 `data-rail-motion`，`transition.finished.finally(...)` 移除；同一時間又點一次（前一個被瀏覽器跳過）也要能正確清掉。
+  - [x] `styles.css`：新增 `@keyframes`（例：`rail-leave`、`rail-enter`）與 `:root[data-rail-motion]` 底下的 `view-transition-name` 與 `::view-transition-*` 規則，時長／曲線只用 token。放在 `@layer base` 之外或之內都可以，但要有一段註解說明「為什麼 JS 端擋減少動態」（`:582` 的保險網抓不到偽元素）。
+- [x] **T2 `FilterRailShell` 加無障礙與掛名點**（AC #1, #2, #6, #7）
+  - [x] 收合鈕加 `aria-expanded="true"`，並接受一個 ref（`collapseButtonRef` prop 或 `forwardRef` 皆可；React 19 可直接把 `ref` 當 prop）。
+  - [x] `<aside>` 與標題組 div 加上給 CSS 選的屬性（例：`data-rail-vt="rail"`／`data-rail-vt="trigger"`），名字本身只在 `:root[data-rail-motion]` 下由 CSS 套上。
+  - [x] `LibraryFilterRail`、`DiscoverFilterRail` 轉傳 ref。
+- [x] **T3 媒體庫接上**（AC #1–#7）
+  - [x] `LibraryBrowseV2`：展開鈕（`:690-709`）加 ref、`aria-expanded={false}`、與標題組相同的 `data-rail-vt="trigger"`；`onCollapse`（`:621`）與展開鈕 `onClick`（`:693`）改走 hook。
+  - [x] 收合後焦點：展開鈕存在就聚焦它；不存在（選取模式）就聚焦 `headingRef`（`:561-563`）。
+- [x] **T4 探索頁接上**（AC #1–#8）
+  - [x] `DiscoverBrowseV2`：展開鈕（`:211-226`）同 T3 處理；`onCollapse`（`:183`）與展開鈕 `onClick`（`:214`）改走 hook。探索頁沒有選取模式，展開鈕在收合後一定存在。
+- [x] **T5 測試**（AC #9）
+  - [x] `hooks/useFilterRailTransition.spec.ts(x)`：
     - 支援 API、沒有減少動態 → 點擊時呼叫 `startViewTransition` 一次，callback 內狀態已更新、焦點已移動；`data-rail-motion` 在動畫中為 `collapse`／`expand`，`finished` 後移除。
     - 減少動態（stub `matchMedia` 回 `matches: true`）→ **不**呼叫 `startViewTransition`，狀態與焦點照樣更新。
     - API 不存在 → 不拋錯，狀態與焦點同步更新。
     - 掛載（初次 render）時**從不**呼叫 `startViewTransition`，即使 localStorage 是收合。
     - 替身寫法：`Object.defineProperty(document, 'startViewTransition', { value: vi.fn((cb) => { cb(); return { finished: Promise.resolve(), ready: Promise.resolve(), updateCallbackDone: Promise.resolve(), skipTransition: vi.fn() }; }), configurable: true })`，`afterEach` 刪掉；`matchMedia` 照 `lib/motion.spec.ts` 用 `vi.stubGlobal` ＋ `vi.unstubAllGlobals()`。
-  - [ ] `LibraryBrowseV2.spec.tsx`：收合後 `document.activeElement` 是 `library-rail-expand`；展開後是 `library-rail-collapse`；選取模式中收合 → `library-page-title`；兩顆鈕的 `aria-expanded`。
-  - [ ] `DiscoverBrowseV2.spec.tsx`：收合／展開的焦點落點（`discover-rail-expand`／`discover-rail-collapse`）與 `aria-expanded`（此檔目前沒有收合測試，要新增）。
-  - [ ] `FilterRailShell.spec.tsx`：收合鈕 `aria-expanded="true"`、ref 指到收合鈕。
-- [ ] **T6 檢查與實機確認**（AC #9, #10）
-  - [ ] `pnpm nx test web`、`pnpm run lint:all`、`pnpm run format:check`。
-  - [ ] Playwright：`tests/e2e/discover-filters.spec.ts` 在 chromium 跑綠。
-  - [ ] 本機 visual 跑一次，確認 `search-discover-filter-rail-unavailable` 無差異（不要 `test:visual:update`）。
-  - [ ] 瀏覽器實機：1280 寬、系統未開減少動態，用 DevTools Animations 面板放慢到 10%，對照 `i11-d.png` 兩列分鏡（收合 240ms、展開 320ms、海報格只淡化、標題↔按鈕變形）；開 DevTools「Emulate prefers-reduced-motion: reduce」確認直接切換；重新整理確認不播動畫；鍵盤 Tab＋Enter 確認焦點落點。
+  - [x] `LibraryBrowseV2.spec.tsx`：收合後 `document.activeElement` 是 `library-rail-expand`；展開後是 `library-rail-collapse`；選取模式中收合 → `library-page-title`；兩顆鈕的 `aria-expanded`。
+  - [x] `DiscoverBrowseV2.spec.tsx`：收合／展開的焦點落點（`discover-rail-expand`／`discover-rail-collapse`）與 `aria-expanded`（此檔目前沒有收合測試，要新增）。
+  - [x] `FilterRailShell.spec.tsx`：收合鈕 `aria-expanded="true"`、ref 指到收合鈕。
+- [x] **T6 檢查與實機確認**（AC #9, #10）
+  - [x] `pnpm nx test web`、`pnpm run lint:all`、`pnpm run format:check`。
+  - [x] Playwright：`tests/e2e/discover-filters.spec.ts` 在 chromium 跑綠。
+  - [x] 本機 visual 跑一次，確認 `search-discover-filter-rail-unavailable` 無差異（不要 `test:visual:update`）。
+  - [x] 瀏覽器實機：1280 寬、系統未開減少動態，用 DevTools Animations 面板放慢到 10%，對照 `i11-d.png` 兩列分鏡（收合 240ms、展開 320ms、海報格只淡化、標題↔按鈕變形）；開 DevTools「Emulate prefers-reduced-motion: reduce」確認直接切換；重新整理確認不播動畫；鍵盤 Tab＋Enter 確認焦點落點。
 
 前端 6 項、後端 0 項 → 不拆單（Cross-Stack Split Check：後端 0 ≤ 3）。
 
@@ -158,10 +158,10 @@ Status: ready-for-dev
 - **E2E 在桌面 Chrome／Firefox 沒有減少動態**：`discover-filters.spec.ts:263-277` 會真的跑動畫；它的斷言會自動重試，預期仍綠，但 T6 要實跑。⚠️ 未查證（dev 開工時先確認）：Playwright 內建 Firefox 版本是否支援 `startViewTransition`——不支援就走退路，兩種結果都應該綠。
 - **探索頁的 `<h1>` 沒有 ref**（`DiscoverBrowseV2.tsx:166`）：探索頁沒有選取模式，展開鈕收合後一定在，所以不需要標題退路；不要順手改 `<h1>`。
 
-### 待 Sally／Alexyu 確認（不影響開工）
+### ⚖️ 已確認（Alexyu 2026-10-06：「都照推薦」）
 
-- I11-D「適用範圍」卡寫「探索頁的『篩選』按鈕在工具列最左」，但程式碼裡它排在 `MediaTypeTabs` 之後（`DiscoverBrowseV2.tsx:191-226`）。本單**不搬按鈕**，變形終點跟著按鈕現在的位置走（卡片同一句也寫「變形終點跟著它走」）。若要搬到最左，另開單。
-- AC #6 的「選取模式中收合 → 焦點退到頁面標題」是 Bob 依現有 `filterSheetFinalFocus` 前例（`LibraryBrowseV2.tsx:168-172`）補的，I11-D 沒畫這個情況。
+- 探索頁「篩選」按鈕**本單不搬**，變形終點跟著它現在的位置（`MediaTypeTabs` 之後，`DiscoverBrowseV2.tsx:191-226`）。搬到工具列最左另開單 `disc-2026-10-discover-filter-button-leftmost`，Alexyu 指定**本單做完接著做**。
+- AC #6「選取模式中收合 → 焦點退到頁面標題」照 Bob 的提議（`filterSheetFinalFocus` 前例，`LibraryBrowseV2.tsx:168-172`）。
 
 ### Time-dependent visual coverage
 
@@ -180,14 +180,81 @@ N/A — no wall-clock-reading components touched（hook 與兩頁的改動都不
 
 ### Agent Model Used
 
+Claude Opus 5.5 (Amelia, dev-story, non-interactive)
+
 ### Debug Log References
+
+- Red first: `useFilterRailTransition.spec.tsx` failed on the missing module; `LibraryBrowseV2.spec.tsx` 2 new focus tests red before wiring (plus a 3rd red from my own selection-mode test leaking `vido:library:rail-collapsed='1'` into the dsr-1b-c suite — fixed with `onTestFinished` cleanup); `DiscoverBrowseV2.spec.tsx` new focus test red before wiring.
+- Mutation check (each restored afterwards; restored file `cmp`-identical): (a) drop `|| prefersReducedMotion()` → 1 failed (AC #4 test); (b) drop the `owner === motionOwner` guard → 1 failed (second-click test); (c) `flushSync(() => set…)` → plain `set…` → 4 failed (AC #1/#2/#4/#5).
+- Browser verification (Playwright headless Chromium 1217 against the dev server, 1440×900, `colorScheme: 'dark'`; slowed frames via CDP `Animation.setPlaybackRate(0.1)`; `startViewTransition` call counter injected by init script). Frames in `/private/tmp/claude-502/-Users-alexyu-projects-personal-vido/07840650-15ce-4e6a-9507-6230e9bd5abf/scratchpad/motion/`:
+  - `library-collapse-0ms.png` → `library-collapse-100ms-slowed.png` → `library-collapse-180ms-slowed.png` → `library-collapse-end.png`: rail slides left and fades, clipped at its own left edge (does not cross the sidebar nav); 「篩選」 title travels right/up toward the toolbar; grid is a whole-page cross-fade (3-col ghost under 6-col) with no per-card travel; end = toolbar 「新增日期 · 篩選」, grid reflowed.
+  - `library-expand-80ms-slowed.png` → `library-expand-200ms-slowed.png` → `library-expand-end.png`: rail enters from the left, already ~82% of the way at 80ms (collapse button 437px vs 485px final — matches 「80ms 就走了 83%」).
+  - Real speed: `library-collapse-realtime-100ms.png` / `-500ms.png`, `library-expand-realtime-100ms.png` / `-500ms.png`; same set for `discover-*` (TMDb is 401 locally so the discover grid area shows the fail-soft banner, the rail/trigger motion is still visible).
+  - Read back from `document.getAnimations({subtree:true})`: `::view-transition-old(filter-rail)` = `rail-leave` 240ms `cubic-bezier(0.4, 0, 0.9, 0.4)`; `::view-transition-new(filter-rail)` = `rail-enter` 320ms `cubic-bezier(0.16, 1, 0.3, 1)`; `filter-rail-trigger` group/old/new 240ms ease-leave on collapse, 320ms ease-settle on expand; `root` group/old/new 200ms. `data-rail-motion` = `collapse`/`expand` during, `null` after.
+  - Focus (both pages, mouse and keyboard Enter): collapse → `*-rail-expand`, expand → `*-rail-collapse`.
+  - `reducedMotion: 'reduce'`: `startViewTransition` calls = 0 for collapse + expand, rail gone at 30ms (`library-reduced-collapse-30ms.png`, `discover-reduced-collapse-30ms.png`), focus rules unchanged, no attribute set.
+  - Reload with `rail-collapsed='1'`: calls = 0, no attribute, rail not mounted (`library-reload-collapsed.png`, `discover-reload-collapsed.png`).
+  - Console: no page errors / no unhandled `AbortError` from skipped transitions. Only pre-existing env noise (`/health` 404 on :4200, TMDb 401 with the dummy key).
 
 ### Completion Notes List
 
+- **T1** `apps/web/src/hooks/useFilterRailTransition.ts`: `collapse()`/`expand()`; path = `typeof document.startViewTransition === 'function' && !prefersReducedMotion()` → set `<html data-rail-motion>`, `startViewTransition(() => { flushSync(set); focus() })`, remove the attribute on `finished` (`.catch().finally()`, so a rejected/skipped transition also clears) only if this click is still the latest owner (module-scope counter — the attribute is document-global). Otherwise `flushSync` + focus synchronously. `styles.css` (end of file, outside `@layer`): `rail-leave`/`rail-enter` keyframes, names only under `:root[data-rail-motion]`, all timings via `--motion-*`/`--ease-*`, comment explaining why the JS guards reduced motion. Addition beyond the Sally sketch: `::view-transition-group(filter-rail) { overflow: clip }` — without it the named rail paints above the root snapshot and slides across the sidebar nav for the whole exit; clipped, it slides away behind its own left edge (I11-D 「從側欄底下退場」).
+- **T2** `FilterRailShell`: collapse button `aria-expanded="true"`, `collapseButtonRef` prop (prop, not forwardRef); `data-rail-vt="rail"` on `<aside>`, `data-rail-vt="trigger"` on the 「篩選 + badge」 group. `LibraryFilterRail`/`DiscoverFilterRail` forward `collapseButtonRef`. No `aria-controls`.
+- **T3** `LibraryBrowseV2`: expand button gets `ref`, `aria-expanded={false}`, `data-rail-vt="trigger"`; `onCollapse`/`onClick` go through the hook; collapse focus = expand button ?? `headingRef` (selection mode). The `?? heading` check uses ref presence, not `getClientRects()` (jsdom returns no rects, and the button only renders when collapsed and not selecting). `toolbarFilterBtnRef`/`phoneFilterBtnRef` untouched; localStorage initialisers untouched.
+- **T4** `DiscoverBrowseV2`: same wiring; no heading fallback (no selection mode); `<h1>` untouched; button position untouched (move is `disc-2026-10-discover-filter-button-leftmost`).
+- **T5** New `useFilterRailTransition.spec.tsx` (9 tests: AC #1, #2, attribute lifetime, second click mid-transition, rejected `finished`, AC #4 reduced motion, AC #5 no API, AC #5 mount with remembered collapsed, missing focus target). `LibraryBrowseV2.spec.tsx` +3 (focus both ways + `aria-expanded` + trigger hook; tablet sheet button keeps its own `aria-expanded`; selection-mode collapse → `library-page-title`). `DiscoverBrowseV2.spec.tsx` +3 (focus both ways + `aria-expanded`; remembered collapsed renders collapsed and takes no focus; phone sheet button untouched). `FilterRailShell.spec.tsx` +3 (`aria-expanded="true"` / no `aria-controls`; ref reaches the button; `data-rail-vt` hooks, badge inside the trigger group).
+- **T6** `pnpm nx test web` 299 files / **4615 passed**; `pnpm nx test api` green (42 packages ok); `pnpm run lint:all` 0 errors (172 pre-existing warnings, none in touched files); `format:check` clean; `python3 scripts/check-design-tokens.py` consistent; `tsc -p apps/web/tsconfig.app.json` — no errors in touched files (only the pre-existing jest-dom matcher typing errors in unrelated specs). E2E `tests/e2e/discover-filters.spec.ts` chromium **10/10**; firefox collapse test 3/3 green (it runs the real View Transition path — see below). Visual `--project=visual` local run **1 passed** (the single gallery test that covers `search-discover-filter-rail-unavailable`) — no baseline changed, nothing updated.
+- **⚠️ 未查證 #1 resolved — rapid double click:** in Chromium, during the transition `document.elementFromPoint()` at the expand button's centre returns `<html>`; a second mouse click there does nothing (`startViewTransition` calls stayed at 1, rail stayed collapsed). So the mouse cannot double-toggle. The keyboard CAN: focus is moved to 「篩選」 inside the update callback, so a second Enter mid-animation starts a second transition (calls = 2, attribute = `expand` mid-way, `null` after, rail mounted, focus on `*-rail-collapse`). The latest-owner guard is what keeps that case clean, and it is pinned by the second-click unit test + mutation (b).
+- **⚠️ 未查證 #2 resolved — Playwright Firefox:** Playwright 1.58 ships Firefox **146.0.1**; `typeof document.startViewTransition === 'function'` is **true** there, so Firefox runs the animated path; `discover-filters.spec.ts` collapse test green 3/3 on firefox. Also found: CI's E2E job runs `--project=chromium --project=webkit-core` only (`.github/workflows/test.yml:461`), and `webkit-core` does not match `discover-filters.spec.ts` — Firefox is never run in CI.
+- 🔗 AC Drift: NONE (checked: `rail-collapse|rail-expand|railCollapsed` across `_bmad-output/implementation-artifacts/*.md` — 3 prior stories (ux3-0-7, ux3-3-2, dsr-1b-c), all REUSE: end states, testids, grid tables and persistence unchanged; this story only adds the in-between motion, focus and `aria-expanded`. `tests/e2e`/`tests/visual` hits: `discover-filters.spec.ts:272/276` only — unchanged and green).
+- 📎 Contract Stamps: NONE (no `[@contract-v*]` stamps in this story or the upstream stories it cites).
+- 🎭 A11y Pre-Flight: PASS (5 components checked — FilterRailShell, LibraryFilterRail, DiscoverFilterRail, LibraryBrowseV2, DiscoverBrowseV2; 0 jsx-a11y warnings on touched files, 0 introduced). Focus management verified in jsdom and in Chromium; `aria-expanded` on both buttons; no dangling `aria-controls`; tablet/phone sheet buttons' `aria-expanded` unchanged.
+- 🎨 UX Verification vs `flow-i-advanced-search/i11-d.png`:
+
+| Area | Design Spec (I11-D) | Implementation | Match? | Fix Needed |
+|------|------|------|------|------|
+| Collapse rail | translateX 0→−100% + fade, 240ms ease-leave | `rail-leave` 240ms `cubic-bezier(0.4,0,0.9,0.4)` (read back from the live animation) | ✅ | — |
+| Expand rail | −100%→0 + fade-in, 320ms ease-settle, ~83% at 80ms | `rail-enter` 320ms `cubic-bezier(0.16,1,0.3,1)`; ~82% at 80ms in frame | ✅ | — |
+| 篩選 morph | title ⇄ toolbar 篩選 N button | shared `filter-rail-trigger` name; frames show the title travelling to/from the button | ✅ | — |
+| Grid | whole cross-fade 200ms, no per-card flight | root cross-fade 200ms, nothing in the grid named | ✅ | — |
+| Content width | lands in one step, no width animation | no `transition-[width]`, no FLIP | ✅ | — |
+| Reduced motion | instant, focus rules kept | 0 `startViewTransition` calls, rail gone at 30ms, focus correct | ✅ | — |
+| Load / reload | draws remembered state, never animates | 0 calls on reload with collapsed persisted | ✅ | — |
+| Focus / ARIA | collapse → 篩選 (`aria-expanded=false`); expand → 收合鈕 (`aria-expanded=true`) | as specified, both pages, mouse + keyboard | ✅ | — |
+| Rail exit path | 「從側欄底下退場」 | slides behind its own left edge (24px right of the nav) via `overflow: clip` | ✅ | — |
+
+🎨 UX Verification: PASS — implementation matches design screenshots.
+
 ### Discovery Triage
 
+1. **Firefox: `discover-filters.spec.ts:169` 「[P0] browser back skips intermediate filter toggles」 fails 2/2 on HEAD code (my 9 changed files swapped back to `HEAD` for the run, then restored) and 3/3 with this story's change** — pre-existing, unrelated to the rail (back-navigation/replace semantics). Lane ③. ⚠️ **sprint-status entry NOT filed by me:** this run was restricted to editing only this story's sprint-status line. Proposed entry for whoever files it: `preexisting-fail-discover-back-nav-firefox: backlog  # tests/e2e/discover-filters.spec.ts:169 — firefox only; URL keeps rating_gte after goBack (filed by disc-2026-10-filter-rail-toggle-no-motion)`. Non-blocking: CI never runs Firefox.
+2. **CI does not run Firefox E2E** (story Dev Notes/AC #9 assumed chromium/firefox). Information only — no work implied; recorded so the next story's assumptions are right. No entry needed.
+3. Local dev servers on :8080 / :4200 were found **not listening** when the E2E step started (they served the browser verification minutes earlier; I did not stop them and found no process of mine that would). Playwright then started and tore down its own servers for the E2E/visual runs. Not restarted (seeded config unknown). Information only.
+
+### Code Review（2026-10-06，主 session 對抗式審查，與 dev 不同 context）
+
+- 讀過 `hooks/useFilterRailTransition.ts` 與 `styles.css` 新增段落；看過實機分格截圖（collapse 100ms／180ms 放慢版、end）。
+- 確認：所有 `view-transition-name` 只在 `:root[data-rail-motion]` 期間存在（不會常駐造成新的堆疊層）；減少動態在 JS 擋（`*` 安全網碰不到 `::view-transition-*`）；只有點擊會觸發；連點靠 `motionOwner` 只讓最後一次拿掉屬性。
+- 觀察（不修）：放慢看時，交叉淡化期間新舊兩版海報格會疊在一起（3 欄淡出、4 欄淡入），正常速度 200ms 內完成，是 I11-D 指定的做法。
+- 結論：無阻擋項。
+
 ### File List
+
+- apps/web/src/hooks/useFilterRailTransition.ts (new)
+- apps/web/src/hooks/useFilterRailTransition.spec.tsx (new)
+- apps/web/src/styles.css
+- apps/web/src/components/ui/FilterRailShell.tsx
+- apps/web/src/components/ui/FilterRailShell.spec.tsx
+- apps/web/src/components/library/LibraryFilterRail.tsx
+- apps/web/src/components/library/LibraryBrowseV2.tsx
+- apps/web/src/components/library/LibraryBrowseV2.spec.tsx
+- apps/web/src/components/search/DiscoverFilterRail.tsx
+- apps/web/src/components/search/DiscoverBrowseV2.tsx
+- apps/web/src/components/search/DiscoverBrowseV2.spec.tsx
+- _bmad-output/implementation-artifacts/disc-2026-10-filter-rail-toggle-no-motion.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
 
 ## Change Log
 
 - 2026-10-06 Bob create-story：ready-for-dev。Ultimate context engine analysis completed - comprehensive developer guide created.
+- 2026-10-06 Amelia dev-story：T1–T6 完成。共用 hook `useFilterRailTransition`（View Transitions＋flushSync，減少動態／不支援時直接切換）＋ `styles.css` 動畫規則；`FilterRailShell` 加 `aria-expanded`／ref／`data-rail-vt`；媒體庫、探索接上 hook 與焦點規則。單元 +18（web 4615 全綠）、E2E chromium 10/10、visual 無變化、Chromium 實機逐格確認。兩個 ⚠️ 未查證已查清（見 Completion Notes）。Status → review。

@@ -11,6 +11,7 @@
  * `ux3-discover-facet-aggregation-be`). Mobile (<lg) keeps the batch
  * `FilterBottomSheet`; this rail is never rendered there.
  */
+import type { Ref } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { FilterPanel } from './FilterPanel';
 import { FilterRailShell } from '../ui/FilterRailShell';
@@ -34,6 +35,8 @@ interface DiscoverFilterRailProps {
   onChange: (next: DiscoverFilters) => void;
   onClearAll: () => void;
   onCollapse: () => void;
+  /** Forwarded to FilterRailShell's collapse button — the post-expand focus target (I11-D). */
+  collapseButtonRef?: Ref<HTMLButtonElement>;
 }
 
 export function DiscoverFilterRail({
@@ -45,6 +48,7 @@ export function DiscoverFilterRail({
   onChange,
   onClearAll,
   onCollapse,
+  collapseButtonRef,
 }: DiscoverFilterRailProps) {
   // Contextual per-facet counts (desktop-rail only, AC7). `counts` is undefined
   // until the first response AND on hard failure — in both cases FilterPanel
@@ -59,6 +63,7 @@ export function DiscoverFilterRail({
       activeCountTestId="discover-rail-active-count"
       collapseTestId="discover-rail-collapse"
       onCollapse={onCollapse}
+      collapseButtonRef={collapseButtonRef}
       footer={
         <>
           {/* Single live total (AC #3) */}

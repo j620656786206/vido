@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   createRootRoute,
   createRoute,
@@ -173,6 +174,50 @@ describe('DiscoverBrowseV2', () => {
     await screen.findByTestId('requests-view-stub');
     expect(rp.start).not.toHaveBeenCalled();
     expect(rp.stop).toHaveBeenCalled();
+  });
+
+  // disc-2026-10-filter-rail-toggle-no-motion AC #6/#7/#8: same hook, same rules as 媒體庫 —
+  // focus never falls to <body> when the collapse button unmounts with the rail.
+  describe('desktop rail collapse / expand (I11-D)', () => {
+    // the page persists the toggle — keep it from leaking into the other tests
+    beforeEach(() => localStorage.removeItem('vido:discover:rail-collapsed'));
+    afterEach(() => localStorage.removeItem('vido:discover:rail-collapsed'));
+
+    it('[P0] collapse moves focus to the toolbar 篩選 button; expand moves it back to 收合篩選', async () => {
+      renderBrowse();
+      const collapseBtn = await screen.findByTestId('discover-rail-collapse');
+      expect(collapseBtn).toHaveAttribute('aria-expanded', 'true');
+      await userEvent.click(collapseBtn);
+
+      expect(screen.queryByTestId('discover-filter-rail')).not.toBeInTheDocument();
+      const expandBtn = screen.getByTestId('discover-rail-expand');
+      expect(document.activeElement).toBe(expandBtn);
+      expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
+      expect(expandBtn).not.toHaveAttribute('aria-controls');
+      expect(expandBtn).toHaveAttribute('data-rail-vt', 'trigger');
+
+      await userEvent.click(expandBtn);
+      expect(screen.getByTestId('discover-filter-rail')).toBeInTheDocument();
+      expect(document.activeElement).toBe(screen.getByTestId('discover-rail-collapse'));
+      expect(localStorage.getItem('vido:discover:rail-collapsed')).toBe('0');
+    });
+
+    it('[P1] a remembered collapsed rail renders collapsed on load', async () => {
+      localStorage.setItem('vido:discover:rail-collapsed', '1');
+      renderBrowse();
+      expect(await screen.findByTestId('discover-rail-expand')).toBeInTheDocument();
+      expect(screen.queryByTestId('discover-filter-rail')).not.toBeInTheDocument();
+      // nothing was clicked, so nothing took focus
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it('[P1] the phone sheet button is untouched (no aria-expanded, no morph hook)', async () => {
+      renderBrowse();
+      await userEvent.click(await screen.findByTestId('discover-rail-collapse'));
+      const sheetBtn = screen.getByTestId('open-filter-sheet');
+      expect(sheetBtn).not.toHaveAttribute('aria-expanded');
+      expect(sheetBtn).not.toHaveAttribute('data-rail-vt');
+    });
   });
 
   it('renders the chip bar as a lighter read/remove summary (AC #7)', async () => {

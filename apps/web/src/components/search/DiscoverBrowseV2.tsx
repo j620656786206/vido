@@ -9,7 +9,7 @@
  * FilterChipBar / FilterBottomSheet / SavePresetDialog / useFilterState /
  * useDiscoverResults — no new filter engine, no new backend.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getRouteApi } from '@tanstack/react-router';
 import { SlidersHorizontal } from 'lucide-react';
 import { MediaTypeTabs, type MediaTypeFilter } from './MediaTypeTabs';
@@ -27,6 +27,7 @@ import { MediaGrid, type MediaItem } from '../media/MediaGrid';
 import { Pagination } from '../ui/Pagination';
 import { RequestsView } from '../requests/RequestsView';
 import { useFilterState } from '../../hooks/useFilterState';
+import { useFilterRailTransition } from '../../hooks/useFilterRailTransition';
 import { useDiscoverResults } from '../../hooks/useDiscoverResults';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
 import { useRequestProgress } from '../../hooks/useRequestProgress';
@@ -63,6 +64,16 @@ export function DiscoverBrowseV2() {
       /* ignore */
     }
   }, []);
+  // disc-2026-10-filter-rail-toggle-no-motion (I11-D): the same hook as 媒體庫 — clicks
+  // animate (View Transitions) and move focus; the initial state above never animates.
+  // No selection mode here, so the 篩選 button always exists once the rail is collapsed.
+  const railExpandBtnRef = useRef<HTMLButtonElement>(null);
+  const railCollapseBtnRef = useRef<HTMLButtonElement>(null);
+  const { collapse: collapseRail, expand: expandRail } = useFilterRailTransition({
+    setRailCollapsed,
+    getCollapsedFocusTarget: useCallback(() => railExpandBtnRef.current, []),
+    getExpandedFocusTarget: useCallback(() => railCollapseBtnRef.current, []),
+  });
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -180,7 +191,8 @@ export function DiscoverBrowseV2() {
               countUnavailable={countUnavailable}
               onChange={setFilters}
               onClearAll={clearAll}
-              onCollapse={() => setRailCollapsed(true)}
+              onCollapse={collapseRail}
+              collapseButtonRef={railCollapseBtnRef}
             />
           </div>
         )}
@@ -207,11 +219,16 @@ export function DiscoverBrowseV2() {
               <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
               篩選
             </button>
-            {/* Desktop (lg+): re-open the rail when collapsed (grid reclaims width) */}
+            {/* Desktop (lg+): re-open the rail when collapsed (grid reclaims width).
+                aria-expanded is about the RAIL (false — the button only exists collapsed);
+                data-rail-vt="trigger" pairs it with the rail's 「篩選 N」 for the I11-D morph. */}
             {railCollapsed && (
               <button
                 type="button"
-                onClick={() => setRailCollapsed(false)}
+                ref={railExpandBtnRef}
+                onClick={expandRail}
+                aria-expanded={false}
+                data-rail-vt="trigger"
                 data-testid="discover-rail-expand"
                 className={`${triggerClass(activeCount > 0)} hidden lg:flex`}
               >
