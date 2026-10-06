@@ -117,11 +117,30 @@ func TestCheckChunk_FailureClasses(t *testing.T) {
 			wantReason: GateReasonSimplifiedLeak,
 		},
 
+		{
+			// disc-2026-10-simplified-leak-false-positive-li: 里 is Traditional too.
+			name:       "simplified_leak: 这 beside a legitimate 里 still fails (the 这 is the leak)",
+			source:     "Over here.",
+			translated: map[int]string{7: "在这里"},
+			wantReason: GateReasonSimplifiedLeak,
+		},
+
 		// ─── pass ───
 		{
 			name:       "pass: clean Traditional translation",
 			source:     "This software is great.",
 			translated: map[int]string{7: "這個軟體很好用"},
+		},
+		{
+			// See S01E02 #29 / #516 shipped in English because of this (2026-10-06).
+			name:       "pass: 里 in a name is not a Simplified leak",
+			source:     "Speak to Paris.",
+			translated: map[int]string{7: "去找帕里斯談。"},
+		},
+		{
+			name:       "pass: 英里 / 茶几 / 占卜 are Traditional words",
+			source:     "Machines that could speak across thousands of miles.",
+			translated: map[int]string{7: "能跨越數千英里說話的機器，茶几旁的占卜師。"},
 		},
 		{
 			name:       "pass: multi-line translation",

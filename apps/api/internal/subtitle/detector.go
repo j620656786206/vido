@@ -169,20 +169,29 @@ var simplifiedOnlySet = func() map[rune]struct{} {
 	chars := []rune{
 		// High-frequency simplified-only characters
 		// Note: shared chars (走,面,后,着,功,商,零,雪,呢,姐,娘,垃) excluded — they exist in both variants
+		//
+		// Also excluded (disc-2026-10-simplified-leak-false-positive-li): characters
+		// that are the SIMPLIFIED form of one Traditional character but ALSO a
+		// legitimate Traditional character in their own right — 里 (公里、鄰里、
+		// 帕里斯 ≠ 裡), 几 (茶几 ≠ 幾), 云 (人云亦云 ≠ 雲), 丰 (丰采 ≠ 豐), 余 (余光中、
+		// 余 ≠ 餘), 占 (占卜 ≠ 佔), 划 (划船 ≠ 劃). The quality gate fails a cue on ANY
+		// member of this set, and See S01E02 shipped 15 cues in English because
+		// 帕里斯 and 英里 were read as leaks. The classifier loses nothing: a
+		// Simplified document still trips dozens of the others.
 		'个', '这', '对', '来', '进', '过', '还', '与', '从', '为',
 		'们', '会', '没', '给', '让', '动', '关', '开', '长', '问',
 		'时', '应', '点', '经', '机', '头', '现', '实', '说', '种',
-		'见', '边', '吗', '里', '听', '远', '运', '两', '几', '发',
-		'无', '书', '东', '马', '车', '云', '风', '飞', '鸟', '鱼',
+		'见', '边', '吗', '听', '远', '运', '两', '发',
+		'无', '书', '东', '马', '车', '风', '飞', '鸟', '鱼',
 		'龙', '门', '电', '号', '乐', '写', '买', '卖', '红', '绿',
 		'蓝', '银', '铁', '钱', '钟', '钢', '闹', '闻', '间', '阳',
 		'阴', '队', '际', '陆', '险', '难', '雾', '韩', '页', '顺',
 		'须', '领', '题', '额', '饭', '饮', '验', '鸡', '鲜', '黄',
 		// Additional common simplified characters
-		'么', '义', '丰', '习', '乡', '亲', '仅', '众', '优', '伤',
-		'传', '体', '余', '佣', '侠', '俩', '债', '储', '兰', '农',
-		'冲', '决', '况', '准', '凭', '击', '创', '划', '则', '刚',
-		'办', '劝', '势', '勋', '华', '协', '单', '占', '卫', '历',
+		'么', '义', '习', '乡', '亲', '仅', '众', '优', '伤',
+		'传', '体', '佣', '侠', '俩', '债', '储', '兰', '农',
+		'冲', '决', '况', '准', '凭', '击', '创', '则', '刚',
+		'办', '劝', '势', '勋', '华', '协', '单', '卫', '历',
 		'厅', '压', '厌', '县', '参', '双', '变', '叙', '叹', '吨',
 		'启', '员', '响', '哟', '唤', '团', '园', '围', '图', '圆',
 		'场', '块', '坚', '坏', '坟', '垒', '报', '壳', '处', '备',
