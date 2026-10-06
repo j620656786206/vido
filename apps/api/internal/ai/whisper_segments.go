@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 // ─── Whisper verbose_json wire types (Story 9R-5) ───────────────────────────
@@ -160,7 +161,58 @@ const (
 	// these in subtitle.FilterSDH (sub-6-4); this is the same rule for the
 	// speech-recognition leg.
 	dropReasonMusicOnly = "music_only"
+	// dropReasonPromptEcho: the segment is a verbatim slice of the name
+	// prompt we sent (disc-2026-10-asr-proper-names-inconsistent, CR M2) —
+	// whisper's known habit over silence or score, when given a prompt, is
+	// to "hear" the prompt. Confident, non-repeating, mid-file: none of the
+	// other rules catch it.
+	dropReasonPromptEcho = "prompt_echo"
 )
+
+// promptEchoMinRunes is how long a prompt slice must be before a segment
+// matching it counts as an echo. One name alone ("Paris.") is a line someone
+// could genuinely say; two or more names in a row are not dialogue.
+const promptEchoMinRunes = 12
+
+// filterPromptEcho removes segments whose text is a substring of the prompt
+// the request carried (case- and punctuation-insensitive), at least
+// promptEchoMinRunes long. PURE like filterHallucinations; a run without a
+// prompt returns its input untouched.
+func filterPromptEcho(segs []whisperSegment, prompt string) (kept []whisperSegment, dropped []droppedSegment) {
+	norm := normalizeForEcho(prompt)
+	if norm == "" {
+		return segs, nil
+	}
+	for _, seg := range segs {
+		text := normalizeForEcho(seg.Text)
+		if len([]rune(text)) >= promptEchoMinRunes && strings.Contains(norm, text) {
+			dropped = append(dropped, droppedSegment{Segment: seg, Reason: dropReasonPromptEcho})
+			continue
+		}
+		kept = append(kept, seg)
+	}
+	return kept, dropped
+}
+
+// normalizeForEcho lower-cases and keeps only letters, digits and single
+// spaces, so "Baba Voss, Paris" and "baba voss paris." compare equal.
+func normalizeForEcho(s string) string {
+	var sb strings.Builder
+	lastSpace := true
+	for _, r := range strings.ToLower(s) {
+		switch {
+		case unicode.IsLetter(r) || unicode.IsDigit(r):
+			sb.WriteRune(r)
+			lastSpace = false
+		default:
+			if !lastSpace {
+				sb.WriteRune(' ')
+				lastSpace = true
+			}
+		}
+	}
+	return strings.TrimSpace(sb.String())
+}
 
 // droppedSegment is one filtered-out segment plus why it went.
 type droppedSegment struct {

@@ -955,7 +955,16 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		// Paid-for chunks are stored as they come back and reused next time;
 		// nil when no store is wired or the source file cannot be identified.
 		scope := s.chunkScope(mediaID, filePath, selectedTrack.Index, lang)
-		srtContent, err = s.transcribeAudio(phaseCtx, audioPath, lang, scope)
+		// disc-2026-10-asr-proper-names-inconsistent: tell the decoder how the
+		// names are spelled (TMDb credits + the trusted glossary) so one
+		// character is not heard seven ways. Rides the ctx to the client.
+		asrCtx := phaseCtx
+		if prompt := s.asrPromptFor(ctx, mediaType, mediaID, glossaryKeyFor(mediaID, s.episodeRowFor(ctx, mediaType, mediaID))); prompt != "" {
+			asrCtx = ai.WithASRPrompt(phaseCtx, prompt)
+			s.logger.Info("asr prompt built", "media_id", mediaID, "media_type", mediaType,
+				"names", len(strings.Split(prompt, ", ")), "runes", len([]rune(prompt)))
+		}
+		srtContent, err = s.transcribeAudio(asrCtx, audioPath, lang, scope)
 		if err != nil {
 			err = explain("transcribing", err)
 			s.failJob(jobID, mediaID, fmt.Sprintf("transcribe: %v", err))
