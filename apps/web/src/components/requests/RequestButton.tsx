@@ -42,6 +42,14 @@ export interface RequestButtonProps {
   variant?: 'primary' | 'secondary';
   /** Button text; defaults to 想要. */
   label?: string;
+  /**
+   * The button sits on a poster's --overlay-scrim (PosterCard hover overlay).
+   * The 已請求 pill's --info-tint is ~20% alpha, so over the dark veil 日巡's
+   * dark --info-text measured 1.36–1.82:1. With this set the pill gets an
+   * OPAQUE --bg-secondary underlay — the HeroBanner / PosterCardV2 precedent —
+   * so the tint composites over the ground the contrast gate measures.
+   */
+  onScrim?: boolean;
 }
 
 type ToastState = { kind: 'success' } | { kind: 'error'; message: string } | null;
@@ -58,6 +66,7 @@ export function RequestButton({
   treeRequiresCoverage = false,
   variant = 'primary',
   label = '想要',
+  onScrim = false,
 }: RequestButtonProps) {
   const navigate = useNavigate();
   const { create } = useRequestActions();
@@ -191,30 +200,45 @@ export function RequestButton({
   // cache flips `requested` true, this branch takes over, and the success
   // toast must survive that flip.
   if (requested || create.isPending) {
+    const requestedPill = (
+      <span
+        ref={pillRef}
+        tabIndex={-1}
+        data-testid="request-pill-requested"
+        role="status"
+        aria-live="polite"
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-full bg-[var(--info-tint)] px-4 py-2.5 text-xs font-semibold text-[var(--info-text)]',
+          fullWidth && 'w-full justify-center',
+          className
+        )}
+      >
+        {create.isPending ? (
+          <Loader2
+            className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+        ) : (
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--info)]" aria-hidden="true" />
+        )}
+        已請求 · 處理中
+      </span>
+    );
     return (
       <>
-        <span
-          ref={pillRef}
-          tabIndex={-1}
-          data-testid="request-pill-requested"
-          role="status"
-          aria-live="polite"
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-full bg-[var(--info-tint)] px-4 py-2.5 text-xs font-semibold text-[var(--info-text)]',
-            fullWidth && 'w-full justify-center',
-            className
-          )}
-        >
-          {create.isPending ? (
-            <Loader2
-              className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"
-              aria-hidden="true"
-            />
-          ) : (
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--info)]" aria-hidden="true" />
-          )}
-          已請求 · 處理中
-        </span>
+        {onScrim ? (
+          <span
+            data-testid="request-pill-underlay"
+            className={cn(
+              'inline-flex rounded-full bg-[var(--bg-secondary)]',
+              fullWidth && 'w-full'
+            )}
+          >
+            {requestedPill}
+          </span>
+        ) : (
+          requestedPill
+        )}
         {toast && <RequestToast toast={toast} onView={navigate} guard={guard} />}
         {tree}
       </>

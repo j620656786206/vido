@@ -61,6 +61,27 @@ describe('RequestButton', () => {
     expect(screen.queryByTestId('request-button')).not.toBeInTheDocument();
   });
 
+  // disc-2026-09-request-button-requested-on-scrim-light-theme: over a poster
+  // scrim the ~20% --info-tint composites over a dark veil (日巡 1.36–1.82:1),
+  // so the card context asks for the opaque --bg-secondary underlay.
+  it('已請求 on a scrim — the pill rides an opaque --bg-secondary underlay', () => {
+    renderButton({ requested: true, onScrim: true, fullWidth: true });
+    const pill = screen.getByTestId('request-pill-requested');
+    const underlay = screen.getByTestId('request-pill-underlay');
+    expect(pill.parentElement).toBe(underlay);
+    expect(underlay.className).toContain('bg-[var(--bg-secondary)]');
+    expect(underlay.className).toContain('w-full');
+    expect(pill.className).toContain('bg-[var(--info-tint)]');
+  });
+
+  it('已請求 on a page ground — no underlay, the detail-page pill is unchanged', () => {
+    renderButton({ requested: true });
+    expect(screen.queryByTestId('request-pill-underlay')).not.toBeInTheDocument();
+    expect(screen.getByTestId('request-pill-requested').parentElement).toBe(
+      screen.getByTestId('card-link')
+    );
+  });
+
   it('可請求 — click fires the create mutation and never navigates the card link (AC #1/#2)', async () => {
     vi.mocked(requestService.createRequest).mockResolvedValue({
       id: 'server',
