@@ -218,7 +218,16 @@ const (
 	hallucinationTailMinRun = 3
 	// hallucinationRepeatRun is how many consecutive identical segments count
 	// as a decoder loop rather than genuine repetition (a chant, a countdown).
-	hallucinationRepeatRun = 3
+	//
+	// Was 3 (disc-2026-10-asr-repeated-lines-dropped): on See S01E02 that ate
+	// real dialogue — 「轉過來看我」shouted three times (4:21–4:37), the name
+	// 「謝拉馬威」called three times (7:46–7:58) — and with the ♪♪ runs now
+	// handled by music_only the biggest honest source of 3-runs is gone. A
+	// decoder that is actually stuck re-emits the line far more than four
+	// times; five identical segments in a row is where "someone is shouting"
+	// stops being the likelier story. Tuned blind from one episode — the
+	// 10-minute ASR clip verifies it.
+	hallucinationRepeatRun = 5
 	// hallucinationDropRatioWarn is the share of dropped segments above which
 	// the caller should shout: the POC's real-vs-generated gap was ~5%
 	// (1029 official cues vs 1082 generated), so a fifth of the file
