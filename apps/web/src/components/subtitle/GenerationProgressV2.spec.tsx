@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { GenerationProgressV2, GENERATION_STAGES } from './GenerationProgressV2';
+import {
+  GenerationProgressV2,
+  GENERATION_STAGES,
+  GENERATION_STAGES_EXTRACT,
+} from './GenerationProgressV2';
 
 describe('GenerationProgressV2', () => {
   it('renders ALL six frozen stage names (fixture vocabulary — do not rename)', () => {
@@ -202,6 +206,83 @@ describe('GenerationProgressV2', () => {
       expect(screen.getByTestId('gen-stage-提取音訊')).toHaveAttribute('data-state', 'done');
       expect(screen.getByTestId('gen-stage-轉錄中')).toHaveAttribute('data-state', 'active');
       expect(screen.getByTestId('gen-stage-完成')).toHaveAttribute('data-state', 'pending');
+    });
+  });
+
+  // disc-2026-10-single-generate-ignores-embedded-english-b — J12-D (jYNkJ), the
+  // five-stage variant for runs that read a subtitle track instead of listening.
+  describe('embedded-track lane (route)', () => {
+    it('renders the FIVE extract stages and none of 提取音訊 / 轉錄中', () => {
+      render(<GenerationProgressV2 phase="extracting" route="extract" />);
+
+      expect(GENERATION_STAGES_EXTRACT).toEqual(['抽取字幕', '翻譯中', '簡轉繁', 'AI校正', '完成']);
+      for (const stage of GENERATION_STAGES_EXTRACT) {
+        expect(screen.getByTestId(`gen-stage-${stage}`)).toBeInTheDocument();
+      }
+      expect(screen.queryByTestId('gen-stage-提取音訊')).toBeNull();
+      expect(screen.queryByTestId('gen-stage-轉錄中')).toBeNull();
+      expect(screen.getByTestId('gen-stage-抽取字幕')).toHaveAttribute('data-state', 'active');
+    });
+
+    it.each(['extract', 'translate', 'deliver_direct', 'convert_then_deliver'])(
+      'route %s selects the five-stage variant',
+      (route) => {
+        render(<GenerationProgressV2 phase="translating" route={route} percentage={62} />);
+        expect(screen.getAllByRole('listitem')).toHaveLength(5);
+        expect(screen.getByTestId('gen-stage-翻譯中')).toHaveAttribute('data-state', 'active');
+        expect(screen.getByTestId('gen-stage-抽取字幕')).toHaveAttribute('data-state', 'done');
+      }
+    );
+
+    it.each(['asr', 'skip', undefined, null])('route %s keeps the six-stage stepper', (route) => {
+      render(
+        <GenerationProgressV2 phase="transcribing" route={route as string | null | undefined} />
+      );
+      expect(screen.getAllByRole('listitem')).toHaveLength(6);
+      expect(screen.getByTestId('gen-stage-轉錄中')).toHaveAttribute('data-state', 'active');
+    });
+
+    it('a delivered Chinese track completes with 翻譯中 SKIPPED (minus), everything else done', () => {
+      render(<GenerationProgressV2 phase="complete" route="deliver_direct" />);
+
+      expect(screen.getByTestId('gen-stage-翻譯中')).toHaveAttribute('data-state', 'skipped');
+      for (const stage of ['抽取字幕', '簡轉繁', 'AI校正', '完成']) {
+        expect(screen.getByTestId(`gen-stage-${stage}`)).toHaveAttribute('data-state', 'done');
+      }
+      // Skipped is visually distinct from pending (dot) and done (check): a minus glyph.
+      const mark = screen.getByTestId('gen-stage-翻譯中').querySelector('svg.lucide-minus');
+      expect(mark).not.toBeNull();
+    });
+
+    it('a converted Simplified track also skips 翻譯中; a translated English track does not', () => {
+      const { unmount } = render(
+        <GenerationProgressV2 phase="complete" route="convert_then_deliver" />
+      );
+      expect(screen.getByTestId('gen-stage-翻譯中')).toHaveAttribute('data-state', 'skipped');
+      unmount();
+      render(<GenerationProgressV2 phase="complete" route="translate" />);
+      expect(screen.getByTestId('gen-stage-翻譯中')).toHaveAttribute('data-state', 'done');
+    });
+
+    it('a predicted extract that actually transcribes shows the six stages (the route was wrong)', () => {
+      render(<GenerationProgressV2 phase="transcribing" route="extract" />);
+      expect(screen.getAllByRole('listitem')).toHaveLength(6);
+      expect(screen.getByTestId('gen-stage-轉錄中')).toHaveAttribute('data-state', 'active');
+    });
+
+    it('names a failed first step 抽取字幕失敗; a failed translation stays 翻譯失敗', () => {
+      const { unmount } = render(
+        <GenerationProgressV2 phase="failed" failedPhase="extracting" route="extract" />
+      );
+      expect(screen.getByTestId('gen-failed-panel').querySelector('p')?.textContent).toBe(
+        '抽取字幕失敗'
+      );
+      expect(screen.getByTestId('gen-stage-抽取字幕')).toHaveAttribute('data-state', 'failed');
+      unmount();
+      render(<GenerationProgressV2 phase="failed" failedPhase="translating" route="extract" />);
+      expect(screen.getByTestId('gen-failed-panel').querySelector('p')?.textContent).toBe(
+        '翻譯失敗'
+      );
     });
   });
 });

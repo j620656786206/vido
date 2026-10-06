@@ -22,6 +22,7 @@ const h = vi.hoisted(() => ({
     zhSrtPath: null as string | null,
     partial: false as boolean,
     englishKeptBlocks: null as number | null,
+    route: null as string | null,
   },
   startTracking: vi.fn(),
   reset: vi.fn(),
@@ -283,6 +284,7 @@ beforeEach(() => {
     englishKeptBlocks: null,
     spentUsd: null,
     budgetUsd: null,
+    route: null,
   };
   h.glossaryTerms = [{ id: 't1' }, { id: 't2' }, { id: 't3' }];
   h.fetchHook.results = [];
@@ -361,6 +363,43 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('$0.18');
   });
 
+  // disc-2026-10-single-generate-ignores-embedded-english-b (⚖️ Sally 2026-10-06):
+  // the embedded-track lane says what it does, and no speech recognition is needed.
+  it('helper・extract lane: 使用片內字幕 line, priced, no settings link', async () => {
+    mockedEstimate.mockResolvedValue(
+      readyEstimate({ plan: 'extract', route: 'extract', asrAvailable: false, estimatedUsd: 0.12 })
+    );
+    renderDialog();
+
+    const cta = await findPricedGenerate();
+    expect(screen.getByTestId('generation-helper')).toHaveTextContent(
+      '使用片內字幕：中文直接套用，英文由 AI 翻譯'
+    );
+    expect(screen.queryByTestId('helper-goto-settings')).toBeNull();
+    expect(cta).toBeEnabled();
+    expect(screen.getByTestId('action-generate-subtitle-amount').textContent).toBe('$0.12');
+  });
+
+  it('helper・extract lane without a translation key: degraded line + 前往設定, CTA stays ENABLED', async () => {
+    mockedEstimate.mockResolvedValue(
+      readyEstimate({
+        plan: 'extract',
+        route: 'extract',
+        translationConfigured: false,
+        modelId: '',
+        estimatedUsd: 0,
+      })
+    );
+    renderDialog();
+
+    const cta = await findPricedGenerate();
+    expect(screen.getByTestId('generation-helper')).toHaveTextContent(
+      '尚未設定翻譯金鑰：片內中文字幕可直接套用，英文字幕需金鑰才能翻譯'
+    );
+    expect(screen.getByTestId('helper-goto-settings')).toBeInTheDocument();
+    expect(cta).toBeEnabled();
+  });
+
   it('helper・loading: the default line and a skeleton — never a clickable button without a price', async () => {
     mockedEstimate.mockReturnValue(new Promise(() => {}));
     renderDialog();
@@ -425,7 +464,8 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     fireEvent.click(await findPricedGenerate());
 
     await waitFor(() => expect(mockedTrigger).toHaveBeenCalledWith(MOVIE_UUID));
-    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
+    // -b: the POST's job id rides along so the hook knows WHICH terminal is ours.
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'job-9'));
     expect(screen.getByText('生成字幕 — 怪奇物語')).toBeInTheDocument();
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
     expect(screen.getByText('即時更新（SSE）')).toBeInTheDocument();
@@ -472,9 +512,40 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     fireEvent.click(await findPricedGenerate());
 
-    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
+    // No job id from a 409 and none from the status probe → attach without one.
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, undefined));
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
     expect(screen.queryByTestId('generation-trigger-error')).not.toBeInTheDocument();
+  });
+
+  it('409 → re-asks the status for the running job id and attaches to THAT job (CR M1)', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'inProgress' });
+    // On open: idle. After the 409: the server names the job.
+    mockedStatus
+      .mockResolvedValueOnce({ inProgress: false })
+      .mockResolvedValue({ inProgress: true, jobId: 'solo-7' });
+    renderDialog();
+
+    fireEvent.click(await findPricedGenerate());
+
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'solo-7'));
+    expect(mockedStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it('an extract-lane estimate shows the five-stage stepper from the first frame (CR H1)', async () => {
+    mockedEstimate.mockResolvedValue(
+      readyEstimate({ plan: 'extract', route: 'extract', estimatedUsd: 0.12 })
+    );
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    h.genState.phase = 'translating';
+    h.genState.route = null; // the start event was missed: the stream opened after it
+    renderDialog();
+
+    fireEvent.click(await findPricedGenerate());
+
+    expect(await screen.findByTestId('gen-stage-抽取字幕')).toBeInTheDocument();
+    expect(screen.queryByTestId('gen-stage-轉錄中')).toBeNull();
+    expect(screen.getByTestId('gen-stage-翻譯中')).toHaveAttribute('data-state', 'active');
   });
 
   it('trigger 404/400/500 → fail-soft error with 重試', async () => {
@@ -629,6 +700,38 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     const note = await screen.findByTestId('generation-complete-note');
     expect(note).toHaveTextContent('字幕已生成完成');
+  });
+
+  it("complete on a pipeline lane → the solo terminal's own sentence (direct-use, no money spent)", async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    h.genState.phase = 'complete';
+    h.genState.zhSrtPath = '/media/x.zh-Hant.srt';
+    h.genState.route = 'deliver_direct';
+    h.genState.message = '字幕已生成（直接使用片內中文字幕，沒有花錢）';
+    renderDialog();
+
+    fireEvent.click(await findPricedGenerate());
+
+    const note = await screen.findByTestId('generation-complete-note');
+    expect(note).toHaveTextContent('字幕已生成（直接使用片內中文字幕，沒有花錢）');
+    expect(note).not.toHaveTextContent('已生成英文字幕');
+  });
+
+  it('complete on a free lane shows $0.00 in the cost line — a number, not a blank', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    h.genState.phase = 'complete';
+    h.genState.zhSrtPath = '/media/x.zh-Hant.srt';
+    h.genState.route = 'convert_then_deliver';
+    h.genState.message = '字幕已生成（片內簡體字幕已轉成繁體，沒有花錢）';
+    h.genState.spentUsd = 0;
+    h.genState.budgetUsd = 2;
+    renderDialog();
+
+    fireEvent.click(await findPricedGenerate());
+
+    const cost = await screen.findByTestId('gen-cost-line');
+    expect(cost).toHaveTextContent('$0.00');
+    expect(cost).toHaveTextContent('$2.00');
   });
 
   it('complete WITHOUT a zh path (en-only, key unconfigured) → 已生成英文字幕；尚未翻譯', async () => {
@@ -1545,7 +1648,7 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
     expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
     expect(screen.getByText(`生成字幕 — ${title}`)).toBeInTheDocument();
     expect(h.startTracking).toHaveBeenCalledTimes(1);
-    expect(h.startTracking).toHaveBeenCalledWith(mediaId);
+    expect(h.startTracking).toHaveBeenCalledWith(mediaId, undefined);
     expect(screen.queryByTestId('action-generate-subtitle')).not.toBeInTheDocument();
     expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
     expect(screen.getByText('關閉後生成會在背景繼續')).toBeInTheDocument();
@@ -1559,6 +1662,14 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
 
     await expectAttachedProgress(MOVIE_UUID, '怪奇物語');
     expect(mockedStatus).toHaveBeenCalledWith('movie', MOVIE_UUID, expect.any(AbortSignal));
+  });
+
+  it('running when opened WITH a solo job id → attaches to that job (pipeline mode)', async () => {
+    mockedStatus.mockResolvedValue({ inProgress: true, jobId: 'solo-7' });
+    renderDialog();
+
+    expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
+    expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'solo-7');
   });
 
   it('episode — running when opened → shows the progress and attaches to the EPISODE stream', async () => {
@@ -1579,7 +1690,7 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
     expect(h.startTracking).not.toHaveBeenCalled();
     fireEvent.click(cta);
     await waitFor(() => expect(mockedTrigger).toHaveBeenCalledWith(MOVIE_UUID));
-    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'j1'));
   });
 
   it('episode — not running → the idle view as before, and 生成字幕 starts a run', async () => {
@@ -1619,7 +1730,7 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
     expect(screen.queryByTestId('generation-progress-v2')).not.toBeInTheDocument();
     fireEvent.click(cta);
     // The server answers 409 → the dialog attaches, exactly as before this fix.
-    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, undefined));
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
   });
 
@@ -1641,7 +1752,7 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
     expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
     expect(mockedStatus).toHaveBeenCalledTimes(2);
     expect(h.startTracking).toHaveBeenCalledTimes(2);
-    expect(h.startTracking).toHaveBeenLastCalledWith(MOVIE_UUID);
+    expect(h.startTracking).toHaveBeenLastCalledWith(MOVIE_UUID, undefined);
     expect(screen.queryByTestId('action-generate-subtitle')).not.toBeInTheDocument();
     expect(mockedTrigger).toHaveBeenCalledTimes(1);
   });

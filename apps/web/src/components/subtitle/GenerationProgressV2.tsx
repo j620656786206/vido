@@ -1,10 +1,19 @@
-// Implements: Component/GenerationProgress-v2 (XkGvG)
+// Implements: Component/GenerationProgress-v2 (XkGvG) + Component/GenerationProgress-v2/Extract (CZrmG)
+// Spec: J12-D (jYNkJ) — 生成進度條依路線切換
 // Source: ux-design.pen (Pencil app)
 /**
  * Route C generation stepper (ux3-subtitle-v2 AC 3, Component Library sJzat row
  * luza9). Renders the FROZEN stage list 提取音訊 → 轉錄中 → 翻譯中 → 簡轉繁 →
  * AI校正 → 完成 (fixture vocabulary — renaming breaks fixture↔baseline mapping)
  * plus the failed-at-stage panel.
+ *
+ * Embedded-track lane (disc-2026-10-single-generate-ignores-embedded-english-b,
+ * ⚖️ Sally 2026-10-06, J12-D): when `route` says the run reads a subtitle track
+ * instead of listening, the stepper is the FIVE-stage variant 抽取字幕 → 翻譯中 →
+ * 簡轉繁 → AI校正 → 完成. A run that delivered or converted a Chinese track never
+ * translated, so on complete its 翻譯中 step renders as SKIPPED (a minus in the
+ * circle — distinct from pending's dot and done's check). No `route`, or
+ * asr / skip → the six-stage stepper, unchanged.
  *
  * Wire-phase mapping (transcription_service.go): `extracting`→提取音訊,
  * `transcribing`→轉錄中, `translating` (+percentage 0–100)→翻譯中, `complete`→完成.
@@ -21,7 +30,7 @@
  * 重試 is NOT here: F4-D-v2 puts it in the dialog footer next to 稍後再試
  * (story dsr-6b AC #6), so the paid button and its price belong to the dialog.
  */
-import { Check, LoaderCircle, X, CircleAlert } from 'lucide-react';
+import { Check, LoaderCircle, X, CircleAlert, Minus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   GENERATION_FAILED_FALLBACK,
@@ -38,6 +47,15 @@ export const GENERATION_STAGES = [
   '完成',
 ] as const;
 
+/** The five-stage variant for the embedded-track lane (CZrmG). */
+export const GENERATION_STAGES_EXTRACT = [
+  '抽取字幕',
+  '翻譯中',
+  '簡轉繁',
+  'AI校正',
+  '完成',
+] as const;
+
 type ActivePhase = 'extracting' | 'transcribing' | 'translating';
 
 const PHASE_INDEX: Record<ActivePhase, number> = {
@@ -45,6 +63,24 @@ const PHASE_INDEX: Record<ActivePhase, number> = {
   transcribing: 1,
   translating: 2,
 };
+
+/** The embedded-track lane has no 轉錄中; `transcribing` never arrives on it
+ *  (and would be the ASR leg, which means the route was not extract after all). */
+const PHASE_INDEX_EXTRACT: Record<ActivePhase, number> = {
+  extracting: 0,
+  transcribing: 0,
+  translating: 1,
+};
+
+/** Lanes (predicted `extract`, or the ledger's post-routing verdicts) that read
+ *  a subtitle track instead of listening. */
+const EXTRACT_ROUTES = new Set(['extract', 'deliver_direct', 'convert_then_deliver', 'translate']);
+/** Lanes that end without ever translating. */
+const NO_TRANSLATE_ROUTES = new Set(['deliver_direct', 'convert_then_deliver']);
+
+export function isExtractRoute(route: string | null | undefined): boolean {
+  return !!route && EXTRACT_ROUTES.has(route);
+}
 
 export interface GenerationProgressV2Props {
   /** Current pipeline phase (from useGenerationProgress; 'idle' renders 提取音訊 as active-waiting). */
@@ -66,6 +102,12 @@ export interface GenerationProgressV2Props {
    * (F8-D-v2), where the stepper sits under the poster's left edge.
    */
   align?: 'center' | 'start';
+  /**
+   * The run's lane (useGenerationProgress `route`): `extract` /
+   * `deliver_direct` / `convert_then_deliver` / `translate` select the
+   * five-stage variant; anything else (or absent) keeps the six-stage one.
+   */
+  route?: string | null;
 }
 
 /** F4-D-v2 `pjXCe`: the failure named with the stepper's own words. */
@@ -75,26 +117,64 @@ const FAILED_STAGE_TEXT: Record<ActivePhase, string> = {
   translating: '翻譯失敗',
 };
 
+/** The same, in the embedded-track lane's words (J12-D rule 3). */
+const FAILED_STAGE_TEXT_EXTRACT: Record<ActivePhase, string> = {
+  extracting: '抽取字幕失敗',
+  transcribing: '抽取字幕失敗',
+  translating: '翻譯失敗',
+};
+
 /** A detail that STARTS in CJK is a sentence written for people (the D6 family's
  *  「字幕生成失敗：…」「已略過：…」). A Go error that merely carries a Chinese file
  *  path — `ffprobe timeout: /media/電影/…` — is still machine text. */
 const STARTS_CJK_RE = /^[\u3000-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef]/;
 
-type StepState = 'done' | 'active' | 'pending' | 'failed';
+type StepState = 'done' | 'active' | 'pending' | 'failed' | 'skipped';
 
-function stepStates(phase: GenerationPhase, failedPhase?: ActivePhase | null): StepState[] {
+interface StepperShape {
+  stages: readonly string[];
+  index: Record<ActivePhase, number>;
+  failedText: Record<ActivePhase, string>;
+  /** Index of the step a no-translate route shows as skipped on complete; -1 = none. */
+  skipOnComplete: number;
+}
+
+function stepperShape(route: string | null | undefined, phase: GenerationPhase): StepperShape {
+  // `transcribing` only ever comes from the ASR leg: a predicted extract that
+  // fell back to speech recognition shows the six stages from that moment on.
+  if (isExtractRoute(route) && phase !== 'transcribing') {
+    return {
+      stages: GENERATION_STAGES_EXTRACT,
+      index: PHASE_INDEX_EXTRACT,
+      failedText: FAILED_STAGE_TEXT_EXTRACT,
+      skipOnComplete: route && NO_TRANSLATE_ROUTES.has(route) ? 1 : -1,
+    };
+  }
+  return {
+    stages: GENERATION_STAGES,
+    index: PHASE_INDEX,
+    failedText: FAILED_STAGE_TEXT,
+    skipOnComplete: -1,
+  };
+}
+
+function stepStates(
+  shape: StepperShape,
+  phase: GenerationPhase,
+  failedPhase?: ActivePhase | null
+): StepState[] {
   if (phase === 'complete') {
     // 簡轉繁 / AI校正 / 完成 flip atomically on transcription_complete.
-    return GENERATION_STAGES.map(() => 'done');
+    return shape.stages.map((_, i) => (i === shape.skipOnComplete ? 'skipped' : 'done'));
   }
   if (phase === 'failed') {
-    const failedIdx = PHASE_INDEX[failedPhase ?? 'extracting'];
-    return GENERATION_STAGES.map((_, i) =>
+    const failedIdx = shape.index[failedPhase ?? 'extracting'];
+    return shape.stages.map((_, i) =>
       i < failedIdx ? 'done' : i === failedIdx ? 'failed' : 'pending'
     );
   }
-  const activeIdx = phase === 'idle' ? 0 : PHASE_INDEX[phase as ActivePhase];
-  return GENERATION_STAGES.map((_, i) =>
+  const activeIdx = phase === 'idle' ? 0 : shape.index[phase as ActivePhase];
+  return shape.stages.map((_, i) =>
     i < activeIdx ? 'done' : i === activeIdx ? 'active' : 'pending'
   );
 }
@@ -107,9 +187,13 @@ function StepMark({ state }: { state: StepState }) {
         state === 'done' && 'bg-[var(--success-tint)]',
         state === 'active' && 'bg-[var(--accent-tint)]',
         state === 'failed' && 'bg-[var(--error-tint)]',
-        state === 'pending' && 'bg-[var(--bg-tertiary)]'
+        (state === 'pending' || state === 'skipped') && 'bg-[var(--bg-tertiary)]'
       )}
     >
+      {state === 'skipped' && (
+        // J12-D: a minus — this step was not needed (the track was already Chinese).
+        <Minus className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+      )}
       {state === 'done' && (
         <Check className="h-3.5 w-3.5 text-[var(--success-text)]" aria-hidden="true" />
       )}
@@ -138,9 +222,11 @@ export function GenerationProgressV2({
   costUsedText,
   costLimitText,
   align = 'center',
+  route = null,
 }: GenerationProgressV2Props) {
-  const states = stepStates(phase, failedPhase);
-  const failedText = FAILED_STAGE_TEXT[failedPhase ?? 'extracting'];
+  const shape = stepperShape(route, phase);
+  const states = stepStates(shape, phase, failedPhase);
+  const failedText = shape.failedText[failedPhase ?? 'extracting'];
   const failedDetail = error && error !== GENERATION_FAILED_FALLBACK ? error : null;
   const pctText =
     percentage !== null && percentage !== undefined ? `${Math.round(percentage)}%` : null;
@@ -158,7 +244,7 @@ export function GenerationProgressV2({
         )}
         aria-label="字幕生成進度"
       >
-        {GENERATION_STAGES.map((stage, i) => {
+        {shape.stages.map((stage, i) => {
           const state = states[i];
           return (
             <li key={stage} className="flex w-full items-start sm:w-auto">
@@ -169,7 +255,9 @@ export function GenerationProgressV2({
                     'hidden sm:block',
                     // Connector is desktop-only (hidden below sm) — XkGvG `ITuZl` 26×2.
                     'mt-[10px] h-0.5 sm:w-[26px]',
-                    states[i - 1] === 'done' ? 'bg-[var(--success)]' : 'bg-[var(--border-subtle)]'
+                    states[i - 1] === 'done' || states[i - 1] === 'skipped'
+                      ? 'bg-[var(--success)]'
+                      : 'bg-[var(--border-subtle)]'
                   )}
                 />
               )}
@@ -186,7 +274,7 @@ export function GenerationProgressV2({
                     state === 'active' && 'font-semibold text-[var(--accent-text)]',
                     state === 'failed' && 'font-semibold text-[var(--error-text)]',
                     state === 'done' && 'text-[var(--text-secondary)]',
-                    state === 'pending' && 'text-[var(--text-muted)]'
+                    (state === 'pending' || state === 'skipped') && 'text-[var(--text-muted)]'
                   )}
                 >
                   {stage}

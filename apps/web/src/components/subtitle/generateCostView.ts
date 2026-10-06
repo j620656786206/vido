@@ -57,6 +57,12 @@ export const FILE_UNREADABLE_LINE =
 export const ASR_NOT_CONFIGURED_LINE =
   '生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。';
 export const TRANSLATION_KEY_MISSING_LINE = '尚未設定翻譯金鑰';
+// disc-2026-10-single-generate-ignores-embedded-english-b (⚖️ Sally 2026-10-06):
+// the embedded-track lane. No duration claim — a Chinese track is applied in
+// seconds. The verb 語音辨識 of DEFAULT_LINE stays correct for asr / skip.
+export const EXTRACT_LINE = '使用片內字幕：中文直接套用，英文由 AI 翻譯';
+export const EXTRACT_NO_KEY_LINE =
+  '尚未設定翻譯金鑰：片內中文字幕可直接套用，英文字幕需金鑰才能翻譯';
 
 function blocked(text: string, settingsLink: boolean): GenerateCostView {
   return {
@@ -111,8 +117,11 @@ export function deriveGenerateCostView(input: {
   }
 
   const translateOnly = data.plan === 'translate_only';
+  // Pipeline mode only (`plan: 'extract'`): the file carries a usable text
+  // track, so speech recognition is never needed — its absence blocks nothing.
+  const extract = data.plan === 'extract';
 
-  if (!translateOnly && !data.asrAvailable) {
+  if (!translateOnly && !extract && !data.asrAvailable) {
     return blocked(ASR_NOT_CONFIGURED_LINE, true); // J9-D ⑥
   }
   if (translateOnly && !data.translationConfigured) {
@@ -134,6 +143,15 @@ export function deriveGenerateCostView(input: {
       helper: { text: TRANSLATE_ONLY_LINE, tone: 'muted', settingsLink: false },
     };
   }
+  if (extract && !data.translationConfigured) {
+    // Degraded ≠ blocked, the embedded-track flavour: a Chinese track still
+    // applies for free; only an English one needs the key.
+    return {
+      cost,
+      retryNote: { text: EXTRACT_NO_KEY_LINE, settingsLink: true },
+      helper: { text: EXTRACT_NO_KEY_LINE, tone: 'muted', settingsLink: true },
+    };
+  }
   if (!data.translationConfigured) {
     // Degraded ≠ blocked (sub-2-2d): an English subtitle beats none. With
     // self-hosted ASR the amount is $0.00, and a zero must say why (SM supplement ①)
@@ -153,6 +171,9 @@ export function deriveGenerateCostView(input: {
       retryNote,
       helper: { text: FALLBACK_RUNTIME_LINE, tone: 'muted', settingsLink: false },
     };
+  }
+  if (extract) {
+    return { cost, retryNote, helper: { text: EXTRACT_LINE, tone: 'muted', settingsLink: false } };
   }
   return { cost, retryNote, helper: { text: DEFAULT_LINE, tone: 'muted', settingsLink: false } };
 }

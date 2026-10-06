@@ -61,6 +61,7 @@ async function stubMovie(page: Page, movieId: string) {
           media_id: movieId,
           media_type: 'movie',
           plan: 'full',
+          route: 'asr',
           asr_available: true,
           self_hosted_asr: false,
           translation_configured: true,

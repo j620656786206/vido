@@ -64,17 +64,22 @@ async function parseTranscribeResponse(response: Response): Promise<TranscribeOu
 }
 
 /**
- * The price of a click on 生成字幕 (story dsr-6a AC #2 [@contract-v1]).
+ * The price of a click on 生成字幕 (story dsr-6a AC #2 [@contract-v2]).
  *
- * confirmed against [@contract-v1] (Story dsr-6a AC #2). It prices what the
- * trigger above will ACTUALLY do — speech recognition + translation, or
- * translation only when an untranslated English SRT can be resumed — never the
- * batch consent list's extract route.
+ * confirmed against [@contract-v2] (Story dsr-6a AC #2, bumped by
+ * disc-2026-10-single-generate-ignores-embedded-english-a). It prices what the
+ * trigger above will ACTUALLY do. In pipeline mode the click routes like the
+ * batch, so `route` names the predicted lane and `plan: 'extract'` prices the
+ * embedded-track lane (no speech recognition); `asr` / `skip` keep the
+ * speech-recognition quote, or translate-only on resume. In legacy mode
+ * `route` is absent and the quote is the speech-recognition one.
  */
 export interface TranscriptionEstimate {
   mediaId: string;
   mediaType: 'movie' | 'episode';
-  plan: 'full' | 'translate_only';
+  plan: 'full' | 'translate_only' | 'extract';
+  /** Probe-only lane prediction; absent in legacy mode or when unclassifiable. */
+  route?: 'extract' | 'asr' | 'skip';
   asrAvailable: boolean;
   selfHostedAsr: boolean;
   translationConfigured: boolean;
@@ -93,6 +98,9 @@ export interface TranscriptionEstimate {
  */
 export interface TranscriptionStatus {
   inProgress: boolean;
+  /** The running solo job's id (pipeline mode) — the terminal event to attach
+   *  to is the one carrying it. Absent for a batch / pool run and in legacy mode. */
+  jobId?: string;
 }
 
 export const transcriptionService = {

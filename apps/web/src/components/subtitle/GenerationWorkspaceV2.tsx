@@ -917,6 +917,7 @@ export function GenerationWorkspaceV2({
                       englishKeptBlocks: null,
                       spentUsd: job.spentUsd ?? null,
                       budgetUsd: job.budgetUsd ?? null,
+                      route: job.route ?? null,
                     }}
                   />
                 ))}

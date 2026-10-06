@@ -287,8 +287,18 @@ export function ManageSubtitleDialogV2({
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [fetchOpen, setFetchOpen] = useState(false);
 
+  // CR M3: if the pipeline says the item ended but our job's own terminal is
+  // lost, the hook asks this once and closes honestly.
+  const probeInProgress = useCallback(
+    () =>
+      transcriptionService
+        .getTranscriptionStatus(isEpisode ? 'episode' : 'movie', mediaId)
+        .then((s) => s.inProgress),
+    [isEpisode, mediaId]
+  );
   const generation = useGenerationProgress({
     onComplete: () => onGenerationComplete?.(),
+    probeInProgress,
   });
 
   const glossary = useGlossaryTerms(glossaryMediaId ?? mediaId, open);
@@ -389,9 +399,27 @@ export function ManageSubtitleDialogV2({
         setGenView('notConfigured');
         return;
       }
-      // started AND inProgress (409) both attach to the job's SSE stream.
+      // started AND inProgress (409) both attach to the job's SSE stream. The
+      // job id (pipeline mode) tells the hook WHICH terminal is ours — the ASR
+      // leg's own complete and the pipeline's D6 complete fire first.
       setGenView('progress');
-      generation.startTracking(mediaId);
+      if (outcome.status === 'started') {
+        generation.startTracking(mediaId, outcome.result.jobId);
+        return;
+      }
+      // 409: the status read on open said "idle" (or the probe failed), so it
+      // cannot know the running job's id — ask again before attaching (CR M1).
+      // A failed re-ask attaches without an id, exactly as before.
+      const statusType = estimateMediaType ?? 'movie';
+      void queryClient
+        .fetchQuery({
+          queryKey: transcriptionStatusKeys.item(statusType, mediaId),
+          queryFn: ({ signal }) =>
+            transcriptionService.getTranscriptionStatus(statusType, mediaId, signal),
+          staleTime: 0,
+        })
+        .then((fresh) => generation.startTracking(mediaId, fresh.jobId))
+        .catch(() => generation.startTracking(mediaId, undefined));
     },
     onError: (error) => {
       setTriggerError(error instanceof Error ? error.message : '生成字幕失敗');
@@ -409,12 +437,13 @@ export function ManageSubtitleDialogV2({
   // stream — the same attach the trigger's 409 does. Only from idle: an
   // answer must not pull the user out of a failure or the 尚未設定 panel.
   const alreadyRunning = runStatus.data?.inProgress === true;
+  const runningJobId = runStatus.data?.jobId;
   const { startTracking } = generation;
   useEffect(() => {
     if (!open || !alreadyRunning || genView !== 'idle') return;
     setGenView('progress');
-    startTracking(mediaId);
-  }, [open, alreadyRunning, genView, startTracking, mediaId]);
+    startTracking(mediaId, runningJobId);
+  }, [open, alreadyRunning, genView, startTracking, mediaId, runningJobId]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -720,7 +749,15 @@ export function ManageSubtitleDialogV2({
                 percentage={generation.progress.percentage}
                 message={generation.progress.message}
                 error={generation.progress.error}
+                // The lane: the job's events when they say, else the estimate's
+                // prediction — the start event fires before the stream is open,
+                // so a routed click would otherwise show six stages until the end.
+                route={
+                  generation.progress.route ??
+                  (estimate.data?.route === 'extract' ? 'extract' : null)
+                }
                 // 9R-17: a solo run's live spend / ceiling; both absent → no line.
+                // A free lane shows $0.00 — a number, not a missing line (⚖️ Sally 2026-10-06).
                 {...costTexts(generation.progress)}
               />
               {/* The stream is closed once a run ends — F4 draws no live chip. */}
@@ -750,9 +787,13 @@ export function ManageSubtitleDialogV2({
                       resumes translate-only from the EN source. */}
                   {generation.progress.partial
                     ? `字幕已生成（部分翻譯失敗，${generation.progress.englishKeptBlocks ?? '若干'} 句保留英文；重新生成可補譯）`
-                    : generation.progress.zhSrtPath
-                      ? '字幕已生成完成'
-                      : '已生成英文字幕；尚未翻譯'}
+                    : generation.progress.route && generation.progress.message
+                      ? // Pipeline mode: the solo terminal names its lane
+                        // (「直接使用片內中文字幕，沒有花錢」…) — show that sentence.
+                        generation.progress.message
+                      : generation.progress.zhSrtPath
+                        ? '字幕已生成完成'
+                        : '已生成英文字幕；尚未翻譯'}
                 </p>
               )}
               {/* F4-D-v2 c6TLrS: what is already on disk after a failure — the
@@ -872,8 +913,9 @@ export function ManageSubtitleDialogV2({
                     )}
                   >
                     {/* Lines and their precedence: generateCostView (J9-D six
-                        states + the SM supplement). Verb ruled 2026-08-06: this
-                        button calls the transcribe (ASR) endpoint — 語音辨識. */}
+                        states + the SM supplement). Verb ruled 2026-08-06 (語音辨識)
+                        and narrowed 2026-10-06 (⚖️ Sally): it now applies only to
+                        the asr / skip lanes; the embedded-track lane says 使用片內字幕. */}
                     {costView.helper.text}
                     {costView.helper.settingsLink && (
                       <>
