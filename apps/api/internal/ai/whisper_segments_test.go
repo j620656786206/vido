@@ -203,16 +203,55 @@ func TestFilterHallucinations_R2RepeatRunKeepsTheFirst(t *testing.T) {
 		speech(2, 3, "thank you"),
 		speech(3, 4, " Thank you. "),
 		speech(4, 5, "Thank you."),
-		speech(6, 7, "Real closing line"),
+		speech(5, 6, "Thank you!"),
+		speech(6, 7, "Thank you."),
+		speech(8, 9, "Real closing line"),
 	}
 	kept, dropped := filterHallucinations(segs)
-	require.Len(t, dropped, 3)
+	require.Len(t, dropped, 5)
 	for _, d := range dropped {
 		assert.Equal(t, dropReasonRepeatRun, d.Reason)
 	}
 	require.Len(t, kept, 2)
 	assert.Equal(t, "Thank you.", kept[0].Text, "the FIRST utterance survives")
 	assert.Equal(t, "Real closing line", kept[1].Text)
+}
+
+// disc-2026-10-asr-repeated-lines-dropped: See S01E02 — 「Face me!」 shouted
+// three times, 「Jerlamarel!」 called three times — is dialogue. A run under
+// hallucinationRepeatRun (now 5) is kept whole.
+func TestFilterHallucinations_R2GenuineRepeatedShoutsSurvive(t *testing.T) {
+	segs := []whisperSegment{
+		speech(261, 263, "Face me!"),
+		speech(263, 265, "Face me!"),
+		speech(265, 268, "Face me!"),
+		speech(466, 468, "Jerlamarel!"),
+		speech(468, 470, "Jerlamarel!"),
+		speech(470, 472, "Jerlamarel!"),
+		speech(472, 474, "Jerlamarel!"),
+		speech(480, 482, "Come back."),
+	}
+	kept, dropped := filterHallucinations(segs)
+	assert.Empty(t, dropped, "three or four genuine shouts are under the loop bar")
+	assert.Len(t, kept, 8)
+}
+
+// Exactly hallucinationRepeatRun identical lines is where the loop rule
+// starts: the first stays, the rest go.
+func TestFilterHallucinations_R2ExactlyFiveIsALoop(t *testing.T) {
+	segs := []whisperSegment{
+		speech(1, 2, "Thank you."),
+		speech(2, 3, "Thank you."),
+		speech(3, 4, "Thank you."),
+		speech(4, 5, "Thank you."),
+		speech(5, 6, "Thank you."),
+	}
+	kept, dropped := filterHallucinations(segs)
+	require.Len(t, dropped, 4)
+	require.Len(t, kept, 1)
+	for _, d := range dropped {
+		assert.Equal(t, dropReasonRepeatRun, d.Reason)
+	}
 }
 
 // Two identical lines are dialogue, not a loop.
