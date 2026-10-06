@@ -714,10 +714,17 @@ func main() {
 		// began storing cast (2026-09-07) never get re-matched, so one pass
 		// after boot fills them through the same fetcher. Idempotent and
 		// cheap — only rows with no cast at all are listed.
-		movieBackfill, _ := repos.Movies.(services.MovieCreditsBackfillRepo)
-		seriesBackfill, _ := repos.Series.(services.SeriesCreditsBackfillRepo)
+		movieBackfill, okM := repos.Movies.(services.MovieCreditsBackfillRepo)
+		seriesBackfill, okS := repos.Series.(services.SeriesCreditsBackfillRepo)
+		if !okM || !okS {
+			slog.Warn("credits backfill disabled: repositories do not expose FindMissingCredits", "movies", okM, "series", okS)
+		}
+		// Own cancellable ctx (CR 2): the pass must stop BEFORE db.Close() on
+		// shutdown, like every other background service here.
+		creditsBackfillCtx, creditsBackfillCancel := context.WithCancel(context.Background())
+		defer creditsBackfillCancel()
 		services.NewCreditsBackfillService(movieBackfill, seriesBackfill, glossarySeeder, slog.Default()).
-			RunAfter(ctx, 45*time.Second)
+			RunAfter(creditsBackfillCtx, 45*time.Second)
 	} else {
 		slog.Warn("glossary seeding from TMDb credits disabled: TMDb service exposes no credits client")
 	}

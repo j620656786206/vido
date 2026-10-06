@@ -383,7 +383,9 @@ func (s *EnrichmentService) refreshManualMovie(ctx context.Context, movie *model
 // Never overwrites: a row with any cast (TMDb's or the Metadata Editor's)
 // returns at once. Fail-soft like matchedCredits.
 func (s *EnrichmentService) fillMissingCredits(ctx context.Context, mediaType, rowID string, tmdbID models.NullInt64, have *models.Credits, write func(context.Context, string, *models.Credits) error) {
-	if have != nil && len(have.Cast) > 0 {
+	// Any stored credits — a cast, or only a director typed into the
+	// Metadata Editor — are the user's word (CR 1): nothing to fill.
+	if have != nil && (len(have.Cast) > 0 || len(have.Crew) > 0) {
 		return
 	}
 	if s.glossaryCredits == nil || !tmdbID.Valid || tmdbID.Int64 <= 0 {

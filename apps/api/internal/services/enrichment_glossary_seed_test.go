@@ -398,6 +398,18 @@ func TestRefreshManualMovie_FillsMissingCreditsOnly(t *testing.T) {
 		assert.Empty(t, seeder.fetchArgs, "the Metadata Editor's cast is the user's word")
 		assert.Empty(t, repo.creditsWrites)
 	})
+	t.Run("only a director typed by the user → nothing fetched, nothing overwritten", func(t *testing.T) {
+		seeder := &fakeGlossarySeeder{credits: seedTestCredits}
+		var events []string
+		repo := &recordingMovieRepo{events: &events}
+		svc := NewEnrichmentService(repo, nil, nil, nil, nil, nil, nil, nil)
+		svc.SetGlossarySeeder(seeder, nil)
+		movie := &models.Movie{ID: "movie-1", TMDbID: models.NewNullInt64(10196),
+			Credits: &models.Credits{Crew: []models.CrewMember{{Name: "周星馳", Job: "Director"}}}}
+		require.NoError(t, svc.refreshManualMovie(context.Background(), movie))
+		assert.Empty(t, seeder.fetchArgs)
+		assert.Empty(t, repo.creditsWrites)
+	})
 	t.Run("no tmdb id → nothing fetched", func(t *testing.T) {
 		seeder := &fakeGlossarySeeder{credits: seedTestCredits}
 		var events []string
