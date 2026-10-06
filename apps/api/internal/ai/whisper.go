@@ -56,6 +56,10 @@ type WhisperClient struct {
 	language string
 	// governor is the shared AI throttle (Story 9R-11; nil = unthrottled).
 	governor *Governor
+	// wordTimestampsUnsupported latches when the engine rejects
+	// timestamp_granularities[] (disc-2026-10-asr-coarse-timestamps): one 4xx
+	// and every later request on this client goes segment-only, no retry.
+	wordTimestampsUnsupported atomic.Bool
 	// model is the transcription model id (Story 9R-9). Defaults to WhisperModel;
 	// self-hosted OpenAI-compatible engines use their own id (e.g. Speaches
 	// "Systran/faster-whisper-small").
@@ -258,6 +262,20 @@ func (c *WhisperClient) TranscribeDetailed(ctx context.Context, audioPath, lang 
 	return detail, nil
 }
 
+// rejectsWordTimestamps tells a 4xx about timestamp_granularities[] apart
+// from a 4xx about the response format. Engines phrase it differently
+// ("unknown field timestamp_granularities", "word timestamps not
+// supported"), so this matches the words they all use.
+func rejectsWordTimestamps(err error) bool {
+	msg := strings.ToLower(err.Error())
+	for _, phrase := range []string{"granularit", "word_timestamp", "word timestamp", "word-level", "word level"} {
+		if strings.Contains(msg, phrase) {
+			return true
+		}
+	}
+	return false
+}
+
 // transcribeVerbose runs the verbose_json path. ok=false means "this engine
 // cannot do verbose_json, fall back to srt" — never an outright failure.
 func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, filename, lang string) (TranscriptionDetail, bool, error) {
@@ -265,7 +283,21 @@ func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, fil
 		return TranscriptionDetail{}, false, nil
 	}
 
-	body, status, err := c.postTranscription(ctx, audio, filename, lang, transcribeFormatVerboseJSON)
+	// Word timestamps are asked for first; a self-hosted engine that rejects
+	// the extra field answers 4xx, and that must NOT be mistaken for "cannot
+	// do verbose_json" — it is retried once without the field and the engine
+	// is remembered as word-less for the rest of the process.
+	// A 4xx that complains about verbose_json itself ("unsupported
+	// response_format") is NOT a word-timestamp rejection — that one keeps
+	// going to the srt latch below, same as before this story.
+	wordTimestamps := !c.wordTimestampsUnsupported.Load()
+	body, status, err := c.postTranscriptionWith(ctx, audio, filename, lang, transcribeFormatVerboseJSON, wordTimestamps)
+	if err != nil && wordTimestamps && status >= 400 && status < 500 && rejectsWordTimestamps(err) {
+		c.wordTimestampsUnsupported.Store(true)
+		c.logger.Info("transcription engine rejected word timestamps — continuing with segment timing",
+			"status", status, "error", err)
+		body, status, err = c.postTranscriptionWith(ctx, audio, filename, lang, transcribeFormatVerboseJSON, false)
+	}
 	if err != nil {
 		// ONLY a permanent 4xx means "this engine does not implement the
 		// format". A 5xx or a timeout is a transient fault that retryTransient
@@ -296,6 +328,14 @@ func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, fil
 		c.logger.Info("transcription returned no speech",
 			"file", filename, "duration_seconds", vt.Duration)
 		return TranscriptionDetail{Filtered: true}, true, nil
+	}
+
+	// disc-2026-10-asr-coarse-timestamps: word timing tightens each cue to
+	// what was actually said inside it. Done BEFORE the hallucination filter,
+	// which reads scores, not times, and before rendering, which stays 1:1.
+	if n := tightenSegmentsWithWords(vt.Segments, vt.Words); n > 0 {
+		c.logger.Debug("segment timing tightened from word timestamps",
+			"file", filename, "segments", len(vt.Segments), "tightened", n, "words", len(vt.Words))
 	}
 
 	// CR M2: a prompted decoder may "hear" the prompt over silence — strip
@@ -389,7 +429,7 @@ func (c *WhisperClient) readAudioForUpload(audioPath string) ([]byte, error) {
 // buildTranscribeBody assembles the multipart payload for one response format.
 // Built per format because response_format is a form field: the verbose→srt
 // fallback needs a second body, not a second file read.
-func (c *WhisperClient) buildTranscribeBody(audio []byte, filename, lang, format, prompt string) ([]byte, string, error) {
+func (c *WhisperClient) buildTranscribeBody(audio []byte, filename, lang, format, prompt string, wordTimestamps bool) ([]byte, string, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -406,6 +446,16 @@ func (c *WhisperClient) buildTranscribeBody(audio []byte, filename, lang, format
 	}
 	if err := writer.WriteField("response_format", format); err != nil {
 		return nil, "", fmt.Errorf("whisper: write format field: %w", err)
+	}
+	// Word-level timing (disc-2026-10-asr-coarse-timestamps): the array field
+	// must list `segment` too, or OpenAI drops the segment array the
+	// hallucination filter reads. Only meaningful with verbose_json.
+	if wordTimestamps && format == transcribeFormatVerboseJSON {
+		for _, g := range []string{"word", "segment"} {
+			if err := writer.WriteField("timestamp_granularities[]", g); err != nil {
+				return nil, "", fmt.Errorf("whisper: write timestamp_granularities field: %w", err)
+			}
+		}
 	}
 	// Pin language when known — avoids unreliable auto-detection (e.g. an English
 	// episode mis-detected as Chinese due to a few seconds of background TV audio).
@@ -435,7 +485,13 @@ func (c *WhisperClient) buildTranscribeBody(audio []byte, filename, lang, format
 // got a response), which is how the caller tells "this engine does not support
 // verbose_json" (4xx) from "the network hiccuped" (5xx / timeout).
 func (c *WhisperClient) postTranscription(ctx context.Context, audio []byte, filename, lang, format string) (string, int, error) {
-	bodyBytes, contentType, err := c.buildTranscribeBody(audio, filename, lang, format, ASRPromptFromContext(ctx))
+	return c.postTranscriptionWith(ctx, audio, filename, lang, format, false)
+}
+
+// postTranscriptionWith is postTranscription with the word-timestamp request
+// field switched on or off (see transcribeVerbose).
+func (c *WhisperClient) postTranscriptionWith(ctx context.Context, audio []byte, filename, lang, format string, wordTimestamps bool) (string, int, error) {
+	bodyBytes, contentType, err := c.buildTranscribeBody(audio, filename, lang, format, ASRPromptFromContext(ctx), wordTimestamps)
 	if err != nil {
 		return "", 0, err
 	}
