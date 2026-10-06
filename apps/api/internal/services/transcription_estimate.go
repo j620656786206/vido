@@ -163,8 +163,10 @@ func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, min
 		// English-only run: the translate leg is skipped, so only audio minutes bill.
 		return roundUSD(decimal.NewFromFloat(minutes).Mul(asrRate))
 	case translate:
-		// RouteExtract is exactly "translation only".
-		return estimateUSD(RouteExtract, minutes, asrRate, model)
+		// Translate-only resume still translates through the ASR leg's
+		// translateSRT, so it pays that leg's rate — NOT RouteExtract's, which
+		// is a cheaper, cached code path this run never takes.
+		return roundUSD(decimal.NewFromFloat(minutes).Mul(asrLegTranslationRatePerMinute(model)))
 	default:
 		// Resume without a translation key does nothing billable.
 		return decimal.Zero

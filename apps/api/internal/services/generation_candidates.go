@@ -140,7 +140,8 @@ const (
 	RuntimeSourceFallback = "fallback"
 )
 
-// translationUSDPerMinuteByModel prices the LLM half, per model, per minute of
+// translationUSDPerMinuteByModel prices the EXTRACT route's LLM half (the ASR
+// route has its own table below), per model, per minute of
 // RUNTIME (not of processing).
 //
 // Cost cannot be computed exactly before extraction — it scales with cue
@@ -181,16 +182,57 @@ var translationUSDPerMinuteByModel = map[string]decimal.Decimal{
 // fallback price that is a fiction.
 const translationCalibrationModel = "claude-sonnet-5"
 
-// translationRatePerMinute is the per-runtime-minute LLM cost of a model.
-// Measured models use their measured rate; anything else is the anchor scaled
-// by the blended (input+output) price ratio — the two prices move together
-// across every row of the pricing table, so a single blended ratio is as good
-// as a token-split one and needs no assumption about the input/output mix.
+// asrLegTranslationUSDPerMinuteByModel prices the LLM half of the ASR route —
+// the translation that follows speech recognition — which is a DIFFERENT code
+// path from the one eval-1 measured above, and costs more per cue.
+//
+// The extract route translates through subtitle.Pipeline's TranslateChunk,
+// which can use prompt caching. The ASR route (single-item button, translate-
+// only resume, and batch ASR items alike — all go through
+// TranscriptionService.translateSRT) calls TranslateWithGlossaryHarvest, which
+// has no caching and re-sends the media context and glossary on every 10-cue
+// batch. Quoting it at the extract rate under-quoted See S01E02 (2026-10-05) at
+// $0.80 against a $1.36 bill (bugfix-generation-estimate-under-quotes).
+//
+// Derivation, MEASURED: that run translated 659 cues in 66 calls for
+// 227,210 input + 22,682 output tokens on Sonnet 5 = $1.022, i.e. $0.001551 per
+// cue — 2.7× the extract route's ~$0.00056. Most of each call's ~3,400 input
+// tokens is the per-batch resend, so cost tracks cue COUNT. Cue density is
+// taken from eval-1 (10,304 cues / 740 min = 13.92 per minute) rather than from
+// S01E02 alone: See is a sparse-dialogue show (~10 official cues per minute),
+// and pricing the whole library from it would under-quote talkier titles.
+// $0.001551 × 13.92 = $0.0216 per runtime minute. Consequence: a sparse title
+// like S01E02 now quotes ~15% HIGH ($1.57 vs $1.36), which is the direction
+// translationCalibrationModel's rule already chooses.
+//
+// ⚠️ Re-measure when backlog-asr-leg-unify-gated-pipeline gives this leg prompt
+// caching: the resend overhead this rate pays for disappears with it.
+var asrLegTranslationUSDPerMinuteByModel = map[string]decimal.Decimal{
+	"claude-sonnet-5": decimal.RequireFromString("0.0216"),
+}
+
+// translationRatePerMinute is the per-runtime-minute LLM cost of a model on
+// the EXTRACT route (translating an embedded text track).
 func translationRatePerMinute(model string) decimal.Decimal {
-	if rate, ok := translationUSDPerMinuteByModel[model]; ok {
+	return ratePerMinuteFrom(translationUSDPerMinuteByModel, model)
+}
+
+// asrLegTranslationRatePerMinute is the per-runtime-minute LLM cost of a model
+// on the ASR route (translating what speech recognition heard).
+func asrLegTranslationRatePerMinute(model string) decimal.Decimal {
+	return ratePerMinuteFrom(asrLegTranslationUSDPerMinuteByModel, model)
+}
+
+// ratePerMinuteFrom reads one route's rate table. Measured models use their
+// measured rate; anything else is the anchor scaled by the blended
+// (input+output) price ratio — the two prices move together across every row
+// of the pricing table, so a single blended ratio is as good as a token-split
+// one and needs no assumption about the input/output mix.
+func ratePerMinuteFrom(rates map[string]decimal.Decimal, model string) decimal.Decimal {
+	if rate, ok := rates[model]; ok {
 		return rate
 	}
-	anchorRate := translationUSDPerMinuteByModel[translationCalibrationModel]
+	anchorRate := rates[translationCalibrationModel]
 	if !ai.HasPricing(model) {
 		// No real price row: PricingFor would hand back the cheapest-tier
 		// fallback, and scaling by it would quote an unknown model BELOW the
@@ -1002,7 +1044,8 @@ func (s *GenerationCandidateService) storeRoute(ctx context.Context, key string,
 
 // estimateUSD prices one item.
 //
-// The ASR leg pays for audio minutes AND the translation that follows it; the
+// The ASR leg pays for audio minutes AND the translation that follows it — at
+// its own translation rate, see asrLegTranslationUSDPerMinuteByModel; the
 // extract leg pays only for translation. Note an extract item is therefore
 // rarely exactly $0 — labelling it "free" in the UI is a rounding decision the
 // client makes, not a claim this function makes.
@@ -1012,7 +1055,7 @@ func estimateUSD(route RoutePrediction, minutes float64, asrRate decimal.Decimal
 	case RouteASR:
 		// Only the translation half moves with the model — speech recognition
 		// is billed per audio minute by a different provider entirely.
-		return roundUSD(mins.Mul(asrRate).Add(mins.Mul(translationRatePerMinute(model))))
+		return roundUSD(mins.Mul(asrRate).Add(mins.Mul(asrLegTranslationRatePerMinute(model))))
 	case RouteExtract:
 		return roundUSD(mins.Mul(translationRatePerMinute(model)))
 	default:
