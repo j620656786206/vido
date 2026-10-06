@@ -51,6 +51,12 @@ technical section; name files and symbols there, not in the plain-language part.
 Write in zh-TW (the project's communication language); technical identifiers,
 env var names and code stay in their original form.
 
+## Backlog 與 story 流水線
+
+- **「從 backlog 挑一張」「挑下一張」「接下來做什麼」（沒指定哪張）= 先列 2～3 張候選＋推薦，停下來等 Alexyu 選。** 不要自己選完做到開 PR（PR #652 教訓）。只有「下一個 story」「繼續做下一張」「做 <id>」才直接做，走 `/next-story`。
+- **再小的 story 也先建檔**（Bob create-story → story `.md` → dev）。P3 一行修正也不例外。
+- **回報 bug 之前先確認資料是新的。** NAS 讀 `/mnt/cache` 路徑或打 API、隔幾分鐘再讀一次；本機 DB 要確認是這次跑出來的。讀到過期資料誤報過兩次。
+
 ## Confirm Before Coding (no premature assumptions)
 
 Before implementing, **state and confirm** any of these you're relying on rather than guessing:
