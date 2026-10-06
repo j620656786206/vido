@@ -117,11 +117,48 @@ func TestCheckChunk_FailureClasses(t *testing.T) {
 			wantReason: GateReasonSimplifiedLeak,
 		},
 
+		{
+			// disc-2026-10-simplified-leak-false-positive-li: 里 is Traditional too.
+			name:       "simplified_leak: 这 beside a legitimate 里 still fails (the 这 is the leak)",
+			source:     "Over here.",
+			translated: map[int]string{7: "在这里"},
+			wantReason: GateReasonSimplifiedLeak,
+		},
+		{
+			// The characters left the detector's set; the WORDS are still caught.
+			name:       "simplified_leak: 家里 is a Simplified word even though 里 alone is Traditional",
+			source:     "Nobody is home.",
+			translated: map[int]string{7: "家里沒人"},
+			wantReason: GateReasonSimplifiedLeak,
+		},
+		{
+			name:       "simplified_leak: 几乎 / 多余 / 丰富 / 什么 / 准备 are Simplified words",
+			source:     "Almost nothing is left.",
+			translated: map[int]string{7: "几乎什么都不剩，准备多余的丰富晚餐"},
+			wantReason: GateReasonSimplifiedLeak,
+		},
+
 		// ─── pass ───
 		{
 			name:       "pass: clean Traditional translation",
 			source:     "This software is great.",
 			translated: map[int]string{7: "這個軟體很好用"},
+		},
+		{
+			// See S01E02 #29 / #516 shipped in English because of this (2026-10-06).
+			name:       "pass: 里 in a name is not a Simplified leak",
+			source:     "Speak to Paris.",
+			translated: map[int]string{7: "去找帕里斯談。"},
+		},
+		{
+			name:       "pass: 英里 / 茶几 / 占卜 are Traditional words",
+			source:     "Machines that could speak across thousands of miles.",
+			translated: map[int]string{7: "能跨越數千英里說話的機器，茶几旁的占卜師。"},
+		},
+		{
+			name:       "pass: 不准動 / 老么 / 佣金 are Traditional words",
+			source:     "Don't move! The youngest takes the commission.",
+			translated: map[int]string{7: "不准動！老么拿走了佣金。"},
 		},
 		{
 			name:       "pass: multi-line translation",

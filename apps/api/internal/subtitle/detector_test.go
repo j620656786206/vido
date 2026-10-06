@@ -213,8 +213,10 @@ func TestDetect_BoundaryExact30(t *testing.T) {
 	simp := []rune{'这', '个', '来', '进', '过', '还', '从', '为', '们', '会',
 		'没', '给', '让', '动', '关', '开', '长', '问', '时', '应',
 		'点', '经', '机', '头', '现', '实', '说', '种', '边', '听',
-		'远', '运', '两', '几', '发', '无', '书', '东', '马', '车',
-		'云', '风', '飞', '鸟', '鱼', '龙', '门', '电', '号', '乐',
+		// 几 / 云 were swapped for 难 / 雾 (disc-2026-10-simplified-leak-false-positive-li):
+		// they are legitimate Traditional characters too and left the set.
+		'远', '运', '两', '难', '发', '无', '书', '东', '马', '车',
+		'雾', '风', '飞', '鸟', '鱼', '龙', '门', '电', '号', '乐',
 		'写', '买', '卖', '红', '绿', '蓝', '银', '铁', '钱', '钟',
 		'钢', '闹', '闻', '间', '阳', '阴', '队', '际', '陆', '险'}
 
@@ -228,6 +230,29 @@ func TestDetect_BoundaryExact30(t *testing.T) {
 	result := Detect([]byte(sb.String()))
 	// 30/100 = 0.30, ≤ 0.30, so zh-Hans
 	assert.Equal(t, LangSimplified, result.Language, "exactly 30%% traditional should be zh-Hans")
+}
+
+// disc-2026-10-simplified-leak-false-positive-li: characters that are both a
+// Simplified form AND a legitimate Traditional character must not count as
+// Simplified — the quality gate fails a cue on a single hit.
+func TestDetect_DualUseCharactersAreNotSimplified(t *testing.T) {
+	for _, text := range []string{
+		"我去找帕里斯。",      // 里 in a transliterated name (See S01E02 #29)
+		"能跨越數千英里說話的機器", // 英里 (See S01E02 #516)
+		"公里、鄰里、里長",
+		"茶几上有一本書", // 几
+		"人云亦云",    // 云
+		"丰采依舊",    // 丰
+		"余光中的詩",   // 余
+		"占卜師說",    // 占
+		"我們去划船",   // 划
+	} {
+		r := Detect([]byte(text))
+		assert.Zero(t, r.SimplifiedCount, "%q must not read as a Simplified leak", text)
+	}
+	// The genuinely Simplified neighbours still count.
+	assert.Greater(t, Detect([]byte("这里")).SimplifiedCount, 0)
+	assert.Greater(t, Detect([]byte("几个")).SimplifiedCount, 0, "个 still trips the set")
 }
 
 func TestDetect_SharedCharactersOnly(t *testing.T) {
