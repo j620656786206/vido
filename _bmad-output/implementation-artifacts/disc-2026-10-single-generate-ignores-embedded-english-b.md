@@ -106,6 +106,13 @@ Status: backlog
 
 **D. 給 Pencil Inline AI Agent 的提示詞**（照 [[feedback-pen-inline-agent-workflow]]：Alexyu 執行、⌘S、重出截圖、只 stage 真變更；Sally 之後用 MCP 唯讀複審）——見本 story 下方「Inline Agent 提示詞」。執行後要補 `scripts/export-pen-screenshots.py` 的 `SCREENS`（新 J12-D 節點 id → `("flow-j-specs", "j12-d")`）。
 
+### Sally MCP 複審（2026-10-06，唯讀 `Get`）——✅ 追認
+
+- **元件 `Component/GenerationProgress-v2/Extract`（新 id `CZrmG`，reusable，x 19762／y −6443，在 `XkGvG` 右側）**：子節點 `gp-st1, gp-cn2, gp-st3, gp-cn3, gp-st4, gp-cn4, gp-st-ai, gp-cn-ai, gp-st5`——`gp-st2` 與 `gp-cn1` 已刪；`gp-st1-lb` 逐字＝「抽取字幕」；其餘標籤「翻譯中／簡轉繁／AI校正／完成」、顏色變數、字重、隱藏的百分比節點全部與 `XkGvG` 相同；`ctx.problems` 為空。原本的 `XkGvG` 未動。
+- **J12-D（新 id `jYNkJ`，x 30200／y 48253，寬 1240）＋ caption `woE7k`「J12 · 生成進度條依路線切換」（樣式同 `pA0PQ`）**：head／states／rules 三段；三列標籤逐字正確；row ① 是 `XkGvG` 實例（預設態）；row ② 是 `CZrmG` 實例，覆寫：第一格完成、連接線 `$success`、第二格 `$accent-tint`＋`loader-circle`＋`$accent-text` 600＋「62%」；row ③ 是 `CZrmG` 實例，覆寫：全部完成態，第二格圓底 `$bg-tertiary`＋lucide `minus` 14×14 `$text-muted`＋標籤 `$text-muted`、無百分比。rules 三行逐字正確，`$bg-secondary`／`$radius-lg`／`$Space/lg`。沒有寫死數字，`ctx.problems` 為空。
+- Inline agent 的合理偏差：row 標籤欄用固定寬 260（`fixed-width`）而不是 fit——三列對齊更穩，追認。
+- `SCREENS` 新增 `"jYNkJ": ("flow-j-specs", "j12-d")`；截圖由 `export-pen-screenshots.py` 重出，只 stage `j12-d.png`。
+
 ### Inline Agent 提示詞
 
 **提示詞 1（元件變體）**
@@ -138,7 +145,7 @@ Status: backlog
 
 ## Tasks / Subtasks
 
-- [ ] T0 Sally：核定 §2 文案、§4 進度條五格變體（含 .pen 變體＋截圖）、§5「沒有花錢」文案（AC #8、#4）—— **裁定已出（見「Sally 裁定」）；待 Alexyu 跑兩段 Inline Agent 提示詞 → ⌘S → 重出截圖 → Sally MCP 複審**
+- [x] T0 Sally：核定 §2 文案、§4 進度條五格變體（含 .pen 變體＋截圖）、§5「沒有花錢」文案（AC #8、#4）—— ✅ 2026-10-06 完成：Alexyu 跑完兩段提示詞、Sally MCP 複審追認、截圖重出
 - [ ] T1 型別與 service（AC #1）
 - [ ] T2 `generateCostView` 路線規則（AC #2）
 - [ ] T3 `useGenerationProgress` job_id 終點判定＋`route`（AC #3、#6）
@@ -191,3 +198,4 @@ N/A — no wall-clock-reading components touched（進度條與對話框不讀 `
 |---|---|
 | 2026-10-06 | Bob create-story（-b 前端半張，依賴 -a）。 |
 | 2026-10-06 | Sally T0 裁定：§2 兩個新字串定稿、`DEFAULT_LINE` 不改字只縮範圍；§5 不另造字串（`$0.00` 就是誠實數字）；§4 新元件 `GenerationProgress-v2/Extract` 五格＋「略過」用 `minus`＋J12-D spec 畫面；兩段 Inline Agent 提示詞寫在 story 裡，等 Alexyu 執行。 |
+| 2026-10-06 | Alexyu 跑完 Inline Agent；Sally MCP 複審追認（`CZrmG` 五格元件、`jYNkJ` J12-D）；`SCREENS` 加 J12-D。T0 完成。 |

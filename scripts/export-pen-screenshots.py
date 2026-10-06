@@ -254,6 +254,7 @@ SCREENS = {
     # disc-2026-10-episode-list-subtitle-badge design (2026-10-05): per-episode
     # 有／缺中文字幕 icons + the tooltip contract in the season list.
     "w2Opax": ("flow-j-specs", "j11-d"),
+    "jYNkJ": ("flow-j-specs", "j12-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "xlrAO": ("design-system", "design-system-reference-light"),
