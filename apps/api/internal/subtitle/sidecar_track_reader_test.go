@@ -57,11 +57,11 @@ func TestSidecarTrackReader_SeasonFolder(t *testing.T) {
 // The language strings the reader emits must classify the way the verdict
 // expects: a mixed-script file is still Chinese (script untold).
 func TestSidecarTrackReader_LanguagesClassify(t *testing.T) {
-	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleOfTrack(LangTraditional, ""))
-	assert.Equal(t, models.ChineseSubtitleZhHans, models.ChineseSubtitleOfTrack(LangSimplified, ""))
-	assert.Equal(t, models.ChineseSubtitleZh, models.ChineseSubtitleOfTrack(LangChineseUnknown, ""))
-	assert.Equal(t, models.ChineseSubtitle(""), models.ChineseSubtitleOfTrack(LangUndetermined, ""))
-	assert.Equal(t, models.ChineseSubtitle(""), models.ChineseSubtitleOfTrack("en", ""))
+	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleOfTrack(LangTraditional, "", ""))
+	assert.Equal(t, models.ChineseSubtitleZhHans, models.ChineseSubtitleOfTrack(LangSimplified, "", ""))
+	assert.Equal(t, models.ChineseSubtitleZh, models.ChineseSubtitleOfTrack(LangChineseUnknown, "", ""))
+	assert.Equal(t, models.ChineseSubtitle(""), models.ChineseSubtitleOfTrack(LangUndetermined, "", ""))
+	assert.Equal(t, models.ChineseSubtitle(""), models.ChineseSubtitleOfTrack("en", "", ""))
 }
 
 func TestSidecarTrackReader_EmptyInput(t *testing.T) {

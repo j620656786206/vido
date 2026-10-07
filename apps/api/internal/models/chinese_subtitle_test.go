@@ -126,6 +126,16 @@ func TestChineseTitleScript(t *testing.T) {
 		{"粵語繁體", TitleScriptCantonese},
 		{"", TitleScriptNone},
 		{"English [SDH]", TitleScriptNone},
+		// Release-scene abbreviations, whole words only (badge-c AC #5).
+		{"CHT", TitleScriptTraditional},
+		{"Chinese Big5", TitleScriptTraditional},
+		{"CHS", TitleScriptSimplified},
+		{"chi.GB", TitleScriptSimplified},
+		{"GB2312", TitleScriptSimplified},
+		{"Chinese (GBP prices)", TitleScriptNone},
+		{"Chinese", TitleScriptNone},
+		{"Richtsubs", TitleScriptNone},
+		{"CHT/CHS", TitleScriptTraditional}, // a dual title: Traditional is checked first
 	}
 	for _, tc := range cases {
 		assert.Equal(t, tc.want, ChineseTitleScript(tc.title), "%q", tc.title)
@@ -142,4 +152,28 @@ func TestChineseSubtitle_AlwaysSerialized(t *testing.T) {
 	sb, err := json.Marshal(Series{ChineseSubtitle: ChineseSubtitleUnknown})
 	assert.NoError(t, err)
 	assert.Contains(t, string(sb), `"chinese_subtitle":"unknown"`)
+}
+
+// disc-2026-10-episode-list-subtitle-badge-c AC #1: what Vido read from the
+// track's text outranks its title and its tag; a sample that did not tell
+// ("zh" / "und") changes nothing; Cantonese stays not-Chinese.
+func TestChineseSubtitleVerdict_DetectedLanguage(t *testing.T) {
+	cases := []struct {
+		name, tracks string
+		want         ChineseSubtitle
+	}{
+		{"untold chi, text Traditional", `[{"language":"chi","detected_language":"zh-Hant"}]`, ChineseSubtitleZhHant},
+		{"untold chi, text Simplified", `[{"language":"chi","detected_language":"zh-Hans"}]`, ChineseSubtitleZhHans},
+		{"sample mixed", `[{"language":"chi","detected_language":"zh"}]`, ChineseSubtitleZh},
+		{"sample had no Chinese", `[{"language":"chi","detected_language":"und"}]`, ChineseSubtitleZh},
+		{"text beats a wrong title", `[{"language":"chi","title":"繁體中文","detected_language":"zh-Hans"}]`, ChineseSubtitleZhHans},
+		{"text beats a wrong tag", `[{"language":"zh-TW","detected_language":"zh-Hans"}]`, ChineseSubtitleZhHans},
+		{"Cantonese title still wins", `[{"language":"chi","title":"粵語","detected_language":"zh-Hant"}]`, ChineseSubtitleNone},
+		{"English track ignores it", `[{"language":"eng","detected_language":"zh-Hant"}]`, ChineseSubtitleNone},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, ChineseSubtitleVerdict("not_searched", "", tc.tracks))
+		})
+	}
 }

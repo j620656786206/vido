@@ -54,6 +54,13 @@ type SubtitleTrack struct {
 	// subtitle_tracks JSON byte-identical for an unflagged track.
 	Forced          bool `json:"forced,omitempty"`
 	HearingImpaired bool `json:"hearing_impaired,omitempty"`
+	// DetectedLanguage is the script Vido read from a sample of an embedded
+	// Chinese text track whose tag and title do not say: "zh-Hant" /
+	// "zh-Hans", or "zh" (mixed) / "und" (no Chinese characters) when the
+	// sample did not tell. Empty = never sampled. Written only by the
+	// episode subtitle-track sweep (disc-2026-10-episode-list-subtitle-badge-c);
+	// ChineseSubtitleVerdict ranks it above the title.
+	DetectedLanguage string `json:"detected_language,omitempty"`
 	// FileName is a sidecar's file name ("See.S01E02.zh-TW.srt") — set only by
 	// the episode sidecar reader (disc-2026-10-episode-list-subtitle-badge-a),
 	// whose Language is decided by the file's content, so the season list can

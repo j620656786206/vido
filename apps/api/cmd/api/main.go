@@ -1081,6 +1081,9 @@ func main() {
 		episodeTracksCtx, episodeTracksCancel := context.WithCancel(context.Background())
 		defer episodeTracksCancel()
 		episodeTracks := services.NewEpisodeSubtitleTracksService(tracksRepo, ffprobeService, subtitle.SidecarTrackReader{}, slog.Default())
+		// -c: a "chi" track with no telling title gets a few minutes read to
+		// tell 繁 from 简.
+		episodeTracks.SetScriptPeeker(subtitle.NewScriptPeeker(slog.Default()))
 		scannerService.AppendOnScanComplete(func() { episodeTracks.Trigger(episodeTracksCtx) })
 		episodeTracks.RunAfter(episodeTracksCtx, 60*time.Second)
 		stopEpisodeTracks = func() {
