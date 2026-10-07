@@ -41,11 +41,6 @@ export function Tooltip({ content, children, side = 'right', delay, openOnPress 
   // blur. A mouse click is left to hover — it already opened the tooltip.
   const pointerType = React.useRef<string | undefined>(undefined);
   const openedByTouch = React.useRef(false);
-  type ChildProps = {
-    onClick?: React.MouseEventHandler;
-    onPointerDown?: React.PointerEventHandler;
-  };
-  const childProps = children.props as ChildProps;
   const controlled = openOnPress
     ? {
         open,
@@ -56,14 +51,13 @@ export function Tooltip({ content, children, side = 'right', delay, openOnPress 
         },
       }
     : {};
-  const trigger = openOnPress
-    ? React.cloneElement(children as React.ReactElement<ChildProps>, {
+  // Base UI merges these with the child's own handlers (mergeProps chains them).
+  const pressProps = openOnPress
+    ? {
         onPointerDown: (event: React.PointerEvent) => {
-          childProps.onPointerDown?.(event);
           pointerType.current = event.pointerType;
         },
         onClick: (event: React.MouseEvent) => {
-          childProps.onClick?.(event);
           // detail 0 = a keyboard click (Enter/Space): no pointer was involved,
           // so a pointerType left over from an earlier tap must not count (CR M1).
           const touch = event.detail !== 0 && pointerType.current !== 'mouse';
@@ -71,12 +65,13 @@ export function Tooltip({ content, children, side = 'right', delay, openOnPress 
           if (touch) openedByTouch.current = true;
           setOpen(true);
         },
-      })
-    : children;
+      }
+    : {};
   return (
     <BaseTooltip.Root {...controlled}>
       <BaseTooltip.Trigger
-        render={trigger}
+        render={children}
+        {...pressProps}
         delay={delay}
         closeOnClick={openOnPress ? false : undefined}
       />

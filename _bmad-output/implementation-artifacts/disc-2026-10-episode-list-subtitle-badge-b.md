@@ -31,7 +31,7 @@ Status: done
 
 ## Dev Agent Record
 
-- 2026-10-07 /ship：PR #719；`-linux` focus 基準由 CI bootstrap PR #720 補進分支。
+- 2026-10-07 /ship：PR #719；`-linux` focus 基準由 CI bootstrap PR #720 補進分支。CI 第一輪 Lint 紅：React Compiler 規則不准把讀 ref 的函式塞進 `cloneElement`（本機 `lint:all` 我只看了「可自動修」那行的 0 errors，漏看了總數）→ 改成把處理函式直接交給 Base UI 的 Trigger（它會跟子元素自己的處理函式串起來），不再 cloneElement。E2E ×2、Tooltip 單元測試照舊綠。
 
 ### File List
 
