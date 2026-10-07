@@ -32,6 +32,8 @@ export interface GlossaryTerm {
   language: string;
   source: GlossarySource;
   confirmed: boolean;
+  /** Set on a per-season drawer row: this spelling is season N's (disc-2026-10-glossary-season-scope-b). */
+  season?: number;
   createdAt: string;
   updatedAt: string;
 }

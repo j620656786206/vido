@@ -371,3 +371,45 @@ func TestDeleteSeasonDrawers(t *testing.T) {
 	require.NoError(t, err)
 	assert.EqualValues(t, 0, n, "the :s anchor keeps a prefix id from matching another show's drawers")
 }
+
+// disc-2026-10-glossary-season-scope-b
+func TestSeasonDrawers_ListAndClearOfTerm(t *testing.T) {
+	db := setupGlossaryDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	repo := NewGlossaryRepository(db)
+	ctx := context.Background()
+	w := func(scope, src, zh string, confirmed bool) string {
+		term := &models.GlossaryTerm{MediaID: "s1", Scope: scope, TermSrc: src, TermZh: zh, Source: models.GlossarySourceOfficialSubtitle, Confirmed: confirmed}
+		require.NoError(t, repo.Upsert(ctx, term))
+		return term.ID
+	}
+	showWide := w("tmdb:tv:80752", "Jerlamarel", "傑拉馬瑞", false)
+	s1 := w("tmdb:tv:80752:s1", "Jerlamarel", "謝拉馬威", false)
+	w("tmdb:tv:80752:s2", "jerlamarel", "傑拉馬瑞", false) // case differs, same term (NOCASE)
+	w("tmdb:tv:80752:s1", "Paris", "芭麗絲", true)        // confirmed drawer — never cleared
+	w("tmdb:tv:80752:s2", "Paris", "巴莉絲", false)
+	w("tmdb:tv:8:s1", "Jerlamarel", "別部劇", false)
+
+	drawers, err := repo.ListSeasonDrawers(ctx, "tmdb:tv:80752")
+	require.NoError(t, err)
+	require.Len(t, drawers, 4, "this show's drawers only; the prefix show's are not matched")
+	assert.Equal(t, 1, *drawers[0].Season)
+	assert.Equal(t, "Jerlamarel", drawers[0].TermSrc)
+
+	// A drawer row id is a no-op: deleting one season's spelling must not take the others.
+	n, err := repo.ClearSeasonDrawersOfTerm(ctx, s1)
+	require.NoError(t, err)
+	assert.EqualValues(t, 0, n)
+	// The show-wide row clears its term's unconfirmed drawers, NOCASE, and nothing else.
+	n, err = repo.ClearSeasonDrawersOfTerm(ctx, showWide)
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, n)
+	drawers, err = repo.ListSeasonDrawers(ctx, "tmdb:tv:80752")
+	require.NoError(t, err)
+	require.Len(t, drawers, 2)
+	assert.Equal(t, "Paris", drawers[0].TermSrc)
+	assert.Equal(t, "Paris", drawers[1].TermSrc)
+	n, err = repo.ClearSeasonDrawersOfTerm(ctx, "no-such-id")
+	require.NoError(t, err)
+	assert.EqualValues(t, 0, n)
+}

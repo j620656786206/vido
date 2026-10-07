@@ -193,13 +193,71 @@ func (r *GlossaryRepository) ReplaceUnconfirmedGuess(ctx context.Context, term *
 // current files justify — a season whose file was replaced stops overriding.
 // The `:s` anchor keeps `tmdb:tv:8` from matching `tmdb:tv:80752:s1`.
 func (r *GlossaryRepository) DeleteSeasonDrawers(ctx context.Context, scope string) (int64, error) {
-	pattern := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(scope) + ":s%"
+	pattern := likeEscape(scope) + ":s%"
 	res, err := r.db.ExecContext(ctx, `DELETE FROM show_glossary
 		WHERE scope LIKE ? ESCAPE '\' AND source = ? AND confirmed = 0`, pattern, models.GlossarySourceOfficialSubtitle)
 	if err != nil {
 		return 0, fmt.Errorf("failed to clear glossary season drawers: %w", err)
 	}
 	return res.RowsAffected()
+}
+
+// ListSeasonDrawers returns a show's per-season drawer rows
+// (`<scope>:s<N>`, disc-2026-10-glossary-season-scope-b) with Season filled,
+// ordered by term then season — the panel lists them next to the show-wide
+// row so the user can see which season a spelling belongs to.
+func (r *GlossaryRepository) ListSeasonDrawers(ctx context.Context, scope string) ([]models.GlossaryTerm, error) {
+	pattern := likeEscape(scope) + ":s%"
+	rows, err := r.db.QueryContext(ctx, `SELECT `+glossaryColumns+` FROM show_glossary
+		WHERE scope LIKE ? ESCAPE '\' ORDER BY term_src ASC, scope ASC`, pattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list glossary season drawers: %w", err)
+	}
+	defer rows.Close()
+	var out []models.GlossaryTerm
+	for rows.Next() {
+		t, err := scanGlossaryTerm(rows)
+		if err != nil {
+			return nil, err
+		}
+		if _, season, ok := models.ParseGlossarySeasonScope(t.Scope); ok {
+			s := season
+			t.Season = &s
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// ClearSeasonDrawersOfTerm removes the unconfirmed per-season drawers of the
+// term behind a show-wide row id (disc-2026-10-glossary-season-scope-b): once
+// the user edits, confirms or deletes the show-wide spelling, their word
+// applies to every season. A drawer row id is a no-op (deleting one season's
+// spelling must not take the others with it). Returns rows removed.
+func (r *GlossaryRepository) ClearSeasonDrawersOfTerm(ctx context.Context, id string) (int64, error) {
+	var scope, termSrc string
+	err := r.db.QueryRowContext(ctx, `SELECT scope, term_src FROM show_glossary WHERE id = ?`, id).Scan(&scope, &termSrc)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("failed to read glossary term for drawer clear: %w", err)
+	}
+	if _, _, isDrawer := models.ParseGlossarySeasonScope(scope); isDrawer {
+		return 0, nil
+	}
+	res, err := r.db.ExecContext(ctx, `DELETE FROM show_glossary
+		WHERE scope LIKE ? ESCAPE '\' AND term_src = ? COLLATE NOCASE AND source = ? AND confirmed = 0`,
+		likeEscape(scope)+":s%", termSrc, models.GlossarySourceOfficialSubtitle)
+	if err != nil {
+		return 0, fmt.Errorf("failed to clear glossary season drawers of term: %w", err)
+	}
+	return res.RowsAffected()
+}
+
+// likeEscape escapes LIKE metacharacters so a scope is matched literally.
+func likeEscape(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
 
 // InsertIfAbsent is the auto-harvest write path (sub-5-5 AC #4): insert-only,

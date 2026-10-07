@@ -103,3 +103,58 @@ func TestGlossaryService_EditAlwaysConfirms(t *testing.T) {
 	require.NotNil(t, repo.lastUpdateConfirmed)
 	assert.True(t, *repo.lastUpdateConfirmed, "a reviewed-and-rewritten term is confirmed")
 }
+
+// drawerAwareRepo adds the optional per-season surface to the inert fake.
+type drawerAwareRepo struct {
+	scopeRecordingRepo
+	base    []models.GlossaryTerm
+	drawers []models.GlossaryTerm
+	cleared []string
+}
+
+func (r *drawerAwareRepo) ListByScope(context.Context, string) ([]models.GlossaryTerm, error) {
+	return r.base, nil
+}
+func (r *drawerAwareRepo) ListSeasonDrawers(context.Context, string) ([]models.GlossaryTerm, error) {
+	return r.drawers, nil
+}
+func (r *drawerAwareRepo) ClearSeasonDrawersOfTerm(_ context.Context, id string) (int64, error) {
+	r.cleared = append(r.cleared, id)
+	return 1, nil
+}
+func (r *drawerAwareRepo) DeleteSeasonDrawers(_ context.Context, scope string) (int64, error) {
+	r.cleared = append(r.cleared, "ALL:"+scope)
+	return 2, nil
+}
+
+// disc-2026-10-glossary-season-scope-b: the panel list interleaves each term's
+// season drawers right after its show-wide row; an edit / confirm / delete of
+// the show-wide row clears that term's drawers.
+func TestGlossaryService_ListInterleavesSeasonDrawers_AndWritesClearThem(t *testing.T) {
+	one, two := 1, 2
+	repo := &drawerAwareRepo{
+		base: []models.GlossaryTerm{{ID: "h", TermSrc: "Haniwa", TermZh: "哈妮娃"}, {ID: "j", TermSrc: "Jerlamarel", TermZh: "傑拉馬瑞"}},
+		drawers: []models.GlossaryTerm{
+			{ID: "j1", TermSrc: "Jerlamarel", TermZh: "謝拉馬威", Scope: "tmdb:tv:80752:s1", Season: &one},
+			{ID: "j2", TermSrc: "Jerlamarel", TermZh: "傑拉馬瑞", Scope: "tmdb:tv:80752:s2", Season: &two},
+		},
+	}
+	svc := NewGlossaryService(repo, &fakeScopeResolver{scope: "tmdb:tv:80752"})
+	got, err := svc.List(context.Background(), "series-1")
+	require.NoError(t, err)
+	var ids []string
+	for _, g := range got {
+		ids = append(ids, g.ID)
+	}
+	assert.Equal(t, []string{"h", "j", "j1", "j2"}, ids)
+
+	require.NoError(t, svc.Edit(context.Background(), "series-1", "j", "傑拉瑪瑞爾", true))
+	require.NoError(t, svc.Confirm(context.Background(), "series-1", "h"))
+	require.NoError(t, svc.Delete(context.Background(), "series-1", "j"))
+	assert.Equal(t, []string{"j", "h", "j"}, repo.cleared)
+
+	// CR 1: 全部確認 makes every show-wide row the user's word → all drawers go.
+	_, err = svc.ConfirmAll(context.Background(), "series-1")
+	require.NoError(t, err)
+	assert.Equal(t, "ALL:tmdb:tv:80752", repo.cleared[len(repo.cleared)-1])
+}

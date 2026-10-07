@@ -425,3 +425,74 @@ describe('GlossaryRowV2 — two-line row on a phone (dsr-6f-2, F6-M-v2 buepS)', 
     );
   });
 });
+
+describe('GlossaryRowV2 — season drawers (disc-2026-10-glossary-season-scope-b)', () => {
+  const drawer = {
+    id: 'j1',
+    mediaId: 's1',
+    termSrc: 'Jerlamarel',
+    termZh: '謝拉馬威',
+    language: 'zh-Hant',
+    source: 'official_subtitle' as const,
+    confirmed: false,
+    season: 1,
+    createdAt: '',
+    updatedAt: '',
+  };
+
+  it('tags a season drawer row with its season', () => {
+    render(
+      <GlossaryRowV2
+        term={drawer}
+        onConfirm={() => {}}
+        onEdit={async () => {}}
+        onDelete={() => {}}
+      />
+    );
+    expect(screen.getByTestId('glossary-season-j1')).toHaveTextContent('S1');
+  });
+
+  it('explains what deleting a season spelling does, naming the show-wide fallback', async () => {
+    render(
+      <GlossaryRowV2
+        term={drawer}
+        fallbackZh="傑拉馬瑞"
+        onConfirm={() => {}}
+        onEdit={async () => {}}
+        onDelete={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByTestId('glossary-delete-j1'));
+    expect(await screen.findByTestId('glossary-delete-dialog-j1')).toHaveTextContent(
+      '這是第 1 季官方字幕的寫法。刪掉後，補第 1 季的集數會改用全劇的寫法「傑拉馬瑞」'
+    );
+  });
+});
+
+describe('GlossaryRowV2 — orphan season drawer', () => {
+  it('says the name leaves the glossary when no show-wide row remains', async () => {
+    render(
+      <GlossaryRowV2
+        term={{
+          id: 'o1',
+          mediaId: 's1',
+          termSrc: 'Oloman',
+          termZh: '奧路文',
+          language: 'zh-Hant',
+          source: 'official_subtitle',
+          confirmed: false,
+          season: 1,
+          createdAt: '',
+          updatedAt: '',
+        }}
+        onConfirm={() => {}}
+        onEdit={async () => {}}
+        onDelete={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByTestId('glossary-delete-o1'));
+    expect(await screen.findByTestId('glossary-delete-dialog-o1')).toHaveTextContent(
+      '全劇層已經沒有這個詞'
+    );
+  });
+});

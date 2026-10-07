@@ -35,6 +35,8 @@ export interface MineResult {
   termsReplaced?: number;
   /** Harvested (speech-recognition) guesses deleted because the official English never says them. */
   termsPruned?: number;
+  /** Terms whose official spelling differs between seasons (each got a season drawer). */
+  termsSplit?: number;
   startedAt: string;
   finishedAt: string;
   error?: string;
