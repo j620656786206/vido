@@ -66,12 +66,15 @@ type MineResult struct {
 	TermsInserted int    `json:"terms_inserted"`
 	// TermsReplaced counts harvested (speech-recognition) guesses the
 	// official rendering overwrote (disc-2026-10-asr-harvest-pollutes-glossary).
-	TermsReplaced int                 `json:"terms_replaced"`
-	Terms         []mine.Term         `json:"terms,omitempty"`
-	Episodes      []MineEpisodeReport `json:"episodes,omitempty"`
-	StartedAt     time.Time           `json:"started_at"`
-	FinishedAt    time.Time           `json:"finished_at"`
-	Error         string              `json:"error,omitempty"`
+	TermsReplaced int `json:"terms_replaced"`
+	// TermsSplit counts terms whose official rendering differs between
+	// seasons; each got a per-season drawer (disc-2026-10-glossary-season-scope-a).
+	TermsSplit int                 `json:"terms_split"`
+	Terms      []mine.Term         `json:"terms,omitempty"`
+	Episodes   []MineEpisodeReport `json:"episodes,omitempty"`
+	StartedAt  time.Time           `json:"started_at"`
+	FinishedAt time.Time           `json:"finished_at"`
+	Error      string              `json:"error,omitempty"`
 }
 
 // MineStatus is the miner's observable state: whether a run is in flight and
@@ -109,6 +112,9 @@ type GlossaryRepo interface {
 	// mining pass) — never a confirmed, TMDb or manual row
 	// (disc-2026-10-asr-harvest-pollutes-glossary). The guard is in the SQL.
 	ReplaceUnconfirmedGuess(ctx context.Context, term *models.GlossaryTerm) (bool, error)
+	// DeleteSeasonDrawers clears a show's per-season drawers before the miner
+	// rewrites the ones the current files justify (disc-2026-10-glossary-season-scope-a).
+	DeleteSeasonDrawers(ctx context.Context, scope string) (int64, error)
 }
 
 // OfficialSubtitleMiner runs 加速器② over the library.
@@ -328,6 +334,7 @@ func (m *OfficialSubtitleMiner) mineOne(ctx context.Context, seriesID string) Mi
 	defer os.RemoveAll(tmp)
 
 	var all []mine.Segment
+	var perEpisode []episodeSegments
 	for _, e := range eps {
 		if !e.FilePath.Valid || e.FilePath.String == "" {
 			continue
@@ -339,6 +346,7 @@ func (m *OfficialSubtitleMiner) mineOne(ctx context.Context, seriesID string) Mi
 		if rep.Skipped == "" {
 			res.EpisodesUsed++
 			all = append(all, segs...)
+			perEpisode = append(perEpisode, episodeSegments{season: e.SeasonNumber, segs: segs})
 		}
 		res.Episodes = append(res.Episodes, rep)
 	}
@@ -350,11 +358,56 @@ func (m *OfficialSubtitleMiner) mineOne(ctx context.Context, seriesID string) Mi
 	known := knownRenderings(rows)
 	harvested := harvestedGuesses(rows)
 	terms := mine.Mine(all, mine.Options{Known: known})
+	// disc-2026-10-glossary-season-scope-a: where seasons disagree, the
+	// show-wide rendering is the one most EPISODES used (tie → the latest
+	// season, whose vendor the next season most likely keeps), and each
+	// season gets its own drawer so a filled-in episode matches its neighbours.
+	splits := seasonSplits(terms, perEpisode, known)
+	// A name the seasons split EVENLY never clears the show-wide share bar
+	// (Kofun: 高豐 53 lines vs 可風 56 of 119 — neither is 60 %), so it is
+	// only visible per season; it still gets its drawers and a show-wide row.
+	have := map[string]struct{}{}
+	for _, t := range terms {
+		have[t.Src] = struct{}{}
+	}
+	var extra []string
+	for src := range splits {
+		if _, ok := have[src]; !ok {
+			extra = append(extra, src)
+		}
+	}
+	sort.Strings(extra)
+	for _, src := range extra {
+		sp := splits[src]
+		terms = append(terms, mine.Term{Src: src, Zh: sp.showWide, Support: sp.votes, Segments: sp.segments, How: "season-split"})
+	}
+	// Drawers exist only under a TMDb show scope (ResolveSeason reads only
+	// there); they are derived data, so clear and rewrite them every pass —
+	// a season whose file was replaced must stop overriding.
+	drawers := strings.HasPrefix(scope, models.GlossaryScopePrefixTMDbTV)
+	if drawers && len(all) > 0 {
+		if _, err := m.glossary.DeleteSeasonDrawers(ctx, scope); err != nil {
+			m.logger.Warn("glossary season drawers not cleared — stale drawers may linger", "scope", scope, "error", err)
+		}
+	}
 	res.Terms = terms
 	res.TermsFound = len(terms)
-	for _, t := range terms {
+	for i := range terms {
+		t := &terms[i]
 		if t.How == "known" {
 			continue // already in the glossary; verified, nothing to write
+		}
+		if sp, ok := splits[t.Src]; ok && drawers {
+			t.Zh = sp.showWide
+			res.TermsSplit++
+			for season, zh := range sp.bySeason {
+				if _, err := m.glossary.ReplaceUnconfirmedGuess(ctx, &models.GlossaryTerm{
+					MediaID: seriesID, Scope: models.GlossarySeasonScope(scope, season),
+					TermSrc: t.Src, TermZh: zh, Source: models.GlossarySourceOfficialSubtitle,
+				}); err != nil {
+					m.logger.Warn("glossary season write failed", "scope", scope, "season", season, "term", t.Src, "error", err)
+				}
+			}
 		}
 		row := &models.GlossaryTerm{
 			MediaID: seriesID,
@@ -390,8 +443,121 @@ func (m *OfficialSubtitleMiner) mineOne(ctx context.Context, seriesID string) Mi
 		"series_id", seriesID, "title", s.Title, "scope", scope,
 		"episodes_used", res.EpisodesUsed, "episodes_total", res.EpisodesTotal,
 		"fansub_skipped", res.FansubSkipped, "terms_found", res.TermsFound,
-		"terms_inserted", res.TermsInserted, "terms_replaced", res.TermsReplaced)
+		"terms_inserted", res.TermsInserted, "terms_replaced", res.TermsReplaced, "terms_split", res.TermsSplit)
 	return res
+}
+
+// episodeSegments is one episode's aligned segments with its season.
+type episodeSegments struct {
+	season int
+	segs   []mine.Segment
+}
+
+// seasonSplit is one term whose official rendering differs between seasons.
+type seasonSplit struct {
+	bySeason map[int]string // season → that season's rendering
+	showWide string         // the rendering most episodes used (tie → latest season)
+	votes    int            // episodes behind showWide
+	segments int            // segments mentioning the term, all seasons
+}
+
+// seasonSplits finds, for each show-wide term, the rendering each season's
+// official files used (mining that season's segments alone), and keeps the
+// terms where at least two seasons disagree. The show-wide pick counts
+// EPISODES, not lines, so a talkative season cannot outvote the rest; a tie
+// goes to the latest season. PURE.
+func seasonSplits(terms []mine.Term, eps []episodeSegments, known map[string]string) map[string]seasonSplit {
+	bySeason := map[int][]mine.Segment{}
+	var seasons []int
+	for _, e := range eps {
+		if _, seen := bySeason[e.season]; !seen {
+			seasons = append(seasons, e.season)
+		}
+		bySeason[e.season] = append(bySeason[e.season], e.segs...)
+	}
+	if len(seasons) < 2 {
+		return nil
+	}
+	sort.Ints(seasons)
+	perSeason := map[int]map[string]string{} // season → term → rendering
+	for _, s := range seasons {
+		m := map[string]string{}
+		for _, t := range mine.Mine(bySeason[s], mine.Options{Known: known}) {
+			if t.How != "known" {
+				m[t.Src] = t.Zh
+			}
+		}
+		perSeason[s] = m
+	}
+	// Candidates: every term any season learned (a show-wide term the seasons
+	// agree on is skipped below; a term only the seasons see is kept).
+	names := map[string]struct{}{}
+	for _, m := range perSeason {
+		for src := range m {
+			names[src] = struct{}{}
+		}
+	}
+	for _, t := range terms {
+		if t.How == "known" {
+			delete(names, t.Src)
+		}
+	}
+	out := map[string]seasonSplit{}
+	for src := range names {
+		renderings := map[int]string{}
+		distinct := map[string]struct{}{}
+		for _, s := range seasons {
+			if zh, ok := perSeason[s][src]; ok {
+				renderings[s] = zh
+				distinct[zh] = struct{}{}
+			}
+		}
+		if len(distinct) < 2 {
+			continue
+		}
+		t := mine.Term{Src: src}
+		for _, tt := range terms {
+			if tt.Src == src {
+				t = tt
+				break
+			}
+		}
+		// An episode votes once for each rendering its own lines carry (an
+		// S1 episode done in the S2 style — See S01E05 — counts for the S2
+		// spelling), so "most episodes" means exactly that.
+		votes := map[string]int{}
+		latest := map[string]int{}
+		segments := 0
+		for _, e := range eps {
+			voted := map[string]bool{}
+			for _, seg := range e.segs {
+				if !mine.MentionsWord(seg.En, t.Src) {
+					continue
+				}
+				segments++
+				for zh := range distinct {
+					if !voted[zh] && strings.Contains(seg.Zh, zh) {
+						votes[zh]++
+						voted[zh] = true
+						if e.season > latest[zh] {
+							latest[zh] = e.season
+						}
+					}
+				}
+			}
+		}
+		best, bestVotes, bestSeason := "", -1, -1
+		for zh, n := range votes {
+			if n > bestVotes || (n == bestVotes && (latest[zh] > bestSeason || (latest[zh] == bestSeason && zh < best))) {
+				best, bestVotes, bestSeason = zh, n, latest[zh]
+			}
+		}
+		if best == "" {
+			continue // no episode's lines carry any season's rendering — nothing to stand on
+		}
+		out[t.Src] = seasonSplit{bySeason: renderings, showWide: best, votes: bestVotes, segments: segments}
+	}
+	return out
 }
 
 // knownRenderings is the show's existing glossary that counts as EVIDENCE
@@ -627,3 +793,6 @@ func looksLikeFansub(path string) bool {
 	n, _ := f.Read(buf)
 	return fansubSignature.Match(buf[:n])
 }
+
+// The production repository must keep offering the miner port.
+var _ GlossaryRepo = (*repository.GlossaryRepository)(nil)

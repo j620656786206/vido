@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1390,4 +1392,38 @@ func TestProcessItem_NoModelChoiceKeepsTheSidecarOnlyGate(t *testing.T) {
 
 	assert.Nil(t, out.Run)
 	assert.Empty(t, h.trans.calls)
+}
+
+// episodeAwareStore is a fakeGlossaryStore that also offers LookupFor.
+type episodeAwareStore struct {
+	fakeGlossaryStore
+	forKeys []string
+	forEps  []string
+	forTerm map[string]string
+}
+
+func (s *episodeAwareStore) LookupFor(_ context.Context, showKey, episodeID string) (map[string]string, error) {
+	s.forKeys = append(s.forKeys, showKey)
+	s.forEps = append(s.forEps, episodeID)
+	return s.forTerm, nil
+}
+
+// disc-2026-10-glossary-season-scope-a: an episode's glossary is fetched
+// through LookupFor (show key + episode id); a movie keeps using Lookup.
+func TestFeedGlossary_EpisodeUsesSeasonAwareLookup(t *testing.T) {
+	store := &episodeAwareStore{fakeGlossaryStore: fakeGlossaryStore{terms: map[string]string{"Jerlamarel": "傑拉馬瑞"}}, forTerm: map[string]string{"Jerlamarel": "謝拉馬威"}}
+	p := &Pipeline{glossary: store, logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+
+	ep := &MediaItem{ShowKey: "series-1"}
+	p.feedGlossary(context.Background(), MediaRef{ID: "ep-1", MediaType: models.SubtitleRunMediaEpisode}, ep)
+	require.Len(t, ep.Context.Glossary, 1)
+	assert.Equal(t, "謝拉馬威", ep.Context.Glossary[0].Target)
+	assert.Equal(t, []string{"series-1"}, store.forKeys)
+	assert.Equal(t, []string{"ep-1"}, store.forEps)
+
+	mv := &MediaItem{}
+	p.feedGlossary(context.Background(), MediaRef{ID: "mv-1", MediaType: models.SubtitleRunMediaMovie}, mv)
+	require.Len(t, mv.Context.Glossary, 1)
+	assert.Equal(t, "傑拉馬瑞", mv.Context.Glossary[0].Target)
+	assert.Equal(t, []string{"mv-1"}, store.lookupKeys)
 }

@@ -67,7 +67,7 @@ func newResolverFixture(mover glossaryScopeMover) *GlossaryScopeResolver {
 		"m-unmatched": {ID: "m-unmatched"},
 	}}
 	episodes := &scopeEpisodeFinder{rows: map[string]*models.Episode{
-		"e-of-matched":   {ID: "e-of-matched", SeriesID: "s-matched"},
+		"e-of-matched":   {ID: "e-of-matched", SeriesID: "s-matched", SeasonNumber: 2},
 		"e-of-unmatched": {ID: "e-of-unmatched", SeriesID: "s-unmatched"},
 		"e-orphan":       {ID: "e-orphan", SeriesID: "s-gone"},
 	}}
@@ -157,4 +157,26 @@ func TestGlossaryScopeResolver_NoCache_EveryResolveAsksAgain(t *testing.T) {
 	second, err := r.Resolve(ctx, "s1")
 	require.NoError(t, err)
 	assert.Equal(t, "tmdb:tv:99", second)
+}
+
+// disc-2026-10-glossary-season-scope-a
+func TestGlossaryScopeResolver_ResolveSeason(t *testing.T) {
+	r := newResolverFixture(nil)
+	ctx := context.Background()
+	scope, season, ok, err := r.ResolveSeason(ctx, "e-of-matched")
+	require.NoError(t, err)
+	assert.True(t, ok)
+	assert.Equal(t, "tmdb:tv:66732", scope)
+	assert.Equal(t, 2, season)
+	assert.Equal(t, "tmdb:tv:66732:s2", models.GlossarySeasonScope(scope, season))
+
+	_, _, ok, err = r.ResolveSeason(ctx, "e-of-unmatched")
+	require.NoError(t, err)
+	assert.False(t, ok, "no season drawer under a local: scope")
+	_, _, ok, err = r.ResolveSeason(ctx, "s-matched")
+	require.NoError(t, err)
+	assert.False(t, ok, "a series id is not an episode")
+	_, _, ok, err = r.ResolveSeason(ctx, "nope")
+	require.NoError(t, err)
+	assert.False(t, ok)
 }

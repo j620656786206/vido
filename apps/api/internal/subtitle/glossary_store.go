@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
@@ -41,6 +42,19 @@ type GlossaryScopeResolver interface {
 	Resolve(ctx context.Context, mediaID string) (string, error)
 }
 
+// GlossarySeasonResolver is the optional second port a resolver may offer
+// (disc-2026-10-glossary-season-scope-a): an episode's show scope plus its
+// season, so the store can read the season's drawer on top of the show's.
+type GlossarySeasonResolver interface {
+	ResolveSeason(ctx context.Context, mediaID string) (scope string, season int, ok bool, err error)
+}
+
+// GlossaryEpisodeLookup is the optional store method the pipeline uses for an
+// EPISODE: show-wide terms, overlaid with the episode's season drawer.
+type GlossaryEpisodeLookup interface {
+	LookupFor(ctx context.Context, showKey, episodeID string) (map[string]string, error)
+}
+
 // glossaryStoreRepository adapts repository.GlossaryRepositoryInterface to
 // GlossaryStore (the NewSegmentCacheRepository pattern).
 type glossaryStoreRepository struct {
@@ -69,6 +83,52 @@ func (r *glossaryStoreRepository) Lookup(ctx context.Context, mediaID string) (m
 	}
 	return r.repo.LookupByScope(ctx, scope, false)
 }
+
+// LookupFor is Lookup for an episode: the show's drawer, then the season's
+// drawer on top (disc-2026-10-glossary-season-scope-a). Without a season
+// resolver, or for a show the season drawer does not apply to, it is Lookup.
+func (r *glossaryStoreRepository) LookupFor(ctx context.Context, showKey, episodeID string) (map[string]string, error) {
+	base, err := r.Lookup(ctx, showKey)
+	if err != nil {
+		return nil, err
+	}
+	sr, ok := r.scopes.(GlossarySeasonResolver)
+	if !ok || episodeID == "" {
+		return base, nil
+	}
+	scope, season, isEp, err := sr.ResolveSeason(ctx, episodeID)
+	if err != nil || !isEp {
+		return base, nil
+	}
+	over, err := r.repo.LookupByScope(ctx, models.GlossarySeasonScope(scope, season), false)
+	if err != nil || len(over) == 0 {
+		return base, nil
+	}
+	// A term the user confirmed or edited in the panel is their word: the
+	// drawer never overrides it (keys compared NOCASE like the unique index).
+	confirmed, err := r.repo.LookupByScope(ctx, scope, true)
+	if err != nil {
+		confirmed = nil
+	}
+	locked := make(map[string]struct{}, len(confirmed))
+	for k := range confirmed {
+		locked[strings.ToLower(k)] = struct{}{}
+	}
+	merged := make(map[string]string, len(base)+len(over))
+	for k, v := range base {
+		merged[k] = v
+	}
+	for k, v := range over {
+		if _, isLocked := locked[strings.ToLower(k)]; isLocked {
+			continue
+		}
+		merged[k] = v
+	}
+	return merged, nil
+}
+
+// Compile-time: the production adapter keeps offering the episode lookup.
+var _ GlossaryEpisodeLookup = (*glossaryStoreRepository)(nil)
 
 func (r *glossaryStoreRepository) InsertNew(ctx context.Context, mediaID string, terms map[string]string) (int, error) {
 	scope, err := r.scopeFor(ctx, mediaID)

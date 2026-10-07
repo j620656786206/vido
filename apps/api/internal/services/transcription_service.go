@@ -443,6 +443,26 @@ func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID string)
 			"media_id", mediaID, "scope", scope, "error", err)
 		return nil
 	}
+	// disc-2026-10-glossary-season-scope-a: an episode reads its season's
+	// drawer on top of the show's — the official subtitles of THIS season
+	// spelled the names this way, and the episode must match its neighbours.
+	if sr, ok := s.glossaryScopes.(GlossarySeasonResolver); ok {
+		if seasonScope, season, isEp, serr := sr.ResolveSeason(ctx, mediaID); serr == nil && isEp && seasonScope == scope {
+			over, oerr := s.glossaryRepo.LookupByScope(ctx, models.GlossarySeasonScope(scope, season), false)
+			if oerr != nil {
+				s.logger.Warn("glossary season drawer lookup failed — show-wide terms only", "media_id", mediaID, "season", season, "error", oerr)
+			} else if len(over) > 0 {
+				// A term the user confirmed or edited in the panel is their
+				// word: the drawer never overrides it (CR 1).
+				confirmed, cerr := s.glossaryRepo.LookupByScope(ctx, scope, true)
+				if cerr != nil {
+					confirmed = nil
+				}
+				m = overlaySeasonDrawer(m, over, confirmed)
+				s.logger.Debug("glossary: season drawer applied", "media_id", mediaID, "season", season, "overrides", len(over))
+			}
+		}
+	}
 	if len(m) == 0 {
 		return nil
 	}
@@ -451,6 +471,27 @@ func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID string)
 		pairs = append(pairs, GlossaryPair{Source: src, Target: zh})
 	}
 	return pairs
+}
+
+// overlaySeasonDrawer lays a season's renderings over the show-wide map,
+// skipping any term the user confirmed (case-insensitive key, matching the
+// NOCASE unique index). PURE; never mutates its inputs.
+func overlaySeasonDrawer(base, over, confirmed map[string]string) map[string]string {
+	merged := make(map[string]string, len(base)+len(over))
+	for src, zh := range base {
+		merged[src] = zh
+	}
+	lockedLower := make(map[string]struct{}, len(confirmed))
+	for src := range confirmed {
+		lockedLower[strings.ToLower(src)] = struct{}{}
+	}
+	for src, zh := range over {
+		if _, locked := lockedLower[strings.ToLower(src)]; locked {
+			continue
+		}
+		merged[src] = zh
+	}
+	return merged
 }
 
 // IsAvailable returns true if both FFmpeg and speech recognition are configured.

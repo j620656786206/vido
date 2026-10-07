@@ -131,3 +131,57 @@ func TestGlossaryStoreRepository_ResolverErrorSurfacesToTheFailSoftCaller(t *tes
 	_, err := store.Lookup(context.Background(), "series-42")
 	require.Error(t, err, "the pipeline's feedGlossary logs and translates without a glossary")
 }
+
+// layeredRepo answers LookupByScope per scope.
+type layeredRepo struct {
+	captureGlossaryRepo
+	byScope   map[string]map[string]string
+	confirmed map[string]map[string]string // confirmed-only view per scope
+}
+
+func (r *layeredRepo) LookupByScope(_ context.Context, scope string, confirmedOnly bool) (map[string]string, error) {
+	r.lookedUp = append(r.lookedUp, scope)
+	if confirmedOnly {
+		return r.confirmed[scope], nil
+	}
+	return r.byScope[scope], nil
+}
+
+// seasonScopeStub resolves a show scope and, for one episode id, its season.
+type seasonScopeStub struct {
+	scopeStub
+	episodeID string
+	season    int
+}
+
+func (s *seasonScopeStub) ResolveSeason(_ context.Context, mediaID string) (string, int, bool, error) {
+	if mediaID == s.episodeID {
+		return s.scope, s.season, true, nil
+	}
+	return s.scope, 0, false, nil
+}
+
+// disc-2026-10-glossary-season-scope-a: an episode reads its season's drawer
+// on top of the show's; a movie / unknown episode reads the show's only.
+func TestGlossaryStore_LookupFor_SeasonDrawerOverlays(t *testing.T) {
+	repo := &layeredRepo{byScope: map[string]map[string]string{
+		"tmdb:tv:80752":    {"Jerlamarel": "傑拉馬瑞", "Haniwa": "哈妮娃"},
+		"tmdb:tv:80752:s1": {"Jerlamarel": "謝拉馬威"},
+	}}
+	scopes := &seasonScopeStub{scopeStub: scopeStub{scope: "tmdb:tv:80752"}, episodeID: "ep-s1", season: 1}
+	store := NewGlossaryStoreRepository(repo, scopes).(GlossaryEpisodeLookup)
+
+	got, err := store.LookupFor(context.Background(), "series-1", "ep-s1")
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{"Jerlamarel": "謝拉馬威", "Haniwa": "哈妮娃"}, got, "season 1 spelling wins for a season-1 episode")
+
+	got, err = store.LookupFor(context.Background(), "series-1", "ep-s3")
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{"Jerlamarel": "傑拉馬瑞", "Haniwa": "哈妮娃"}, got, "a season without a drawer gets the show-wide pick")
+
+	// CR 1: a term the user confirmed in the panel is never overridden by a drawer.
+	repo.confirmed = map[string]map[string]string{"tmdb:tv:80752": {"jerlamarel": "傑拉馬瑞"}}
+	got, err = store.LookupFor(context.Background(), "series-1", "ep-s1")
+	require.NoError(t, err)
+	assert.Equal(t, "傑拉馬瑞", got["Jerlamarel"], "the user's word wins, NOCASE")
+}

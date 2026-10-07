@@ -124,6 +124,45 @@ func (r *GlossaryScopeResolver) Resolve(ctx context.Context, mediaID string) (st
 	return scope, nil
 }
 
+// ResolveSeason is Resolve for an EPISODE id with its season attached
+// (disc-2026-10-glossary-season-scope-a): scope is the show's drawer, season
+// the episode's season number, ok true only when the id is an episode of a
+// TMDb-matched show (the per-season drawer exists only under tmdb:tv). Not an
+// episode → ok=false, no error; the caller falls back to Resolve.
+func (r *GlossaryScopeResolver) ResolveSeason(ctx context.Context, mediaID string) (scope string, season int, ok bool, err error) {
+	id := strings.TrimSpace(mediaID)
+	if id == "" || r.episodes == nil || r.series == nil {
+		return "", 0, false, nil
+	}
+	e, err := r.episodes.FindByID(ctx, id)
+	if err != nil {
+		if isGlossaryNotFound(err) {
+			return "", 0, false, nil
+		}
+		return "", 0, false, fmt.Errorf("resolve glossary season (episode %s): %w", id, err)
+	}
+	if e == nil || e.SeriesID == "" {
+		return "", 0, false, nil
+	}
+	scope, _, err = r.lookup(ctx, e.SeriesID)
+	if err != nil {
+		return "", 0, false, err
+	}
+	if !strings.HasPrefix(scope, models.GlossaryScopePrefixTMDbTV) || e.SeasonNumber < 0 {
+		return scope, 0, false, nil
+	}
+	return scope, e.SeasonNumber, true, nil
+}
+
+// GlossarySeasonResolver is the optional port a scope resolver may offer
+// (disc-2026-10-glossary-season-scope-a); consumers assert for it.
+type GlossarySeasonResolver interface {
+	ResolveSeason(ctx context.Context, mediaID string) (scope string, season int, ok bool, err error)
+}
+
+// Compile-time: the production resolver keeps offering the season port.
+var _ GlossarySeasonResolver = (*GlossaryScopeResolver)(nil)
+
 // lookup returns the scope and the SHOW-level id the local fallback should key
 // on (the series id for an episode, the id itself otherwise).
 func (r *GlossaryScopeResolver) lookup(ctx context.Context, id string) (scope, showID string, err error) {
