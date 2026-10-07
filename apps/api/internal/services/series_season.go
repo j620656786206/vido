@@ -56,6 +56,12 @@ type MergedEpisode struct {
 	// Sources lists only the Chinese ones ([] when none).
 	ChineseSubtitle        models.ChineseSubtitle   `json:"chinese_subtitle,omitempty"`
 	ChineseSubtitleSources *[]ChineseSubtitleSource `json:"chinese_subtitle_sources,omitempty"`
+	// EmbeddedSubtitlesRead — has Vido read the subtitle tracks inside this
+	// episode's file yet? false = the verdict rests on the sidecars and Vido's
+	// own record alone and may still change (disc-2026-10-episode-list-
+	// subtitle-badge-b, Alexyu 2A: the tooltip says so). Present only
+	// alongside HasLocalFile; additive to contract-v1.
+	EmbeddedSubtitlesRead *bool `json:"embedded_subtitles_read,omitempty"`
 }
 
 // episodeTracksRefresher is the season list's write-back (AC #4), satisfied by
@@ -190,6 +196,7 @@ func (s *SeriesService) GetSeasonEpisodes(ctx context.Context, seriesID string, 
 			v := computeEpisodeSubtitle(local, side)
 			merged.ChineseSubtitle = v.verdict
 			merged.ChineseSubtitleSources = &v.sources
+			merged.EmbeddedSubtitlesRead = &v.embeddedRead
 			if v.refresh != "" {
 				s.refreshEpisodeTracks(ctx, local, v.refresh)
 			}

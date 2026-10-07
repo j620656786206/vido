@@ -200,6 +200,9 @@ export interface MergedEpisode {
   chineseSubtitle?: ChineseSubtitle;
   /** The Chinese sources behind chineseSubtitle ([] when none). */
   chineseSubtitleSources?: ChineseSubtitleSource[];
+  /** false = Vido has not read the subtitle tracks inside the file yet, so
+   *  the verdict may still change (badge-b, Alexyu 2A). */
+  embeddedSubtitlesRead?: boolean;
 }
 
 /** One Chinese source of an episode's subtitle verdict.

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen B4p-D (N2fmG6) + Screen J3-D (Z54xAd)
+// Design ref: ux-design.pen Screen B4p-D (N2fmG6) + Screen J3-D (Z54xAd) + Screen J11-D (w2Opax)
 /**
  * EpisodeList (Story 12-2)
  *
@@ -21,9 +21,18 @@
  * this component only raises onManageSubtitle.
  */
 
-import { CheckCircle2, XCircle, Loader2, Minus, CircleSlash, CircleDashed } from 'lucide-react';
+import {
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Minus,
+  CircleSlash,
+  CircleDashed,
+  AlertCircle,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
-import type { MergedEpisode } from '../../types/library';
+import { Tooltip } from '../ui/Tooltip';
+import type { ChineseSubtitleSource, MergedEpisode } from '../../types/library';
 
 /**
  * The single gate for the per-episode subtitle entry (CR M3).
@@ -144,23 +153,150 @@ const SUBTITLE_STATUS: Record<
   },
 };
 
-/** Subtitle status indicator — hidden entirely when no local file exists (AC #6). */
-function SubtitleStatusIcon({ episode }: { episode: MergedEpisode }) {
-  if (!episode.hasLocalFile) return null;
+// ─── J11-D: "does this episode have Chinese subtitles" (badge-b) ───────────
+//
+// When the API sends chinese_subtitle (badge-a), the mark answers THAT
+// question — the one the user opens the season for — instead of Vido's own
+// search record. Same J2 grammar: circled = settled, bare = not yet; colour
+// = does the user need to act. In-flight pipeline states still win: while a
+// subtitle is being made, "it is being made" is the news.
+//
+// `zh` (Chinese, script untold — after badge-c only bitmap tracks stay here)
+// reads like zh_hant: there IS Chinese to watch (Alexyu 1A, 2026-10-07).
+type Mark = {
+  Icon: typeof CheckCircle2;
+  color: string;
+  /** Line 1: the verdict. */
+  title: string;
+  /** Line 2: where it comes from, or what to do next. */
+  detail: string;
+  spin?: boolean;
+};
 
+const IN_FLIGHT = new Set(['searching', 'probing', 'extracting', 'translating']);
+
+const SOURCE_LABEL: Record<ChineseSubtitleSource['kind'], (s: ChineseSubtitleSource) => string> = {
+  embedded: () => '片內字幕',
+  sidecar: (s) => (s.label ? `旁邊的 ${s.label} 檔` : '旁邊的字幕檔'),
+  vido: () => 'Vido 生成',
+};
+
+/** "片內字幕・旁邊的 zh-TW 檔・Vido 生成" — each source once, in API order. */
+function describeSources(sources: ChineseSubtitleSource[] | undefined): string {
+  const seen = new Set<string>();
+  for (const s of sources ?? []) seen.add(SOURCE_LABEL[s.kind](s));
+  return [...seen].join('・');
+}
+
+function chineseMark(episode: MergedEpisode): Mark | null {
+  const verdict = episode.chineseSubtitle;
+  if (!verdict) return null;
+  if (IN_FLIGHT.has(episode.subtitleStatus ?? '')) {
+    return {
+      Icon: Loader2,
+      color: 'text-[var(--accent-text)]',
+      title: '字幕生成中',
+      detail: '打開「管理字幕」看進度',
+      spin: true,
+    };
+  }
+  // Alexyu 2A: before the tracks inside the file are read, a verdict can still
+  // move — say so rather than change the rule.
+  const stillReading = episode.embeddedSubtitlesRead === false;
+  const sources = describeSources(episode.chineseSubtitleSources);
+  switch (verdict) {
+    case 'zh_hant':
+      return {
+        Icon: CheckCircle2,
+        color: 'text-[var(--success-text)]',
+        title: '有繁中字幕',
+        detail: sources,
+      };
+    case 'zh':
+      return {
+        Icon: CheckCircle2,
+        color: 'text-[var(--success-text)]',
+        title: '有中文字幕（繁簡未知）',
+        detail: sources,
+      };
+    case 'zh_hans':
+      return {
+        Icon: AlertCircle,
+        color: 'text-[var(--error-text)]',
+        title: '只有簡中字幕',
+        detail: '可以在「管理字幕」轉成繁中',
+      };
+    case 'none':
+      return {
+        Icon: XCircle,
+        color: 'text-[var(--error-text)]',
+        title: '缺中文字幕',
+        detail: stillReading ? '還在讀片內字幕，讀完可能會變' : '只有英文等其他語言——可以生成',
+      };
+    case 'unknown':
+      return {
+        Icon: Minus,
+        color: 'text-[var(--text-muted)]',
+        title: '還沒檢查這一集的字幕',
+        detail: '下次掃描媒體庫時會讀',
+      };
+  }
+  // A verdict this client does not know yet (a newer backend): fall back to
+  // Vido's own record rather than claim "not checked" (CR L4).
+  return null;
+}
+
+/** Pre-badge-a backends send no chinese_subtitle: fall back to Vido's own
+ *  record (J2-D), with its long-form label as the only line. */
+function statusMark(episode: MergedEpisode): Mark {
   const status = episode.subtitleStatus ?? 'not_searched';
   const meta = SUBTITLE_STATUS[status] ?? SUBTITLE_STATUS.not_searched;
-  const { Icon } = meta;
+  return { Icon: meta.Icon, color: meta.color, title: meta.label, detail: '', spin: meta.spin };
+}
+
+/**
+ * Subtitle indicator — hidden entirely when no local file exists (AC #6).
+ *
+ * An icon with no visible text, so its explanation lives in a Tooltip (J11-D
+ * rules 3–4, 6): instant on hover, on Tab focus, on a tap; Esc or a press
+ * elsewhere closes it. The trigger is a real button so keyboards reach it; it
+ * does nothing else — 管理字幕 stays its own action. The accessible name is
+ * the same sentence the tooltip shows. No `title` (rule 6).
+ */
+function SubtitleStatusIcon({ episode, code }: { episode: MergedEpisode; code: string }) {
+  if (!episode.hasLocalFile) return null;
+
+  const mark = chineseMark(episode) ?? statusMark(episode);
+  const { Icon } = mark;
+  const sentence = mark.detail ? `${mark.title}，${mark.detail}` : mark.title;
 
   return (
-    <span
-      role="status"
-      aria-label={meta.label}
-      title={meta.label}
-      className={cn('inline-flex shrink-0 items-center', meta.color)}
+    <Tooltip
+      side="right"
+      delay={0}
+      openOnPress
+      content={
+        <span className="flex flex-col gap-0.5 text-left" data-testid="episode-subtitle-tooltip">
+          <span className="font-semibold">{mark.title}</span>
+          {mark.detail && (
+            <span className="font-normal text-[var(--text-secondary)]">{mark.detail}</span>
+          )}
+        </span>
+      }
     >
-      <Icon className={cn('h-4 w-4', meta.spin && 'animate-spin')} aria-hidden="true" />
-    </span>
+      <button
+        type="button"
+        aria-label={sentence}
+        data-testid="episode-subtitle-indicator"
+        data-episode={code}
+        className={cn(
+          '-m-1 inline-flex shrink-0 items-center rounded-[var(--radius-sm)] p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+          mark.color
+        )}
+      >
+        <Icon className={cn('h-4 w-4', mark.spin && 'animate-spin')} aria-hidden="true" />
+      </button>
+    </Tooltip>
   );
 }
 
@@ -244,7 +380,7 @@ export function EpisodeList({
               <span className="truncate text-sm font-medium text-[var(--text-primary)]">
                 {ep.name || `第 ${ep.episodeNumber} 集`}
               </span>
-              <SubtitleStatusIcon episode={ep} />
+              <SubtitleStatusIcon episode={ep} code={episodeCode(seasonNumber, ep.episodeNumber)} />
             </div>
 
             {/* 9R-10c: the per-episode subtitle entry. Rendered for EVERY

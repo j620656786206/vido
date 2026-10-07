@@ -23,12 +23,58 @@ interface TooltipProps {
    * trigger behaviour onto it rather than nesting an extra control. */
   children: React.ReactElement;
   side?: 'top' | 'right' | 'bottom' | 'left';
+  /** Hover-open delay in ms (Base UI default 600). Icon-only STATUS marks pass
+   *  0: the tooltip is their only label (J11-D rule 4 — no browser-title wait). */
+  delay?: number;
+  /** Also open on a press, so a phone (no hover) gets the tooltip on tap; it
+   *  then closes on a press elsewhere or Esc (J11-D rule 4). Pressing the
+   *  trigger again keeps it open — a toggle would close it the moment a mouse
+   *  user clicks an icon the hover already opened. */
+  openOnPress?: boolean;
 }
 
-export function Tooltip({ content, children, side = 'right' }: TooltipProps) {
+export function Tooltip({ content, children, side = 'right', delay, openOnPress }: TooltipProps) {
+  const [open, setOpen] = React.useState(false);
+  // A TOUCH press opens it; Base UI's hover hook then sees the synthetic
+  // mouseleave a tap ends with and closes it again at once. So a touch-opened
+  // tooltip ignores hover-closes and stays until a press elsewhere, Esc or
+  // blur. A mouse click is left to hover — it already opened the tooltip.
+  const pointerType = React.useRef<string | undefined>(undefined);
+  const openedByTouch = React.useRef(false);
+  const controlled = openOnPress
+    ? {
+        open,
+        onOpenChange: (next: boolean, details: { reason: string }) => {
+          if (!next && openedByTouch.current && details.reason === 'trigger-hover') return;
+          if (!next) openedByTouch.current = false;
+          setOpen(next);
+        },
+      }
+    : {};
+  // Base UI merges these with the child's own handlers (mergeProps chains them).
+  const pressProps = openOnPress
+    ? {
+        onPointerDown: (event: React.PointerEvent) => {
+          pointerType.current = event.pointerType;
+        },
+        onClick: (event: React.MouseEvent) => {
+          // detail 0 = a keyboard click (Enter/Space): no pointer was involved,
+          // so a pointerType left over from an earlier tap must not count (CR M1).
+          const touch = event.detail !== 0 && pointerType.current !== 'mouse';
+          pointerType.current = undefined;
+          if (touch) openedByTouch.current = true;
+          setOpen(true);
+        },
+      }
+    : {};
   return (
-    <BaseTooltip.Root>
-      <BaseTooltip.Trigger render={children} />
+    <BaseTooltip.Root {...controlled}>
+      <BaseTooltip.Trigger
+        render={children}
+        {...pressProps}
+        delay={delay}
+        closeOnClick={openOnPress ? false : undefined}
+      />
       <BaseTooltip.Portal>
         <BaseTooltip.Positioner side={side} sideOffset={8}>
           <BaseTooltip.Popup className="z-[80] flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-primary)] shadow-[var(--shadow-lg)] data-[starting-style]:opacity-0 data-[ending-style]:opacity-0">

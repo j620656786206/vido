@@ -30,6 +30,9 @@ type ChineseSubtitleSource struct {
 type episodeSubtitleVerdict struct {
 	verdict models.ChineseSubtitle
 	sources []ChineseSubtitleSource
+	// embeddedRead: the background sweep has read the tracks inside the file.
+	// False means the verdict can still change once it does (-b CR L1 / 2A).
+	embeddedRead bool
 	// refresh is the subtitle_tracks JSON to write back ("" = nothing to
 	// write): set when the embedded half is known and the live sidecar read
 	// differs from what is stored (AC #4).
@@ -79,7 +82,7 @@ func computeEpisodeSubtitle(ep models.Episode, live *SidecarTracks) episodeSubti
 		sidecars = live.Tracks
 	}
 
-	var out episodeSubtitleVerdict
+	out := episodeSubtitleVerdict{embeddedRead: embeddedKnown}
 	if embeddedKnown {
 		merged := append(append(make([]SubtitleTrack, 0, len(embedded)+len(sidecars)), embedded...), sidecars...)
 		raw, _ := json.Marshal(merged)

@@ -1,6 +1,6 @@
 # Story: 季清單每一集標出「有沒有中文字幕」，圖示都有提示
 
-Status: ready-for-dev
+Status: done
 
 **Source:** `disc-2026-10-episode-list-subtitle-badge`（Alexyu 2026-10-05 在 NAS 上看《末日光明》時提出）。
 **⚖️ 裁定（Alexyu 2026-10-05，party mode）：**
@@ -90,6 +90,8 @@ N/A — 不碰讀時鐘的元件。
 
 - 2026-10-05 Bob（SM）：Ultimate context engine analysis completed - comprehensive developer guide created
 - 2026-10-05 Sally（UX）：J11-D 規格畫面已畫（狀態六列＋提示框範例＋六條規則），截圖 `flow-j-specs/j11-d.png`。
+
+- 2026-10-07：拆成 -a（後端，#717）、-c（片內 chi 軌看字判繁簡，#718，Alexyu 選 B）、-b（前端，#719，Alexyu 1A 2A）。全部合併。
 
 ### Discovery Triage
 
