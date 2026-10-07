@@ -36,7 +36,8 @@ export function describeResult(r: MineResult): string {
   }
   const replaced =
     r.termsReplaced && r.termsReplaced > 0 ? `，其中 ${r.termsReplaced} 個修正了聽寫猜的寫法` : '';
-  const learned = `${r.title} 學到 ${r.termsFound} 個詞（${r.episodesUsed} 集）${replaced}`;
+  const pruned = r.termsPruned && r.termsPruned > 0 ? `，清掉 ${r.termsPruned} 個聽寫猜錯的詞` : '';
+  const learned = `${r.title} 學到 ${r.termsFound} 個詞（${r.episodesUsed} 集）${replaced}${pruned}`;
   return skipped ? `${learned}，${skipped}` : learned;
 }
 
