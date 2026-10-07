@@ -151,11 +151,19 @@ func Mine(segments []Segment, opts Options) []Term {
 		}
 		local := map[string]int{}
 		bounded := map[string]int{}
+		atStart := map[string]int{} // seen at the start of a Han run
+		atEnd := map[string]int{}   // seen at the end of a Han run
 		for _, i := range idxs {
-			for sub, standsAlone := range hanSubstringsWithBoundary(segments[i].Zh) {
+			for sub, e := range hanSubstringsWithEdges(segments[i].Zh) {
 				local[sub]++
-				if standsAlone {
+				if e.Whole {
 					bounded[sub]++
+				}
+				if e.AtStart {
+					atStart[sub]++
+				}
+				if e.AtEnd {
+					atEnd[sub]++
 				}
 			}
 		}
@@ -177,12 +185,24 @@ func Mine(segments []Segment, opts Options) []Term {
 			// one (a full name beats its own prefix).
 			if n > bestCount || (n == bestCount && (bounded[sub] > bounded[best] ||
 				(bounded[sub] == bounded[best] && (global[sub] < global[best] ||
-					(global[sub] == global[best] && utf8.RuneCountInString(sub) > utf8.RuneCountInString(best)))))) {
+					(global[sub] == global[best] && (utf8.RuneCountInString(sub) > utf8.RuneCountInString(best) ||
+						(utf8.RuneCountInString(sub) == utf8.RuneCountInString(best) && sub < best))))))) {
 				best, bestCount = sub, n
 			}
 		}
 		if best == "" {
 			continue
+		}
+		// disc-2026-10-mine-cross-season-rendering-split: when the official
+		// translators spelled one name two ways across seasons (See:
+		// 謝拉馬威 in S1, 傑拉馬瑞爾 in S2), the piece they share — 拉馬 —
+		// outscores either full name and won. Grow the winner into the
+		// superstring that explains at least half of its occurrences and
+		// stands alone no less often, so the majority FULL rendering is
+		// learned instead of the fragment.
+		best, bestCount = growToFullRendering(best, bestCount, opts.MinSupport, local, bounded, atStart, atEnd, global)
+		if best == "" {
+			continue // a two-sided fragment nothing could complete: 拉馬 alone teaches nothing
 		}
 		out = append(out, Term{Src: src, Zh: best, Support: bestCount, Segments: len(idxs), How: "cooccurrence"})
 	}
@@ -194,6 +214,69 @@ func Mine(segments []Segment, opts Options) []Term {
 		return out[i].Src < out[j].Src
 	})
 	return out
+}
+
+// growToFullRendering climbs from a winning FRAGMENT to the full rendering.
+//
+// A fragment is a substring with a side that is always glued to more Han
+// text in this term's lines: never seen at the start of a Han run (拉馬,
+// 拉公主, 斯人 — something always precedes), or never at the end. A word that
+// has been seen at both edges (托比 in 「托比在哪」 and 「去問托比」) is complete
+// and is left alone, vocative or not. Growth extends only towards the glued
+// side(s), to the superstring that accounts for at least half of the ORIGINAL
+// fragment's occurrences and clears MinSupport and the specificity gate,
+// preferring one that stands alone somewhere (a name), then the better
+// supported, then the longer, then the lexically smaller (deterministic).
+// Repeats until the result is complete or nothing qualifies. A two-sided
+// fragment that cannot be completed returns "" — it is not worth learning.
+// PURE.
+func growToFullRendering(best string, bestCount, minSupport int, local, bounded, atStart, atEnd, global map[string]int) (string, int) {
+	origin := bestCount
+	for {
+		gluedLeft, gluedRight := atStart[best] == 0, atEnd[best] == 0
+		if !gluedLeft && !gluedRight {
+			return best, bestCount
+		}
+		next, nextCount := "", 0
+		for sub, n := range local {
+			if len(sub) <= len(best) {
+				continue
+			}
+			switch {
+			case gluedLeft && gluedRight:
+				if !strings.Contains(sub, best) {
+					continue
+				}
+			case gluedLeft:
+				if !strings.HasSuffix(sub, best) {
+					continue
+				}
+			default:
+				if !strings.HasPrefix(sub, best) {
+					continue
+				}
+			}
+			if 2*n < origin || n < minSupport {
+				continue
+			}
+			// Specific to this term, same gate the first pick cleared.
+			if float64(n) < 0.5*float64(global[sub]) {
+				continue
+			}
+			if next == "" || bounded[sub] > bounded[next] || (bounded[sub] == bounded[next] &&
+				(n > nextCount || (n == nextCount && (utf8.RuneCountInString(sub) > utf8.RuneCountInString(next) ||
+					(utf8.RuneCountInString(sub) == utf8.RuneCountInString(next) && sub < next))))) {
+				next, nextCount = sub, n
+			}
+		}
+		if next == "" {
+			if gluedLeft && gluedRight {
+				return "", 0
+			}
+			return best, bestCount
+		}
+		best, bestCount = next, nextCount
+	}
 }
 
 // dropSubTerms removes a single-word term whose rendering is exactly a
@@ -380,11 +463,26 @@ func hanSubstrings(zh string) map[string]struct{} {
 	return out
 }
 
+// hanEdges says where a substring sat inside the Han runs of one line: as a
+// WHOLE run (bounded by punctuation, Latin text or the string edges on both
+// sides), at the start of a run, at the end of a run.
+type hanEdges struct{ Whole, AtStart, AtEnd bool }
+
 // hanSubstringsWithBoundary is hanSubstrings plus, per substring, whether it
-// occurred at least once as a WHOLE run — bounded by punctuation, Latin text
-// or the string edges on both sides.
+// occurred at least once as a WHOLE run.
 func hanSubstringsWithBoundary(zh string) map[string]bool {
 	out := map[string]bool{}
+	for sub, e := range hanSubstringsWithEdges(zh) {
+		out[sub] = e.Whole
+	}
+	return out
+}
+
+// hanSubstringsWithEdges is hanSubstrings plus, per substring, the edges it
+// touched at least once (disc-2026-10-mine-cross-season-rendering-split: a
+// fragment of a name never touches one of its edges).
+func hanSubstringsWithEdges(zh string) map[string]hanEdges {
+	out := map[string]hanEdges{}
 	var run []rune
 	flush := func() {
 		for i := 0; i < len(run); i++ {
@@ -393,8 +491,11 @@ func hanSubstringsWithBoundary(zh string) map[string]bool {
 					continue
 				}
 				sub := string(run[i : i+n])
-				whole := i == 0 && i+n == len(run)
-				out[sub] = out[sub] || whole
+				e := out[sub]
+				e.AtStart = e.AtStart || i == 0
+				e.AtEnd = e.AtEnd || i+n == len(run)
+				e.Whole = e.Whole || (i == 0 && i+n == len(run))
+				out[sub] = e
 			}
 		}
 		run = run[:0]

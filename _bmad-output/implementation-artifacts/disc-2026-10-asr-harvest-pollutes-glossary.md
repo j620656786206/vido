@@ -1,6 +1,6 @@
 # Disc：聽寫猜出來的人名寫法不能擋住官方字幕的正解——官方的要蓋過猜的
 
-Status: review
+Status: done
 
 **Source:** See S01E02 第二次實測：名詞表 37 條 `source=subtitle` 裡有 7 種 Jerlamarel 的錯拼（傑拉·莫瑞爾、丘拉·莫瑞爾、傑拉瑪瑞爾…），都是自己聽寫＋翻譯後自動寫回的。2026-10-07 修 mine-shift 時發現：這些列還會讓官方字幕學習**跳過** Jerlamarel——`subtitle|Jerlamarel|傑拉瑪瑞爾` 被當成「已知、可信」，miner 只去驗證它、不再學 謝拉馬威；就算學到也因為同一個 term_src 已存在而寫不進去。
 
@@ -26,6 +26,7 @@ Status: review
 
 ## Dev Agent Record
 
+- **AC #4 實測（2026-10-07，正式機 #707）：** 重學 See `terms_found=54`、`terms_replaced=5`；Haniwa／Paris／Baba Voss 的聽寫猜測被官方寫法取代。Jerlamarel 也被取代，但取代成片段「拉馬」（另一題，見 cross-season-rendering-split）。
 - **Adversarial CR（2026-10-07，fresh agent）3L，全部處理：**
   - L1 用一般 `Upsert` 覆寫，若使用者在這一瞬間按了「確認」會被蓋掉 → 改成 repo 的 `ReplaceUnconfirmedGuess`：守門寫在 SQL（`WHERE confirmed = 0 AND source IN (subtitle, official_subtitle) AND term_zh != excluded`），順便讓 miner 重跑能更新自己上一次未確認的猜測（CR 提到的既有缺口）。
   - L2 猜對的收成被算成「取代」 → SQL 的 `term_zh != excluded` 讓相同寫法不算寫入。

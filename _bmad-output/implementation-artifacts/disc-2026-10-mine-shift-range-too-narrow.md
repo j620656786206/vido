@@ -53,6 +53,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **AC #4 實測（2026-10-07，正式機）：** 更新後 See official_subtitle 0 → 48 條（15/16 集）；Jerlamarel 先被聽寫猜的列擋住（→ #707 修），再因兩季寫法不同學成「拉馬」（→ `disc-2026-10-mine-cross-season-rendering-split`）。對齊本身已驗證；story 等 split 修完、Jerlamarel 變「謝拉馬威」再標 done。
 - **Adversarial CR（2026-10-07，fresh agent，用真實夾具跑了 300 次隨機檔）1M/3L：**
   - M1 「無關檔不位移」測試其實是被舊門檻擋下的、沒測到 35% 規則 → 換成「真位移剛好在視窗外（+181 秒）」與「幀率漂移 25/23.976」兩個會過舊門檻、只被 35% 擋的案例。
   - L1 20～25 句的小檔（只有強制字幕那種）35% 只是 7 次命中，雜訊一半機率湊得到 → 加絕對門檻 `shiftMinHits = 12`（實測 20／25／30 句的誤接受 49%／16%／2% → 0／0／0.3%；真的 4 秒位移 20 句仍全中）；加測試。
