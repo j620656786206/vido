@@ -73,6 +73,8 @@ Claude Opus 5.5（dev）；對抗式 CR 換模型（Sonnet 5.5——Fable 額度
   - **L4／L5／L6（不修，記錄）** 看字一直失敗的檔每次重開機會再試一次（最多 60 秒×2）；一集兩條軌一條失敗時只存一半結果；看字不排抽軌閘門，可能跟整檔抽軌同時讀同一顆硬碟（上限 60 秒）。
   - 修後閘門：`go test ./...` 全綠、`staticcheck` 乾淨、`lint:all` 0 errors、prettier 綠。
 
+- 2026-10-07 /ship：PR #718。
+
 ### Discovery Triage
 
 - **③（不修）** 「管理字幕」對話框是現場 ffprobe，看不到存好的 `detected_language`，這種軌在對話框仍顯示「分不出繁簡」（Dev Notes 已記）。
