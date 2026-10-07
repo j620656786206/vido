@@ -69,12 +69,17 @@ type MineResult struct {
 	TermsReplaced int `json:"terms_replaced"`
 	// TermsSplit counts terms whose official rendering differs between
 	// seasons; each got a per-season drawer (disc-2026-10-glossary-season-scope-a).
-	TermsSplit int                 `json:"terms_split"`
-	Terms      []mine.Term         `json:"terms,omitempty"`
-	Episodes   []MineEpisodeReport `json:"episodes,omitempty"`
-	StartedAt  time.Time           `json:"started_at"`
-	FinishedAt time.Time           `json:"finished_at"`
-	Error      string              `json:"error,omitempty"`
+	TermsSplit int `json:"terms_split"`
+	// TermsPruned counts unconfirmed speech-recognition harvest rows deleted
+	// because the official English of the mined episodes never says them
+	// (disc-2026-10-glossary-prune-harvest-garble); Pruned lists them.
+	TermsPruned int                 `json:"terms_pruned"`
+	Pruned      []string            `json:"pruned,omitempty"`
+	Terms       []mine.Term         `json:"terms,omitempty"`
+	Episodes    []MineEpisodeReport `json:"episodes,omitempty"`
+	StartedAt   time.Time           `json:"started_at"`
+	FinishedAt  time.Time           `json:"finished_at"`
+	Error       string              `json:"error,omitempty"`
 }
 
 // MineStatus is the miner's observable state: whether a run is in flight and
@@ -115,6 +120,9 @@ type GlossaryRepo interface {
 	// DeleteSeasonDrawers clears a show's per-season drawers before the miner
 	// rewrites the ones the current files justify (disc-2026-10-glossary-season-scope-a).
 	DeleteSeasonDrawers(ctx context.Context, scope string) (int64, error)
+	// Delete removes one row by id — the miner uses it to prune a harvested
+	// guess the official English never says (disc-2026-10-glossary-prune-harvest-garble).
+	Delete(ctx context.Context, id string) error
 }
 
 // OfficialSubtitleMiner runs 加速器② over the library.
@@ -335,17 +343,23 @@ func (m *OfficialSubtitleMiner) mineOne(ctx context.Context, seriesID string) Mi
 
 	var all []mine.Segment
 	var perEpisode []episodeSegments
+	var corpus []string          // every English line of every mined episode
+	seasonFiles := map[int]int{} // season → episodes with a file
+	seasonUsed := map[int]int{}  // season → episodes mined
 	for _, e := range eps {
 		if !e.FilePath.Valid || e.FilePath.String == "" {
 			continue
 		}
 		res.EpisodesTotal++
+		seasonFiles[e.SeasonNumber]++
 		rep := MineEpisodeReport{EpisodeID: e.ID, File: filepath.Base(e.FilePath.String)}
-		segs, fansubs := m.mineEpisode(ctx, e.FilePath.String, tmp, &rep)
+		segs, english, fansubs := m.mineEpisode(ctx, e.FilePath.String, tmp, &rep)
 		res.FansubSkipped += fansubs
 		if rep.Skipped == "" {
 			res.EpisodesUsed++
+			seasonUsed[e.SeasonNumber]++
 			all = append(all, segs...)
+			corpus = append(corpus, english...)
 			perEpisode = append(perEpisode, episodeSegments{season: e.SeasonNumber, segs: segs})
 		}
 		res.Episodes = append(res.Episodes, rep)
@@ -439,12 +453,67 @@ func (m *OfficialSubtitleMiner) mineOne(ctx context.Context, seriesID string) Mi
 			res.TermsInserted++
 		}
 	}
+	// disc-2026-10-glossary-prune-harvest-garble: with enough official
+	// English in hand, a harvested guess that none of it ever says
+	// ("Chola Morel", "Cofoun", "Timat Dijon") is a mishearing — delete it
+	// before it forces the next translation to repeat the mistake. Only
+	// unconfirmed harvest rows; only when the corpus covers the show.
+	if pruneCoverageOK(res.EpisodesUsed, res.EpisodesTotal, seasonFiles, seasonUsed) {
+		for _, r := range rows {
+			if r.Source != models.GlossarySourceSubtitle || r.Confirmed {
+				continue
+			}
+			if corpusMentions(corpus, r.TermSrc) {
+				continue
+			}
+			if err := m.glossary.Delete(ctx, r.ID); err != nil && !errors.Is(err, repository.ErrGlossaryTermNotFound) {
+				m.logger.Warn("glossary prune failed", "scope", scope, "term", r.TermSrc, "error", err)
+				continue
+			}
+			res.TermsPruned++
+			res.Pruned = append(res.Pruned, r.TermSrc)
+		}
+		sort.Strings(res.Pruned)
+	}
 	m.logger.Info("official-subtitle mining finished",
 		"series_id", seriesID, "title", s.Title, "scope", scope,
 		"episodes_used", res.EpisodesUsed, "episodes_total", res.EpisodesTotal,
 		"fansub_skipped", res.FansubSkipped, "terms_found", res.TermsFound,
-		"terms_inserted", res.TermsInserted, "terms_replaced", res.TermsReplaced, "terms_split", res.TermsSplit)
+		"terms_inserted", res.TermsInserted, "terms_replaced", res.TermsReplaced, "terms_split", res.TermsSplit, "terms_pruned", res.TermsPruned)
 	return res
+}
+
+// pruneMinEpisodes is the fewest mined episodes that may vouch for "the
+// official English never says this".
+const pruneMinEpisodes = 2
+
+// pruneCoverageOK says whether the mined episodes may vouch for "the
+// official English never says this": at least pruneMinEpisodes, at least half
+// of the show's files, and — CR 1 — NO season with files left entirely
+// unmined. A new season still without official subtitles is exactly where
+// the harvest is doing its job (its names are not in the old seasons'
+// English), so that show is left alone until the season has files.
+func pruneCoverageOK(used, total int, seasonFiles, seasonUsed map[int]int) bool {
+	if used < pruneMinEpisodes || used*2 < total {
+		return false
+	}
+	for season := range seasonFiles {
+		if seasonUsed[season] == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// corpusMentions reports whether any English line of the mined episodes
+// names the term (every cue, aligned or not).
+func corpusMentions(corpus []string, term string) bool {
+	for _, line := range corpus {
+		if mine.MentionsWord(line, term) {
+			return true
+		}
+	}
+	return false
 }
 
 // episodeSegments is one episode's aligned segments with its season.
@@ -597,7 +666,11 @@ func harvestedGuesses(rows []models.GlossaryTerm) map[string]struct{} {
 // mineEpisode loads one episode's two sides and aligns them. It returns the
 // segments and how many zh sidecars were skipped as fan-group files; rep is
 // filled with what happened.
-func (m *OfficialSubtitleMiner) mineEpisode(ctx context.Context, media, tmp string, rep *MineEpisodeReport) ([]mine.Segment, int) {
+// mineEpisode loads one episode's two sides and aligns them. It returns the
+// aligned segments, EVERY English cue's text (the prune corpus — a line the
+// Chinese file lacks is still English the show says), and how many zh
+// sidecars were skipped as fan-group files; rep is filled with what happened.
+func (m *OfficialSubtitleMiner) mineEpisode(ctx context.Context, media, tmp string, rep *MineEpisodeReport) ([]mine.Segment, []string, int) {
 	zhSidecars := sidecarsOf(media, mine.IsOfficialZhSidecar)
 	enSidecars := sidecarsOf(media, mine.IsEnglishSidecar)
 
@@ -640,17 +713,17 @@ func (m *OfficialSubtitleMiner) mineEpisode(ctx context.Context, media, tmp stri
 		default:
 			rep.Skipped = "no official zh subtitle"
 		}
-		return nil, fansubs
+		return nil, nil, fansubs
 	}
 	zh, zhFrom, err := m.loadSide(ctx, media, tmp, src.ZhSidecars, src.ZhStreams)
 	if err != nil {
 		rep.Skipped = "zh: " + err.Error()
-		return nil, fansubs
+		return nil, nil, fansubs
 	}
 	en, enFrom, err := m.loadEnglish(ctx, media, tmp, src)
 	if err != nil {
 		rep.Skipped = "en: " + err.Error()
-		return nil, fansubs
+		return nil, nil, fansubs
 	}
 	if probeErr != nil {
 		// Say so in the report: this episode's English came from a sidecar
@@ -660,7 +733,11 @@ func (m *OfficialSubtitleMiner) mineEpisode(ctx context.Context, media, tmp stri
 	}
 	segs := mine.Align(en, zh)
 	rep.ZhSource, rep.EnSource, rep.Segments = zhFrom, enFrom, len(segs)
-	return segs, fansubs
+	english := make([]string, 0, len(en))
+	for _, c := range en {
+		english = append(english, c.Text)
+	}
+	return segs, english, fansubs
 }
 
 // minUsableCues is the fewest cues a side may have and still be dialogue;

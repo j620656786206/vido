@@ -33,6 +33,8 @@ export interface MineResult {
   termsInserted: number;
   /** Harvested (speech-recognition) guesses the official rendering overwrote. */
   termsReplaced?: number;
+  /** Harvested (speech-recognition) guesses deleted because the official English never says them. */
+  termsPruned?: number;
   startedAt: string;
   finishedAt: string;
   error?: string;

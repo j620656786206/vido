@@ -52,11 +52,16 @@ type fakeGlossary struct {
 	inserted []models.GlossaryTerm
 	upserted []models.GlossaryTerm
 	cleared  []string // scopes whose season drawers were cleared
+	deleted  []string // ids pruned
 }
 
 func (g *fakeGlossary) DeleteSeasonDrawers(_ context.Context, scope string) (int64, error) {
 	g.cleared = append(g.cleared, scope)
 	return 0, nil
+}
+func (g *fakeGlossary) Delete(_ context.Context, id string) error {
+	g.deleted = append(g.deleted, id)
+	return nil
 }
 
 func (g *fakeGlossary) ListByScope(context.Context, string) ([]models.GlossaryTerm, error) {
@@ -423,7 +428,7 @@ func TestMineEpisode_EmbeddedEnglishBeatsASRSidecar(t *testing.T) {
 	m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, prober, ext, nil)
 
 	rep := MineEpisodeReport{}
-	segs, _ := m.mineEpisode(context.Background(), base+".mkv", t.TempDir(), &rep)
+	segs, _, _ := m.mineEpisode(context.Background(), base+".mkv", t.TempDir(), &rep)
 
 	assert.Equal(t, "embedded stream 3", rep.EnSource, "the full embedded track, not the forced one, not the ASR sidecar")
 	assert.Equal(t, []int{3}, ext.asked, "the forced track is never even extracted; one ffmpeg pass")
@@ -446,7 +451,7 @@ func TestMineEpisode_SidecarWhenNoEmbeddedEnglish(t *testing.T) {
 	require.NoError(t, os.WriteFile(base+".en.srt", []byte(en), 0o644))
 	m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, fakeProber{}, &fakeExtractor{}, nil)
 	rep := MineEpisodeReport{}
-	segs, _ := m.mineEpisode(context.Background(), base+".mkv", t.TempDir(), &rep)
+	segs, _, _ := m.mineEpisode(context.Background(), base+".mkv", t.TempDir(), &rep)
 	assert.Equal(t, "Show.S01E01.en.srt", rep.EnSource)
 	assert.Equal(t, 4, len(segs))
 }
@@ -476,7 +481,7 @@ func TestMineEpisode_EnglishFallbacksAreExplained(t *testing.T) {
 		ext := &fakeExtractor{byStream: map[int]string{3: fourLines(false, "")}} // 4 cues < minUsableCues
 		m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, fakeProber{tracks: []services.SubtitleTrack{{Language: "eng", Format: "subrip", StreamIndex: 3}}}, ext, nil)
 		rep := MineEpisodeReport{}
-		segs, _ := m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
+		segs, _, _ := m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
 		assert.Equal(t, "Show.S01E01.en.srt", rep.EnSource)
 		assert.Equal(t, 4, len(segs))
 	})
@@ -484,7 +489,7 @@ func TestMineEpisode_EnglishFallbacksAreExplained(t *testing.T) {
 		media := mk(t, true)
 		m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, failingProber{}, &fakeExtractor{}, nil)
 		rep := MineEpisodeReport{}
-		_, _ = m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
+		_, _, _ = m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
 		assert.Equal(t, "Show.S01E01.en.srt (probe failed; embedded tracks unknown)", rep.EnSource)
 	})
 	t.Run("only short tracks, no sidecar → skipped with every reason", func(t *testing.T) {
@@ -493,7 +498,7 @@ func TestMineEpisode_EnglishFallbacksAreExplained(t *testing.T) {
 		m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, fakeProber{tracks: []services.SubtitleTrack{
 			{Language: "eng", Format: "subrip", StreamIndex: 3}, {Language: "eng", Format: "subrip", StreamIndex: 4, HearingImpaired: true}}}, ext, nil)
 		rep := MineEpisodeReport{}
-		_, _ = m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
+		_, _, _ = m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
 		assert.Equal(t, "en: stream 3 has only 4 cues; stream 4 has only 1 cues", rep.Skipped)
 		assert.Equal(t, []int{3, 4}, ext.asked, "both candidates in one extraction call")
 	})
@@ -565,5 +570,91 @@ func TestMineSeries_SeasonDrawers(t *testing.T) {
 		_, has := r["tmdb:tv:s1:s1|Jerlamarel"]
 		assert.False(t, has)
 		assert.Equal(t, 0, res.TermsSplit)
+	})
+}
+
+// disc-2026-10-glossary-prune-harvest-garble: a harvested guess the official
+// English never says is deleted; a harvested term the English does say, a
+// confirmed row, and non-harvest rows stay; a thin corpus prunes nothing.
+func TestMineSeries_PrunesHarvestedGarble(t *testing.T) {
+	dir := t.TempDir()
+	var eps []models.Episode
+	for i := 1; i <= 4; i++ {
+		base := filepath.Join(dir, fmt.Sprintf("Show.S01E0%d", i))
+		require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+		require.NoError(t, os.WriteFile(base+".en.srt", []byte(fourLines(false, "")), 0o644))
+		require.NoError(t, os.WriteFile(base+".zh-TW.srt", []byte(fourLines(true, "謝拉馬威")), 0o644))
+		eps = append(eps, models.Episode{ID: fmt.Sprintf("e%d", i), SeriesID: "s1", FilePath: models.NewNullString(base + ".mkv")})
+	}
+	existing := []models.GlossaryTerm{
+		{ID: "garble-1", TermSrc: "Chola Morel", TermZh: "丘拉·莫瑞爾", Source: models.GlossarySourceSubtitle},
+		{ID: "garble-2", TermSrc: "Cofoun", TermZh: "科鋒", Source: models.GlossarySourceSubtitle},
+		{ID: "said", TermSrc: "Jerlamarel", TermZh: "傑拉瑪瑞爾", Source: models.GlossarySourceSubtitle}, // said → replaced, not pruned
+		{ID: "confirmed", TermSrc: "Sungrave", TermZh: "日升之地", Source: models.GlossarySourceSubtitle, Confirmed: true},
+		{ID: "tmdb", TermSrc: "Timat Dijon", TermZh: "提馬特", Source: models.GlossarySourceMetadata},
+	}
+	t.Run("enough coverage → garble goes, the rest stays", func(t *testing.T) {
+		g := &fakeGlossary{existing: append([]models.GlossaryTerm{}, existing...)}
+		m := NewOfficialSubtitleMiner(fakeEpisodes{bySeries: map[string][]models.Episode{"s1": eps}},
+			fakeSeries{rows: []models.Series{{ID: "s1", Title: "See"}}}, fakeScopes{}, g, nil, nil, nil)
+		res, err := m.MineSeries(context.Background(), "s1")
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{"garble-1", "garble-2"}, g.deleted)
+		assert.Equal(t, 2, res.TermsPruned)
+		assert.Equal(t, []string{"Chola Morel", "Cofoun"}, res.Pruned)
+		assert.Equal(t, 1, res.TermsReplaced, "the harvested Jerlamarel is REPLACED by the official rendering, not pruned")
+		require.Len(t, g.upserted, 1)
+		assert.Equal(t, "謝拉馬威", g.upserted[0].TermZh)
+	})
+	t.Run("a mention only in an English line the Chinese file lacks still counts", func(t *testing.T) {
+		// CR 2: the prune corpus is every English cue, not only the aligned ones.
+		dir := t.TempDir()
+		var eps2 []models.Episode
+		for i := 1; i <= 2; i++ {
+			base := filepath.Join(dir, fmt.Sprintf("Show.S01E0%d", i))
+			require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+			en := fourLines(false, "") + srt([3]string{"00:00:40,000", "00:00:42,000", "Chola Morel is here."})
+			require.NoError(t, os.WriteFile(base+".en.srt", []byte(en), 0o644))
+			require.NoError(t, os.WriteFile(base+".zh-TW.srt", []byte(fourLines(true, "謝拉馬威")), 0o644))
+			eps2 = append(eps2, models.Episode{ID: fmt.Sprintf("x%d", i), SeriesID: "s1", FilePath: models.NewNullString(base + ".mkv")})
+		}
+		g := &fakeGlossary{existing: []models.GlossaryTerm{{ID: "garble-1", TermSrc: "Chola Morel", TermZh: "丘拉·莫瑞爾", Source: models.GlossarySourceSubtitle}}}
+		m := NewOfficialSubtitleMiner(fakeEpisodes{bySeries: map[string][]models.Episode{"s1": eps2}},
+			fakeSeries{rows: []models.Series{{ID: "s1", Title: "See"}}}, fakeScopes{}, g, nil, nil, nil)
+		_, err := m.MineSeries(context.Background(), "s1")
+		require.NoError(t, err)
+		assert.Empty(t, g.deleted)
+	})
+	t.Run("a season with files but no official subtitles protects the show (CR 1)", func(t *testing.T) {
+		dir := t.TempDir()
+		var eps2 []models.Episode
+		for i := 1; i <= 4; i++ {
+			base := filepath.Join(dir, fmt.Sprintf("Show.S01E0%d", i))
+			require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+			require.NoError(t, os.WriteFile(base+".en.srt", []byte(fourLines(false, "")), 0o644))
+			require.NoError(t, os.WriteFile(base+".zh-TW.srt", []byte(fourLines(true, "謝拉馬威")), 0o644))
+			eps2 = append(eps2, models.Episode{ID: fmt.Sprintf("a%d", i), SeriesID: "s1", SeasonNumber: 1, FilePath: models.NewNullString(base + ".mkv")})
+		}
+		for i := 1; i <= 2; i++ { // season 2: files, no zh yet — its new names live only in the harvest
+			base := filepath.Join(dir, fmt.Sprintf("Show.S02E0%d", i))
+			require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+			eps2 = append(eps2, models.Episode{ID: fmt.Sprintf("b%d", i), SeriesID: "s1", SeasonNumber: 2, FilePath: models.NewNullString(base + ".mkv")})
+		}
+		g := &fakeGlossary{existing: []models.GlossaryTerm{{ID: "new-name", TermSrc: "Wren", TermZh: "蘭恩", Source: models.GlossarySourceSubtitle}}}
+		m := NewOfficialSubtitleMiner(fakeEpisodes{bySeries: map[string][]models.Episode{"s1": eps2}},
+			fakeSeries{rows: []models.Series{{ID: "s1", Title: "See"}}}, fakeScopes{}, g, nil, nil, nil)
+		res, err := m.MineSeries(context.Background(), "s1")
+		require.NoError(t, err)
+		assert.Equal(t, 4, res.EpisodesUsed)
+		assert.Empty(t, g.deleted, "4 of 6 would pass the half rule; the unmined season stops it")
+	})
+	t.Run("one episode is not enough to judge", func(t *testing.T) {
+		g := &fakeGlossary{existing: append([]models.GlossaryTerm{}, existing...)}
+		m := NewOfficialSubtitleMiner(fakeEpisodes{bySeries: map[string][]models.Episode{"s1": eps[:1]}},
+			fakeSeries{rows: []models.Series{{ID: "s1", Title: "See"}}}, fakeScopes{}, g, nil, nil, nil)
+		res, err := m.MineSeries(context.Background(), "s1")
+		require.NoError(t, err)
+		assert.Empty(t, g.deleted)
+		assert.Equal(t, 0, res.TermsPruned)
 	})
 }
