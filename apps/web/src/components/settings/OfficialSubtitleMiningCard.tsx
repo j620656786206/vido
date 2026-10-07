@@ -34,7 +34,9 @@ export function describeResult(r: MineResult): string {
   if (r.episodesUsed === 0) {
     return skipped ? `${r.title} ${skipped}` : `${r.title} 沒有可用的集`;
   }
-  const learned = `${r.title} 學到 ${r.termsFound} 個詞（${r.episodesUsed} 集）`;
+  const replaced =
+    r.termsReplaced && r.termsReplaced > 0 ? `，其中 ${r.termsReplaced} 個修正了聽寫猜的寫法` : '';
+  const learned = `${r.title} 學到 ${r.termsFound} 個詞（${r.episodesUsed} 集）${replaced}`;
   return skipped ? `${learned}，${skipped}` : learned;
 }
 

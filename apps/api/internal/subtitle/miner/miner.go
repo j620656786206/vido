@@ -56,14 +56,17 @@ type MineEpisodeReport struct {
 // [@contract-v1] — served by GET /subtitles/glossary/mine (last run) and
 // POST /subtitles/glossary/mine (synchronous single-show run).
 type MineResult struct {
-	SeriesID      string              `json:"series_id"`
-	Title         string              `json:"title"`
-	Scope         string              `json:"scope"`
-	EpisodesTotal int                 `json:"episodes_total"`
-	EpisodesUsed  int                 `json:"episodes_used"`
-	FansubSkipped int                 `json:"fansub_skipped"`
-	TermsFound    int                 `json:"terms_found"`
-	TermsInserted int                 `json:"terms_inserted"`
+	SeriesID      string `json:"series_id"`
+	Title         string `json:"title"`
+	Scope         string `json:"scope"`
+	EpisodesTotal int    `json:"episodes_total"`
+	EpisodesUsed  int    `json:"episodes_used"`
+	FansubSkipped int    `json:"fansub_skipped"`
+	TermsFound    int    `json:"terms_found"`
+	TermsInserted int    `json:"terms_inserted"`
+	// TermsReplaced counts harvested (speech-recognition) guesses the
+	// official rendering overwrote (disc-2026-10-asr-harvest-pollutes-glossary).
+	TermsReplaced int                 `json:"terms_replaced"`
 	Terms         []mine.Term         `json:"terms,omitempty"`
 	Episodes      []MineEpisodeReport `json:"episodes,omitempty"`
 	StartedAt     time.Time           `json:"started_at"`
@@ -85,7 +88,7 @@ type MineStatus struct {
 // ErrMinerBusy is returned when a run is already in flight.
 var ErrMinerBusy = errors.New("official-subtitle miner: a run is already in progress")
 
-// mineEpisodeLister / mineSeriesReader / mineGlossaryRepo are the narrow
+// mineEpisodeLister / mineSeriesReader / GlossaryRepo are the narrow
 // repository surfaces the miner needs (Rule 11).
 type mineEpisodeLister interface {
 	FindBySeriesID(ctx context.Context, seriesID string) ([]models.Episode, error)
@@ -96,9 +99,16 @@ type mineSeriesReader interface {
 	List(ctx context.Context, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error)
 }
 
-type mineGlossaryRepo interface {
+// GlossaryRepo is the miner's narrow glossary port; main asserts the concrete
+// repository to it (the wide GlossaryRepositoryInterface is kept free of
+// miner-only methods so the dozens of test fakes implementing it stay small).
+type GlossaryRepo interface {
 	ListByScope(ctx context.Context, scope string) ([]models.GlossaryTerm, error)
-	InsertIfAbsent(ctx context.Context, term *models.GlossaryTerm) (bool, error)
+	// ReplaceUnconfirmedGuess inserts the term, or overwrites a row that is
+	// only an unconfirmed guess (speech-recognition harvest, or an earlier
+	// mining pass) — never a confirmed, TMDb or manual row
+	// (disc-2026-10-asr-harvest-pollutes-glossary). The guard is in the SQL.
+	ReplaceUnconfirmedGuess(ctx context.Context, term *models.GlossaryTerm) (bool, error)
 }
 
 // OfficialSubtitleMiner runs 加速器② over the library.
@@ -106,7 +116,7 @@ type OfficialSubtitleMiner struct {
 	episodes  mineEpisodeLister
 	series    mineSeriesReader
 	scopes    subtitle.GlossaryScopeResolver
-	glossary  mineGlossaryRepo
+	glossary  GlossaryRepo
 	prober    subtitle.TechProber     // nil = sidecars only
 	extractor subtitle.TrackExtractor // nil = sidecars only
 	logger    *slog.Logger
@@ -122,7 +132,7 @@ type OfficialSubtitleMiner struct {
 
 // NewOfficialSubtitleMiner wires the miner. prober and extractor may be nil
 // (the miner then reads sidecar files only — embedded tracks need ffmpeg).
-func NewOfficialSubtitleMiner(episodes mineEpisodeLister, series mineSeriesReader, scopes subtitle.GlossaryScopeResolver, glossary mineGlossaryRepo, prober subtitle.TechProber, extractor subtitle.TrackExtractor, logger *slog.Logger) *OfficialSubtitleMiner {
+func NewOfficialSubtitleMiner(episodes mineEpisodeLister, series mineSeriesReader, scopes subtitle.GlossaryScopeResolver, glossary GlossaryRepo, prober subtitle.TechProber, extractor subtitle.TrackExtractor, logger *slog.Logger) *OfficialSubtitleMiner {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -333,10 +343,12 @@ func (m *OfficialSubtitleMiner) mineOne(ctx context.Context, seriesID string) Mi
 		res.Episodes = append(res.Episodes, rep)
 	}
 
-	known, err := m.knownRenderings(ctx, scope)
+	rows, err := m.glossary.ListByScope(ctx, scope)
 	if err != nil {
 		m.logger.Warn("existing glossary unreadable — mining without it", "scope", scope, "error", err)
 	}
+	known := knownRenderings(rows)
+	harvested := harvestedGuesses(rows)
 	terms := mine.Mine(all, mine.Options{Known: known})
 	res.Terms = terms
 	res.TermsFound = len(terms)
@@ -344,7 +356,7 @@ func (m *OfficialSubtitleMiner) mineOne(ctx context.Context, seriesID string) Mi
 		if t.How == "known" {
 			continue // already in the glossary; verified, nothing to write
 		}
-		inserted, err := m.glossary.InsertIfAbsent(ctx, &models.GlossaryTerm{
+		row := &models.GlossaryTerm{
 			MediaID: seriesID,
 			Scope:   scope,
 			TermSrc: t.Src,
@@ -353,37 +365,67 @@ func (m *OfficialSubtitleMiner) mineOne(ctx context.Context, seriesID string) Mi
 			// Confirmed stays false: the professionals' rendering is a strong
 			// default, and the user still gets to approve it in the panel
 			// (Scorpion's "official" files turned out to be a fan group's).
-		})
+		}
+		// disc-2026-10-asr-harvest-pollutes-glossary: a row our own
+		// speech-recognition run harvested ("Jerlamarel → 傑拉瑪瑞爾") is a
+		// guess, not evidence — the official file's rendering replaces it.
+		// Anything else already there (TMDb, manual, a confirmed row) stays;
+		// the repository enforces that in SQL, the snapshot only decides
+		// which counter the write lands in.
+		written, err := m.glossary.ReplaceUnconfirmedGuess(ctx, row)
 		if err != nil {
-			m.logger.Warn("glossary insert failed", "scope", scope, "term", t.Src, "error", err)
+			m.logger.Warn("glossary write failed", "scope", scope, "term", t.Src, "error", err)
 			continue
 		}
-		if inserted {
+		if !written {
+			continue
+		}
+		if _, guess := harvested[strings.ToLower(t.Src)]; guess {
+			res.TermsReplaced++
+		} else {
 			res.TermsInserted++
 		}
 	}
 	m.logger.Info("official-subtitle mining finished",
 		"series_id", seriesID, "title", s.Title, "scope", scope,
 		"episodes_used", res.EpisodesUsed, "episodes_total", res.EpisodesTotal,
-		"fansub_skipped", res.FansubSkipped, "terms_found", res.TermsFound, "terms_inserted", res.TermsInserted)
+		"fansub_skipped", res.FansubSkipped, "terms_found", res.TermsFound,
+		"terms_inserted", res.TermsInserted, "terms_replaced", res.TermsReplaced)
 	return res
 }
 
-// knownRenderings is the show's existing glossary (TMDb-seeded, manual,
-// harvested), handed to the miner as the trusted set to verify first.
-func (m *OfficialSubtitleMiner) knownRenderings(ctx context.Context, scope string) (map[string]string, error) {
-	rows, err := m.glossary.ListByScope(ctx, scope)
-	if err != nil {
-		return nil, err
-	}
+// knownRenderings is the show's existing glossary that counts as EVIDENCE
+// (TMDb-seeded, manual, confirmed), handed to the miner as the trusted set to
+// verify first. Two kinds of row are not evidence and are left out: our own
+// unconfirmed official-subtitle guess from an earlier pass, and anything the
+// speech-recognition harvest wrote (disc-2026-10-asr-harvest-pollutes-glossary
+// — See had seven garbled Jerlamarel spellings there, and treating the one
+// spelled right as "known" stopped the miner from ever learning 謝拉馬威).
+func knownRenderings(rows []models.GlossaryTerm) map[string]string {
 	known := make(map[string]string, len(rows))
 	for _, r := range rows {
 		if r.Source == models.GlossarySourceOfficialSubtitle && !r.Confirmed {
-			continue // our own earlier guess is not evidence
+			continue
+		}
+		if r.Source == models.GlossarySourceSubtitle && !r.Confirmed {
+			continue
 		}
 		known[r.TermSrc] = r.TermZh
 	}
-	return known, nil
+	return known
+}
+
+// harvestedGuesses is the set of term_src (lower-cased) whose only row is an
+// unconfirmed speech-recognition harvest — the rows an official rendering may
+// overwrite.
+func harvestedGuesses(rows []models.GlossaryTerm) map[string]struct{} {
+	out := map[string]struct{}{}
+	for _, r := range rows {
+		if r.Source == models.GlossarySourceSubtitle && !r.Confirmed {
+			out[strings.ToLower(r.TermSrc)] = struct{}{}
+		}
+	}
+	return out
 }
 
 // mineEpisode loads one episode's two sides and aligns them. It returns the

@@ -299,3 +299,49 @@ func TestGlossaryRepository_MigrateScope_RejectsNonMoves(t *testing.T) {
 	_, _, err = repo.MigrateScope(context.Background(), "", "tmdb:tv:1")
 	require.Error(t, err)
 }
+
+// disc-2026-10-asr-harvest-pollutes-glossary: the miner's write overwrites
+// only an unconfirmed guess; the guard is in the SQL.
+func TestReplaceUnconfirmedGuess(t *testing.T) {
+	db := setupGlossaryDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	repo := NewGlossaryRepository(db)
+	ctx := context.Background()
+	official := func(zh string) *models.GlossaryTerm {
+		return &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1", TermSrc: "Jerlamarel", TermZh: zh, Source: models.GlossarySourceOfficialSubtitle}
+	}
+	// absent → inserted
+	ok, err := repo.ReplaceUnconfirmedGuess(ctx, official("謝拉馬威"))
+	require.NoError(t, err)
+	assert.True(t, ok)
+	// same rendering again → nothing to do
+	ok, err = repo.ReplaceUnconfirmedGuess(ctx, official("謝拉馬威"))
+	require.NoError(t, err)
+	assert.False(t, ok)
+
+	// a harvested guess → replaced, source upgraded
+	_, err = repo.InsertIfAbsent(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1", TermSrc: "Paris", TermZh: "派瑞斯", Source: models.GlossarySourceSubtitle})
+	require.NoError(t, err)
+	ok, err = repo.ReplaceUnconfirmedGuess(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1", TermSrc: "paris", TermZh: "芭麗絲", Source: models.GlossarySourceOfficialSubtitle})
+	require.NoError(t, err)
+	assert.True(t, ok)
+	rows, err := repo.ListByScope(ctx, "tmdb:tv:1")
+	require.NoError(t, err)
+	byName := map[string]models.GlossaryTerm{}
+	for _, r := range rows {
+		byName[r.TermSrc] = r
+	}
+	assert.Equal(t, "芭麗絲", byName["Paris"].TermZh, "stored spelling of term_src is kept, rendering replaced")
+	assert.Equal(t, models.GlossarySourceOfficialSubtitle, byName["Paris"].Source)
+
+	// a confirmed row and a manual row are never touched
+	_, err = repo.Confirm(ctx, byName["Paris"].ID)
+	require.NoError(t, err)
+	ok, err = repo.ReplaceUnconfirmedGuess(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1", TermSrc: "Paris", TermZh: "帕里斯", Source: models.GlossarySourceOfficialSubtitle})
+	require.NoError(t, err)
+	assert.False(t, ok)
+	require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1", TermSrc: "Maghra", TermZh: "瑪格拉", Source: models.GlossarySourceManual}))
+	ok, err = repo.ReplaceUnconfirmedGuess(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: "tmdb:tv:1", TermSrc: "Maghra", TermZh: "瑪嘉拉", Source: models.GlossarySourceOfficialSubtitle})
+	require.NoError(t, err)
+	assert.False(t, ok)
+}
