@@ -1,6 +1,6 @@
 # Disc：官方字幕學習的英文那一側拿錯來源——拿到 Vido 自己聽寫的 .en.srt、或拿到只有幾句的「強制字幕」軌
 
-Status: review
+Status: done
 
 **Source:** 2026-10-07 正式機重學 See 的逐集報告：S01E02 用了旁邊的 `…en.srt`（Vido 10/5 聽寫產出，人名全錯）只對上 287 段（嵌入的官方英文軌可對 568 段）；S01E07／S02E04／S02E05 選到 stream 2「English (Forced)」只有 1～3 句，對上 0～1 段。結果 Jerlamarel 的第 1 季票數掉到比第 2 季少，學成「傑拉馬瑞」。
 
@@ -23,6 +23,7 @@ Status: review
 
 ## Dev Agent Record
 
+- **AC #4 ✅（2026-10-07）：** 正式機逐集報告 15 集全用嵌入英文軌（S01E02 287 → 568 段；S01E07／S02E04／S02E05 0～1 → 483／470／643 段）；`terms_found=61`、Jerlamarel → 謝拉馬威。
 - **Adversarial CR（2026-10-07，fresh agent）2M/2L＋留意，處理如下：**
   - M1 每個候選軌各跑一次全檔 ffmpeg → 改成一次 `Extract` 抽全部候選再依序挑；miner 的 extractor 沒共用字幕生成的 IO 閘門（既有）→ 記著，未處理。
   - M2 probe 失敗被靜默吞掉、會原封不動重演這個 bug → Warn log＋報告的 `en_source` 標 `(probe failed; embedded tracks unknown)`；加測試。
@@ -39,5 +40,6 @@ Status: review
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 正式機驗證通過 → done。 |
 | 2026-10-07 | CR 2M/2L：一次抽全部候選、probe 失敗記 log＋標註、title 判斷 Forced／SDH、原因全列。 |
 | 2026-10-07 | create-story＋dev 同日；全綠，狀態 review，待正式機重學驗證。 |
