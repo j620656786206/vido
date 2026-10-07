@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/tmdb"
@@ -48,6 +49,20 @@ type MergedEpisode struct {
 	SubtitleStatus   string `json:"subtitle_status,omitempty"`
 	SubtitleLanguage string `json:"subtitle_language,omitempty"`
 	FilePath         string `json:"file_path,omitempty"`
+	// ChineseSubtitle / ChineseSubtitleSources — "does this episode have
+	// Chinese subtitles, and from where" (disc-2026-10-episode-list-subtitle-
+	// badge-a AC #1 [@contract-v1]). Present only alongside HasLocalFile; the
+	// value is the movie/series enum, computed by models.ChineseSubtitleVerdict.
+	// Sources lists only the Chinese ones ([] when none).
+	ChineseSubtitle        models.ChineseSubtitle   `json:"chinese_subtitle,omitempty"`
+	ChineseSubtitleSources *[]ChineseSubtitleSource `json:"chinese_subtitle_sources,omitempty"`
+}
+
+// episodeTracksRefresher is the season list's write-back (AC #4), satisfied by
+// *repository.EpisodeRepository; kept off EpisodeRepositoryInterface so the
+// many hand-written mocks of it need not grow a method.
+type episodeTracksRefresher interface {
+	RefreshSubtitleTracks(ctx context.Context, episodeID, previous, next string) (bool, error)
 }
 
 // SeasonEpisodesResponse is the payload for the season-episodes endpoint:
@@ -144,6 +159,10 @@ func (s *SeriesService) GetSeasonEpisodes(ctx context.Context, seriesID string, 
 	// Local episodes for subtitle/file enrichment, indexed by episode number.
 	localByNumber := s.localEpisodesByNumber(ctx, seriesID, seasonNumber)
 
+	// One directory read per folder for every local file of the season
+	// (AC #3) — never an ffprobe.
+	live := s.readSeasonSidecars(localByNumber)
+
 	episodes := make([]MergedEpisode, 0, len(details.Episodes))
 	for _, te := range details.Episodes {
 		merged := MergedEpisode{
@@ -163,6 +182,16 @@ func (s *SeriesService) GetSeasonEpisodes(ctx context.Context, seriesID string, 
 			merged.SubtitleStatus = string(local.SubtitleStatus)
 			if local.SubtitleLanguage.Valid {
 				merged.SubtitleLanguage = local.SubtitleLanguage.String
+			}
+			var side *SidecarTracks
+			if read, ok := live[local.FilePath.String]; ok {
+				side = &read
+			}
+			v := computeEpisodeSubtitle(local, side)
+			merged.ChineseSubtitle = v.verdict
+			merged.ChineseSubtitleSources = &v.sources
+			if v.refresh != "" {
+				s.refreshEpisodeTracks(ctx, local, v.refresh)
 			}
 		}
 
@@ -205,4 +234,39 @@ func (s *SeriesService) localEpisodesByNumber(ctx context.Context, seriesID stri
 		byNumber[ep.EpisodeNumber] = ep
 	}
 	return byNumber
+}
+
+// readSeasonSidecars reads the sidecars of every local episode file in one
+// call (one directory read per folder). nil when no reader is wired.
+func (s *SeriesService) readSeasonSidecars(local map[int]models.Episode) map[string]SidecarTracks {
+	if s.sidecars == nil {
+		return nil
+	}
+	paths := make([]string, 0, len(local))
+	known := make(map[string][]SubtitleTrack, len(local))
+	for _, ep := range local {
+		if ep.FilePath.Valid && ep.FilePath.String != "" {
+			paths = append(paths, ep.FilePath.String)
+			known[ep.FilePath.String] = storedSidecars(ep)
+		}
+	}
+	if len(paths) == 0 {
+		return nil
+	}
+	sort.Strings(paths)
+	return s.sidecars.ReadSidecarTracks(paths, known)
+}
+
+// refreshEpisodeTracks stores the live sidecar half (AC #4). Compare-and-set
+// against the value this request read, so it never overwrites a re-probe the
+// background sweep committed meanwhile; a failure is logged, the response is
+// already correct.
+func (s *SeriesService) refreshEpisodeTracks(ctx context.Context, ep models.Episode, next string) {
+	refresher, ok := s.episodeRepo.(episodeTracksRefresher)
+	if !ok {
+		return
+	}
+	if _, err := refresher.RefreshSubtitleTracks(ctx, ep.ID, ep.SubtitleTracks.String, next); err != nil {
+		slog.Warn("Failed to refresh episode sidecar subtitles", "error", err, "episode_id", ep.ID)
+	}
 }

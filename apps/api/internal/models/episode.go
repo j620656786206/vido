@@ -38,6 +38,16 @@ type Episode struct {
 	SubtitlePath     NullString     `db:"subtitle_path" json:"subtitle_path,omitempty"`
 	SubtitleLanguage NullString     `db:"subtitle_language" json:"subtitle_language,omitempty"`
 
+	// SubtitleTracks is the episode's embedded subtitle tracks plus the sidecar
+	// files beside it — the JSON shape movies.subtitle_tracks uses, read by
+	// ChineseSubtitleVerdict (migration 044, disc-2026-10-episode-list-
+	// subtitle-badge-a). NULL = never read. Written only by the background
+	// sweep and the season list's sidecar refresh, never by Create/Update.
+	SubtitleTracks NullString `db:"subtitle_tracks" json:"subtitle_tracks,omitempty"`
+	// SubtitleTracksFileSig is "<size>:<mtime unix nanos>" of the file when
+	// SubtitleTracks' embedded half was probed; a mismatch means re-probe.
+	SubtitleTracksFileSig NullString `db:"subtitle_tracks_file_sig" json:"-"`
+
 	// Timestamps
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`

@@ -66,6 +66,8 @@ func setupEpisodeTestDB(t *testing.T) *sql.DB {
 			subtitle_status TEXT DEFAULT 'not_searched',
 			subtitle_path TEXT,
 			subtitle_language TEXT,
+			subtitle_tracks TEXT,
+			subtitle_tracks_file_sig TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)
