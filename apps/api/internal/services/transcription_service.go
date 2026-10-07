@@ -139,6 +139,9 @@ type TranscriptionService struct {
 	// .en.srt is written, so an interrupted run resumes at the first
 	// un-transcribed chunk (disc-2026-09-generation-resume-b). nil = off.
 	chunkStore ASRChunkStore
+	// namePrompt turns the character-name conditioning text on
+	// (disc-2026-10-asr-name-prompt-default-off; off unless SetASRNamePrompt).
+	namePrompt bool
 	// segmentStore keeps each paid-for TRANSLATED cue, so a run stopped by the
 	// money ceiling resumes at the first untranslated cue instead of paying for
 	// the finished ones again (disc-2026-09-generation-resume-a). nil = off.
@@ -223,6 +226,12 @@ func NewTranscriptionService(
 // SetASRChunkStore wires the paid-for chunk transcript store
 // (disc-2026-09-generation-resume-b). Wiring only — call it during startup.
 // nil (the default) transcribes every chunk on every run, as before.
+// SetASRNamePrompt switches the character-name prompt to the engine on or
+// off (VIDO_ASR_NAME_PROMPT; default off, see config.ASRNamePrompt).
+func (s *TranscriptionService) SetASRNamePrompt(on bool) {
+	s.namePrompt = on
+}
+
 func (s *TranscriptionService) SetASRChunkStore(store ASRChunkStore) {
 	s.chunkStore = store
 }
@@ -959,10 +968,12 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		// names are spelled (TMDb credits + the trusted glossary) so one
 		// character is not heard seven ways. Rides the ctx to the client.
 		asrCtx := phaseCtx
-		if prompt := s.asrPromptFor(ctx, mediaType, mediaID, glossaryKeyFor(mediaID, s.episodeRowFor(ctx, mediaType, mediaID))); prompt != "" {
-			asrCtx = ai.WithASRPrompt(phaseCtx, prompt)
-			s.logger.Info("asr prompt built", "media_id", mediaID, "media_type", mediaType,
-				"names", len(strings.Split(prompt, ", ")), "runes", len([]rune(prompt)))
+		if s.namePrompt {
+			if prompt := s.asrPromptFor(ctx, mediaType, mediaID, glossaryKeyFor(mediaID, s.episodeRowFor(ctx, mediaType, mediaID))); prompt != "" {
+				asrCtx = ai.WithASRPrompt(phaseCtx, prompt)
+				s.logger.Info("asr prompt built", "media_id", mediaID, "media_type", mediaType,
+					"names", len(strings.Split(prompt, ", ")), "runes", len([]rune(prompt)))
+			}
 		}
 		srtContent, err = s.transcribeAudio(asrCtx, audioPath, lang, scope)
 		if err != nil {

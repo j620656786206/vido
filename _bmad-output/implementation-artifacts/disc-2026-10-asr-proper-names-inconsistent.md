@@ -58,6 +58,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **2026-10-07 第六次實測後裁定：** 聽寫側的人名提示六次都沒修對一個人名 → 預設關（`disc-2026-10-asr-name-prompt-default-off`）。人名一致改走翻譯側：先修 `disc-2026-10-mine-shift-range-too-narrow`（官方字幕差 51.7 秒對不上 → 名詞表沒有 Jerlamarel 的官方譯名）。
 - **2026-10-07 第五次實測（演員表補上後）：** 41 個名字反而讓 Whisper 把名單念進字幕、對白剩三分之一，Jerlamarel 仍錯 → `disc-2026-10-asr-name-prompt-too-long`（角色名、拉丁字母、≤12）。
 - **實測（2026-10-06／07，10 分鐘片段）：沒測到。** See 的 `series.credits` 在 DB 是空的，只送了 3 個演員名、0 個角色名（`asr prompt built names=3 runes=42`）；Jerlamarel 仍聽成 Trilla Morel。程式路徑有跑、有 log；效果要等 `disc-2026-10-series-credits-empty` 把演員表存進來再量。
 - **Adversarial CR（2026-10-06，fresh agent）2M/3L＋nits，全部修掉：**
