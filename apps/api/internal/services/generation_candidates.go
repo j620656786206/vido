@@ -962,7 +962,7 @@ func (s *GenerationCandidateService) planRouteCache(ctx context.Context, rows []
 		// parity — `backlog-episode-tech-info-parity`), this predicate must
 		// learn it too, or probeBound (and the route_probes log field) silently
 		// drifts. classify carries the mirror of this note.
-		if _, ok := parsePersistedTracks(row.tracksJSON); ok {
+		if _, ok := row.persistedTracks(); ok {
 			continue
 		}
 		plans[i].probeBound = true
@@ -1100,9 +1100,15 @@ type candidateRow struct {
 	// candidateDisplayTitle.
 	posterPath  string
 	tmdbMatched bool
-	// tracksJSON is the persisted scan-time probe result. Empty for episodes,
-	// which have no such column.
+	// tracksJSON is the persisted probe result: movies.subtitle_tracks from
+	// enrichment, episodes.subtitle_tracks from the background sweep
+	// (disc-2026-10-episode-list-subtitle-badge-a AC #6; empty until the sweep
+	// reached the episode, which then probes as before).
 	tracksJSON string
+	// emptyTracksAreFact: an episode's subtitle_tracks is written only after
+	// a successful probe, so its `[]` means "no subtitle tracks at all" — a
+	// fact, unlike a movie's `[]` (see parsePersistedTracks).
+	emptyTracksAreFact bool
 	// Series identity (sub-5-3) — zero-valued for movies. seriesTitle is
 	// resolved once per series per sweep (memo in enumerate) and degrades to
 	// "" on a lookup failure (Rule 13 case 3 — one missing series row must not
@@ -1274,6 +1280,9 @@ func (s *GenerationCandidateService) enumerate(ctx context.Context) ([]candidate
 				filePath:        e.FilePath.String,
 				runtime:         e.Runtime,
 				durationSeconds: e.DurationSeconds,
+				tracksJSON:      e.SubtitleTracks.String,
+				// The sweep stores `[]` only after ffprobe read the file.
+				emptyTracksAreFact: e.SubtitleTracks.Valid,
 				// An episode's own still is a frame grab, not an identity —
 				// the SERIES poster is what makes the row recognisable.
 				posterPath:    meta.posterPath,
@@ -1322,7 +1331,7 @@ func (s *GenerationCandidateService) classify(ctx context.Context, row candidate
 		return "", false, 0
 	}
 
-	if tracks, ok := parsePersistedTracks(row.tracksJSON); ok {
+	if tracks, ok := row.persistedTracks(); ok {
 		return s.predictor.FromTracks(tracks), true, 0
 	}
 
@@ -1366,6 +1375,19 @@ func (s *GenerationCandidateService) rememberEpisodeDuration(ctx context.Context
 		s.logger.Debug("episode duration write-back failed — the quote still used the measurement",
 			"media_id", row.id, "seconds", seconds, "error", err)
 	}
+}
+
+// persistedTracks is the row's stored track list, when it decides the route
+// without a probe. Both planRouteCache and classify ask this one question
+// (PARITY CONTRACT, CR sub-5-4 L3).
+func (r candidateRow) persistedTracks() ([]SubtitleTrack, bool) {
+	if tracks, ok := parsePersistedTracks(r.tracksJSON); ok {
+		return tracks, true
+	}
+	if r.emptyTracksAreFact && strings.TrimSpace(r.tracksJSON) == "[]" {
+		return []SubtitleTrack{}, true
+	}
+	return nil, false
 }
 
 // parsePersistedTracks reads the scan-time `subtitle_tracks` JSON.

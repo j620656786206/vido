@@ -253,6 +253,9 @@ func main() {
 	// (episode repo for local subtitle/file status + TMDb for the canonical episode list).
 	seriesService.SetEpisodeDeps(repos.Episodes, tmdbService)
 	seriesService.SetSeasonRepo(repos.Seasons) // bugfix-20-1: GetSeasons reads the seasons table
+	// disc-2026-10-episode-list-subtitle-badge-a: opening a season reads the
+	// subtitle files beside its episodes (one folder read, no ffprobe).
+	seriesService.SetSidecarReader(subtitle.SidecarTrackReader{})
 
 	// Initialize explore block service (Story 10.3 — homepage custom discover blocks)
 	exploreBlockService := services.NewExploreBlockService(repos.ExploreBlocks, tmdbService, repos.Cache)
@@ -1067,6 +1070,26 @@ func main() {
 	officialMiner := miner.NewOfficialSubtitleMiner(repos.Episodes, repos.Series, glossaryScopes, minerGlossary,
 		ffprobeService, subtitle.NewExtractor(subtitleExtractTimeout, slog.Default()), slog.Default())
 	scannerService.AppendOnScanComplete(officialMiner.ScanCallback())
+
+	// disc-2026-10-episode-list-subtitle-badge-a: read each episode's embedded
+	// subtitle tracks once (ffprobe) and store them with its sidecars, so the
+	// season list and the library filter need no probe. After every scan, and
+	// once after boot for the episodes scanned before this existed.
+	// Hoisted so the graceful-shutdown block stops it before db.Close().
+	stopEpisodeTracks := func() {}
+	if tracksRepo, ok := repos.Episodes.(services.EpisodeSubtitleTracksRepo); ok {
+		episodeTracksCtx, episodeTracksCancel := context.WithCancel(context.Background())
+		defer episodeTracksCancel()
+		episodeTracks := services.NewEpisodeSubtitleTracksService(tracksRepo, ffprobeService, subtitle.SidecarTrackReader{}, slog.Default())
+		scannerService.AppendOnScanComplete(func() { episodeTracks.Trigger(episodeTracksCtx) })
+		episodeTracks.RunAfter(episodeTracksCtx, 60*time.Second)
+		stopEpisodeTracks = func() {
+			episodeTracksCancel()
+			episodeTracks.Wait()
+		}
+	} else {
+		slog.Warn("episode subtitle-track sweep disabled: episode repository lacks UpdateSubtitleTracks")
+	}
 	glossaryMineHandler := handlers.NewGlossaryMineHandler(officialMiner)
 	localizationHandler := handlers.NewLocalizationHandler(localizationSettings)                 // sub-7-4 GET/PUT /subtitles/localization
 	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr", "sonarr") // Story 13-4a + 13-4b
@@ -1571,6 +1594,11 @@ func main() {
 	slog.Info("Stopping usage report scheduler...")
 	usageReportCancel()
 	usageReportScheduler.Stop()
+
+	// Stop the episode subtitle-track sweep — waits for an in-flight probe to
+	// return, before db.Close() below (Rule 14).
+	slog.Info("Stopping episode subtitle-track sweep...")
+	stopEpisodeTracks()
 
 	// Stop retry scheduler
 	slog.Info("Stopping retry scheduler...")

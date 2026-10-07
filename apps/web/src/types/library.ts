@@ -193,6 +193,23 @@ export interface MergedEpisode {
   subtitleStatus?: string;
   subtitleLanguage?: string;
   filePath?: string;
+  /** "Does this episode have Chinese subtitles" — same enum and rule as
+   *  movies/series. Present only alongside hasLocalFile.
+   *  Backend: services.MergedEpisode.chinese_subtitle
+   *  (disc-2026-10-episode-list-subtitle-badge-a AC #1 [@contract-v1]). */
+  chineseSubtitle?: ChineseSubtitle;
+  /** The Chinese sources behind chineseSubtitle ([] when none). */
+  chineseSubtitleSources?: ChineseSubtitleSource[];
+}
+
+/** One Chinese source of an episode's subtitle verdict.
+ *  kind: embedded = inside the file, sidecar = a file beside it, vido = the
+ *  subtitle Vido placed. label: the track title or the sidecar's filename tag
+ *  ("zh-TW"), "" when none. */
+export interface ChineseSubtitleSource {
+  kind: 'embedded' | 'sidecar' | 'vido';
+  language: 'zh-Hant' | 'zh-Hans' | 'zh-unknown';
+  label: string;
 }
 
 export interface SeasonEpisodesResponse {

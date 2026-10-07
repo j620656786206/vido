@@ -126,12 +126,19 @@ func BuildInventory(ctx context.Context, mediaPath, ownSubtitlePath string, prob
 // text formats, no .bak / .tmp. artifacts) with ONE directory read. Chinese is
 // decided by content — a ".zh-TW.srt" full of Simplified is Simplified.
 func ListSidecars(mediaPath, ownSubtitlePath string) ([]SidecarFile, error) {
-	dir := filepath.Dir(mediaPath)
-	stem := strings.TrimSuffix(filepath.Base(mediaPath), filepath.Ext(mediaPath))
-	entries, err := os.ReadDir(dir)
+	entries, err := os.ReadDir(filepath.Dir(mediaPath))
 	if err != nil {
 		return nil, err
 	}
+	return sidecarsFromEntries(entries, mediaPath, ownSubtitlePath), nil
+}
+
+// sidecarsFromEntries is ListSidecars over an already-read directory, so a
+// season whose episodes share one folder reads it once
+// (disc-2026-10-episode-list-subtitle-badge-a AC #3).
+func sidecarsFromEntries(entries []os.DirEntry, mediaPath, ownSubtitlePath string) []SidecarFile {
+	dir := filepath.Dir(mediaPath)
+	stem := strings.TrimSuffix(filepath.Base(mediaPath), filepath.Ext(mediaPath))
 	own := ""
 	if ownSubtitlePath != "" {
 		own = filepath.Clean(ownSubtitlePath)
@@ -139,29 +146,111 @@ func ListSidecars(mediaPath, ownSubtitlePath string) ([]SidecarFile, error) {
 
 	files := []SidecarFile{}
 	for _, e := range entries {
-		if e.IsDir() {
+		format, tag, ok := matchSidecar(e, stem)
+		if !ok {
 			continue
 		}
-		name := e.Name()
-		lower := strings.ToLower(name)
-		format, ok := sidecarFormats[filepath.Ext(lower)]
-		if !ok || strings.Contains(lower, ".tmp.") {
-			continue
-		}
-		nameNoExt := strings.TrimSuffix(name, filepath.Ext(name))
-		if nameNoExt != stem && !strings.HasPrefix(nameNoExt, stem+".") {
-			continue
-		}
-		path := filepath.Join(dir, name)
+		path := filepath.Join(dir, e.Name())
 		files = append(files, SidecarFile{
-			FileName:     name,
-			Language:     sidecarLanguage(path, strings.TrimPrefix(strings.TrimPrefix(nameNoExt, stem), ".")),
+			FileName:     e.Name(),
+			Language:     sidecarLanguage(path, tag),
 			Format:       format,
 			IsVidoOutput: own != "" && filepath.Clean(path) == own,
 		})
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].FileName < files[j].FileName })
-	return files, nil
+	return files
+}
+
+// matchSidecar reports whether a directory entry is a text subtitle file of
+// the video whose file stem is stem, with its format and filename tag
+// ("zh-TW" of "Ep.zh-TW.srt", "" for "Ep.srt").
+func matchSidecar(e os.DirEntry, stem string) (format, tag string, ok bool) {
+	if e.IsDir() {
+		return "", "", false
+	}
+	name := e.Name()
+	lower := strings.ToLower(name)
+	format, ok = sidecarFormats[filepath.Ext(lower)]
+	if !ok || strings.Contains(lower, ".tmp.") {
+		return "", "", false
+	}
+	nameNoExt := strings.TrimSuffix(name, filepath.Ext(name))
+	if nameNoExt != stem && !strings.HasPrefix(nameNoExt, stem+".") {
+		return "", "", false
+	}
+	return format, strings.TrimPrefix(strings.TrimPrefix(nameNoExt, stem), "."), true
+}
+
+// SidecarTrackReader implements services.SidecarTrackReader: the sidecar half
+// of an episode's subtitle_tracks, as services.SubtitleTrack values, reading
+// each directory once however many episodes live in it. Language is the
+// content verdict (zh-Hant / zh-Hans / zh-unknown) or the filename tag; the
+// file name goes in FileName, never in Title, so a ".zh-TW" name cannot
+// overrule what the text says.
+//
+// Reading the text is the expensive part on a NAS mount (an open plus up to
+// 100KB per file), so a sidecar whose name and size:mtime match what was
+// stored keeps its stored Language without being opened again.
+type SidecarTrackReader struct{}
+
+// ReadSidecarTracks lists the sidecars of every media path. known maps a media
+// path to the sidecar tracks stored for it (may be nil).
+func (SidecarTrackReader) ReadSidecarTracks(mediaPaths []string, known map[string][]services.SubtitleTrack) map[string]services.SidecarTracks {
+	out := make(map[string]services.SidecarTracks, len(mediaPaths))
+	dirs := map[string][]os.DirEntry{}
+	dirErrs := map[string]error{}
+	for _, mediaPath := range mediaPaths {
+		dir := filepath.Dir(mediaPath)
+		if _, read := dirs[dir]; !read {
+			if _, failed := dirErrs[dir]; !failed {
+				if entries, err := os.ReadDir(dir); err != nil {
+					dirErrs[dir] = err
+				} else {
+					dirs[dir] = entries
+				}
+			}
+		}
+		if err, failed := dirErrs[dir]; failed {
+			out[mediaPath] = services.SidecarTracks{Err: err}
+			continue
+		}
+
+		prior := map[string]services.SubtitleTrack{}
+		for _, t := range known[mediaPath] {
+			if t.External && t.FileName != "" && t.FileSig != "" && t.Language != "" {
+				prior[t.FileName] = t
+			}
+		}
+		stem := strings.TrimSuffix(filepath.Base(mediaPath), filepath.Ext(mediaPath))
+		tracks := []services.SubtitleTrack{}
+		for _, e := range dirs[dir] {
+			format, tag, ok := matchSidecar(e, stem)
+			if !ok {
+				continue
+			}
+			sig := ""
+			if info, err := e.Info(); err == nil {
+				sig = services.FileSignature(info)
+			}
+			lang := ""
+			if p, seen := prior[e.Name()]; seen && sig != "" && p.FileSig == sig {
+				lang = p.Language
+			} else {
+				lang = sidecarLanguage(filepath.Join(dir, e.Name()), tag)
+			}
+			tracks = append(tracks, services.SubtitleTrack{
+				Language: lang,
+				Format:   format,
+				External: true,
+				FileName: e.Name(),
+				FileSig:  sig,
+			})
+		}
+		sort.Slice(tracks, func(i, j int) bool { return tracks[i].FileName < tracks[j].FileName })
+		out[mediaPath] = services.SidecarTracks{Tracks: tracks}
+	}
+	return out
 }
 
 // sidecarLanguage decides a sidecar's language: Chinese from the text, else the

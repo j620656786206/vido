@@ -54,6 +54,32 @@ type SubtitleTrack struct {
 	// subtitle_tracks JSON byte-identical for an unflagged track.
 	Forced          bool `json:"forced,omitempty"`
 	HearingImpaired bool `json:"hearing_impaired,omitempty"`
+	// FileName is a sidecar's file name ("See.S01E02.zh-TW.srt") — set only by
+	// the episode sidecar reader (disc-2026-10-episode-list-subtitle-badge-a),
+	// whose Language is decided by the file's content, so the season list can
+	// still say which file it was. omitempty keeps movie JSON unchanged.
+	FileName string `json:"file_name,omitempty"`
+	// FileSig is a sidecar's "<size>:<mtime>" (FileSignature) when it was
+	// read, so the next read can keep Language without reopening the file.
+	FileSig string `json:"file_sig,omitempty"`
+}
+
+// SidecarTracks is one media file's sidecar half; Err when its directory
+// could not be read.
+type SidecarTracks struct {
+	Tracks []SubtitleTrack
+	Err    error
+}
+
+// SidecarTrackReader reads the sidecar subtitle files beside many media files,
+// one directory read per folder. Implemented by subtitle.SidecarTrackReader
+// (content-based language detection lives in that package; Rule 19 keeps
+// services from importing it).
+//
+// known maps a media path to the sidecar tracks already stored for it (nil is
+// fine): an unchanged file keeps its stored language instead of being reread.
+type SidecarTrackReader interface {
+	ReadSidecarTracks(mediaPaths []string, known map[string][]SubtitleTrack) map[string]SidecarTracks
 }
 
 // FFprobeService extracts technical metadata from video files using ffprobe

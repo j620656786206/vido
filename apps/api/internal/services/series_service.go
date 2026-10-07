@@ -24,6 +24,10 @@ type SeriesService struct {
 	// the parse pipeline). GetSeasons reads it — NOT the dead `series.seasons`
 	// JSON column. Wired via SetSeasonRepo (bugfix-20-1).
 	seasonRepo repository.SeasonRepositoryInterface
+	// sidecars reads the subtitle files beside a season's episodes when the
+	// season is opened (disc-2026-10-episode-list-subtitle-badge-a AC #3).
+	// nil = use only what the background sweep stored.
+	sidecars SidecarTrackReader
 }
 
 // NewSeriesService creates a new SeriesService with the given repository.
@@ -46,6 +50,13 @@ func (s *SeriesService) SetEpisodeDeps(episodeRepo repository.EpisodeRepositoryI
 // callers/tests are unaffected; GetSeasons returns an error if it is not set.
 func (s *SeriesService) SetSeasonRepo(seasonRepo repository.SeasonRepositoryInterface) {
 	s.seasonRepo = seasonRepo
+}
+
+// SetSidecarReader wires the sidecar reader the season list uses to refresh
+// each episode's "has Chinese subtitles" verdict (disc-2026-10-episode-list-
+// subtitle-badge-a). Optional: without it the verdict reads stored tracks only.
+func (s *SeriesService) SetSidecarReader(r SidecarTrackReader) {
+	s.sidecars = r
 }
 
 // Create validates and creates a new series.

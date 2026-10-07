@@ -132,6 +132,41 @@ func TestAnalyze_PersistedTracksAvoidProbing(t *testing.T) {
 	assert.Equal(t, 1, res.Summary.ASRCount)
 }
 
+// disc-2026-10-episode-list-subtitle-badge-a AC #6: once the background sweep
+// stored an episode's tracks, the estimate reads them like a movie's instead
+// of running ffprobe on every episode again.
+func TestAnalyze_EpisodePersistedTracksAvoidProbing(t *testing.T) {
+	read := episodeRow("e-read", 1, 1, "/tv/s01e01.mkv", 56)
+	read.SubtitleTracks = models.NewNullString(`[{"language":"eng","format":"subrip","stream_index":8}]`)
+	unread := episodeRow("e-unread", 1, 2, "/tv/s01e02.mkv", 56)
+	episodes := &stubEpisodeFinder{episodes: []models.Episode{read, unread}}
+	pred := &stubPredictor{fromTracks: RouteExtract, probeRoute: RouteASR}
+
+	svc := NewGenerationCandidateService(nil, episodes, nil, pred, false, 0, nil)
+	res, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"/tv/s01e02.mkv"}, pred.probed)
+	assert.Equal(t, 1, res.Summary.ExtractCount)
+	assert.Equal(t, 1, res.Summary.ASRCount)
+}
+
+// An episode's stored `[]` comes only from a successful probe — it is "no
+// subtitle tracks", a fact, so it is not probed again (a movie's `[]` still is,
+// TestAnalyze_UnusableTracksJSONFallsBackToProbing).
+func TestAnalyze_EpisodeStoredEmptyTracksAreAFact(t *testing.T) {
+	none := episodeRow("e-none", 1, 1, "/tv/s01e01.mkv", 56)
+	none.SubtitleTracks = models.NewNullString(`[]`)
+	episodes := &stubEpisodeFinder{episodes: []models.Episode{none}}
+	pred := &stubPredictor{fromTracks: RouteASR, probeRoute: RouteExtract}
+
+	svc := NewGenerationCandidateService(nil, episodes, nil, pred, false, 0, nil)
+	res, err := svc.Analyze(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Empty(t, pred.probed)
+	assert.Equal(t, 1, res.Summary.ASRCount)
+}
+
 // An empty/blank/broken tracks column means "we have no scan-time answer", not
 // "this file has no tracks" — concluding the latter would quote paid speech
 // recognition for every movie whose enrichment never ran.

@@ -310,3 +310,20 @@ func ChineseSubtitleVerdict(status, language, tracks string) ChineseSubtitle {
 	}
 	return ChineseSubtitleUnknown
 }
+
+// ChineseSubtitleOfTrack is the verdict for ONE track (or one language tag
+// with an empty title): zh_hant / zh_hans / zh when it is Chinese, "" when it
+// is not or cannot be told. Same classification ChineseSubtitleVerdict folds
+// over every track — the season list uses it to say WHICH sources are Chinese
+// (disc-2026-10-episode-list-subtitle-badge-a AC #1).
+func ChineseSubtitleOfTrack(language, title string) ChineseSubtitle {
+	switch classifyTrack(language, title) {
+	case classZhHant:
+		return ChineseSubtitleZhHant
+	case classZhHans:
+		return ChineseSubtitleZhHans
+	case classZh:
+		return ChineseSubtitleZh
+	}
+	return ""
+}
