@@ -253,3 +253,9 @@ founder-pm 判決＋party mode 全員同意後實作：各季寫法不同的詞�
 
 **研究結論（供日後參考）：** Netflix KNP／CAT 工具從不用統計決定譯名，一詞一譯鎖定、靠人維護；不一致是流程失守；成熟模型是 preferred／admitted／forbidden 三態。Vido 做的「跟鄰集一致」是觀眾真正感受得到的那一層；選擇 UI（人設 preferred）留到有第二個使用者再做。
 
+## 2026-10-07 第九節：聽寫錯字清掉（#713，正式機實跑）
+
+重學 See：`terms_pruned=20`。29 條聽寫收成列只剩 9 條，全是真詞：Chet-chet→切特、Lord Carne→卡恩大人、Maghra→瑪格拉、Sak→薩克、Shadow→夏朵、Souter Bax→索特·巴克斯、Witchfinder→獵巫者、Zee→季伊、rose fruit→玫瑰果。清掉的 20 條（Algini、Aniwa、Chalamarel、Chola Morel、Cofoun、Durla Morel、Gilles Morel、Jeremiah、Jerla Morel、Jill、Jorna Morel、Mara、Morel、Paeon、Papa Voss、Sungrave、Timat Dijon、Trilla Morel、gatherpacks、pseudopacks）都是 10/5 那次聽寫＋翻譯寫回的錯字。
+
+10/5 列出的「人名不一致」這一條到此收尾：聽寫側提示關掉、翻譯側名詞表有官方對照（分季）、錯字清掉。
+

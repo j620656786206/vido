@@ -13,9 +13,9 @@ Status: done
 1. `knownRenderings`：未確認的 `subtitle` 來源（聽寫收成）不算證據，不交給 miner 當「已知」。
 2. miner 寫入：學到的詞如果撞到未確認的 `subtitle` 列 → `Upsert` 覆寫（term_zh、source=official_subtitle、confirmed 仍 false）；撞到 TMDb／手動／已確認的列 → 照舊不動。新增 `terms_replaced` 計數＋log 欄位。
 
-## 沒做的（第二半，另外再議）
+## 第二半（2026-10-07 做完）
 
-- 其他沒被官方詞覆蓋到的錯拼列（「Chola Morel」「Jerla Morel」…）仍留在名詞表、仍會進翻譯提示；要不要在官方字幕存在時整批降級／刪除，或在收成寫回時就先查官方字幕——待討論。
+- `disc-2026-10-glossary-prune-harvest-garble`（#713）：官方字幕學習後，未確認的聽寫收成列若在全部官方英文裡一次都沒出現就刪；新季沒官方字幕時不清。正式機 See 清掉 20 條、留 9 條真詞。
 
 ## Acceptance Criteria
 
