@@ -1196,6 +1196,20 @@ one broke the row. Codified per retro-dsr-AI1.
 
 ---
 
+### Rule 29: Glossary Trust Ladder (名詞表的信任階梯)
+
+**2026-10-07 party mode 裁定（founder-pm＋John／Winston／Murat／Sally／Bob／Mary），Alexyu 核准。** 一個詞有多個來源給出不同中文寫法時，照這個順序信：
+
+1. **手動確認**（`confirmed = 1`，任何 source）— 使用者的話，永遠最大；學習、匯入、抽屜都不得改寫。
+2. **官方字幕**（`official_subtitle`）— 片子旁邊、真人翻的；分季抽屜 `tmdb:tv:<id>:s<N>` 也屬這層。
+3. **TMDb 種子**（`metadata`）— 社群填的中繼資料。
+4. **聽寫收成**（`subtitle`）— 機器猜的。
+
+一句話：**離這部片最近的證據贏。**
+
+- **今天程式的實際行為是 3 ＞ 2**（種子是 Known，miner 只驗證不改寫）。片庫查證（2026-10-07）：TMDb zh-TW 只翻演員名、角色名維持英文，71 部劇中歐美劇角色名翻譯為 0，與官方字幕沒有任何真實衝突，所以**不改程式**。先做觀測（`disc-2026-10-glossary-seed-vs-official-report`）；第一次真的出現衝突再依這條階梯改 miner（Known 的詞驗證 support 過低時回到候選，`ReplaceUnconfirmedGuess` 來源白名單加 `metadata`）。
+- 衝突數是 0 的規則寫文件、加觀測，不寫程式。
+
 ## 🧪 Known dev-mode artifacts
 
 Behaviors that look like bugs in `pnpm nx serve web` but DO NOT reproduce in
