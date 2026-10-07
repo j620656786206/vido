@@ -1,6 +1,6 @@
 # Disc：有官方字幕可對照時，Vido 自己聽寫猜出來、官方英文裡根本沒有這個詞的名詞表列會被清掉
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-10-asr-harvest-pollutes-glossary` 的第二半。See 名詞表 29 條 `subtitle`（聽寫收成）列，用 15 集官方英文字幕（8,365 句）一查：**20 條在官方英文裡一次都沒出現**——Algini（Alkenny）、Aniwa（Haniwa）、Chalamarel／Chola Morel／Durla Morel／Jerla Morel／Jorna Morel／Trilla Morel／Gilles Morel／Morel（Jerlamarel）、Cofoun（Kofun）、Mara（Maghra）、Paeon（Payan）、Papa Voss、Timat Dijon（Tamacti Jun）、Sungrave、gatherpacks、pseudopacks、Jeremiah、Jill。這些都會進翻譯提示，聽寫再聽錯一次就被強制翻成那個錯字。留下的 9 條（Chet-chet、Shadow、Witchfinder、Maghra、Lord Carne、Souter Bax、Zee、Sak、rose fruit）都是真的。
 
@@ -23,6 +23,7 @@ Status: review
 
 ## Dev Agent Record
 
+- **AC #1 ✅（2026-10-07，正式機 #713）：** 重學 See `terms_pruned=20`，剩 9 條全是真詞（eval 第九節）。
 - **Adversarial CR（2026-10-07，fresh agent）1H/1M/2L，全部修掉：**
   - H1 新一季還沒有官方字幕時，剛收成的正確新角色名會在下次掃描被清掉（正是收成功能要解決的場景）→ 加「每一季覆蓋」門檻：有檔案但一集都沒被學到的季存在，整部劇就不清；加測試。
   - M2 判定語料原本只有「對齊成功」的英文句，中文檔沒有的句子（recap、歌詞）不在裡面 → 改用每集**全部**英文 cue；加「只在未對齊句出現仍保留」測試。
@@ -40,5 +41,6 @@ Status: review
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 正式機驗證通過（20 清、9 留）→ done。 |
 | 2026-10-07 | CR 1H/1M/2L：每季覆蓋門檻、全部英文 cue 當語料、斷言與容錯。 |
 | 2026-10-07 | create-story＋dev 同日；本機 See 20/29 驗證；狀態 review，待正式機重學。 |
