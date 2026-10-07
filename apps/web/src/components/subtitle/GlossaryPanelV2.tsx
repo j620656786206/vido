@@ -402,6 +402,15 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
             key={term.id}
             term={term}
             busy={busy}
+            fallbackZh={
+              term.season !== undefined
+                ? list.find(
+                    (t) =>
+                      t.season === undefined &&
+                      t.termSrc.toLowerCase() === term.termSrc.toLowerCase()
+                  )?.termZh
+                : undefined
+            }
             onConfirm={(termId) => {
               runWrite(`確認「${termSrcOf(termId)}」失敗，請再試一次`, () =>
                 confirm.mutateAsync(termId)

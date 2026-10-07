@@ -84,6 +84,7 @@ describe('OfficialSubtitleMiningCard — copy rules (C9-D note ①–④)', () =
     expect(describeResult({ ...SAB, error: 'boom' })).toBe('Shadow and Bone 沒學成');
     expect(describeResult({ ...SAB, termsReplaced: 1 })).toContain('其中 1 個修正了聽寫猜的寫法');
     expect(describeResult({ ...SAB, termsPruned: 20 })).toContain('清掉 20 個聽寫猜錯的詞');
+    expect(describeResult({ ...SAB, termsSplit: 11 })).toContain('其中 11 個詞各季寫法不同');
     expect(describeResult({ ...SAB, episodesUsed: 0 })).toBe('Shadow and Bone 沒有可用的集');
   });
 

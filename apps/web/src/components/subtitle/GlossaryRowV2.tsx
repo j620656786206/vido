@@ -43,6 +43,12 @@ export interface GlossaryRowV2Props {
   onDelete: (termId: string) => void;
   /** Disables actions while a mutation is in flight. */
   busy?: boolean;
+  /**
+   * For a season drawer row: the show-wide spelling the season falls back to
+   * once this row is deleted (disc-2026-10-glossary-season-scope-b). Shown in
+   * the delete confirm so nobody deletes "the duplicate" and breaks a season.
+   */
+  fallbackZh?: string;
 }
 
 export function GlossaryRowV2({
@@ -51,6 +57,7 @@ export function GlossaryRowV2({
   onEdit,
   onDelete,
   busy = false,
+  fallbackZh,
 }: GlossaryRowV2Props) {
   const [editing, setEditing] = useState(false);
   const [draftZh, setDraftZh] = useState(term.termZh);
@@ -154,6 +161,15 @@ export function GlossaryRowV2({
         >
           {sourceLabel}
         </span>
+        {term.season !== undefined && (
+          <span
+            data-testid={`glossary-season-${term.id}`}
+            title={`第 ${term.season} 季官方字幕的寫法`}
+            className={`${BADGE_SHAPE} bg-[var(--bg-tertiary)] text-[var(--text-secondary)]`}
+          >
+            S{term.season}
+          </span>
+        )}
 
         {!term.confirmed && (
           <span
@@ -256,7 +272,11 @@ export function GlossaryRowV2({
                 clearance the other sheets get from their header's pr-12. */}
             <DialogTitle className="text-lg sm:text-xl max-sm:pr-12">刪除詞彙</DialogTitle>
             <DialogDescription>
-              確定要刪除「{term.termSrc} → {term.termZh}」嗎？此操作無法復原。
+              {term.season !== undefined
+                ? fallbackZh
+                  ? `這是第 ${term.season} 季官方字幕的寫法。刪掉後，補第 ${term.season} 季的集數會改用全劇的寫法「${fallbackZh}」。此操作無法復原。`
+                  : `這是第 ${term.season} 季官方字幕的寫法，全劇層已經沒有這個詞。刪掉後「${term.termSrc}」就不在名詞表裡了。此操作無法復原。`
+                : `確定要刪除「${term.termSrc} → ${term.termZh}」嗎？此操作無法復原。`}
             </DialogDescription>
           </div>
           <DialogFooter>

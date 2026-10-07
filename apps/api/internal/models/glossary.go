@@ -113,6 +113,20 @@ func GlossarySeasonScope(scope string, season int) string {
 	return scope + ":s" + strconv.Itoa(season)
 }
 
+// ParseGlossarySeasonScope splits "tmdb:tv:80752:s1" into its show scope and
+// season; ok is false for a show-wide scope.
+func ParseGlossarySeasonScope(scope string) (base string, season int, ok bool) {
+	i := strings.LastIndex(scope, ":s")
+	if i <= 0 || !strings.HasPrefix(scope, GlossaryScopePrefixTMDbTV) {
+		return scope, 0, false
+	}
+	n, err := strconv.Atoi(scope[i+2:])
+	if err != nil || n < 0 {
+		return scope, 0, false
+	}
+	return scope[:i], n, true
+}
+
 // IsSharedGlossaryScope reports whether scope is keyed by a world-wide id.
 func IsSharedGlossaryScope(scope string) bool {
 	return strings.HasPrefix(scope, GlossaryScopePrefixTMDbTV) ||
@@ -127,14 +141,18 @@ func IsSharedGlossaryScope(scope string) bool {
 // that WROTE it, kept for audit until the next migration drops it (Rule 24
 // superseded-mechanism corollary).
 type GlossaryTerm struct {
-	ID        string    `db:"id" json:"id"`
-	MediaID   string    `db:"media_id" json:"media_id"`
-	Scope     string    `db:"scope" json:"scope"`
-	TermSrc   string    `db:"term_src" json:"term_src"`
-	TermZh    string    `db:"term_zh" json:"term_zh"`
-	Language  string    `db:"language" json:"language"`
-	Source    string    `db:"source" json:"source"`
-	Confirmed bool      `db:"confirmed" json:"confirmed"`
+	ID        string `db:"id" json:"id"`
+	MediaID   string `db:"media_id" json:"media_id"`
+	Scope     string `db:"scope" json:"scope"`
+	TermSrc   string `db:"term_src" json:"term_src"`
+	TermZh    string `db:"term_zh" json:"term_zh"`
+	Language  string `db:"language" json:"language"`
+	Source    string `db:"source" json:"source"`
+	Confirmed bool   `db:"confirmed" json:"confirmed"`
+	// Season is set on a per-season drawer row when listed for the panel
+	// (disc-2026-10-glossary-season-scope-b): "this spelling is season N's".
+	// Derived from Scope, never stored.
+	Season    *int      `db:"-" json:"season,omitempty"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

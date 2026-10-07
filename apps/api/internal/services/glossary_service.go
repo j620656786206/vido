@@ -52,7 +52,60 @@ func (s *GlossaryService) List(ctx context.Context, mediaID string) ([]models.Gl
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.ListByScope(ctx, scope)
+	terms, err := s.repo.ListByScope(ctx, scope)
+	if err != nil {
+		return nil, err
+	}
+	// disc-2026-10-glossary-season-scope-b: the per-season drawers are part
+	// of what the user sees, each tagged with its season, right after the
+	// show-wide row of the same term.
+	dr, ok := s.repo.(seasonDrawerRepo)
+	if !ok {
+		return terms, nil
+	}
+	drawers, err := dr.ListSeasonDrawers(ctx, scope)
+	if err != nil {
+		return nil, fmt.Errorf("list glossary season drawers: %w", err)
+	}
+	if len(drawers) == 0 {
+		return terms, nil
+	}
+	bySrc := map[string][]models.GlossaryTerm{}
+	for _, d := range drawers {
+		k := strings.ToLower(d.TermSrc)
+		bySrc[k] = append(bySrc[k], d)
+	}
+	out := make([]models.GlossaryTerm, 0, len(terms)+len(drawers))
+	for _, t := range terms {
+		out = append(out, t)
+		k := strings.ToLower(t.TermSrc)
+		out = append(out, bySrc[k]...)
+		delete(bySrc, k)
+	}
+	for _, d := range drawers { // drawers whose show-wide row is gone: still shown, still deletable
+		if rest, left := bySrc[strings.ToLower(d.TermSrc)]; left {
+			out = append(out, rest...)
+			delete(bySrc, strings.ToLower(d.TermSrc))
+		}
+	}
+	return out, nil
+}
+
+// seasonDrawerRepo is the optional repository surface for per-season drawers
+// (disc-2026-10-glossary-season-scope-b); the wide interface stays as is so
+// the many test fakes implementing it need not change.
+type seasonDrawerRepo interface {
+	ListSeasonDrawers(ctx context.Context, scope string) ([]models.GlossaryTerm, error)
+	ClearSeasonDrawersOfTerm(ctx context.Context, id string) (int64, error)
+	DeleteSeasonDrawers(ctx context.Context, scope string) (int64, error)
+}
+
+// clearDrawersOf applies the user's word to every season: after an edit,
+// confirm or delete of a show-wide row, that term's unconfirmed drawers go.
+func (s *GlossaryService) clearDrawersOf(ctx context.Context, id string) {
+	if dr, ok := s.repo.(seasonDrawerRepo); ok {
+		_, _ = dr.ClearSeasonDrawersOfTerm(ctx, id)
+	}
 }
 
 // Add creates (or upserts) a term. The mediaID from the route is authoritative
@@ -91,6 +144,9 @@ func (s *GlossaryService) Edit(ctx context.Context, mediaID, id, termZh string, 
 		return &models.ValidationError{Field: "id", Message: "id is required"}
 	}
 	_, err := s.repo.Update(ctx, id, termZh, true)
+	if err == nil {
+		s.clearDrawersOf(ctx, id)
+	}
 	return err
 }
 
@@ -99,6 +155,9 @@ func (s *GlossaryService) Confirm(ctx context.Context, mediaID, id string) error
 		return &models.ValidationError{Field: "id", Message: "id is required"}
 	}
 	_, err := s.repo.Confirm(ctx, id)
+	if err == nil {
+		s.clearDrawersOf(ctx, id)
+	}
 	return err
 }
 
@@ -110,12 +169,23 @@ func (s *GlossaryService) ConfirmAll(ctx context.Context, mediaID string) (int64
 	if err != nil {
 		return 0, err
 	}
-	return s.repo.ConfirmAllByScope(ctx, scope)
+	n, err := s.repo.ConfirmAllByScope(ctx, scope)
+	if err == nil {
+		// Every show-wide row is now the user's word, so no unconfirmed season
+		// drawer applies to lookups any more; clearing them keeps the panel
+		// honest and lets 「N 條未確認」 reach zero (CR 1).
+		if dr, ok := s.repo.(seasonDrawerRepo); ok {
+			_, _ = dr.DeleteSeasonDrawers(ctx, scope)
+		}
+	}
+	return n, err
 }
 
 func (s *GlossaryService) Delete(ctx context.Context, mediaID, id string) error {
 	if strings.TrimSpace(id) == "" {
 		return &models.ValidationError{Field: "id", Message: "id is required"}
 	}
+	// Clear first: the drawers are found through the row that is about to go.
+	s.clearDrawersOf(ctx, id)
 	return s.repo.Delete(ctx, id)
 }
