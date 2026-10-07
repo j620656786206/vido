@@ -251,6 +251,15 @@ func Align(en, zh []Cue) []Segment {
 // so their start times line up best with the English ones, searched over
 // ±shiftSearchMS in shiftStepMS steps; 0 when the aligned-as-is count is
 // already the best or the data is too thin to tell.
+//
+// disc-2026-10-mine-shift-range-too-narrow: the window was ±30 s. See
+// S01E02's official zh-TW sidecar carries a 51.7 s "previously on" recap the
+// video does not, so the true shift (−51.5 s) was outside the window — and
+// worse, a coincidence at −13.75 s (73 hits over a base of 38) cleared the old
+// margin, so every line was paired 38 s off and the miner learned nothing
+// (0 official_subtitle terms for the show). The window is now ±180 s and a
+// shift must also look like a real alignment — a good share of the cues
+// landing on an English start — not merely beat "as is" by a little.
 func EstimateShift(en, zh []Cue) int {
 	if len(en) < 20 || len(zh) < 20 {
 		return 0
@@ -279,17 +288,31 @@ func EstimateShift(en, zh []Cue) int {
 		}
 	}
 	// Only move when it clearly helps: a shift must beat "as is" by a margin,
-	// or random coincidences would nudge a perfectly aligned pair.
-	if bestHits < base+base/5+5 {
+	// or random coincidences would nudge a perfectly aligned pair — AND it
+	// must line up a real share of the cues, or a lucky offset inside a wide
+	// window wins over "as is" on noise alone (the −13.75 s case above).
+	smaller := len(en)
+	if len(zh) < smaller {
+		smaller = len(zh)
+	}
+	if bestHits < base+base/5+5 || bestHits*100 < smaller*shiftMinHitPercent || bestHits < shiftMinHits {
 		return 0
 	}
 	return best
 }
 
 const (
-	shiftSearchMS = 30000
+	shiftSearchMS = 180000
 	shiftStepMS   = 250
 	shiftBucketMS = 500
+	// shiftMinHitPercent: the chosen shift must put at least this share of
+	// the smaller side's cues on an English cue start. A true constant offset
+	// scores 60–90 %; noise inside ±180 s peaks around 10–15 %.
+	shiftMinHitPercent = 35
+	// shiftMinHits is an absolute floor (CR L1): on a 20-cue file 35 % is
+	// seven hits, which noise inside ±180 s reaches half the time; twelve it
+	// does not, while a genuine offset still hits every cue.
+	shiftMinHits = 12
 )
 
 func abs(v int) int {
