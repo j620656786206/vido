@@ -1,6 +1,6 @@
 # Disc：官方字幕兩季譯名不同時，補哪一季的集就用那一季的寫法（後端）
 
-Status: review
+Status: done
 
 **Source:** 2026-10-07 founder-pm 判決＋party mode（John／Winston／Sally／Murat／Bob／Mary 全員同意，修正三點）。資料：See 15 集逐集對照（`eval-see-s01e02-asr-vs-official.md` 第七節）、研究報告（Netflix KNP、CAT 工具 preferred／admitted／forbidden）。
 
@@ -51,7 +51,7 @@ Status: review
 - [x] T1 miner：逐集帶季號、分季 Mine、集數計票＋同票取最新季、子層只在分裂時寫（AC #1、#4）
 - [x] T2 翻譯側查詢：單集先子層後全劇層——兩條路都接（聽寫路 `loadGlossary`、片內英文路 `LookupFor`／`feedGlossary`）（AC #2、#3）
 - [x] T3 測試（AC #4、#5）
-- [ ] T4 實測（AC #6）
+- [x] T4 實測（AC #6）——正式機三層如 eval 第八節；翻譯側靠單元測試覆蓋（兩條路都疊層）
 
 ## Dev Notes
 
@@ -66,6 +66,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 ### Completion Notes List
 
+- **AC #1／#6 ✅（2026-10-07，正式機 #711）：** 重學 See `terms_found=65`、11 個詞分裂；全劇層 99 條、`:s1` 11 條、`:s2` 11 條；Jerlamarel 全劇 傑拉馬瑞／s1 謝拉馬威／s2 傑拉馬瑞；Haniwa 只有全劇層。
 - **Adversarial CR（2026-10-07，fresh agent）1H/2M/3L＋nits，處理如下：**
   - H1 使用者在面板確認／改過的全劇層詞會被看不見的季抽屜無聲蓋掉 → 兩條讀取路都加守門：已確認（confirmed）的詞不被抽屜覆蓋（NOCASE 比對）；「刪掉又長回來」要靠寫端清抽屜 → 記到 B 單。
   - M2 抽屜永遠不會被刪（換檔後舊抽屜仍覆蓋）→ 新 repo `DeleteSeasonDrawers(scope)`（`LIKE scope||':s%'`、只刪未確認的 official 列），miner 每次先清再寫。
@@ -90,6 +91,7 @@ Claude Fable 5.1（claude-fable-5-1）
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 正式機驗證通過（eval 第八節）→ done。 |
 | 2026-10-07 | CR 1H/2M/3L 修掉：已確認詞不被抽屜蓋、先清再寫、投票語意、共用字詞比對、只在 tmdb:tv 下寫抽屜。 |
 | 2026-10-07 | create-story（party mode 後）＋dev 同日；全綠，狀態 review，待正式機重學驗證。 |
 
