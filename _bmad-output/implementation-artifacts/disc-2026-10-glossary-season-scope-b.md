@@ -1,6 +1,6 @@
 # Disc：詞彙面板看得出「這個寫法是哪一季的」，刪之前會說清楚後果（前端）
 
-Status: review
+Status: done
 
 **Source:** 2026-10-07 party mode，Sally 的踩雷點：面板看到同一個詞兩條會想刪一條，刪了就把那一季弄壞。
 
@@ -37,6 +37,8 @@ Status: review
 
 ## Dev Agent Record
 
+- **AC #1 ✅（2026-10-07，正式機 #715）：** `GET /media/<See>/glossary` 回傳的清單含 `season:1`／`season:2` 的抽屜列（Jerlamarel 等 11 個詞各兩列），面板徽章與刪除文案靠 spec 覆蓋。
+- **產品題結案（party mode，2026-10-07）：** 正式機查證——TMDb zh-TW 角色名翻譯在歐美劇上是 0（14 部有中文角色名的全是華語劇、且多為簡體），種子 vs 官方字幕沒有任何真實衝突 → 寫信任階梯文件＋觀測，不改程式（待 Alexyu 拍板）。
 - **Adversarial CR（2026-10-07，fresh agent）1M/2L＋2 notes：** M1「全部確認」不會處理抽屜 → 「N 條未確認」永遠歸不了零、確認過的全劇列底下還掛著 S1／S2 → `ConfirmAll` 成功後整批清抽屜（此時所有全劇列都是使用者的話，抽屜對查詢已無作用）；L2 `List` 吞掉抽屜查詢錯誤 → 改回傳錯誤；L3 孤兒抽屜（全劇列已刪）的刪除文案說錯 → 改成「全劇層已經沒有這個詞，刪掉後就不在名詞表裡」。Notes：Delete 先清抽屜再刪列沒有交易（not-found 安全）；使用者在面板確認一個抽屜列會讓它永久留下（使用者的話，接受，UI 沒提示）。
 - Claude Fable 5.1。🔗 AC Drift: NONE。📎 Contract Stamps: `GlossaryTerm` 多 `season`（additive）。🎭 A11y: 徽章有 `title`。🎨 UX: 微調既有元件、未改 .pen（Sally 未另審）。
 - 產品題仍開：TMDb 種子 vs 官方字幕誰大（第 6 點）。
@@ -50,6 +52,7 @@ Status: review
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 正式機驗證（清單含 season 列）→ done；種子題以資料結案。 |
 | 2026-10-07 | CR 1M/2L：全部確認清抽屜、List 不吞錯、孤兒文案。 |
 | 2026-10-07 | dev：抽屜列出＋徽章＋刪除文案＋寫端清抽屜；全綠，狀態 review。 |
 
