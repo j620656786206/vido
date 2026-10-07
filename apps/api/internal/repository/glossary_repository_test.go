@@ -345,3 +345,29 @@ func TestReplaceUnconfirmedGuess(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
+
+func TestDeleteSeasonDrawers(t *testing.T) {
+	db := setupGlossaryDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	repo := NewGlossaryRepository(db)
+	ctx := context.Background()
+	w := func(scope, src, zh string, confirmed bool) {
+		require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "s1", Scope: scope, TermSrc: src, TermZh: zh, Source: models.GlossarySourceOfficialSubtitle, Confirmed: confirmed}))
+	}
+	w("tmdb:tv:8", "Jerlamarel", "傑拉馬瑞", false)        // show-wide of ANOTHER show whose id is a prefix
+	w("tmdb:tv:80752", "Jerlamarel", "傑拉馬瑞", false)    // this show, show-wide — stays
+	w("tmdb:tv:80752:s1", "Jerlamarel", "謝拉馬威", false) // drawer — goes
+	w("tmdb:tv:80752:s2", "Jerlamarel", "傑拉馬瑞", false) // drawer — goes
+	w("tmdb:tv:80752:s1", "Paris", "芭麗絲", true)        // confirmed drawer — stays
+	n, err := repo.DeleteSeasonDrawers(ctx, "tmdb:tv:80752")
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, n)
+	left := func(scope string) int { rows, _ := repo.ListByScope(ctx, scope); return len(rows) }
+	assert.Equal(t, 1, left("tmdb:tv:8"))
+	assert.Equal(t, 1, left("tmdb:tv:80752"))
+	assert.Equal(t, 1, left("tmdb:tv:80752:s1"))
+	assert.Equal(t, 0, left("tmdb:tv:80752:s2"))
+	n, err = repo.DeleteSeasonDrawers(ctx, "tmdb:tv:8")
+	require.NoError(t, err)
+	assert.EqualValues(t, 0, n, "the :s anchor keeps a prefix id from matching another show's drawers")
+}

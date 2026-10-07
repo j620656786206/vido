@@ -105,6 +105,14 @@ func IsLocalGlossaryScope(scope string) bool {
 	return strings.HasPrefix(scope, GlossaryScopePrefixLocal)
 }
 
+// GlossarySeasonScope is the per-season drawer under a show's scope
+// (disc-2026-10-glossary-season-scope-a): "tmdb:tv:80752:s1". Only written
+// when the official subtitles of different seasons spell a term differently;
+// a lookup for an episode reads it on top of the show-wide drawer.
+func GlossarySeasonScope(scope string, season int) string {
+	return scope + ":s" + strconv.Itoa(season)
+}
+
 // IsSharedGlossaryScope reports whether scope is keyed by a world-wide id.
 func IsSharedGlossaryScope(scope string) bool {
 	return strings.HasPrefix(scope, GlossaryScopePrefixTMDbTV) ||

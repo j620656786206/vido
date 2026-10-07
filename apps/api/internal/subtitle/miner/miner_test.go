@@ -51,6 +51,12 @@ type fakeGlossary struct {
 	existing []models.GlossaryTerm
 	inserted []models.GlossaryTerm
 	upserted []models.GlossaryTerm
+	cleared  []string // scopes whose season drawers were cleared
+}
+
+func (g *fakeGlossary) DeleteSeasonDrawers(_ context.Context, scope string) (int64, error) {
+	g.cleared = append(g.cleared, scope)
+	return 0, nil
 }
 
 func (g *fakeGlossary) ListByScope(context.Context, string) ([]models.GlossaryTerm, error) {
@@ -62,7 +68,7 @@ func (g *fakeGlossary) ListByScope(context.Context, string) ([]models.GlossaryTe
 // rendering differs; leave everything else alone.
 func (g *fakeGlossary) ReplaceUnconfirmedGuess(_ context.Context, t *models.GlossaryTerm) (bool, error) {
 	for i, e := range g.existing {
-		if !strings.EqualFold(e.TermSrc, t.TermSrc) {
+		if !strings.EqualFold(e.TermSrc, t.TermSrc) || (e.Scope != "" && e.Scope != t.Scope) {
 			continue
 		}
 		guess := !e.Confirmed && (e.Source == models.GlossarySourceSubtitle || e.Source == models.GlossarySourceOfficialSubtitle)
@@ -490,5 +496,74 @@ func TestMineEpisode_EnglishFallbacksAreExplained(t *testing.T) {
 		_, _ = m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
 		assert.Equal(t, "en: stream 3 has only 4 cues; stream 4 has only 1 cues", rep.Skipped)
 		assert.Equal(t, []int{3, 4}, ext.asked, "both candidates in one extraction call")
+	})
+}
+
+// disc-2026-10-glossary-season-scope-a: the two seasons' official files spell
+// Jerlamarel differently; Haniwa the same. The show-wide row follows the
+// season with more EPISODES; each season gets its own drawer; the consistent
+// name gets no drawer.
+func TestMineSeries_SeasonDrawers(t *testing.T) {
+	dir := t.TempDir()
+	mk := func(season, ep int, jerl string) models.Episode {
+		base := filepath.Join(dir, fmt.Sprintf("Show.S%02dE%02d", season, ep))
+		require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+		require.NoError(t, os.WriteFile(base+".en.srt", []byte(srt(
+			[3]string{"00:00:01,000", "00:00:03,000", "Jerlamarel told me."},
+			[3]string{"00:00:05,000", "00:00:07,000", "Go find Jerlamarel."},
+			[3]string{"00:00:09,000", "00:00:11,000", "Jerlamarel is waiting."},
+			[3]string{"00:00:13,000", "00:00:15,000", "Haniwa, come."},
+			[3]string{"00:00:17,000", "00:00:19,000", "Where is Haniwa?"},
+			[3]string{"00:00:21,000", "00:00:23,000", "Haniwa knows."},
+		)), 0o644))
+		require.NoError(t, os.WriteFile(base+".zh-TW.srt", []byte(srt(
+			[3]string{"00:00:01,000", "00:00:03,000", jerl + "告訴我"},
+			[3]string{"00:00:05,000", "00:00:07,000", "去找" + jerl},
+			[3]string{"00:00:09,000", "00:00:11,000", jerl + "在等"},
+			[3]string{"00:00:13,000", "00:00:15,000", "哈妮娃，過來"},
+			[3]string{"00:00:17,000", "00:00:19,000", "哈妮娃在哪"},
+			[3]string{"00:00:21,000", "00:00:23,000", "哈妮娃知道"},
+		)), 0o644))
+		return models.Episode{ID: fmt.Sprintf("s%de%d", season, ep), SeriesID: "s1", SeasonNumber: season, EpisodeNumber: ep, FilePath: models.NewNullString(base + ".mkv")}
+	}
+	run := func(t *testing.T, eps []models.Episode) (*fakeGlossary, MineResult) {
+		g := &fakeGlossary{}
+		m := NewOfficialSubtitleMiner(fakeEpisodes{bySeries: map[string][]models.Episode{"s1": eps}},
+			fakeSeries{rows: []models.Series{{ID: "s1", Title: "See"}}}, fakeScopes{}, g, nil, nil, nil)
+		res, err := m.MineSeries(context.Background(), "s1")
+		require.NoError(t, err)
+		return g, res
+	}
+	rows := func(g *fakeGlossary) map[string]string { // "scope|src" → zh
+		out := map[string]string{}
+		for _, r := range append(append([]models.GlossaryTerm{}, g.inserted...), g.upserted...) {
+			out[r.Scope+"|"+r.TermSrc] = r.TermZh
+		}
+		return out
+	}
+
+	t.Run("more episodes win; each season keeps its drawer", func(t *testing.T) {
+		g, res := run(t, []models.Episode{mk(1, 1, "謝拉馬威"), mk(1, 2, "謝拉馬威"), mk(2, 1, "傑拉馬瑞"), mk(2, 2, "傑拉馬瑞"), mk(2, 3, "傑拉馬瑞")})
+		r := rows(g)
+		assert.Equal(t, "傑拉馬瑞", r["tmdb:tv:s1|Jerlamarel"], "3 episodes vs 2")
+		assert.Equal(t, "謝拉馬威", r["tmdb:tv:s1:s1|Jerlamarel"])
+		assert.Equal(t, "傑拉馬瑞", r["tmdb:tv:s1:s2|Jerlamarel"])
+		assert.Equal(t, "哈妮娃", r["tmdb:tv:s1|Haniwa"])
+		_, s1Haniwa := r["tmdb:tv:s1:s1|Haniwa"]
+		assert.False(t, s1Haniwa, "a name the seasons agree on gets no season drawer")
+		assert.Equal(t, 1, res.TermsSplit)
+		assert.Equal(t, []string{"tmdb:tv:s1"}, g.cleared, "drawers are cleared before being rewritten")
+	})
+	t.Run("a tie goes to the latest season", func(t *testing.T) {
+		g, _ := run(t, []models.Episode{mk(1, 1, "謝拉馬威"), mk(1, 2, "謝拉馬威"), mk(2, 1, "傑拉馬瑞"), mk(2, 2, "傑拉馬瑞")})
+		assert.Equal(t, "傑拉馬瑞", rows(g)["tmdb:tv:s1|Jerlamarel"])
+	})
+	t.Run("one season only → no drawers at all", func(t *testing.T) {
+		g, res := run(t, []models.Episode{mk(1, 1, "謝拉馬威"), mk(1, 2, "謝拉馬威"), mk(1, 3, "謝拉馬威")})
+		r := rows(g)
+		assert.Equal(t, "謝拉馬威", r["tmdb:tv:s1|Jerlamarel"])
+		_, has := r["tmdb:tv:s1:s1|Jerlamarel"]
+		assert.False(t, has)
+		assert.Equal(t, 0, res.TermsSplit)
 	})
 }

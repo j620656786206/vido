@@ -128,3 +128,58 @@ func TestASRPromptNames_RecoversEnglishFromZhCredits(t *testing.T) {
 		assert.False(t, isLatinName(no), no)
 	}
 }
+
+// seasonLayeredRepo answers LookupByScope per scope (embeds the inert repo).
+type seasonLayeredRepo struct {
+	scopeRecordingRepo
+	byScope   map[string]map[string]string
+	confirmed map[string]map[string]string
+}
+
+func (r *seasonLayeredRepo) LookupByScope(_ context.Context, scope string, confirmedOnly bool) (map[string]string, error) {
+	if confirmedOnly {
+		return r.confirmed[scope], nil
+	}
+	return r.byScope[scope], nil
+}
+
+type seasonScopes struct {
+	scope     string
+	episodeID string
+	season    int
+}
+
+func (s seasonScopes) Resolve(context.Context, string) (string, error) { return s.scope, nil }
+func (s seasonScopes) ResolveSeason(_ context.Context, mediaID string) (string, int, bool, error) {
+	if mediaID == s.episodeID {
+		return s.scope, s.season, true, nil
+	}
+	return s.scope, 0, false, nil
+}
+
+// disc-2026-10-glossary-season-scope-a: the speech-recognition route's
+// translation reads the episode's season drawer on top of the show's.
+func TestLoadGlossary_SeasonDrawerOverlays(t *testing.T) {
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetGlossaryRepository(&seasonLayeredRepo{byScope: map[string]map[string]string{
+		"tmdb:tv:80752":    {"Jerlamarel": "傑拉馬瑞", "Haniwa": "哈妮娃"},
+		"tmdb:tv:80752:s1": {"Jerlamarel": "謝拉馬威"},
+	}})
+	svc.SetGlossaryScopeResolver(seasonScopes{scope: "tmdb:tv:80752", episodeID: "ep-s1", season: 1})
+
+	pairs := map[string]string{}
+	for _, p := range svc.loadGlossary(context.Background(), "ep-s1") {
+		pairs[p.Source] = p.Target
+	}
+	assert.Equal(t, map[string]string{"Jerlamarel": "謝拉馬威", "Haniwa": "哈妮娃"}, pairs)
+
+	pairs = map[string]string{}
+	for _, p := range svc.loadGlossary(context.Background(), "ep-s3") {
+		pairs[p.Source] = p.Target
+	}
+	assert.Equal(t, map[string]string{"Jerlamarel": "傑拉馬瑞", "Haniwa": "哈妮娃"}, pairs)
+
+	// CR 1: a confirmed show-wide term is the user's word — no drawer override.
+	assert.Equal(t, map[string]string{"Jerlamarel": "傑拉瑪瑞爾", "Haniwa": "哈妮娃"},
+		overlaySeasonDrawer(map[string]string{"Jerlamarel": "傑拉瑪瑞爾", "Haniwa": "哈妮娃"}, map[string]string{"Jerlamarel": "謝拉馬威"}, map[string]string{"JERLAMAREL": "傑拉瑪瑞爾"}))
+}

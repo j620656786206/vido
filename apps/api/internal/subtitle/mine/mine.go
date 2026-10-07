@@ -407,6 +407,10 @@ func isStopword(tok string) bool {
 }
 
 // mentionsWord is a whole-word, case-insensitive match of term inside text.
+// MentionsWord is mentionsWord for the miner package (one definition of
+// "this English line names the term": case-insensitive, whole word).
+func MentionsWord(text, term string) bool { return mentionsWord(text, term) }
+
 func mentionsWord(text, term string) bool {
 	lt, lterm := strings.ToLower(text), strings.ToLower(strings.TrimSpace(term))
 	if lterm == "" {

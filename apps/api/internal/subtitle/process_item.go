@@ -967,7 +967,15 @@ func (p *Pipeline) feedGlossary(ctx context.Context, ref MediaRef, item *MediaIt
 		return
 	}
 	key := glossaryKeyFor(ref, item.ShowKey)
-	terms, err := p.glossary.Lookup(ctx, key)
+	var terms map[string]string
+	var err error
+	// disc-2026-10-glossary-season-scope-a: an episode also reads its
+	// season's drawer, so a filled-in episode matches its neighbours.
+	if el, ok := p.glossary.(GlossaryEpisodeLookup); ok && ref.MediaType == models.SubtitleRunMediaEpisode {
+		terms, err = el.LookupFor(ctx, key, ref.ID)
+	} else {
+		terms, err = p.glossary.Lookup(ctx, key)
+	}
 	if err != nil {
 		p.logger.Warn("glossary lookup failed — translating without glossary",
 			"media_id", ref.ID, "media_type", ref.MediaType, "glossary_key", key, "error", err)

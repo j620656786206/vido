@@ -186,6 +186,22 @@ func (r *GlossaryRepository) ReplaceUnconfirmedGuess(ctx context.Context, term *
 	return affected > 0, nil
 }
 
+// DeleteSeasonDrawers removes every per-season drawer under a show scope
+// (`<scope>:s<N>`, disc-2026-10-glossary-season-scope-a) that is still an
+// unconfirmed official-subtitle row. Drawers are derived data the panel
+// cannot see or edit, so the miner clears them and rewrites the ones the
+// current files justify — a season whose file was replaced stops overriding.
+// The `:s` anchor keeps `tmdb:tv:8` from matching `tmdb:tv:80752:s1`.
+func (r *GlossaryRepository) DeleteSeasonDrawers(ctx context.Context, scope string) (int64, error) {
+	pattern := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(scope) + ":s%"
+	res, err := r.db.ExecContext(ctx, `DELETE FROM show_glossary
+		WHERE scope LIKE ? ESCAPE '\' AND source = ? AND confirmed = 0`, pattern, models.GlossarySourceOfficialSubtitle)
+	if err != nil {
+		return 0, fmt.Errorf("failed to clear glossary season drawers: %w", err)
+	}
+	return res.RowsAffected()
+}
+
 // InsertIfAbsent is the auto-harvest write path (sub-5-5 AC #4): insert-only,
 // existing rows stay byte-identical. Two concurrent harvests of the same new
 // term are naturally safe — the second INSERT hits the UNIQUE conflict and
