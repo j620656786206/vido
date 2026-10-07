@@ -1,6 +1,6 @@
 # Disc：官方字幕兩季寫法不同時，名詞表學到的是兩種寫法的共同片段（Jerlamarel → 「拉馬」）
 
-Status: review
+Status: done
 
 **Source:** 2026-10-07 第七節：See 官方 zh-TW 第 1 季「謝拉馬威」、第 2 季「傑拉馬瑞爾」，miner 學到「拉馬」；同類「Princess Maghra→拉公主」「Trivantians→斯人」。
 
@@ -22,6 +22,7 @@ Status: review
 
 ## Dev Agent Record
 
+- **AC #4 ✅（2026-10-07）：** 英文側來源修好（#709）後正式機重學：Jerlamarel → 謝拉馬威 52/83、Trivantians → 崔凡特斯人、Princess Maghra → 瑪格拉公主；與本機 15 集重現一致。
 - **Adversarial CR（2026-10-07，fresh agent，在 scratchpad 複製套件實跑攻擊用例）2H/2M/1L，全部修掉：**
   - H1 「至少一半」原本對上一層算、且沒套 MinSupport，會一路爬到只出現 1 次的片語、結果隨機 → 門檻改成對**原始片段**算（`origin`）＋ `n ≥ MinSupport`。
   - H2 用「有沒有單獨站過」判片段，沒呼格的小樣本會把「托比」長成「問托比」 → 改用 **run 邊界**：在這個詞的所有行裡從沒出現在 Han run 開頭（左邊永遠黏東西）或結尾才算片段，而且只往黏著的那一側延伸；「托比在哪」（開頭）＋「去問托比」（結尾）就是完整詞。`hanSubstringsWithEdges` 回傳 Whole／AtStart／AtEnd。
@@ -39,5 +40,6 @@ Status: review
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 正式機驗證通過 → done。 |
 | 2026-10-07 | CR 2H/2M/1L 修掉：origin 門檻、run 邊界判片段、方向性成長、決定性、雙側片段不學。 |
 | 2026-10-07 | create-story＋dev 同日；全綠，狀態 review，待正式機重學驗證。 |
