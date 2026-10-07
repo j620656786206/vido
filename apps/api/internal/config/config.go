@@ -129,6 +129,14 @@ type Config struct {
 	// clip ran clean 2/2 with it on and timed best, so it is on by default
 	// (disc-2026-10-asr-word-timestamps-default-on). VIDO_ASR_WORD_TIMESTAMPS=false turns it off.
 	ASRWordTimestamps bool
+	// ASRNamePrompt hands the engine the show's character names as
+	// conditioning text (disc-2026-10-asr-proper-names-inconsistent). OFF by
+	// default (disc-2026-10-asr-name-prompt-default-off): on See S01E02 the
+	// prompt never fixed the one name that mattered (Jerlamarel → "To the
+	// morale" in every run, with or without it), a long list made the engine
+	// read the list back as subtitles, and even the 12-name list leaked one
+	// list cue in 1 of 2 runs. The code stays for engines where it helps.
+	ASRNamePrompt bool
 
 	// TMDb configuration
 	TMDbDefaultLanguage   string
@@ -190,6 +198,7 @@ func Load() (*Config, error) {
 	cfg.ASRBaseURL = cfg.loadString("ASR_BASE_URL", "")
 	cfg.ASRModel = cfg.loadString("ASR_MODEL", "")
 	cfg.ASRWordTimestamps = cfg.loadBool("VIDO_ASR_WORD_TIMESTAMPS", true)
+	cfg.ASRNamePrompt = cfg.loadBool("VIDO_ASR_NAME_PROMPT", false)
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 	// Auth password gate (V0.1.1). Empty = auth disabled (LAN-only posture).

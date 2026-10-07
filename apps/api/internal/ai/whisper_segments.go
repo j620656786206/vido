@@ -326,11 +326,20 @@ func isNameList(text string, names map[string]struct{}) bool {
 }
 
 // isNamePrefix is true when k is the beginning of some prompt name (a
-// fragment whisper cut mid-name: "Mag" of "Maghra", "Lord" of "Lord Diego").
+// fragment whisper cut mid-name: "Mag" of "Maghra", "Lord" of "Lord Diego")
+// or one whole word of a multi-word name ("Kane" of "Queen Kane", "Jun" of
+// "Tamacti Jun" — the fifth NAS run read the list back with exactly those).
 func isNamePrefix(k string, names map[string]struct{}) bool {
 	for n := range names {
 		if len(k) < len(n) && strings.HasPrefix(n, k) {
 			return true
+		}
+		if strings.Contains(n, " ") {
+			for _, w := range strings.Fields(n) {
+				if w == k {
+					return true
+				}
+			}
 		}
 	}
 	return false

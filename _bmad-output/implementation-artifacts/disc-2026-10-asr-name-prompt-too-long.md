@@ -1,6 +1,6 @@
 # Disc：給語音辨識的人名提示只放角色名、只放拉丁字母、最多 12 個——40 個名字反而害它把名單念出來
 
-Status: review
+Status: done
 
 **Source:** 2026-10-07 第五次實測（`eval-see-s01e02-asr-vs-official.md` 第五節）：演員表補上後提示變成 41 個名字（含 zh-TW 演員名），Whisper 把名單念進字幕 5 句、對白剩三分之一、Jerlamarel 還是沒聽對。
 
@@ -23,6 +23,7 @@ Status: review
 
 ## Dev Agent Record
 
+- **AC #4 實測（2026-10-07，eval 第六節）：** 句數 74／73（回到不帶提示的水準）、時間一樣準；名單仍 1/2 次被念進字幕（「Kane」「Jun」這類多字名字的單字沒被認出 → 規則補上）；Jerlamarel 沒改善 → 照規則把提示預設關掉（`disc-2026-10-asr-name-prompt-default-off`）。
 - **Adversarial CR（2026-10-07，fresh agent）2H／2M／1L，全部修掉：**
   - H 逗號名單規則 60% 門檻會砍掉「Baba Voss, Maghra, come.」這種叫人名＋短句的真對白（7 條測試句全砍）→ 改成「每一項都得是名單裡的名字、或被切斷的名字開頭」，出現任何自由詞就保留；補 4 條對白負向案例。
   - H 存起來的演員表是 TMDb zh-TW 版，主角名可能被翻成中文而被「拉丁字母」規則跳過、剩下的反而是沒翻譯的小角色（正是實測看到的 The Bank／Lord Diego）；名詞表又按字母序把演員名混回來 → 用 metadata 名詞表的 zh→en 對照把角色名找回英文、保住 billing order；TermZh 等於演員名的名詞表列（演員對）跳過；補 zh-credits 測試。
@@ -40,5 +41,6 @@ Status: review
 
 | 日期 | 內容 |
 |---|---|
+| 2026-10-07 | 實測：對白不再被吃掉，但人名沒改善、名單偶爾還是漏 → done，預設關另立單。 |
 | 2026-10-07 | CR 2H/2M/1L 修掉：名單規則改「全是名字才算」、zh 角色反查英文、多角色取第一、長片語 continue、Latin script。 |
 | 2026-10-07 | create-story＋dev 同日；全綠，狀態 review，待 2 次實測。 |

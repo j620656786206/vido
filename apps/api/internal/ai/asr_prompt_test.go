@@ -62,11 +62,12 @@ func TestFilterPromptEcho(t *testing.T) {
 // disc-2026-10-asr-name-prompt-too-long: the list read back out of order /
 // with a dangling fragment is still an echo.
 func TestFilterPromptEcho_NameListOutOfOrder(t *testing.T) {
-	prompt := "Baba Voss, Maghra, Paris, Jerlamarel, Kofun, Haniwa, Tamacti Jun, Lord Harlan, Oloman, Shiloh, The Bank, Lord Diego"
+	prompt := "Baba Voss, Queen Kane, Maghra, Paris, Jerlamarel, Kofun, Haniwa, Tamacti Jun, Lord Harlan, Oloman, Shiloh, The Bank, Lord Diego, Wren"
 	segs := []whisperSegment{
 		{Start: 0, End: 2, Text: "The Bank, Lord Diego, Oloman, Shiloh, Lord Harlan, The Bank, Lord"}, // reordered, repeated, cut off
 		{Start: 2, End: 3, Text: "Maghra, Kofun"},                                                     // two names → echo
 		{Start: 3, End: 4, Text: "Kofun, Haniwa, Tamacti"},                                            // cut mid-name → echo
+		{Start: 3, End: 4, Text: "Kane, Wren, Tamacti Jun, Kofun, Haniwa, Wren, Lord Harlan, Paris"},  // lone words of names, repeats → echo
 		{Start: 4, End: 5, Text: "Kofun, come here, Haniwa, now, please"},                             // free words — dialogue
 		{Start: 5, End: 6, Text: "Baba Voss, Maghra, come."},                                          // CR 1: two names + a verb — dialogue
 		{Start: 6, End: 7, Text: "Kofun, Haniwa, run!"},                                               // dialogue
@@ -74,7 +75,7 @@ func TestFilterPromptEcho_NameListOutOfOrder(t *testing.T) {
 		{Start: 8, End: 9, Text: "Maghra."},                                                           // one name — a line
 	}
 	kept, dropped := filterPromptEcho(segs, prompt)
-	assert.Len(t, dropped, 3)
+	assert.Len(t, dropped, 4)
 	var texts []string
 	for _, k := range kept {
 		texts = append(texts, k.Text)

@@ -114,6 +114,7 @@ Vido 有一個預設關閉的「匿名使用回報」（開關在「設定 → �
 | `ASR_BASE_URL`             | —        | 指向自架的 OpenAI 相容 ASR 服務即可省下雲端費用                                                           |
 | `ASR_MODEL`                | —        | 自架引擎的 model id                                                                                       |
 | `VIDO_ASR_WORD_TIMESTAMPS` | `true`   | 向語音辨識多要「每個字的時間」讓字幕貼著開口出現（音檔已切成兩分鐘一段，不再整段聽不到）；設 `false` 可關 |
+| `VIDO_ASR_NAME_PROMPT`     | `false`  | 把劇中角色名交給語音辨識當提示；實測對人名沒幫助、偶爾把名單念進字幕，預設關                              |
 | `AI_RUN_BUDGET_USD`        | `5.0`    | 單次執行的費用上限，超過就中止並標記為暫停                                                                |
 
 > 💡 想完全避開雲端費用，可以把 `ASR_BASE_URL` 指到自架的 OpenAI 相容引擎（例如 Speaches、WhisperLive），語音辨識就會走本機。
