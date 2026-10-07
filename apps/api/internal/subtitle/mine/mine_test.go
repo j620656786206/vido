@@ -235,3 +235,113 @@ func TestMine_SubTermsAndDashes(t *testing.T) {
 	assert.NotContains(t, byName, "Rollins", "the surname alone only ever appeared inside the full name")
 	assert.NotContains(t, byName, "Shut", "a word after a dialogue dash is sentence-initial")
 }
+
+// disc-2026-10-mine-cross-season-rendering-split: See's official zh-TW spells
+// Jerlamarel 謝拉馬威 in season 1 and 傑拉馬瑞爾 in season 2. Their shared
+// piece 拉馬 out-counts either full name; the miner must still learn the
+// majority FULL rendering, never the fragment.
+func TestMine_CrossSeasonSplitLearnsTheMajorityFullName(t *testing.T) {
+	var segs []Segment
+	s1 := []string{"謝拉馬威告訴我", "去找謝拉馬威", "謝拉馬威在等", "是謝拉馬威嗎", "謝拉馬威，過來", "我見過謝拉馬威", "謝拉馬威的孩子"}
+	s2 := []string{"傑拉馬瑞爾告訴我", "去找傑拉馬瑞爾", "傑拉馬瑞爾在等", "是傑拉馬瑞爾嗎"}
+	en := []string{"Jerlamarel told me.", "Go find Jerlamarel.", "Jerlamarel is waiting.", "Is that Jerlamarel?", "Jerlamarel, come here.", "I have met Jerlamarel.", "The children of Jerlamarel."}
+	for i, zh := range s1 {
+		segs = append(segs, Segment{En: en[i], Zh: zh, EnCues: 1, ZhCues: 1})
+	}
+	for i, zh := range s2 {
+		segs = append(segs, Segment{En: en[i], Zh: zh, EnCues: 1, ZhCues: 1})
+	}
+	terms := Mine(segs, Options{})
+	require.NotEmpty(t, terms)
+	var got Term
+	for _, tm := range terms {
+		if tm.Src == "Jerlamarel" {
+			got = tm
+		}
+	}
+	assert.Equal(t, "謝拉馬威", got.Zh, "the season-1 spelling (7 of 11) wins, not the shared fragment 拉馬")
+	assert.Equal(t, 7, got.Support)
+}
+
+// A phrase that merely contains the name must not be "grown" into — with or
+// without a vocative line in the sample (CR 2).
+func TestMine_GrowDoesNotSwallowAVerb(t *testing.T) {
+	cases := map[string][]Segment{
+		"with a vocative": {
+			{En: "Ask Toby.", Zh: "去問托比"}, {En: "Ask Toby, now.", Zh: "去問托比吧"}, {En: "Toby, come here.", Zh: "托比，過來"},
+			{En: "Where is Toby?", Zh: "托比在哪"}, {En: "Just ask Toby.", Zh: "去問托比就對了"}, {En: "I am Toby.", Zh: "我是托比"},
+		},
+		"never alone": {
+			{En: "Ask Toby.", Zh: "去問托比"}, {En: "Ask Toby, now.", Zh: "去問托比"}, {En: "Go ask Toby.", Zh: "去問托比"}, {En: "Just ask Toby.", Zh: "去問托比"},
+			{En: "Where is Toby?", Zh: "托比在哪"}, {En: "Where did Toby go?", Zh: "托比在哪裡"},
+		},
+		"three lines, verb after": {
+			{En: "Toby said no.", Zh: "托比說不"}, {En: "Toby said yes.", Zh: "托比說好"}, {En: "Find Toby now.", Zh: "快找到托比"},
+		},
+	}
+	for name, segs := range cases {
+		t.Run(name, func(t *testing.T) {
+			for run := 0; run < 10; run++ {
+				var got string
+				for _, tm := range Mine(segs, Options{}) {
+					if tm.Src == "Toby" {
+						got = tm.Zh
+					}
+				}
+				require.Equal(t, "托比", got)
+			}
+		})
+	}
+}
+
+// CR 3: a bare first name that is only ever seen glued to a title must not be
+// grown into "name+title" (dropSubTerms would then delete it outright).
+func TestMine_BareNameNextToTitledNameSurvives(t *testing.T) {
+	segs := []Segment{
+		{En: "Serve Princess Maghra.", Zh: "效忠瑪格拉公主"}, {En: "Serve Princess Maghra well.", Zh: "好好效忠瑪格拉公主"},
+		{En: "Hail, Princess Maghra, hail.", Zh: "萬歲，瑪格拉公主，萬歲"},
+		{En: "Where is Maghra?", Zh: "瑪格拉在哪"}, {En: "I love Maghra.", Zh: "我愛瑪格拉"},
+	}
+	by := map[string]string{}
+	for _, tm := range Mine(segs, Options{}) {
+		by[tm.Src] = tm.Zh
+	}
+	assert.Equal(t, "瑪格拉", by["Maghra"])
+	assert.Equal(t, "瑪格拉公主", by["Princess Maghra"])
+}
+
+// Two spellings split evenly, same length: the pick must be deterministic,
+// and the shared fragment must never be the answer.
+func TestMine_EvenSplitIsDeterministic(t *testing.T) {
+	segs := []Segment{
+		{En: "Jerlamarel told me.", Zh: "謝拉馬威告訴我"}, {En: "Go find Jerlamarel.", Zh: "去找謝拉馬威"}, {En: "Jerlamarel is waiting.", Zh: "謝拉馬威在等"},
+		{En: "Is that Jerlamarel?", Zh: "是謝拉馬威嗎"}, {En: "I met Jerlamarel.", Zh: "我見過謝拉馬威"},
+		{En: "Jerlamarel left.", Zh: "傑拉馬爾走了"}, {En: "Call Jerlamarel.", Zh: "叫傑拉馬爾來"}, {En: "Jerlamarel knows.", Zh: "傑拉馬爾知道"},
+		{En: "Trust Jerlamarel.", Zh: "相信傑拉馬爾"}, {En: "Jerlamarel again.", Zh: "又是傑拉馬爾"},
+	}
+	first := ""
+	for run := 0; run < 20; run++ {
+		got := ""
+		for _, tm := range Mine(segs, Options{}) {
+			if tm.Src == "Jerlamarel" {
+				got = tm.Zh
+			}
+		}
+		assert.NotEqual(t, "拉馬", got)
+		if first == "" {
+			first = got
+		}
+		assert.Equal(t, first, got, "same input, same answer")
+	}
+}
+
+// A 2+2 split too thin to complete: the fragment is dropped, not learned.
+func TestMine_FragmentThatCannotGrowIsNotLearned(t *testing.T) {
+	segs := []Segment{
+		{En: "Go find Jerlamarel now.", Zh: "現在去找謝拉馬威"}, {En: "Go find Jerlamarel now.", Zh: "現在去找謝拉馬威"},
+		{En: "Only Jerlamarel decides.", Zh: "只有傑拉馬瑞爾能決定"}, {En: "Where did Jerlamarel go?", Zh: "傑拉馬瑞爾去哪了"},
+	}
+	for _, tm := range Mine(segs, Options{}) {
+		assert.NotEqual(t, "Jerlamarel", tm.Src, "got %q", tm.Zh)
+	}
+}

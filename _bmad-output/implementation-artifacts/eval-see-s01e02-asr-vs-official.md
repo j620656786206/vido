@@ -224,3 +224,10 @@ NAS 容器更新到 `main`（rev `7f228bc8`，含 #689／#690／#692）後，對
 
 **花費：** 2 次 $0.20；今天累計 $1.61（原估 $0.3）。
 
+## 2026-10-07 第七節：官方字幕學習修好之後（#706＋#707，正式機實跑）
+
+- 正式機更新到 #706（對齊 ±3 分鐘）後，開機自動學習＋手動重學 See：**official_subtitle 0 → 48 條**，16 集用了 15 集（Harlan→哈蘭、Edo→伊鐸、Pennsa→賓薩、Sibeth→貝絲、Kanzua→肯祖亞…）。但 Jerlamarel／Paris／Baba Voss／Haniwa 沒進來——被聽寫猜的 `subtitle` 列擋住（第二道門）。
+- 更新到 #707（官方蓋過猜的）後重學：`terms_found=54`、**`terms_replaced=5`**、official 53 條。Haniwa→哈妮娃、Paris→巴莉絲、Baba Voss→巴霸沃斯 都進來了。
+- **Jerlamarel 變成「拉馬」**（斷字）。查官方 zh-TW 檔：第 1 季 7 集寫「謝拉馬威」、S01E05 與第 2 季寫「傑拉馬瑞爾」——兩種寫法的共同片段「拉馬」次數最多就被選中。同類：「Princess Maghra→拉公主」「Trivantians→斯人」。→ `disc-2026-10-mine-cross-season-rendering-split`：片段（從不單獨出現在標點之間）要長成能解釋它一半以上出現次數的完整寫法。
+- 另外看到官方自己季與季之間翻法不同（巴巴禾斯／巴霸沃斯、芭麗絲／巴莉絲），miner 取多數；要不要「以第 1 季為準」是產品題，記著。
+
