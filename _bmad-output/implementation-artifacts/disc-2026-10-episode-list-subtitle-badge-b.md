@@ -1,6 +1,6 @@
 # Story（前端）：季清單每一集的字幕圖示改看真實結論，圖示都有提示框
 
-Status: review
+Status: done
 
 **Source:** 傘狀單 `disc-2026-10-episode-list-subtitle-badge`。**依賴 `-a`**（季清單 API 的 `chinese_subtitle`／`chinese_subtitle_sources`，AC #1 `[@contract-v1]`）。
 **設計稿：** `J11-D`（`w2Opax`）規則 3–6、`J2-D`（圖示語法）。
@@ -30,6 +30,8 @@ Status: review
 - [x] T3 spec＋E2E＋視覺基準
 
 ## Dev Agent Record
+
+- 2026-10-07 /ship：PR #719；`-linux` focus 基準由 CI bootstrap PR #720 補進分支。
 
 ### File List
 
