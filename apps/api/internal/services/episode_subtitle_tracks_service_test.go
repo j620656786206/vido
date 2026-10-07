@@ -329,3 +329,93 @@ func TestEpisodeSubtitleTracks_RunAfterRetriesWhenNoFileIsReachable(t *testing.T
 	cancel()
 	svc.Wait()
 }
+
+// ─── disc-2026-10-episode-list-subtitle-badge-c: script samples ─────────────
+
+type fakePeeker struct {
+	script map[int]string // stream index → answer
+	err    error
+	calls  []int
+}
+
+func (p *fakePeeker) IsAvailable() bool { return true }
+func (p *fakePeeker) Peekable(t SubtitleTrack) bool {
+	return !t.External && t.Format == "subrip" &&
+		models.ChineseSubtitleOfTrack(t.Language, t.Title, "") == models.ChineseSubtitleZh
+}
+func (p *fakePeeker) PeekScript(_ context.Context, _ string, idx int) (string, error) {
+	p.calls = append(p.calls, idx)
+	return p.script[idx], p.err
+}
+
+func TestEpisodeSubtitleTracks_SamplesUntoldChineseTracks(t *testing.T) {
+	dir := t.TempDir()
+	e1 := filepath.Join(dir, "See.S02E01.mkv")
+	touchEpisodeFile(t, e1)
+	repo := &fakeTracksRepo{episodes: []models.Episode{{ID: "e1", FilePath: models.NewNullString(e1)}}}
+	prober := &fakeProber{available: true, info: map[string]*MediaTechInfo{e1: {SubtitleTracks: []SubtitleTrack{
+		{Language: "chi", Format: "subrip", StreamIndex: 3},                // untold → sampled
+		{Language: "chi", Format: "subrip", StreamIndex: 4, Title: "简体中文"}, // title tells
+		{Language: "chi", Format: "hdmv_pgs_subtitle", StreamIndex: 5},     // bitmap
+		{Language: "eng", Format: "subrip", StreamIndex: 6},
+	}}}}
+	peeker := &fakePeeker{script: map[int]string{3: "zh-Hant"}}
+	svc := NewEpisodeSubtitleTracksService(repo, prober, nil, nil)
+	svc.SetScriptPeeker(peeker)
+
+	res := svc.Run(context.Background())
+	assert.Equal(t, 1, res.Peeked)
+	assert.Equal(t, []int{3}, peeker.calls)
+	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0]))
+
+	var stored []SubtitleTrack
+	require.NoError(t, json.Unmarshal([]byte(repo.writes["e1"][0]), &stored))
+	assert.Equal(t, "zh-Hant", stored[0].DetectedLanguage)
+	assert.Empty(t, stored[2].DetectedLanguage)
+
+	// Second pass: nothing new to sample → no probe, no peek.
+	svc.Run(context.Background())
+	assert.Equal(t, 1, prober.callCount())
+	assert.Len(t, peeker.calls, 1)
+}
+
+// An episode -a already swept (before the sampler existed) has an untold
+// track and no sample: it is read again once, even though its file did not
+// change. An undecided sample is stored as an answer and not retaken.
+func TestEpisodeSubtitleTracks_SamplesEpisodesSweptBeforeTheSampler(t *testing.T) {
+	dir := t.TempDir()
+	e1 := filepath.Join(dir, "X.S01E01.mkv")
+	info := touchEpisodeFile(t, e1)
+	untold := []SubtitleTrack{{Language: "chi", Format: "subrip", StreamIndex: 2}}
+	repo := &fakeTracksRepo{episodes: []models.Episode{{ID: "e1", FilePath: models.NewNullString(e1),
+		SubtitleTracks: tracksJSON(t, untold...), SubtitleTracksFileSig: models.NewNullString(FileSignature(info))}}}
+	prober := &fakeProber{available: true, info: map[string]*MediaTechInfo{e1: {SubtitleTracks: untold}}}
+	peeker := &fakePeeker{script: map[int]string{2: "und"}}
+	svc := NewEpisodeSubtitleTracksService(repo, prober, nil, nil)
+	svc.SetScriptPeeker(peeker)
+
+	assert.Equal(t, 1, svc.Run(context.Background()).Peeked)
+	assert.Equal(t, 0, svc.Run(context.Background()).Peeked, "'und' is stored — the file is not sampled again")
+	assert.Equal(t, 1, prober.callCount())
+}
+
+func TestEpisodeSubtitleTracks_FailedSampleStoresTheTrackAndIsTriedOncePerProcess(t *testing.T) {
+	dir := t.TempDir()
+	e1 := filepath.Join(dir, "X.S01E01.mkv")
+	touchEpisodeFile(t, e1)
+	repo := &fakeTracksRepo{episodes: []models.Episode{{ID: "e1", FilePath: models.NewNullString(e1)}}}
+	prober := &fakeProber{available: true, info: map[string]*MediaTechInfo{e1: {SubtitleTracks: []SubtitleTrack{
+		{Language: "chi", Format: "subrip", StreamIndex: 2}}}}}
+	peeker := &fakePeeker{err: errors.New("ffmpeg exit 1")}
+	svc := NewEpisodeSubtitleTracksService(repo, prober, nil, nil)
+	svc.SetScriptPeeker(peeker)
+
+	res := svc.Run(context.Background())
+	assert.Equal(t, 1, res.Probed)
+	assert.Equal(t, 1, res.PeekFailed)
+	assert.Equal(t, models.ChineseSubtitleZh, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0]),
+		"the track is stored without a script — still 'Chinese'")
+
+	svc.Run(context.Background())
+	assert.Len(t, peeker.calls, 1, "a broken file is not resampled every pass")
+}

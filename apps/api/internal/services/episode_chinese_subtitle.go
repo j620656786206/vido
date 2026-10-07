@@ -112,7 +112,7 @@ func computeEpisodeSubtitle(ep models.Episode, live *SidecarTracks) episodeSubti
 func episodeChineseSources(ep models.Episode, embedded, sidecars []SubtitleTrack) []ChineseSubtitleSource {
 	sources := []ChineseSubtitleSource{}
 	for _, t := range embedded {
-		if c := models.ChineseSubtitleOfTrack(t.Language, t.Title); c != "" {
+		if c := models.ChineseSubtitleOfTrack(t.Language, t.Title, t.DetectedLanguage); c != "" {
 			sources = append(sources, ChineseSubtitleSource{Kind: ChineseSourceEmbedded, Language: verdictLanguage(c), Label: t.Title})
 		}
 	}
@@ -126,7 +126,7 @@ func episodeChineseSources(ep models.Episode, embedded, sidecars []SubtitleTrack
 	}
 	vidoListed := false
 	for _, t := range sidecars {
-		c := models.ChineseSubtitleOfTrack(t.Language, "")
+		c := models.ChineseSubtitleOfTrack(t.Language, "", "")
 		if c == "" {
 			continue
 		}
@@ -139,7 +139,7 @@ func episodeChineseSources(ep models.Episode, embedded, sidecars []SubtitleTrack
 	}
 
 	if !vidoListed && ep.SubtitleStatus == models.SubtitleStatusFound {
-		if c := models.ChineseSubtitleOfTrack(ep.SubtitleLanguage.String, ""); c != "" {
+		if c := models.ChineseSubtitleOfTrack(ep.SubtitleLanguage.String, "", ""); c != "" {
 			sources = append(sources, ChineseSubtitleSource{Kind: ChineseSourceVido, Language: verdictLanguage(c)})
 		}
 	}

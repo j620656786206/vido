@@ -45,6 +45,15 @@ type EpisodeTrackProber interface {
 	Probe(ctx context.Context, filePath string) (*MediaTechInfo, error)
 }
 
+// TrackScriptPeeker reads a sample of an embedded Chinese text track to tell
+// Traditional from Simplified when its tag and title do not say. Implemented
+// by subtitle.ScriptPeeker (disc-2026-10-episode-list-subtitle-badge-c).
+type TrackScriptPeeker interface {
+	IsAvailable() bool
+	Peekable(t SubtitleTrack) bool
+	PeekScript(ctx context.Context, mediaPath string, streamIndex int) (string, error)
+}
+
 // episodeTracksProgressEvery is how often (in probed episodes) a pass logs.
 const episodeTracksProgressEvery = 25
 
@@ -53,6 +62,7 @@ type EpisodeSubtitleTracksService struct {
 	repo     EpisodeSubtitleTracksRepo
 	prober   EpisodeTrackProber
 	sidecars SidecarTrackReader
+	peeker   TrackScriptPeeker
 	logger   *slog.Logger
 	stat     func(string) (os.FileInfo, error)
 
@@ -82,6 +92,13 @@ func NewEpisodeSubtitleTracksService(repo EpisodeSubtitleTracksRepo, prober Epis
 	}
 }
 
+// SetScriptPeeker turns on reading a sample of untold-script Chinese tracks
+// (disc-2026-10-episode-list-subtitle-badge-c). nil or unavailable = off;
+// those tracks then stay "Chinese, script untold".
+func (s *EpisodeSubtitleTracksService) SetScriptPeeker(p TrackScriptPeeker) {
+	s.peeker = p
+}
+
 // EpisodeTracksSweepResult is what one pass did, for the log line and tests.
 type EpisodeTracksSweepResult struct {
 	Probed  int // episodes whose tracks were read and stored
@@ -89,6 +106,11 @@ type EpisodeTracksSweepResult struct {
 	Skipped int // already read from the same file (or failed before, unchanged)
 	Missing int // file not there — share not mounted yet, or deleted
 	Total   int // episodes with a file path that the pass looked at
+	// Peeked / PeekFailed count untold-script Chinese tracks whose text was
+	// sampled, and samples ffmpeg could not take (the track is stored
+	// without a detected script).
+	Peeked     int
+	PeekFailed int
 }
 
 // FileSignature is the "<size>:<mtime unix nanos>" an episode's stored tracks
@@ -122,7 +144,7 @@ func (s *EpisodeSubtitleTracksService) Run(ctx context.Context) EpisodeTracksSwe
 			continue
 		}
 		sig := FileSignature(info)
-		if ep.SubtitleTracks.Valid && ep.SubtitleTracksFileSig.String == sig {
+		if ep.SubtitleTracks.Valid && ep.SubtitleTracksFileSig.String == sig && !s.needsPeek(ep) {
 			res.Skipped++
 			continue
 		}
@@ -178,6 +200,10 @@ func (s *EpisodeSubtitleTracksService) Run(ctx context.Context) EpisodeTracksSwe
 				tracks = append(tracks, t)
 			}
 		}
+		peekFailedBefore := res.PeekFailed
+		if interrupted := s.peekScripts(ctx, path, tracks, &res); interrupted {
+			continue // a cut-short sample must not store a half-read episode
+		}
 		if side, ok := dirSidecars[path]; ok && side.Err == nil {
 			tracks = append(tracks, side.Tracks...)
 		}
@@ -191,6 +217,11 @@ func (s *EpisodeSubtitleTracksService) Run(ctx context.Context) EpisodeTracksSwe
 			res.Failed++
 			s.logger.Warn("episode subtitle tracks: write failed", "episode_id", w.ep.ID, "error", err)
 			continue
+		}
+		if res.PeekFailed > peekFailedBefore {
+			// Stored without that track's script; needsPeek would queue the
+			// episode again every pass — try once per process, like a probe.
+			s.rememberFailure(w.ep.ID, w.sig)
 		}
 		// The probe measured the length too; an episode with no stored length
 		// is priced at the 45-minute assumption, so keep it
@@ -207,8 +238,55 @@ func (s *EpisodeSubtitleTracksService) Run(ctx context.Context) EpisodeTracksSwe
 	}
 
 	s.logger.Info("episode subtitle tracks: pass finished",
-		"probed", res.Probed, "failed", res.Failed, "skipped", res.Skipped, "missing_files", res.Missing, "took", time.Since(started).Round(time.Second).String())
+		"probed", res.Probed, "failed", res.Failed, "skipped", res.Skipped, "missing_files", res.Missing,
+		"scripts_peeked", res.Peeked, "peeks_failed", res.PeekFailed, "took", time.Since(started).Round(time.Second).String())
 	return res
+}
+
+// peekScripts fills DetectedLanguage on every embedded Chinese text track
+// whose tag and title do not tell the script. Fail-soft: a failed sample
+// leaves that track as it was. interrupted = ctx ended during a sample.
+func (s *EpisodeSubtitleTracksService) peekScripts(ctx context.Context, path string, tracks []SubtitleTrack, res *EpisodeTracksSweepResult) (interrupted bool) {
+	if s.peeker == nil || !s.peeker.IsAvailable() {
+		return false
+	}
+	for i := range tracks {
+		if !s.peeker.Peekable(tracks[i]) {
+			continue
+		}
+		script, err := s.peeker.PeekScript(ctx, path, tracks[i].StreamIndex)
+		if ctx.Err() != nil {
+			return true
+		}
+		if err != nil {
+			res.PeekFailed++
+			s.logger.Warn("episode subtitle tracks: script sample failed", "file", path, "stream_index", tracks[i].StreamIndex, "error", err)
+			continue
+		}
+		res.Peeked++
+		tracks[i].DetectedLanguage = script
+	}
+	return false
+}
+
+// needsPeek reports whether an episode read before the script sampler
+// existed still has an untold-script Chinese track never sampled — so a
+// library swept by -a gets its samples without waiting for a file to change.
+// A sample that did not tell is stored as "zh"/"und", so this is true once.
+func (s *EpisodeSubtitleTracksService) needsPeek(ep models.Episode) bool {
+	if s.peeker == nil || !s.peeker.IsAvailable() {
+		return false
+	}
+	var stored []SubtitleTrack
+	if json.Unmarshal([]byte(ep.SubtitleTracks.String), &stored) != nil {
+		return false
+	}
+	for _, t := range stored {
+		if t.DetectedLanguage == "" && s.peeker.Peekable(t) {
+			return true
+		}
+	}
+	return false
 }
 
 // episodeTracksTodo is one episode a pass will probe, with the signature of

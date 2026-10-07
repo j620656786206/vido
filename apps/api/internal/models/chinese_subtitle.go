@@ -102,16 +102,36 @@ func ChineseTitleScript(title string) TitleScript {
 		}
 		return false
 	}
+	// Release-scene abbreviations are matched as whole words only: "chs"
+	// inside a longer word, or "gb" in "gbp", must not decide a script
+	// (disc-2026-10-episode-list-subtitle-badge-c AC #5).
+	words := map[string]bool{}
+	for _, w := range titleWordSplit.Split(t, -1) {
+		if w != "" {
+			words[w] = true
+		}
+	}
+	hasWord := func(ws ...string) bool {
+		for _, w := range ws {
+			if words[w] {
+				return true
+			}
+		}
+		return false
+	}
 	switch {
 	case has("粵", "粤", "cantonese", "yue"):
 		return TitleScriptCantonese
-	case has("繁", "traditional", "hant", "zh-tw", "taiwan", "hong kong", "zh-hk"):
+	case has("繁", "traditional", "hant", "zh-tw", "taiwan", "hong kong", "zh-hk"), hasWord("cht", "big5"):
 		return TitleScriptTraditional
-	case has("简", "簡", "simplified", "hans", "zh-cn"):
+	case has("简", "簡", "simplified", "hans", "zh-cn"), hasWord("chs", "gb", "gbk", "gb2312", "gb18030"):
 		return TitleScriptSimplified
 	}
 	return TitleScriptNone
 }
+
+// titleWordSplit splits a lowercased title into ASCII words.
+var titleWordSplit = regexp.MustCompile(`[^a-z0-9]+`)
 
 // trackClass is a single language tag's (plus title's) verdict.
 type trackClass int
@@ -200,17 +220,30 @@ func classifyChineseSegment(seg string) trackClass {
 	return classUndetermined
 }
 
-// classifyTrack folds the title into the tag's class: any Chinese tag whose
-// title says Cantonese is Cantonese (same precedence as embeddedLanguage), and
+// classifyTrack folds the title and the detected script into the tag's class:
+// any Chinese tag whose title says Cantonese is Cantonese (same precedence as
+// embeddedLanguage); otherwise the script read from the text wins; otherwise
 // an untold-script Chinese tag takes its script from the title.
-func classifyTrack(tag, title string) trackClass {
+func classifyTrack(tag, title, detected string) trackClass {
 	c := classifyTag(tag)
-	if c < classZh || title == "" {
+	if c < classZh {
+		return c
+	}
+	if ChineseTitleScript(title) == TitleScriptCantonese {
+		return classNotChinese
+	}
+	// What the text says outranks the title and the tag: Vido read a sample
+	// of the track (disc-2026-10-episode-list-subtitle-badge-c AC #1).
+	switch detected {
+	case "zh-Hant":
+		return classZhHant
+	case "zh-Hans":
+		return classZhHans
+	}
+	if title == "" {
 		return c
 	}
 	switch ChineseTitleScript(title) {
-	case TitleScriptCantonese:
-		return classNotChinese
 	case TitleScriptTraditional:
 		if c == classZh {
 			return classZhHant
@@ -226,6 +259,10 @@ func classifyTrack(tag, title string) trackClass {
 type verdictTrack struct {
 	Language string `json:"language"`
 	Title    string `json:"title"`
+	// DetectedLanguage is the script Vido read from a sample of the track's
+	// text. Only "zh-Hant" / "zh-Hans" decide anything; "zh" / "und" / "" =
+	// the sample did not tell, or was never taken.
+	DetectedLanguage string `json:"detected_language"`
 }
 
 // parseVerdictTracks reads subtitle_tracks: a JSON array (ffprobe + sidecars)
@@ -280,7 +317,7 @@ func ChineseSubtitleVerdict(status, language, tracks string) ChineseSubtitle {
 	parsed, haveTracks := parseVerdictTracks(tracks)
 	allKnownNonChinese := true
 	for _, t := range parsed {
-		c := classifyTrack(t.Language, t.Title)
+		c := classifyTrack(t.Language, t.Title, t.DetectedLanguage)
 		if c > best && c >= classZh {
 			best = c
 		}
@@ -316,8 +353,8 @@ func ChineseSubtitleVerdict(status, language, tracks string) ChineseSubtitle {
 // is not or cannot be told. Same classification ChineseSubtitleVerdict folds
 // over every track — the season list uses it to say WHICH sources are Chinese
 // (disc-2026-10-episode-list-subtitle-badge-a AC #1).
-func ChineseSubtitleOfTrack(language, title string) ChineseSubtitle {
-	switch classifyTrack(language, title) {
+func ChineseSubtitleOfTrack(language, title, detected string) ChineseSubtitle {
+	switch classifyTrack(language, title, detected) {
 	case classZhHant:
 		return ChineseSubtitleZhHant
 	case classZhHans:
