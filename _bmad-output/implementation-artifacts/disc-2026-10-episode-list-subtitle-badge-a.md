@@ -1,6 +1,6 @@
 # Story（後端）：每一集算出「有沒有中文字幕」，片內字幕掃一次存起來
 
-Status: review
+Status: done
 
 **Source:** 傘狀單 `disc-2026-10-episode-list-subtitle-badge`（Alexyu 2026-10-05 party mode 裁定；開工條件「看完 S01E02」已在 2026-10-06 達成，見 `eval-see-s01e02-asr-vs-official.md` 狀態列）。前端半張見 `-b`（依賴本單的 AC #1 契約）。
 **設計稿：** `J11-D`（`w2Opax`）規則 1、2 → `_bmad-output/screenshots/flow-j-specs/j11-d.png`。
@@ -101,6 +101,8 @@ Claude Opus 5.5（dev）；對抗式 CR 換模型（Fable 5.1）。
   - **L3** 補三條測試：資料夾讀不到只存片內半邊、存的 JSON 壞掉當沒讀過、沒標籤的非中文旁邊檔不算「缺中文」。
   - **L1（不修，寫進 -b）** 片內沒讀過＋Vido 紀錄 `not_found` 會先顯示「缺中文」——這是 `ChineseSubtitleVerdict` 既有規則 2（電影同規則），要改需 Alexyu 裁定；背景工作讀完就會更正。
   - 修後閘門：`go test ./...` 全綠、`staticcheck` 乾淨、`lint:all` 0 errors、prettier 綠、`web:typecheck` 綠；本單測試 `-race` ×2 乾淨。
+
+- 2026-10-07 /ship：PR #717，CI 第一輪全綠（Go Tests、Unit、E2E ×4、Lint、Build ×3、Serve Smoke、Visual 偵測）。
 
 ### Discovery Triage
 
