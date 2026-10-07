@@ -64,9 +64,13 @@ func TestSeriesService_GetSeasonEpisodes_ChineseSubtitle(t *testing.T) {
 	assert.Equal(t, []ChineseSubtitleSource{{Kind: ChineseSourceSidecar, Language: "zh-Hant", Label: "zh-TW"}},
 		*resp.Episodes[1].ChineseSubtitleSources)
 
-	// No local file → neither field (the client hides the icon).
+	require.NotNil(t, resp.Episodes[0].EmbeddedSubtitlesRead)
+	assert.True(t, *resp.Episodes[0].EmbeddedSubtitlesRead)
+
+	// No local file → no subtitle field at all (the client hides the icon).
 	assert.Empty(t, resp.Episodes[2].ChineseSubtitle)
 	assert.Nil(t, resp.Episodes[2].ChineseSubtitleSources)
+	assert.Nil(t, resp.Episodes[2].EmbeddedSubtitlesRead)
 
 	// Only e2's sidecars changed → only e2 is written back, compare-and-set
 	// against what this request read (AC #4).
@@ -86,4 +90,6 @@ func TestSeriesService_GetSeasonEpisodes_NoSidecarReaderUsesStored(t *testing.T)
 	resp, err := svc.GetSeasonEpisodes(context.Background(), "series-1", 1)
 	require.NoError(t, err)
 	assert.Equal(t, models.ChineseSubtitleUnknown, resp.Episodes[0].ChineseSubtitle, "never read and nothing beside it known → unknown")
+	require.NotNil(t, resp.Episodes[0].EmbeddedSubtitlesRead)
+	assert.False(t, *resp.Episodes[0].EmbeddedSubtitlesRead, "the client says the verdict may still change")
 }

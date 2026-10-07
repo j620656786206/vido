@@ -48,8 +48,8 @@ describe('EpisodeList', () => {
   it('shows a subtitle status indicator only for episodes with a local file (AC #6)', () => {
     render(<EpisodeList episodes={episodes} seasonNumber={1} />);
 
-    // ep1 found + ep2 not_found each carry a role=status indicator; ep3 has none.
-    const indicators = screen.getAllByRole('status');
+    // ep1 found + ep2 not_found each carry an indicator button; ep3 has none.
+    const indicators = screen.getAllByTestId('episode-subtitle-indicator');
     expect(indicators).toHaveLength(2);
     expect(screen.getByLabelText('已找到字幕')).toBeInTheDocument();
     expect(screen.getByLabelText('找不到字幕')).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('EpisodeList — subtitle-pipeline status icons (sub-1-7b AC #3)', () =
     render(<EpisodeList episodes={[ep(subtitleStatus)]} seasonNumber={1} />);
     // The icon carries no visible text, so the accessible name is where the full
     // explanation lives — this is where "已略過 must not read as broken" is solved.
-    expect(screen.getByRole('status', { name: label })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
   });
 
   it('spins for the three in-flight states and NOT for the terminal ones', () => {
@@ -112,12 +112,16 @@ describe('EpisodeList — subtitle-pipeline status icons (sub-1-7b AC #3)', () =
 
     for (const status of inFlight) {
       const { unmount } = render(<EpisodeList episodes={[ep(status)]} seasonNumber={1} />);
-      expect(screen.getByRole('status').querySelector('svg')).toHaveClass('animate-spin');
+      expect(screen.getByTestId('episode-subtitle-indicator').querySelector('svg')).toHaveClass(
+        'animate-spin'
+      );
       unmount();
     }
     for (const status of terminal) {
       const { unmount } = render(<EpisodeList episodes={[ep(status)]} seasonNumber={1} />);
-      expect(screen.getByRole('status').querySelector('svg')).not.toHaveClass('animate-spin');
+      expect(screen.getByTestId('episode-subtitle-indicator').querySelector('svg')).not.toHaveClass(
+        'animate-spin'
+      );
       unmount();
     }
   });
@@ -125,16 +129,20 @@ describe('EpisodeList — subtitle-pipeline status icons (sub-1-7b AC #3)', () =
   it('tints in-flight states with accent, terminal verdicts with muted (sub-1-7a AC #3)', () => {
     const { unmount } = render(<EpisodeList episodes={[ep('translating')]} seasonNumber={1} />);
     // accent is RESERVED for in-progress (Sally 2026-07-05).
-    expect(screen.getByRole('status')).toHaveClass('text-[var(--accent-text)]');
+    expect(screen.getByTestId('episode-subtitle-indicator')).toHaveClass(
+      'text-[var(--accent-text)]'
+    );
     unmount();
 
     render(<EpisodeList episodes={[ep('no_text_source')]} seasonNumber={1} />);
-    expect(screen.getByRole('status')).toHaveClass('text-[var(--text-muted)]');
+    expect(screen.getByTestId('episode-subtitle-indicator')).toHaveClass(
+      'text-[var(--text-muted)]'
+    );
   });
 
   it('re-tints the pre-existing searching state to accent (sub-1-7a AC #5 ruling)', () => {
     render(<EpisodeList episodes={[ep('searching')]} seasonNumber={1} />);
-    const icon = screen.getByRole('status');
+    const icon = screen.getByTestId('episode-subtitle-indicator');
     // Was --warning; two colours for one meaning next to the three new spinners
     // read as a distinction that does not exist.
     expect(icon).toHaveClass('text-[var(--accent-text)]');
@@ -151,12 +159,12 @@ describe('EpisodeList — subtitle-pipeline status icons (sub-1-7b AC #3)', () =
         seasonNumber={1}
       />
     );
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('episode-subtitle-indicator')).not.toBeInTheDocument();
   });
 
   it('falls back to not_searched for an unrecognised value (belt and braces)', () => {
     render(<EpisodeList episodes={[ep('some_future_state')]} seasonNumber={1} />);
-    expect(screen.getByRole('status', { name: '尚未搜尋字幕' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '尚未搜尋字幕' })).toBeInTheDocument();
   });
 });
 
@@ -172,7 +180,7 @@ describe('EpisodeList — subtitle-pipeline status icons (sub-1-7b AC #3)', () =
 describe('EpisodeList — icon grammar: settled verdicts vs not-yet (J2-D)', () => {
   const glyphOf = (subtitleStatus: string): string => {
     const { unmount } = render(<EpisodeList episodes={[ep(subtitleStatus)]} seasonNumber={1} />);
-    const svg = screen.getByRole('status').querySelector('svg');
+    const svg = screen.getByTestId('episode-subtitle-indicator').querySelector('svg');
     // lucide stamps `lucide-<kebab-icon-name>` alongside the base `lucide` class.
     const glyph = [...(svg?.classList ?? [])].find((c) => c.startsWith('lucide-')) ?? '';
     unmount();
@@ -207,7 +215,9 @@ describe('EpisodeList — icon grammar: settled verdicts vs not-yet (J2-D)', () 
     // ratified the resemblance, so a future reader must not "fix" it apart.
     for (const status of ['no_text_source', 'skipped']) {
       const { unmount } = render(<EpisodeList episodes={[ep(status)]} seasonNumber={1} />);
-      expect(screen.getByRole('status')).toHaveClass('text-[var(--text-muted)]');
+      expect(screen.getByTestId('episode-subtitle-indicator')).toHaveClass(
+        'text-[var(--text-muted)]'
+      );
       unmount();
     }
   });
@@ -347,4 +357,154 @@ describe('EpisodeList — canManageEpisodeSubtitle gate (CR M3)', () => {
 
     expect(screen.getByTestId('episode-manage-subtitle')).toBeInTheDocument();
   });
+});
+
+// ─── disc-2026-10-episode-list-subtitle-badge-b — J11-D ─────────────────────
+// The real shapes of 《末日光明》(See), as the badge-a API sends them.
+
+const see = (n: number, extra: Partial<MergedEpisode>): MergedEpisode => ({
+  episodeNumber: n,
+  name: `第 ${n} 集`,
+  hasLocalFile: true,
+  episodeId: `see-${n}`,
+  filePath: `/tv/See/S01/See.S01E0${n}.mkv`,
+  subtitleStatus: 'not_searched',
+  embeddedSubtitlesRead: true,
+  chineseSubtitleSources: [],
+  ...extra,
+});
+
+const indicator = (code: string) =>
+  document.querySelector(`[data-testid="episode-subtitle-indicator"][data-episode="${code}"]`);
+
+describe('EpisodeList — Chinese-subtitle verdict (badge-b, J11-D)', () => {
+  it.each<[string, MergedEpisode, string, string]>([
+    [
+      'S01E02 zh_hant from the zh-TW file + Vido',
+      see(2, {
+        chineseSubtitle: 'zh_hant',
+        chineseSubtitleSources: [
+          { kind: 'vido', language: 'zh-Hant', label: 'zh-Hant' },
+          { kind: 'sidecar', language: 'zh-Hant', label: 'zh-TW' },
+        ],
+      }),
+      '有繁中字幕，Vido 生成・旁邊的 zh-TW 檔',
+      'text-[var(--success-text)]',
+    ],
+    [
+      'S02E01 zh_hant from the file',
+      see(1, {
+        chineseSubtitle: 'zh_hant',
+        chineseSubtitleSources: [
+          { kind: 'embedded', language: 'zh-Hant', label: '繁體中文' },
+          { kind: 'embedded', language: 'zh-Hant', label: 'Traditional' },
+        ],
+      }),
+      '有繁中字幕，片內字幕',
+      'text-[var(--success-text)]',
+    ],
+    [
+      'zh — Chinese, script untold (Alexyu 1A: reads like zh_hant)',
+      see(3, {
+        chineseSubtitle: 'zh',
+        chineseSubtitleSources: [{ kind: 'embedded', language: 'zh-unknown', label: '' }],
+      }),
+      '有中文字幕（繁簡未知），片內字幕',
+      'text-[var(--success-text)]',
+    ],
+    [
+      'zh_hans',
+      see(5, { chineseSubtitle: 'zh_hans' }),
+      '只有簡中字幕，可以在「管理字幕」轉成繁中',
+      'text-[var(--error-text)]',
+    ],
+    [
+      'S01E01 none',
+      see(1, { chineseSubtitle: 'none' }),
+      '缺中文字幕，只有英文等其他語言——可以生成',
+      'text-[var(--error-text)]',
+    ],
+    [
+      'none before the file was read (Alexyu 2A)',
+      see(1, { chineseSubtitle: 'none', embeddedSubtitlesRead: false }),
+      '缺中文字幕，還在讀片內字幕，讀完可能會變',
+      'text-[var(--error-text)]',
+    ],
+    [
+      'unknown',
+      see(8, { chineseSubtitle: 'unknown', embeddedSubtitlesRead: false }),
+      '還沒檢查這一集的字幕，下次掃描媒體庫時會讀',
+      'text-[var(--text-muted)]',
+    ],
+  ])('%s', (_name, episode, sentence, color) => {
+    render(<EpisodeList episodes={[episode]} seasonNumber={1} />);
+    const button = screen.getByRole('button', { name: sentence });
+    expect(button).toHaveClass(color);
+    expect(button).not.toHaveAttribute('title');
+  });
+
+  it('a subtitle being made outranks the verdict', () => {
+    render(
+      <EpisodeList
+        episodes={[see(3, { chineseSubtitle: 'none', subtitleStatus: 'translating' })]}
+        seasonNumber={1}
+      />
+    );
+    const button = screen.getByRole('button', { name: '字幕生成中，打開「管理字幕」看進度' });
+    expect(button.querySelector('svg')).toHaveClass('animate-spin');
+  });
+
+  it('the verdict replaces Vido’s own search record (S01E03: a zh-TW file, never searched)', () => {
+    render(
+      <EpisodeList
+        episodes={[
+          see(3, {
+            chineseSubtitle: 'zh_hant',
+            chineseSubtitleSources: [{ kind: 'sidecar', language: 'zh-Hant', label: 'zh-TW' }],
+          }),
+        ]}
+        seasonNumber={1}
+      />
+    );
+    expect(screen.queryByRole('button', { name: '尚未搜尋字幕' })).not.toBeInTheDocument();
+    expect(indicator('S01E03')).toHaveAccessibleName('有繁中字幕，旁邊的 zh-TW 檔');
+  });
+
+  it('pressing the icon does not open 管理字幕', () => {
+    const onManage = vi.fn();
+    render(
+      <EpisodeList
+        episodes={[see(1, { chineseSubtitle: 'none' })]}
+        seasonNumber={1}
+        onManageSubtitle={onManage}
+      />
+    );
+    fireEvent.click(indicator('S01E01')!);
+    expect(onManage).not.toHaveBeenCalled();
+  });
+
+  it('no local file → no indicator, whatever the verdict', () => {
+    render(
+      <EpisodeList
+        episodes={[{ ...see(4, { chineseSubtitle: 'zh_hant' }), hasLocalFile: false }]}
+        seasonNumber={1}
+      />
+    );
+    expect(screen.queryByTestId('episode-subtitle-indicator')).not.toBeInTheDocument();
+  });
+});
+
+it('an unrecognised verdict falls back to Vido’s own record, not "not checked" (CR L4)', () => {
+  render(
+    <EpisodeList
+      episodes={[
+        see(1, {
+          chineseSubtitle: 'zh_future' as unknown as MergedEpisode['chineseSubtitle'],
+          subtitleStatus: 'found',
+        }),
+      ]}
+      seasonNumber={1}
+    />
+  );
+  expect(screen.getByRole('button', { name: '已找到字幕' })).toBeInTheDocument();
 });
