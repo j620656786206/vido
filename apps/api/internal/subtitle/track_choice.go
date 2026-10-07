@@ -55,6 +55,13 @@ func classifyTrack(t services.SubtitleTrack) trackKind {
 	return trackRegular
 }
 
+// TrackIsForced / TrackIsSDH expose classifyTrack's title-aware reading to
+// the miner (disc-2026-10-mine-en-source-selection): a release that names
+// its track "English (Forced)" without setting the disposition flag is still
+// the short one.
+func TrackIsForced(t services.SubtitleTrack) bool { return classifyTrack(t) == trackForced }
+func TrackIsSDH(t services.SubtitleTrack) bool    { return classifyTrack(t) == trackSDH }
+
 // coversHalf reports whether a track's last cue ends at or past half of the
 // file. An unknown duration (0) or unreadable timestamps never disqualify a
 // track — the rule only removes tracks it can prove are partial.

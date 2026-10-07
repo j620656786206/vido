@@ -17,6 +17,8 @@ import (
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/subtitle/mine"
 )
 
 // ─── fakes ──────────────────────────────────────────────────────────────────
@@ -351,4 +353,142 @@ func TestMineSeries_ConfirmedGuessIsNotReplaced(t *testing.T) {
 	assert.Empty(t, g.inserted)
 	assert.Equal(t, 0, res.TermsReplaced)
 	assert.Equal(t, "傑拉瑪瑞爾", g.existing[0].TermZh)
+}
+
+// --- disc-2026-10-mine-en-source-selection fakes ---
+
+type fakeProber struct{ tracks []services.SubtitleTrack }
+
+func (p fakeProber) Probe(context.Context, string) (*services.MediaTechInfo, error) {
+	return &services.MediaTechInfo{SubtitleTracks: p.tracks}, nil
+}
+
+// fakeExtractor "extracts" by writing the SRT text registered per stream.
+type fakeExtractor struct {
+	byStream map[int]string
+	asked    []int
+}
+
+func (e *fakeExtractor) Extract(_ context.Context, _ string, tmp string, streams []int) (map[int]string, error) {
+	out := map[int]string{}
+	for _, s := range streams {
+		e.asked = append(e.asked, s)
+		p := filepath.Join(tmp, fmt.Sprintf("s%d.srt", s))
+		if err := os.WriteFile(p, []byte(e.byStream[s]), 0o644); err != nil {
+			return nil, err
+		}
+		out[s] = p
+	}
+	return out, nil
+}
+
+func fourLines(zh bool, name string) string {
+	if zh {
+		return srt([3]string{"00:00:01,000", "00:00:03,000", name + "告訴我"}, [3]string{"00:00:05,000", "00:00:07,000", "去找" + name},
+			[3]string{"00:00:09,000", "00:00:11,000", name + "在等"}, [3]string{"00:00:13,000", "00:00:15,000", "是" + name + "嗎"})
+	}
+	return srt([3]string{"00:00:01,000", "00:00:03,000", "Jerlamarel told me."}, [3]string{"00:00:05,000", "00:00:07,000", "Go find Jerlamarel."},
+		[3]string{"00:00:09,000", "00:00:11,000", "Jerlamarel is waiting."}, [3]string{"00:00:13,000", "00:00:15,000", "Is that Jerlamarel?"})
+}
+
+// Vido's own ASR transcript sits beside the file as `.en.srt` with the name
+// garbled; the release's English track is the source the Chinese was made
+// from. The miner must read the embedded track, not the sidecar.
+func TestMineEpisode_EmbeddedEnglishBeatsASRSidecar(t *testing.T) {
+	dir := t.TempDir()
+	base := filepath.Join(dir, "Show.S01E01")
+	require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+	require.NoError(t, os.WriteFile(base+".zh-TW.srt", []byte(fourLines(true, "謝拉馬威")), 0o644))
+	garbled := strings.ReplaceAll(fourLines(false, ""), "Jerlamarel", "Trilla Morel")
+	// pad the sidecar past minUsableCues so size alone does not decide
+	for i := 0; i < 20; i++ {
+		garbled += fmt.Sprintf("%d\n00:01:%02d,000 --> 00:01:%02d,500\nfiller\n\n", 10+i, i, i)
+	}
+	require.NoError(t, os.WriteFile(base+".en.srt", []byte(garbled), 0o644))
+	full := fourLines(false, "")
+	for i := 0; i < 20; i++ { // a real dialogue track is long; the forced one is not
+		full += fmt.Sprintf("%d\n00:02:%02d,000 --> 00:02:%02d,500\nmore dialogue\n\n", 10+i, i, i)
+	}
+	ext := &fakeExtractor{byStream: map[int]string{2: srt([3]string{"00:00:01,000", "00:00:02,000", "FORCED"}), 3: full}}
+	prober := fakeProber{tracks: []services.SubtitleTrack{
+		{Language: "eng", Format: "subrip", StreamIndex: 2, Forced: true},
+		{Language: "eng", Format: "subrip", StreamIndex: 3},
+	}}
+	m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, prober, ext, nil)
+
+	rep := MineEpisodeReport{}
+	segs, _ := m.mineEpisode(context.Background(), base+".mkv", t.TempDir(), &rep)
+
+	assert.Equal(t, "embedded stream 3", rep.EnSource, "the full embedded track, not the forced one, not the ASR sidecar")
+	assert.Equal(t, []int{3}, ext.asked, "the forced track is never even extracted; one ffmpeg pass")
+	assert.Equal(t, 4, len(segs))
+	terms := mine.Mine(segs, mine.Options{})
+	require.Len(t, terms, 1)
+	assert.Equal(t, "謝拉馬威", terms[0].Zh)
+}
+
+// With no embedded English track the sidecar is still used.
+func TestMineEpisode_SidecarWhenNoEmbeddedEnglish(t *testing.T) {
+	dir := t.TempDir()
+	base := filepath.Join(dir, "Show.S01E01")
+	require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+	require.NoError(t, os.WriteFile(base+".zh-TW.srt", []byte(fourLines(true, "謝拉馬威")), 0o644))
+	en := fourLines(false, "")
+	for i := 0; i < 20; i++ {
+		en += fmt.Sprintf("%d\n00:01:%02d,000 --> 00:01:%02d,500\nfiller\n\n", 10+i, i, i)
+	}
+	require.NoError(t, os.WriteFile(base+".en.srt", []byte(en), 0o644))
+	m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, fakeProber{}, &fakeExtractor{}, nil)
+	rep := MineEpisodeReport{}
+	segs, _ := m.mineEpisode(context.Background(), base+".mkv", t.TempDir(), &rep)
+	assert.Equal(t, "Show.S01E01.en.srt", rep.EnSource)
+	assert.Equal(t, 4, len(segs))
+}
+
+type failingProber struct{}
+
+func (failingProber) Probe(context.Context, string) (*services.MediaTechInfo, error) {
+	return nil, errors.New("ffprobe: timeout")
+}
+
+// CR 2 / CR 6: a short embedded track falls back to the sidecar; a failed
+// probe falls back to the sidecar AND says so in the report; no usable source
+// names every reason.
+func TestMineEpisode_EnglishFallbacksAreExplained(t *testing.T) {
+	mk := func(t *testing.T, withSidecar bool) string {
+		dir := t.TempDir()
+		base := filepath.Join(dir, "Show.S01E01")
+		require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+		require.NoError(t, os.WriteFile(base+".zh-TW.srt", []byte(fourLines(true, "謝拉馬威")), 0o644))
+		if withSidecar {
+			require.NoError(t, os.WriteFile(base+".en.srt", []byte(fourLines(false, "")), 0o644))
+		}
+		return base + ".mkv"
+	}
+	t.Run("short embedded track → sidecar", func(t *testing.T) {
+		media := mk(t, true)
+		ext := &fakeExtractor{byStream: map[int]string{3: fourLines(false, "")}} // 4 cues < minUsableCues
+		m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, fakeProber{tracks: []services.SubtitleTrack{{Language: "eng", Format: "subrip", StreamIndex: 3}}}, ext, nil)
+		rep := MineEpisodeReport{}
+		segs, _ := m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
+		assert.Equal(t, "Show.S01E01.en.srt", rep.EnSource)
+		assert.Equal(t, 4, len(segs))
+	})
+	t.Run("probe failed → sidecar, flagged", func(t *testing.T) {
+		media := mk(t, true)
+		m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, failingProber{}, &fakeExtractor{}, nil)
+		rep := MineEpisodeReport{}
+		_, _ = m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
+		assert.Equal(t, "Show.S01E01.en.srt (probe failed; embedded tracks unknown)", rep.EnSource)
+	})
+	t.Run("only short tracks, no sidecar → skipped with every reason", func(t *testing.T) {
+		media := mk(t, false)
+		ext := &fakeExtractor{byStream: map[int]string{3: fourLines(false, ""), 4: srt([3]string{"00:00:01,000", "00:00:02,000", "x"})}}
+		m := NewOfficialSubtitleMiner(nil, nil, fakeScopes{}, &fakeGlossary{}, fakeProber{tracks: []services.SubtitleTrack{
+			{Language: "eng", Format: "subrip", StreamIndex: 3}, {Language: "eng", Format: "subrip", StreamIndex: 4, HearingImpaired: true}}}, ext, nil)
+		rep := MineEpisodeReport{}
+		_, _ = m.mineEpisode(context.Background(), media, t.TempDir(), &rep)
+		assert.Equal(t, "en: stream 3 has only 4 cues; stream 4 has only 1 cues", rep.Skipped)
+		assert.Equal(t, []int{3, 4}, ext.asked, "both candidates in one extraction call")
+	})
 }

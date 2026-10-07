@@ -345,3 +345,27 @@ func TestMine_FragmentThatCannotGrowIsNotLearned(t *testing.T) {
 		assert.NotEqual(t, "Jerlamarel", tm.Src, "got %q", tm.Zh)
 	}
 }
+
+// disc-2026-10-mine-en-source-selection: See S01E07's English tracks are
+// [2 forced, 3 full, 4 SDH]; the forced one must never be the English side,
+// and the full one comes before the SDH one.
+func TestClassify_EnglishStreamsSkipForcedAndPreferFull(t *testing.T) {
+	tracks := []services.SubtitleTrack{
+		{Language: "eng", Format: "subrip", StreamIndex: 2, Forced: true},
+		{Language: "eng", Format: "subrip", StreamIndex: 4, HearingImpaired: true},
+		{Language: "eng", Format: "subrip", StreamIndex: 3},
+		{Language: "chi", Format: "subrip", StreamIndex: 7},
+	}
+	src := Classify("/m/x.mkv", nil, tracks)
+	assert.Equal(t, []int{3, 4}, src.EnStreams)
+	assert.Equal(t, []int{7}, src.ZhStreams)
+	onlyForced := Classify("/m/x.mkv", nil, []services.SubtitleTrack{{Language: "eng", Format: "subrip", StreamIndex: 2, Forced: true}})
+	assert.Empty(t, onlyForced.EnStreams, "a forced-only file has no English dialogue track")
+	// Title-only releases (no disposition flags) are read the same way.
+	byTitle := Classify("/m/x.mkv", nil, []services.SubtitleTrack{
+		{Language: "eng", Format: "subrip", StreamIndex: 2, Title: "English (Forced)"},
+		{Language: "eng", Format: "subrip", StreamIndex: 4, Title: "English [SDH]"},
+		{Language: "eng", Format: "subrip", StreamIndex: 3, Title: "English"},
+	})
+	assert.Equal(t, []int{3, 4}, byTitle.EnStreams)
+}
