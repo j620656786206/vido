@@ -50,4 +50,4 @@ Status: review
   - 實機截圖對照 J11-D：桌機懸停、手機點一下都跟稿一致。
 - 2026-10-07 對抗式 CR（Sonnet 5.5）：0H／3M／4L。修 M1（鍵盤 Enter 被當成觸控）、M3（E2E 懸停等待 500→1500ms）、L4（不認得的結論改退回舊邏輯）、L5（加 `Tooltip.spec.tsx`，突變測試確認拿掉觸控保護會紅）。不修：M2（打開時螢幕閱讀器會念兩次同一句——J11-D 規則 3 本來就要求同一句）、L6、L7。
   - 閘門：web 單元 300 檔全綠、E2E chromium／firefox／mobile-chrome ×3 全綠（本機沒裝 WebKit，交給 CI）、`lint:all` 0 errors、prettier 綠、Go services 測試綠。
-  - **視覺基準有一張真的變了**：`media-episode-list-subtitle-entry/focus`——Tab 現在先停在字幕圖示（新的可聚焦按鈕）並打開提示框，不再直接停在「管理字幕」。這是 AC 要的行為，但要 Alexyu 確認後才更新基準。
+  - **視覺基準有一張真的變了**：`media-episode-list-subtitle-entry/focus`——Tab 現在先停在字幕圖示（新的可聚焦按鈕）並打開提示框，不再直接停在「管理字幕」。這是 AC 要的行為。⚖️ Alexyu 2026-10-07 選 A：更新 darwin 基準、刪掉舊的 linux 基準，由 CI bootstrap 補。
