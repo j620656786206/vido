@@ -31,6 +31,8 @@ export interface MineResult {
   fansubSkipped: number;
   termsFound: number;
   termsInserted: number;
+  /** Harvested (speech-recognition) guesses the official rendering overwrote. */
+  termsReplaced?: number;
   startedAt: string;
   finishedAt: string;
   error?: string;

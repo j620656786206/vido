@@ -151,6 +151,41 @@ func (r *GlossaryRepository) Upsert(ctx context.Context, term *models.GlossaryTe
 	return nil
 }
 
+// ReplaceUnconfirmedGuess is the official-subtitle miner's write
+// (disc-2026-10-asr-harvest-pollutes-glossary): insert the term, or — only if
+// the row already there is an UNCONFIRMED guess (a speech-recognition harvest,
+// or the miner's own earlier pass) — overwrite its rendering and source. A
+// confirmed row, a TMDb-seeded row and a manual row are never touched; the
+// guard lives in the SQL so a confirmation that lands mid-run still wins.
+// Returns whether a row was written (inserted or replaced).
+func (r *GlossaryRepository) ReplaceUnconfirmedGuess(ctx context.Context, term *models.GlossaryTerm) (bool, error) {
+	if err := normalizeGlossaryTerm(term); err != nil {
+		return false, err
+	}
+	query := `INSERT INTO show_glossary (` + glossaryColumns + `)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		` + glossaryConflictTarget + ` DO UPDATE SET
+			term_zh = excluded.term_zh,
+			source = excluded.source,
+			updated_at = excluded.updated_at
+		WHERE show_glossary.confirmed = 0
+		  AND show_glossary.source IN (?, ?)
+		  AND show_glossary.term_zh != excluded.term_zh`
+	res, err := r.db.ExecContext(ctx, query,
+		term.ID, term.MediaID, term.Scope, term.TermSrc, term.TermZh, term.Language,
+		term.Source, term.Confirmed, term.CreatedAt, term.UpdatedAt,
+		models.GlossarySourceSubtitle, models.GlossarySourceOfficialSubtitle,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to write glossary term: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to read glossary write result: %w", err)
+	}
+	return affected > 0, nil
+}
+
 // InsertIfAbsent is the auto-harvest write path (sub-5-5 AC #4): insert-only,
 // existing rows stay byte-identical. Two concurrent harvests of the same new
 // term are naturally safe — the second INSERT hits the UNIQUE conflict and

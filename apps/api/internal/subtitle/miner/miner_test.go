@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,16 +48,28 @@ func (fakeScopes) Resolve(_ context.Context, id string) (string, error) { return
 type fakeGlossary struct {
 	existing []models.GlossaryTerm
 	inserted []models.GlossaryTerm
+	upserted []models.GlossaryTerm
 }
 
 func (g *fakeGlossary) ListByScope(context.Context, string) ([]models.GlossaryTerm, error) {
 	return g.existing, nil
 }
-func (g *fakeGlossary) InsertIfAbsent(_ context.Context, t *models.GlossaryTerm) (bool, error) {
-	for _, e := range g.existing {
-		if e.TermSrc == t.TermSrc {
-			return false, nil
+
+// ReplaceUnconfirmedGuess mirrors the repository's SQL guard: insert when
+// absent; overwrite only an unconfirmed harvest / earlier-mining row whose
+// rendering differs; leave everything else alone.
+func (g *fakeGlossary) ReplaceUnconfirmedGuess(_ context.Context, t *models.GlossaryTerm) (bool, error) {
+	for i, e := range g.existing {
+		if !strings.EqualFold(e.TermSrc, t.TermSrc) {
+			continue
 		}
+		guess := !e.Confirmed && (e.Source == models.GlossarySourceSubtitle || e.Source == models.GlossarySourceOfficialSubtitle)
+		if guess && e.TermZh != t.TermZh {
+			g.existing[i].TermZh, g.existing[i].Source = t.TermZh, t.Source
+			g.upserted = append(g.upserted, *t)
+			return true, nil
+		}
+		return false, nil
 	}
 	g.inserted = append(g.inserted, *t)
 	return true, nil
@@ -251,4 +264,91 @@ func (b blockingSeries) FindByID(context.Context, string) (*models.Series, error
 func (b blockingSeries) List(context.Context, repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
 	<-b.release
 	return nil, &repository.PaginationResult{TotalPages: 1}, nil
+}
+
+// disc-2026-10-asr-harvest-pollutes-glossary: a rendering our own
+// speech-recognition run harvested is a guess. It must not count as "known"
+// (that silenced the miner on See's Jerlamarel), and the official file's
+// rendering overwrites it; TMDb / manual / confirmed rows are untouched.
+func TestKnownRenderings_HarvestIsNotEvidence(t *testing.T) {
+	rows := []models.GlossaryTerm{
+		{TermSrc: "Jerlamarel", TermZh: "傑拉瑪瑞爾", Source: models.GlossarySourceSubtitle},
+		{TermSrc: "Chola Morel", TermZh: "丘拉·莫瑞爾", Source: models.GlossarySourceSubtitle},
+		{TermSrc: "Paris", TermZh: "芭麗絲", Source: models.GlossarySourceSubtitle, Confirmed: true}, // the user approved it
+		{TermSrc: "Baba Voss", TermZh: "巴巴佛斯", Source: models.GlossarySourceMetadata},
+		{TermSrc: "Maghra", TermZh: "瑪格拉", Source: models.GlossarySourceManual},
+		{TermSrc: "Kofun", TermZh: "柯方", Source: models.GlossarySourceOfficialSubtitle}, // our earlier guess, unconfirmed
+	}
+	known := knownRenderings(rows)
+	assert.Equal(t, map[string]string{"Paris": "芭麗絲", "Baba Voss": "巴巴佛斯", "Maghra": "瑪格拉"}, known)
+	guesses := harvestedGuesses(rows)
+	assert.Equal(t, map[string]struct{}{"jerlamarel": {}, "chola morel": {}}, guesses)
+}
+
+func TestMineSeries_OfficialRenderingReplacesHarvestedGuess(t *testing.T) {
+	dir := t.TempDir()
+	// Four episodes where "Jerlamarel" is rendered 謝拉馬威 every time.
+	var eps []models.Episode
+	for i := 1; i <= 4; i++ {
+		base := filepath.Join(dir, fmt.Sprintf("Show.S01E0%d", i))
+		require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+		require.NoError(t, os.WriteFile(base+".en.srt", []byte(srt(
+			[3]string{"00:00:01,000", "00:00:03,000", "Jerlamarel told me."},
+			[3]string{"00:00:05,000", "00:00:07,000", "Jerlamarel is waiting."},
+			[3]string{"00:00:09,000", "00:00:11,000", "Find Jerlamarel."},
+		)), 0o644))
+		require.NoError(t, os.WriteFile(base+".zh-TW.srt", []byte(srt(
+			[3]string{"00:00:01,000", "00:00:03,000", "謝拉馬威告訴我"},
+			[3]string{"00:00:05,000", "00:00:07,000", "謝拉馬威在等"},
+			[3]string{"00:00:09,000", "00:00:11,000", "去找謝拉馬威"},
+		)), 0o644))
+		eps = append(eps, models.Episode{ID: fmt.Sprintf("e%d", i), SeriesID: "s1", FilePath: models.NewNullString(base + ".mkv")})
+	}
+	g := &fakeGlossary{existing: []models.GlossaryTerm{
+		{TermSrc: "Jerlamarel", TermZh: "傑拉瑪瑞爾", Source: models.GlossarySourceSubtitle}, // the garble
+	}}
+	m := NewOfficialSubtitleMiner(fakeEpisodes{bySeries: map[string][]models.Episode{"s1": eps}},
+		fakeSeries{rows: []models.Series{{ID: "s1", Title: "See"}}}, fakeScopes{}, g, nil, nil, nil)
+
+	res, err := m.MineSeries(context.Background(), "s1")
+	require.NoError(t, err)
+	require.Len(t, g.upserted, 1, "the official rendering replaces the harvested guess")
+	assert.Equal(t, "Jerlamarel", g.upserted[0].TermSrc)
+	assert.Equal(t, "謝拉馬威", g.upserted[0].TermZh)
+	assert.Equal(t, models.GlossarySourceOfficialSubtitle, g.upserted[0].Source)
+	assert.Empty(t, g.inserted)
+	assert.Equal(t, 1, res.TermsReplaced)
+	assert.Equal(t, 0, res.TermsInserted)
+}
+
+func TestMineSeries_ConfirmedGuessIsNotReplaced(t *testing.T) {
+	dir := t.TempDir()
+	var eps []models.Episode
+	for i := 1; i <= 4; i++ {
+		base := filepath.Join(dir, fmt.Sprintf("Show.S01E0%d", i))
+		require.NoError(t, os.WriteFile(base+".mkv", []byte("x"), 0o644))
+		require.NoError(t, os.WriteFile(base+".en.srt", []byte(srt(
+			[3]string{"00:00:01,000", "00:00:03,000", "Jerlamarel told me."},
+			[3]string{"00:00:05,000", "00:00:07,000", "Jerlamarel is waiting."},
+			[3]string{"00:00:09,000", "00:00:11,000", "Find Jerlamarel."},
+		)), 0o644))
+		require.NoError(t, os.WriteFile(base+".zh-TW.srt", []byte(srt(
+			[3]string{"00:00:01,000", "00:00:03,000", "謝拉馬威告訴我"},
+			[3]string{"00:00:05,000", "00:00:07,000", "謝拉馬威在等"},
+			[3]string{"00:00:09,000", "00:00:11,000", "去找謝拉馬威"},
+		)), 0o644))
+		eps = append(eps, models.Episode{ID: fmt.Sprintf("e%d", i), SeriesID: "s1", FilePath: models.NewNullString(base + ".mkv")})
+	}
+	g := &fakeGlossary{existing: []models.GlossaryTerm{
+		{TermSrc: "Jerlamarel", TermZh: "傑拉瑪瑞爾", Source: models.GlossarySourceSubtitle, Confirmed: true}, // the user approved it
+	}}
+	m := NewOfficialSubtitleMiner(fakeEpisodes{bySeries: map[string][]models.Episode{"s1": eps}},
+		fakeSeries{rows: []models.Series{{ID: "s1", Title: "See"}}}, fakeScopes{}, g, nil, nil, nil)
+
+	res, err := m.MineSeries(context.Background(), "s1")
+	require.NoError(t, err)
+	assert.Empty(t, g.upserted, "a confirmed row is the user's word, whatever its source")
+	assert.Empty(t, g.inserted)
+	assert.Equal(t, 0, res.TermsReplaced)
+	assert.Equal(t, "傑拉瑪瑞爾", g.existing[0].TermZh)
 }

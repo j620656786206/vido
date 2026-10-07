@@ -1058,7 +1058,13 @@ func main() {
 	// because the pipeline's lives inside the pipeline-enabled block; $0 work,
 	// so it runs regardless of the pipeline mode. Post-scan it sweeps partial
 	// shows in the background; the settings button hits the handler.
-	officialMiner := miner.NewOfficialSubtitleMiner(repos.Episodes, repos.Series, glossaryScopes, repos.Glossary,
+	// disc-2026-10-asr-harvest-pollutes-glossary: the miner needs the guarded
+	// write the concrete repository has; the wide interface stays narrow.
+	minerGlossary, ok := repos.Glossary.(miner.GlossaryRepo)
+	if !ok {
+		slog.Error("official-subtitle miner: glossary repository lacks ReplaceUnconfirmedGuess — mining disabled")
+	}
+	officialMiner := miner.NewOfficialSubtitleMiner(repos.Episodes, repos.Series, glossaryScopes, minerGlossary,
 		ffprobeService, subtitle.NewExtractor(subtitleExtractTimeout, slog.Default()), slog.Default())
 	scannerService.AppendOnScanComplete(officialMiner.ScanCallback())
 	glossaryMineHandler := handlers.NewGlossaryMineHandler(officialMiner)
