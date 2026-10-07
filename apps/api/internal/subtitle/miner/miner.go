@@ -445,10 +445,22 @@ func (m *OfficialSubtitleMiner) mineEpisode(ctx context.Context, media, tmp stri
 		official = append(official, sc)
 	}
 
+	// disc-2026-10-mine-en-source-selection: always probe. An `.en.srt`
+	// beside the video is as likely Vido's own speech-recognition transcript
+	// as an official file (See S01E02: 287 segments from the garbled ASR
+	// sidecar instead of 568 from the release's English track, and the miner
+	// then preferred season 2's spelling of Jerlamarel), so the embedded
+	// English track must be known even when a sidecar exists.
 	var tracks []services.SubtitleTrack
-	needProbe := (len(official) == 0 && fansubs == 0) || len(enSidecars) == 0
-	if needProbe && m.prober != nil {
-		if info, err := m.prober.Probe(ctx, media); err == nil && info != nil {
+	var probeErr error
+	if m.prober != nil {
+		info, err := m.prober.Probe(ctx, media)
+		switch {
+		case err != nil:
+			probeErr = err
+			m.logger.Warn("official-subtitle miner: probe failed — embedded tracks unknown, sidecars only",
+				"media", filepath.Base(media), "error", err)
+		case info != nil:
 			tracks = info.SubtitleTracks
 		}
 	}
@@ -469,14 +481,82 @@ func (m *OfficialSubtitleMiner) mineEpisode(ctx context.Context, media, tmp stri
 		rep.Skipped = "zh: " + err.Error()
 		return nil, fansubs
 	}
-	en, enFrom, err := m.loadSide(ctx, media, tmp, src.EnSidecars, src.EnStreams)
+	en, enFrom, err := m.loadEnglish(ctx, media, tmp, src)
 	if err != nil {
 		rep.Skipped = "en: " + err.Error()
 		return nil, fansubs
 	}
+	if probeErr != nil {
+		// Say so in the report: this episode's English came from a sidecar
+		// because the embedded tracks could not be seen, not because there
+		// were none (CR 2 — a silent fallback would re-create the bug).
+		enFrom += " (probe failed; embedded tracks unknown)"
+	}
 	segs := mine.Align(en, zh)
 	rep.ZhSource, rep.EnSource, rep.Segments = zhFrom, enFrom, len(segs)
 	return segs, fansubs
+}
+
+// minUsableCues is the fewest cues a side may have and still be dialogue;
+// a forced-narrative track or a truncated file has a handful.
+const minUsableCues = 20
+
+// loadEnglish picks the English side the other way round from loadSide:
+// the release's own embedded track first (it is the official transcript the
+// Chinese was translated from), a sidecar only when no embedded English
+// track yields dialogue — because a `.en.srt` beside the file may be Vido's
+// own speech-recognition output (disc-2026-10-mine-en-source-selection).
+func (m *OfficialSubtitleMiner) loadEnglish(ctx context.Context, media, tmp string, src mine.Sources) ([]mine.Cue, string, error) {
+	var reasons []string
+	switch {
+	case len(src.EnStreams) == 0:
+	case m.extractor == nil:
+		reasons = append(reasons, "embedded track needs ffmpeg")
+	default:
+		// ONE ffmpeg pass pulls every candidate (CR 1: a full-file read per
+		// candidate would double the cost whenever the first is short).
+		out, err := m.extractor.Extract(ctx, media, tmp, src.EnStreams)
+		if err != nil {
+			reasons = append(reasons, err.Error())
+		}
+		for _, stream := range src.EnStreams {
+			path, ok := out[stream]
+			if !ok {
+				if err == nil {
+					reasons = append(reasons, fmt.Sprintf("stream %d not extracted", stream))
+				}
+				continue
+			}
+			cues, err := mine.LoadCues(path)
+			if err != nil {
+				reasons = append(reasons, fmt.Sprintf("stream %d: %v", stream, err))
+				continue
+			}
+			if len(cues) < minUsableCues {
+				reasons = append(reasons, fmt.Sprintf("stream %d has only %d cues", stream, len(cues)))
+				continue
+			}
+			return cues, fmt.Sprintf("embedded stream %d", stream), nil
+		}
+	}
+	// A sidecar is read as is (the cue floor is for telling a forced track
+	// from a full one; a short official file is still official).
+	dir := filepath.Dir(media)
+	for _, sc := range src.EnSidecars {
+		cues, err := mine.LoadCues(filepath.Join(dir, sc))
+		if err == nil && len(cues) > 0 {
+			return cues, sc, nil
+		}
+		if err != nil {
+			reasons = append(reasons, fmt.Sprintf("%s: %v", sc, err))
+		} else {
+			reasons = append(reasons, sc+": empty")
+		}
+	}
+	if len(reasons) == 0 {
+		return nil, "", errors.New("no readable sidecar and no embedded track")
+	}
+	return nil, "", errors.New(strings.Join(reasons, "; "))
 }
 
 func (m *OfficialSubtitleMiner) loadSide(ctx context.Context, media, tmp string, sidecars []string, streams []int) ([]mine.Cue, string, error) {

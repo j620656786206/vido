@@ -94,6 +94,7 @@ func IsEnglishSidecar(name string) bool {
 // next to the media file) and its probed embedded tracks.
 func Classify(mediaPath string, sidecars []string, tracks []services.SubtitleTrack) Sources {
 	s := Sources{MediaPath: mediaPath}
+	var sdh []int
 	for _, name := range sidecars {
 		switch {
 		case IsOfficialZhSidecar(name):
@@ -112,8 +113,21 @@ func Classify(mediaPath string, sidecars []string, tracks []services.SubtitleTra
 			// track is still a human translation of the same show.
 			s.ZhStreams = append(s.ZhStreams, t.StreamIndex)
 		case subtitle.IsEnglishLanguageTag(t.Language):
+			// disc-2026-10-mine-en-source-selection: the forced-narrative
+			// track is a handful of on-screen captions, not the dialogue —
+			// on See S01E07 / S02E04 / S02E05 it was stream 2, first in
+			// file order, and the episode aligned 0–1 segments. Skip it;
+			// put the full track before the SDH one.
+			if subtitle.TrackIsForced(t) {
+				continue
+			}
+			if subtitle.TrackIsSDH(t) {
+				sdh = append(sdh, t.StreamIndex)
+				continue
+			}
 			s.EnStreams = append(s.EnStreams, t.StreamIndex)
 		}
 	}
+	s.EnStreams = append(s.EnStreams, sdh...)
 	return s
 }
