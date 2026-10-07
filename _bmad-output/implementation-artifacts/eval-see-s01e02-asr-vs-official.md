@@ -263,5 +263,5 @@ founder-pm 判決＋party mode 全員同意後實作：各季寫法不同的詞�
 
 - **TMDb zh-TW 角色名翻譯在這個片庫幾乎不存在**：14 部有中文角色名的影集全是華語劇（天龍八部、凡人修仙傳、劍來、仙逆…原生中文、多為簡體）；歐美劇 0 部（力量之戒的 4 個是 Míriel／Pharazôn 這種重音字母的誤判）；電影忽略。TMDb 存的是演員名翻譯（柔伊莎達娜、妮可·基嫚），角色名多半維持英文。→ 「種子 vs 官方字幕誰大」沒有真實衝突，party mode 裁定：寫信任階梯（手動確認 ＞ 官方字幕 ＞ TMDb 種子 ＞ 聽寫收成）＋觀測，不改程式。
 - **力量之戒**（9 集官方 zh-TW）：學到 70 條（Sauron→索倫、Galadriel→凱蘭崔爾、Celebrimbor→凱勒布理鵬、Elrond→愛隆…）、取代 15 條聽寫猜的、清掉 5 條。新 bug：帶重音的名字被切半（Khazad-d／Pharaz／Rh）→ `disc-2026-10-mine-accented-names-truncated`。
-- **特種部隊：母獅**：第 1 季 8 集 BluRay 無字幕、第 2 季 5 個 Amazon 官方 zh-TW；TMDb 角色名全英文。學習結果：第 2 季 5 集都用嵌入英文軌（373～553 段），學到 24 條（Kyle→凱爾、Cruz→克魯茲、Kaitlyn→凱特琳、Lioness→母獅、Los Tigres→虎幫、Eagle→老鷹一號…）、取代 1 條聽寫猜的；**沒有清任何收成列**——第 1 季 8 集有檔沒官方字幕，新季保護規則啟動（覆蓋 5/16）。之後補第 1 季走聽聲音時，翻譯提示會拿到這 24 條 Amazon 官方寫法。
+- **特種部隊：母獅**：第 1 季 8 集 BluRay **有** CHT／CHS／CHT&ENG 等 5 條嵌入字幕，但全是 PGS 圖片字幕（`hdmv_pgs_subtitle`），Vido 的 `IsImageSubtitleCodec` 刻意不抽、miner 也只認 srt／ass → 對 Vido 來說等於無字幕（Alexyu 2026-10-07 指出，本機 ffprobe 證實）、第 2 季 5 個 Amazon 官方 zh-TW；TMDb 角色名全英文。學習結果：第 2 季 5 集都用嵌入英文軌（373～553 段），學到 24 條（Kyle→凱爾、Cruz→克魯茲、Kaitlyn→凱特琳、Lioness→母獅、Los Tigres→虎幫、Eagle→老鷹一號…）、取代 1 條聽寫猜的；**沒有清任何收成列**——第 1 季 8 集有檔沒官方字幕，新季保護規則啟動（覆蓋 5/16）。之後補第 1 季走聽聲音時，翻譯提示會拿到這 24 條 Amazon 官方寫法。
 
