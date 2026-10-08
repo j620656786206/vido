@@ -72,6 +72,8 @@ Claude Opus 5.5（dev）；對抗式 CR 換模型（Sonnet 5.5）。
   - L3（每條讀取路徑都算彙總，背景工作用不到）、L4（SQL 壞掉時的退路沒有 log）記錄不修：目前片庫大小下可以忽略。
   - 閘門：`go vet`、`go test ./...` 全綠、`staticcheck` 乾淨、`lint:all` 0 errors、prettier 綠、web `libraryStatus.spec` 綠；突變測試（篩選改回只看影集那一列）會讓一致性測試紅。
 
+- 2026-10-08 /ship：PR #721。
+
 ### Discovery Triage
 
 - **③** 影片刪掉後集數那一列不會消失 → `disc-2026-10-episode-rows-outlive-deleted-files`
