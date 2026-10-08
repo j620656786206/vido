@@ -1041,23 +1041,23 @@ func (r *MovieRepository) CountMissingZhHantSubtitle(ctx context.Context) (int, 
 	return count, nil
 }
 
-// hasZhHantSubtitleWhere is the INVERSE of missingZhHantSubtitleWhere over the
-// same population (on-disk, not-removed): the coverage numerator (ux3-1-6).
-// Fileless movies match NEITHER predicate — they count in the denominator only,
-// which keeps the 42/55 readout honest.
-const hasZhHantSubtitleWhere = `
-	subtitle_language = 'zh-Hant'
-	AND file_path IS NOT NULL AND file_path != ''
-	AND (is_removed = 0 OR is_removed IS NULL)
-`
-
-// CountZhHantSubtitle counts movies that HAVE a zh-Hant subtitle on record —
-// the home-summary coverage numerator (Story ux3-1-6).
+// CountZhHantSubtitle counts on-disk, not-removed movies whose "has Chinese
+// subtitles" verdict is Traditional — the home-summary 繁中字幕 numerator
+// (Story ux3-1-6). ⚖️ disc-2026-10-home-coverage-counts-only-vido-zh-hant
+// (Alexyu option A): the SAME rule as the poster badge and the library filter
+// (vido_chinese_subtitle), so Traditional from anywhere counts — a Vido-made
+// file, an official sidecar, an embedded 繁中 track. Before, only Vido's own
+// subtitle_language = 'zh-Hant' did, and the home page kept offering 產生字幕
+// for films that already had Traditional subtitles. Fileless movies count in
+// the denominator only, which keeps Covered ≤ Total.
 func (r *MovieRepository) CountZhHantSubtitle(ctx context.Context) (int, error) {
-	query := fmt.Sprintf(`SELECT COUNT(*) FROM movies WHERE %s`, hasZhHantSubtitleWhere)
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM movies
+		WHERE file_path IS NOT NULL AND file_path != ''
+		  AND (is_removed = 0 OR is_removed IS NULL)
+		  AND %s(subtitle_status, subtitle_language, subtitle_tracks) = ?`, chineseSubtitleSQLFunc)
 
 	var count int
-	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+	if err := r.db.QueryRowContext(ctx, query, string(models.ChineseSubtitleZhHant)).Scan(&count); err != nil {
 		return 0, fmt.Errorf("failed to count movies with zh-Hant subtitle: %w", err)
 	}
 	return count, nil

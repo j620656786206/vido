@@ -16,43 +16,55 @@ import (
 // by construction — a hand-rolled schema could not catch a predicate referencing
 // a column the shipped schema lacks (Rule 15 / bugfix-20-1).
 
-func seedHomeSummaryMovie(t *testing.T, db *sql.DB, id, filePath, subtitleLanguage string, removed bool) {
+func seedHomeSummaryMovie(t *testing.T, db *sql.DB, id, filePath, subtitleLanguage, tracks string, removed bool) {
 	t.Helper()
 	rm := 0
 	if removed {
 		rm = 1
 	}
-	_, err := db.Exec(`INSERT INTO movies (id, title, release_date, file_path, subtitle_language, is_removed)
-		VALUES (?, ?, '2020-01-01', ?, ?, ?)`,
-		id, "Movie "+id, nullableText(filePath), nullableText(subtitleLanguage), rm)
+	status := "not_searched"
+	if subtitleLanguage != "" {
+		status = "found"
+	}
+	_, err := db.Exec(`INSERT INTO movies (id, title, release_date, file_path, subtitle_status, subtitle_language, subtitle_tracks, is_removed)
+		VALUES (?, ?, '2020-01-01', ?, ?, ?, ?, ?)`,
+		id, "Movie "+id, nullableText(filePath), status, nullableText(subtitleLanguage), nullableText(tracks), rm)
 	require.NoError(t, err)
 }
 
+// ⚖️ disc-2026-10-home-coverage-counts-only-vido-zh-hant (option A): covered =
+// the badge/filter verdict is Traditional, whatever the source.
 func TestMovieRepository_CountZhHantSubtitle(t *testing.T) {
 	db := newMigratedEpisodeDB(t)
 	repo := NewMovieRepository(db)
 	ctx := context.Background()
 
-	seedHomeSummaryMovie(t, db, "m-covered", "/media/a.mkv", "zh-Hant", false)
-	seedHomeSummaryMovie(t, db, "m-english", "/media/b.mkv", "en", false)
-	seedHomeSummaryMovie(t, db, "m-none", "/media/c.mkv", "", false)
-	// Fileless: neither covered nor missing — denominator only.
-	seedHomeSummaryMovie(t, db, "m-fileless", "", "zh-Hant", false)
-	// Removed: out of every count.
-	seedHomeSummaryMovie(t, db, "m-removed", "/media/d.mkv", "zh-Hant", true)
+	// Traditional from each source — all covered.
+	seedHomeSummaryMovie(t, db, "m-vido", "/media/a.mkv", "zh-Hant", "", false)
+	seedHomeSummaryMovie(t, db, "m-official-sidecar", "/media/b.mkv", "", trSidecarTW, false)
+	seedHomeSummaryMovie(t, db, "m-embedded-hant", "/media/c.mkv", "", trChiHant, false)
+	// Not Traditional — not covered.
+	seedHomeSummaryMovie(t, db, "m-english", "/media/d.mkv", "", trEng, false)
+	seedHomeSummaryMovie(t, db, "m-untold-chi", "/media/e.mkv", "", trChiEng, false)
+	seedHomeSummaryMovie(t, db, "m-simplified", "/media/f.mkv", "zh-Hans", "", false)
+	seedHomeSummaryMovie(t, db, "m-unread", "/media/g.mkv", "", "", false)
+	// A zh-Hant language left by an unfinished run (status not found) is not
+	// evidence — the badge rule.
+	_, err := db.Exec(`INSERT INTO movies (id, title, release_date, file_path, subtitle_status, subtitle_language, is_removed)
+		VALUES ('m-in-progress', 'Movie', '2020-01-01', '/media/i.mkv', 'translating', 'zh-Hant', 0)`)
+	require.NoError(t, err)
+	// Fileless: denominator only. Removed: out of every count.
+	seedHomeSummaryMovie(t, db, "m-fileless", "", "zh-Hant", "", false)
+	seedHomeSummaryMovie(t, db, "m-removed", "/media/h.mkv", "zh-Hant", "", true)
 
 	covered, err := repo.CountZhHantSubtitle(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 1, covered)
+	assert.Equal(t, 3, covered)
 
-	// Sanity: covered + missing never exceeds total (fileless sits in neither).
-	missing, err := repo.CountMissingZhHantSubtitle(ctx)
-	require.NoError(t, err)
 	total, err := repo.Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 2, missing)
-	assert.Equal(t, 4, total)
-	assert.LessOrEqual(t, covered+missing, total)
+	assert.Equal(t, 9, total)
+	assert.LessOrEqual(t, covered, total)
 }
 
 func TestSeriesRepository_CountZhHantCovered(t *testing.T) {
@@ -60,29 +72,52 @@ func TestSeriesRepository_CountZhHantCovered(t *testing.T) {
 	repo := NewSeriesRepository(db)
 	ctx := context.Background()
 
-	// Fully covered: every on-disk episode has zh-Hant.
+	// Every on-disk episode Traditional (Vido-made, and an official sidecar).
 	seedGenerationSeries(t, db, "s-covered")
 	seedGenerationEpisode(t, db, "e1", "s-covered", 1, "/tv/e1.mkv", "zh-Hant")
-	seedGenerationEpisode(t, db, "e2", "s-covered", 2, "/tv/e2.mkv", "zh-Hant")
+	seedGenerationEpisode(t, db, "e2", "s-covered", 2, "/tv/e2.mkv", "")
+	_, err := db.Exec(`UPDATE episodes SET subtitle_tracks = ? WHERE id = 'e2'`, trSidecarTW)
+	require.NoError(t, err)
 
-	// Partially covered: one episode still missing → NOT covered.
+	// Embedded 繁中 in every episode — covered too (before: never).
+	seedGenerationSeries(t, db, "s-embedded")
+	seedGenerationEpisode(t, db, "e7", "s-embedded", 1, "/tv/e7.mkv", "")
+	_, err = db.Exec(`UPDATE episodes SET subtitle_tracks = ? WHERE id = 'e7'`, trChiHant)
+	require.NoError(t, err)
+
+	// One episode English-only → NOT covered.
 	seedGenerationSeries(t, db, "s-partial")
 	seedGenerationEpisode(t, db, "e3", "s-partial", 1, "/tv/e3.mkv", "zh-Hant")
 	seedGenerationEpisode(t, db, "e4", "s-partial", 2, "/tv/e4.mkv", "")
+	_, err = db.Exec(`UPDATE episodes SET subtitle_tracks = ? WHERE id = 'e4'`, trEng)
+	require.NoError(t, err)
 
-	// Zero on-disk episodes: the vacuous-truth guard — NOT covered.
+	// One Traditional, one Simplified episode → the worst verdict wins, NOT covered.
+	seedGenerationSeries(t, db, "s-mixed")
+	seedGenerationEpisode(t, db, "e8", "s-mixed", 1, "/tv/e8.mkv", "zh-Hant")
+	seedGenerationEpisode(t, db, "e9", "s-mixed", 2, "/tv/e9.mkv", "zh-Hans")
+
+	// Zero on-disk episodes: the vacuous-truth guard — NOT covered, even if
+	// the series row itself says zh-Hant.
 	seedGenerationSeries(t, db, "s-empty")
 	seedGenerationEpisode(t, db, "e5", "s-empty", 1, "", "")
+	_, err = db.Exec(`UPDATE series SET subtitle_status = 'found', subtitle_language = 'zh-Hant' WHERE id = 's-empty'`)
+	require.NoError(t, err)
 
 	// Covered but soft-deleted → out of the count.
 	seedGenerationSeries(t, db, "s-removed")
 	seedGenerationEpisode(t, db, "e6", "s-removed", 1, "/tv/e6.mkv", "zh-Hant")
-	_, err := db.Exec(`UPDATE series SET is_removed = 1 WHERE id = 's-removed'`)
+	_, err = db.Exec(`UPDATE series SET is_removed = 1 WHERE id = 's-removed'`)
+	require.NoError(t, err)
+
+	// Vido's own record counts as evidence once delivered (status found) —
+	// the badge rule.
+	_, err = db.Exec(`UPDATE episodes SET subtitle_status = 'found' WHERE id IN ('e1', 'e3', 'e6', 'e8', 'e9')`)
 	require.NoError(t, err)
 
 	covered, err := repo.CountZhHantCovered(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 1, covered)
+	assert.Equal(t, 2, covered)
 }
 
 func seedHomeSummaryParseJob(t *testing.T, db *sql.DB, id string, status models.ParseJobStatus, mediaID any, completedAt any) {

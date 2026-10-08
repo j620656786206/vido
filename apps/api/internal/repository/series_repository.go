@@ -554,14 +554,16 @@ func (r *SeriesRepository) Count(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-// CountZhHantCovered counts series that are fully zh-Hant covered — the series
-// half of the home-summary coverage numerator (Story ux3-1-6, by 部).
+// CountZhHantCovered counts series whose rolled-up verdict is Traditional —
+// the series half of the home-summary 繁中字幕 numerator (Story ux3-1-6, by 部).
 //
-// "Covered" requires BOTH: at least one on-disk episode (a zero-episode series
-// is NOT vacuously covered) AND no on-disk episode matching the shared
-// missing-predicate (episode_repository.go missingZhHantSubtitleEpisodeWhere,
-// inlined here with the e. alias). Episode-grain detail stays on the library
-// page; this readout counts whole series.
+// ⚖️ disc-2026-10-home-coverage-counts-only-vido-zh-hant (option A): the same
+// expression the library list and filter use (seriesChineseSubtitleSQL — the
+// verdict that most needs handling among episodes with a file), so one
+// Simplified / untold-script / missing / unread episode keeps the series out.
+// A series needs at least one on-disk episode: with none, the rollup would
+// fall back to the series row's own verdict, and a show with nothing on disk
+// is not "covered".
 func (r *SeriesRepository) CountZhHantCovered(ctx context.Context) (int, error) {
 	query := fmt.Sprintf(`SELECT COUNT(*) FROM series s
 		WHERE %s
@@ -569,14 +571,10 @@ func (r *SeriesRepository) CountZhHantCovered(ctx context.Context) (int, error) 
 			SELECT 1 FROM episodes e WHERE e.series_id = s.id
 			AND e.file_path IS NOT NULL AND e.file_path != ''
 		)
-		AND NOT EXISTS (
-			SELECT 1 FROM episodes e WHERE e.series_id = s.id
-			AND (e.subtitle_language IS NULL OR e.subtitle_language != 'zh-Hant')
-			AND e.file_path IS NOT NULL AND e.file_path != ''
-		)`, notRemovedSeriesQualified("s"))
+		AND %s = ?`, notRemovedSeriesQualified("s"), seriesChineseSubtitleSQL("s"))
 
 	var count int
-	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+	if err := r.db.QueryRowContext(ctx, query, string(models.ChineseSubtitleZhHant)).Scan(&count); err != nil {
 		return 0, fmt.Errorf("failed to count zh-Hant covered series: %w", err)
 	}
 	return count, nil
