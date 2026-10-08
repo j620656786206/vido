@@ -162,6 +162,12 @@ func (s *SeriesService) GetSeasonEpisodes(ctx context.Context, seriesID string, 
 		return nil, fmt.Errorf("failed to fetch season episodes: %w", err)
 	}
 
+	// disc-2026-10-season-episode-count-unknown AC #2: the TMDb season we just
+	// fetched is what the season header needs — keep it.
+	if stored := s.rememberSeasonDetails(ctx, seriesID, seasonNumber, details); stored != nil {
+		season = seasonToSummary(stored)
+	}
+
 	// Local episodes for subtitle/file enrichment, indexed by episode number.
 	localByNumber := s.localEpisodesByNumber(ctx, seriesID, seasonNumber)
 
@@ -276,4 +282,24 @@ func (s *SeriesService) refreshEpisodeTracks(ctx context.Context, ep models.Epis
 	if _, err := refresher.RefreshSubtitleTracks(ctx, ep.ID, ep.SubtitleTracks.String, next); err != nil {
 		slog.Warn("Failed to refresh episode sidecar subtitles", "error", err, "episode_id", ep.ID)
 	}
+}
+
+// rememberSeasonDetails writes the TMDb season detail onto the season row when
+// it differs (disc-2026-10-season-episode-count-unknown AC #2) and returns the
+// row, or nil when there is no row or no season repo. A failed write is
+// logged; the response is already correct.
+func (s *SeriesService) rememberSeasonDetails(ctx context.Context, seriesID string, seasonNumber int, details *tmdb.SeasonDetails) *models.Season {
+	if s.seasonRepo == nil || details == nil {
+		return nil
+	}
+	row, err := s.seasonRepo.FindBySeriesAndNumber(ctx, seriesID, seasonNumber)
+	if err != nil || row == nil {
+		return nil
+	}
+	if MergeSeasonDetails(row, details.ID, details.Name, details.Overview, details.PosterPath, details.AirDate, len(details.Episodes)) {
+		if err := s.seasonRepo.Update(ctx, row); err != nil {
+			slog.Warn("Failed to remember season details", "error", err, "series_id", seriesID, "season_number", seasonNumber)
+		}
+	}
+	return row
 }
