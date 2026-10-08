@@ -418,6 +418,67 @@ func (r *EpisodeRepository) FindWithFiles(ctx context.Context) ([]models.Episode
 	return scanEpisodeRows(rows)
 }
 
+// EpisodeFileRef is one episode file the scanner checks for removal: the
+// episode, the path it holds, and the library of its series (episodes carry
+// no library of their own).
+type EpisodeFileRef struct {
+	ID        string
+	FilePath  string
+	LibraryID string
+}
+
+// FindFilesForRemovalCheck lists every episode that holds a file path, with
+// its series' library — the scanner's removed-file pass
+// (disc-2026-10-episode-rows-outlive-deleted-files).
+func (r *EpisodeRepository) FindFilesForRemovalCheck(ctx context.Context) ([]EpisodeFileRef, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT e.id, e.file_path, COALESCE(s.library_id, '')
+		FROM episodes e LEFT JOIN series s ON s.id = e.series_id
+		WHERE e.file_path IS NOT NULL AND e.file_path != ''
+		ORDER BY e.id`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query episode files: %w", err)
+	}
+	defer rows.Close()
+	var refs []EpisodeFileRef
+	for rows.Next() {
+		var ref EpisodeFileRef
+		if err := rows.Scan(&ref.ID, &ref.FilePath, &ref.LibraryID); err != nil {
+			return nil, fmt.Errorf("failed to scan episode file: %w", err)
+		}
+		refs = append(refs, ref)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating episode files: %w", err)
+	}
+	return refs, nil
+}
+
+// ClearMissingFile turns an episode whose file is gone back into "known
+// episode, no local file": file_path and the two columns read FROM that file
+// (subtitle_tracks, subtitle_tracks_file_sig) are cleared. Everything else —
+// TMDb data, subtitle delivery state — stays: other flows own it, and they
+// already skip episodes without a path. The next scan that finds the file
+// again writes the path back onto this same row (Upsert matches series +
+// season + episode).
+//
+// Compare-and-set on the path the caller checked, so an episode re-ingested
+// at a new path while the scan was stat-ing is left alone. Returns whether
+// it cleared.
+func (r *EpisodeRepository) ClearMissingFile(ctx context.Context, episodeID, filePath string) (bool, error) {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE episodes SET file_path = NULL, subtitle_tracks = NULL, subtitle_tracks_file_sig = NULL
+		 WHERE id = ? AND file_path = ?`,
+		episodeID, filePath)
+	if err != nil {
+		return false, fmt.Errorf("failed to clear missing episode file: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	return n > 0, nil
+}
+
 // UpdateSubtitleTracks records what the sweep read for one episode: the
 // merged embedded+sidecar tracks and the file signature they were read from
 // (migration 044). Narrow write, like UpdateDurationSeconds: `updated_at` is
