@@ -1,6 +1,6 @@
 # Disc：連續同句規則不該把「已經被別條規則刪掉的句子」算進連續數
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-10-asr-repeated-lines-dropped` 的 CR L1／L2；2026-10-07 實測看到配樂幻聽每 30 秒一句、剛好 4 句時留下來（`eval-see-s01e02-asr-vs-official.md` 第三次實測「新映像・人名提示＋字級時間」那列：`repeat_run:20`，門檻 5 讓 4 句假台詞留下來）。
 
@@ -59,6 +59,11 @@ Status: review
 - **M**：回音留在原位後會參與片尾規則（R3）的倒數——結尾一句回音會擋住片尾 3 句假台詞被刪，或把 2 句湊成 3 句。修：片尾倒數把 `prompt_echo` 當透明（不擋、不算數），等同舊的「先移除」；補測試。
 - **L**：R2b 註解改寫（同文字被標的不斷串、不同文字的回音會斷串）；常數註解講清楚分段跑時跨切點的迴圈抓不到；補 19.9 秒邊界、5 句間隔大報 `repeat_run`、第一句被標時留第一個沒被標的、`applyTail=false` 仍套用等測試。
 - **未改**：`dropped` 的順序從「回音先」變成依時間——只有 log 逐筆印與依原因計數，沒有消費者依賴順序。
+
+### 交付
+
+- PR #734（squash 合併），CI 17 項全綠（Go Tests、Unit Tests、E2E 4 片、Lint、Build、Docker amd64／arm64、Serve Smoke）。
+- 待辦：正式機更新後重跑 10 分鐘片段，確認 log 的 `dropped_by_reason` 出現 `repeat_spaced`、配樂段 4 句假台詞消失。
 
 ### File List
 
