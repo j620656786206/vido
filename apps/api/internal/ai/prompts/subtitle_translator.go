@@ -27,7 +27,10 @@ import (
 // (eval-1: 120 of 484 zero-score cues were content shifted onto a neighbouring
 // cue), and rule 3 no longer contradicts the ===TERMS=== trailer — names
 // follow the glossary, otherwise get a Chinese rendering that is reported.
-const SubtitleTranslatorPromptVersion = "m1-v4"
+// m1-v4 → m1-v5 (disc-2026-10-translation-gender-default): rule 8 — "you"
+// defaults to 你; 妳 only when the lines themselves show the listener is
+// female (See S01E02 had 8–12 men addressed as 妳).
+const SubtitleTranslatorPromptVersion = "m1-v5"
 
 // SubtitleTranslatorContextWindow is the number of previous blocks sent as
 // read-only context for each translation batch to maintain consistency (AC #2).
@@ -58,6 +61,14 @@ Translate English subtitle dialogue into natural, fluent Traditional Chinese as 
 5. Maintain natural spoken Chinese rhythm — subtitles should sound like real dialogue, not written prose
 6. Do NOT add honorifics or politeness markers not present in the original
 7. Keep translations concise — subtitles have limited screen time
+8. "You" has no gender in English. Render it as 你 (plural 你們) by default. Use 妳 ONLY when the subtitles show the person spoken to is female — they are called ma'am, Mom, sister, girl, or by a woman's name, or that same person is referred to as she/her. The evidence may come from any line of this batch or of the read-only context; a cast list, the plot, or the tone of voice is NOT enough. Use 妳們 only when every person addressed is shown to be female. When unsure, use 你: 你 for a woman reads naturally, 妳 for a man is an error. Use 您 only where the original is formal. Third person follows the English: he → 他, she → 她.
+Correct:
+[1] You, of all people, might know them.   → [1] 你大概是最可能認識他們的人。
+WRONG (nothing in the subtitles says the listener is a woman):
+[1] 妳大概是最可能認識他們的人。
+Correct (the evidence is in the line before):
+[1] Mom, I'm sorry.        → [1] 媽，對不起。
+[2] You were right.        → [2] 妳說得對。
 
 ## Per-cue alignment — this is NOT optional:
 Each [N] you output translates ONLY the text of input [N]. Subtitles are timed: a line shown on the wrong cue is wrong even when the words are right.

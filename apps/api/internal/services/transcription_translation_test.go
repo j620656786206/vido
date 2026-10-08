@@ -484,9 +484,10 @@ func TestTranslateSRT_NoReaderWiredKeepsThePromptByteIdentical(t *testing.T) {
 // the prompt version) to re-translate a library that gained nothing, while the
 // ASR leg — which has no segment cache at all — would gain nothing either.
 func TestSubtitleTranslatorPromptVersion_NotBumpedBy9R8(t *testing.T) {
-	// sub-7-4 bumped it to m1-v3 for its OWN prompt-surface change (style +
-	// lexicon sections); the 9R-8 non-bump decision stands unchanged.
-	assert.Equal(t, "m1-v4", prompts.SubtitleTranslatorPromptVersion)
+	// sub-7-4 (m1-v3), sub-7-9 (m1-v4) and disc-2026-10-translation-gender-
+	// default (m1-v5) each bumped it for their OWN prompt-surface change; the
+	// 9R-8 non-bump decision stands unchanged.
+	assert.Equal(t, "m1-v5", prompts.SubtitleTranslatorPromptVersion)
 }
 
 // metadataSeriesReader is a SeriesMetadataReader serving one series row.
