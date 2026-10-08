@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
@@ -759,6 +760,11 @@ func splitHarvestTrailer(response string) (string, map[string]string) {
 			slog.Debug("harvest trailer line ignored — malformed term entry", "line", line)
 			continue
 		}
+		var ok bool
+		if src, zh, ok = orientHarvestPair(src, zh); !ok {
+			slog.Debug("harvest trailer line ignored — rendering has no Chinese", "line", line)
+			continue
+		}
 		if src == zh {
 			// The prompt forbids listing terms kept in their original form, but
 			// a disobedient model still emits `Vecna=>Vecna` — an identity
@@ -775,6 +781,31 @@ func splitHarvestTrailer(response string) (string, map[string]string) {
 		}
 	}
 	return strings.Join(lines[:sentinelAt], "\n"), terms
+}
+
+// orientHarvestPair checks a trailer pair's direction
+// (disc-2026-10-mine-accented-names-truncated AC #3). The rendering is always
+// Chinese, so a line whose "source" has Chinese and whose "rendering" has none
+// was written backwards (`馬言者=>The Neigh-sayer`, seen on the NAS) and is
+// turned around; a rendering with no Chinese on either side is not a rendering
+// at all and is dropped (ok=false).
+func orientHarvestPair(src, zh string) (string, string, bool) {
+	if hasHan(zh) {
+		return src, zh, true
+	}
+	if hasHan(src) {
+		return zh, src, true
+	}
+	return src, zh, false
+}
+
+func hasHan(s string) bool {
+	for _, r := range s {
+		if unicode.Is(unicode.Han, r) {
+			return true
+		}
+	}
+	return false
 }
 
 // responseLinePattern matches "[N] text" format from Claude's response.

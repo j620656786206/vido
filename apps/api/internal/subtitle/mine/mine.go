@@ -304,7 +304,13 @@ func dropSubTerms(terms []Term) []Term {
 
 // ─── English candidates ─────────────────────────────────────────────────────
 
-var tokenRe = regexp.MustCompile(`[A-Za-z][A-Za-z'’-]*`)
+// tokenRe is one English word: a Latin letter, then Latin letters, combining
+// marks, apostrophes and hyphens. Latin script, not [A-Za-z] — Khazad-dûm,
+// Pharazôn, Rhûn and Míriel were cut at their first accented letter and
+// learned as fragments (disc-2026-10-mine-accented-names-truncated). Not every
+// letter either: Han glued to a name in a bilingual line ("Gandalf的朋友") or
+// a Cyrillic aside must not become part of — or a — candidate (CR H1/M4).
+var tokenRe = regexp.MustCompile(`\p{Latin}[\p{Latin}\p{M}'’-]*`)
 
 // stopwords are capitalised words that are not names. Keep it to the words
 // that actually show up capitalised mid-sentence in dialogue: pronoun "I",
@@ -423,17 +429,24 @@ func mentionsWord(text, term string) bool {
 		}
 		i += start
 		end := i + len(lterm)
-		before := i == 0 || !isWordByte(lt[i-1])
-		after := end == len(lt) || !isWordByte(lt[end])
+		prev, _ := utf8.DecodeLastRuneInString(lt[:i])
+		next, _ := utf8.DecodeRuneInString(lt[end:])
+		before := i == 0 || !isWordRune(prev)
+		after := end == len(lt) || !isWordRune(next)
 		if before && after {
 			return true
 		}
-		start = i + 1
+		_, size := utf8.DecodeRuneInString(lt[i:])
+		start = i + size
 	}
 }
 
-func isWordByte(c byte) bool {
-	return c == '_' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+// isWordRune: a Latin letter, combining mark, digit or underscore continues
+// an English word. Rune-wise, not byte-wise — "Rh" must not match inside
+// "Rhûn", whose next byte is the first byte of û. Latin only, like tokenRe:
+// Han right after a name ("Gandalf的朋友") still ends the word (CR M3).
+func isWordRune(r rune) bool {
+	return r == '_' || unicode.IsDigit(r) || unicode.Is(unicode.Latin, r) || unicode.Is(unicode.M, r)
 }
 
 // ─── Chinese side ───────────────────────────────────────────────────────────
