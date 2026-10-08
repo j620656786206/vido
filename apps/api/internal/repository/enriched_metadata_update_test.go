@@ -157,3 +157,99 @@ func TestFindMissingCredits_ListsOnlyMatchedRowsWithoutCast(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, gotSeries)
 }
+
+// disc-2026-10-movie-subtitle-tracks-unknown-refresh: the backfill lists only
+// movies with a file whose subtitle tracks are unknown (NULL) — `[]` is a
+// known "no subtitles" and stays out — and its write never overwrites a value.
+func TestFindMissingSubtitleTracks_ListsOnlyUnknownRowsWithAFile(t *testing.T) {
+	db := setupTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	movies := NewMovieRepository(db)
+
+	path := func(p string) models.NullString { return models.NewNullString(p) }
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "mv-unknown", Title: "A", FilePath: path("/m/a.mkv")}))
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "mv-none", Title: "B", FilePath: path("/m/b.mkv"), SubtitleTracks: models.NewNullString("[]")}))
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "mv-has", Title: "C", FilePath: path("/m/c.mkv"), SubtitleTracks: models.NewNullString(`[{"language":"chi"}]`)}))
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "mv-no-file", Title: "D"}))
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "mv-removed", Title: "E", FilePath: path("/m/e.mkv"), IsRemoved: true}))
+
+	got, err := movies.FindMissingSubtitleTracks(ctx, "", 50)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "mv-unknown", got[0].ID)
+
+	before, err := movies.FindByID(ctx, "mv-unknown")
+	require.NoError(t, err)
+
+	written, err := movies.UpdateSubtitleTracksIfMissing(ctx, "mv-unknown", "[]")
+	require.NoError(t, err)
+	assert.True(t, written)
+	after, err := movies.FindByID(ctx, "mv-unknown")
+	require.NoError(t, err)
+	assert.Equal(t, "[]", after.SubtitleTracks.String)
+	assert.Equal(t, before.UpdatedAt, after.UpdatedAt, "a background fill is not an edit of the movie")
+
+	got, err = movies.FindMissingSubtitleTracks(ctx, "", 50)
+	require.NoError(t, err)
+	assert.Empty(t, got, "once filled, the row leaves the list")
+
+	// A value that is already there — the scan's, or this fill's — is kept.
+	written, err = movies.UpdateSubtitleTracksIfMissing(ctx, "mv-has", "[]")
+	require.NoError(t, err)
+	assert.False(t, written)
+	kept, err := movies.FindByID(ctx, "mv-has")
+	require.NoError(t, err)
+	assert.Equal(t, `[{"language":"chi"}]`, kept.SubtitleTracks.String)
+
+	written, err = movies.UpdateSubtitleTracksIfMissing(ctx, "no-such-movie", "[]")
+	require.NoError(t, err)
+	assert.False(t, written)
+}
+
+// The backfill pages by id so rows that stay unknown cannot crowd out the
+// rest; and enrichment holding a stale NULL cannot erase a filled answer.
+func TestFindMissingSubtitleTracks_PagesByIDAndNullNeverErasesAnAnswer(t *testing.T) {
+	db := setupTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	movies := NewMovieRepository(db)
+	for _, id := range []string{"mv-a", "mv-b", "mv-c"} {
+		require.NoError(t, movies.Create(ctx, &models.Movie{ID: id, Title: id, FilePath: models.NewNullString("/m/" + id + ".mkv")}))
+	}
+
+	page, err := movies.FindMissingSubtitleTracks(ctx, "", 2)
+	require.NoError(t, err)
+	require.Len(t, page, 2)
+	assert.Equal(t, []string{"mv-a", "mv-b"}, []string{page[0].ID, page[1].ID})
+	page, err = movies.FindMissingSubtitleTracks(ctx, "mv-b", 2)
+	require.NoError(t, err)
+	require.Len(t, page, 1)
+	assert.Equal(t, "mv-c", page[0].ID)
+
+	// Enrichment loaded mv-a while it was unknown, skipped the probe (NFO
+	// tech info), and writes back after the backfill filled it.
+	stale, err := movies.FindByID(ctx, "mv-a")
+	require.NoError(t, err)
+	written, err := movies.UpdateSubtitleTracksIfMissing(ctx, "mv-a", "[]")
+	require.NoError(t, err)
+	require.True(t, written)
+	stale.Title = "Matched Title"
+	require.NoError(t, movies.UpdateEnrichedMetadata(ctx, stale))
+	got, err := movies.FindByID(ctx, "mv-a")
+	require.NoError(t, err)
+	assert.Equal(t, "Matched Title", got.Title)
+	assert.Equal(t, "[]", got.SubtitleTracks.String, "a stale NULL must not turn 「缺中文」 back into 「不知道」")
+
+	// Same for the wide Update; a real value still replaces the old one.
+	stale.SubtitleTracks = models.NullString{}
+	require.NoError(t, movies.Update(ctx, stale))
+	got, err = movies.FindByID(ctx, "mv-a")
+	require.NoError(t, err)
+	assert.Equal(t, "[]", got.SubtitleTracks.String)
+	stale.SubtitleTracks = models.NewNullString(`[{"language":"chi"}]`)
+	require.NoError(t, movies.UpdateEnrichedMetadata(ctx, stale))
+	got, err = movies.FindByID(ctx, "mv-a")
+	require.NoError(t, err)
+	assert.Equal(t, `[{"language":"chi"}]`, got.SubtitleTracks.String)
+}
