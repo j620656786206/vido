@@ -265,6 +265,185 @@ func TestFilterHallucinations_R2TwoIdenticalLinesSurvive(t *testing.T) {
 	assert.Empty(t, dropped, "a run of 2 is under hallucinationRepeatRun")
 }
 
+// disc-2026-10-asr-repeat-run-bridging: a same-text window another rule has
+// already claimed does not count toward the run. Four real shouts plus one
+// same-text window judged silence are four shouts — all four stay.
+func TestFilterHallucinations_R2ClaimedSegmentsDoNotLengthenTheRun(t *testing.T) {
+	silent := whisperSegment{Start: 263, End: 264, Text: "Face me!", NoSpeechProb: 0.9, AvgLogprob: -1.6, CompressionRatio: 1.2}
+	segs := []whisperSegment{
+		speech(261, 263, "Face me!"),
+		silent,
+		speech(264, 266, "Face me!"),
+		speech(266, 268, "Face me!"),
+		speech(268, 270, "Face me!"),
+	}
+	kept, dropped := filterHallucinations(segs)
+	require.Len(t, dropped, 1)
+	assert.Equal(t, dropReasonSilence, dropped[0].Reason)
+	assert.Len(t, kept, 4, "the four real shouts are under the loop bar")
+}
+
+// An echo of the name prompt between two groups of the same shout is marked in
+// place, so it keeps the groups apart instead of splicing 3+3 into a six-long
+// "loop" (the old filterPromptEcho removed it first).
+func TestFilterHallucinations_PromptEchoDoesNotBridgeTwoShoutGroups(t *testing.T) {
+	prompt := "Baba Voss, Maghra, Jerlamarel, Kofun, Haniwa"
+	segs := []whisperSegment{
+		speech(466, 468, "Jerlamarel!"),
+		speech(468, 470, "Jerlamarel!"),
+		speech(470, 472, "Jerlamarel!"),
+		speech(472, 474, "Baba Voss, Maghra, Kofun"),
+		speech(474, 476, "Jerlamarel!"),
+		speech(476, 478, "Jerlamarel!"),
+		speech(478, 480, "Jerlamarel!"),
+	}
+	kept, dropped := filterHallucinationsWith(segs, true, prompt)
+	require.Len(t, dropped, 1)
+	assert.Equal(t, dropReasonPromptEcho, dropped[0].Reason)
+	assert.Len(t, kept, 6, "both groups of three shouts survive")
+}
+
+// The other loop shape: over score whisper emits one identical line per
+// 30-second window (10-minute See clip, run1-prompt — the run of four that
+// slipped under hallucinationRepeatRun). The first stays, the rest go.
+func TestFilterHallucinations_R2SpacedRepeatIsALoop(t *testing.T) {
+	segs := []whisperSegment{
+		speech(0, 2, "Welcome to the guesthouse."),
+		speech(30, 32, "Welcome to the guesthouse."),
+		speech(60, 62, "Welcome to the guesthouse."),
+		speech(90, 92, "Welcome to the guesthouse!"),
+		speech(125, 127, "Stop the van."),
+	}
+	kept, dropped := filterHallucinations(segs)
+	require.Len(t, dropped, 3)
+	for _, d := range dropped {
+		assert.Equal(t, dropReasonRepeatSpaced, d.Reason)
+	}
+	require.Len(t, kept, 2)
+	assert.Equal(t, "Welcome to the guesthouse.", kept[0].Text, "the FIRST utterance survives")
+	assert.InDelta(t, 0.0, kept[0].Start, 0.001)
+}
+
+// Exactly three, exactly 20 s apart, is where the spaced rule starts.
+func TestFilterHallucinations_R2SpacedRepeatAtTheBar(t *testing.T) {
+	segs := []whisperSegment{
+		speech(10, 11, "Hello?"),
+		speech(30, 31, "Hello?"),
+		speech(50, 51, "Hello?"),
+	}
+	kept, dropped := filterHallucinations(segs)
+	assert.Len(t, dropped, 2)
+	assert.Len(t, kept, 1)
+}
+
+// Two of the same short answer half a minute apart is ordinary dialogue.
+func TestFilterHallucinations_R2TwoSpacedIdenticalLinesSurvive(t *testing.T) {
+	segs := []whisperSegment{
+		speech(10, 11, "Yes."),
+		speech(35, 36, "Yes."),
+	}
+	_, dropped := filterHallucinations(segs)
+	assert.Empty(t, dropped, "two is under hallucinationSpacedRepeatRun")
+}
+
+// One gap under the bar means someone is actually repeating themselves — the
+// spaced rule does not apply (the five-in-a-row rule still could).
+func TestFilterHallucinations_R2SpacedRuleNeedsEveryGapWide(t *testing.T) {
+	segs := []whisperSegment{
+		speech(10, 11, "Hello?"),
+		speech(40, 41, "Hello?"),
+		speech(45, 46, "Hello?"),
+		speech(75, 76, "Hello?"),
+	}
+	_, dropped := filterHallucinations(segs)
+	assert.Empty(t, dropped)
+}
+
+// A claimed window in the middle neither counts nor shortens the gap: the gap
+// is measured between the live segments either side of it.
+func TestFilterHallucinations_R2SpacedGapSkipsClaimedSegments(t *testing.T) {
+	segs := []whisperSegment{
+		speech(0, 2, "Welcome to the guesthouse."),
+		{Start: 5, End: 6, Text: "Welcome to the guesthouse.", NoSpeechProb: 0.9, AvgLogprob: -1.6, CompressionRatio: 1.2},
+		speech(30, 32, "Welcome to the guesthouse."),
+		speech(60, 62, "Welcome to the guesthouse."),
+	}
+	kept, dropped := filterHallucinations(segs)
+	assert.Equal(t, map[string]int{dropReasonSilence: 1, dropReasonRepeatSpaced: 2}, dropReasonCounts(dropped))
+	assert.Len(t, kept, 1)
+}
+
+// Just under the gap bar is someone repeating themselves: all three stay.
+func TestFilterHallucinations_R2SpacedRepeatJustUnderTheBarSurvives(t *testing.T) {
+	segs := []whisperSegment{
+		speech(10, 11, "Hello?"),
+		speech(29.9, 30.9, "Hello?"),
+		speech(49.8, 50.8, "Hello?"),
+	}
+	_, dropped := filterHallucinations(segs)
+	assert.Empty(t, dropped)
+}
+
+// Five or more is the stuck-decoder rule whatever the spacing — the log says
+// repeat_run, not repeat_spaced.
+func TestFilterHallucinations_R2FiveSpacedReportsRepeatRun(t *testing.T) {
+	var segs []whisperSegment
+	for i := 0; i < 5; i++ {
+		segs = append(segs, speech(float64(i*30), float64(i*30+2), "Welcome to the guesthouse."))
+	}
+	_, dropped := filterHallucinations(segs)
+	assert.Equal(t, map[string]int{dropReasonRepeatRun: 4}, dropReasonCounts(dropped))
+}
+
+// A claimed FIRST window: the first LIVE one is the one kept.
+func TestFilterHallucinations_R2ClaimedFirstSegmentKeepsTheFirstLiveOne(t *testing.T) {
+	segs := []whisperSegment{
+		{Start: 0, End: 1, Text: "Hello?", NoSpeechProb: 0.9, AvgLogprob: -1.6, CompressionRatio: 1.2},
+		speech(30, 31, "Hello?"),
+		speech(60, 61, "Hello?"),
+		speech(90, 91, "Hello?"),
+	}
+	kept, dropped := filterHallucinations(segs)
+	assert.Equal(t, map[string]int{dropReasonSilence: 1, dropReasonRepeatSpaced: 2}, dropReasonCounts(dropped))
+	require.Len(t, kept, 1)
+	assert.InDelta(t, 30.0, kept[0].Start, 0.001)
+}
+
+// The spaced rule runs on mid-file chunks too (only R3 is end-of-file only).
+func TestFilterHallucinationsWith_SpacedRepeatAppliesMidFile(t *testing.T) {
+	segs := []whisperSegment{
+		speech(0, 2, "Welcome to the guesthouse."),
+		speech(30, 32, "Welcome to the guesthouse."),
+		speech(60, 62, "Welcome to the guesthouse."),
+		speech(90, 92, "Welcome to the guesthouse."),
+	}
+	_, dropped := filterHallucinationsWith(segs, false, "")
+	assert.Equal(t, map[string]int{dropReasonRepeatSpaced: 3}, dropReasonCounts(dropped))
+}
+
+// R3 + prompt echo: an echo is transparent to the tail walk, as it was when
+// echoes were removed before the filter — it neither ends the run nor pads it.
+func TestFilterHallucinations_R3TailIgnoresPromptEcho(t *testing.T) {
+	prompt := "Baba Voss, Maghra, Jerlamarel, Kofun, Haniwa"
+	quiet := func(start float64, text string) whisperSegment {
+		return whisperSegment{Start: start, End: start + 1, Text: text, NoSpeechProb: 0.5, AvgLogprob: -0.3, CompressionRatio: 1.3}
+	}
+	echo := speech(20, 21, "Baba Voss, Maghra, Kofun")
+
+	t.Run("echo last does not end the run", func(t *testing.T) {
+		segs := []whisperSegment{speech(1, 2, "Real line"), quiet(10, "Outro one"), quiet(12, "Outro two"), quiet(14, "Outro three"), echo}
+		_, dropped := filterHallucinationsWith(segs, true, prompt)
+		assert.Equal(t, map[string]int{dropReasonTail: 3, dropReasonPromptEcho: 1}, dropReasonCounts(dropped))
+	})
+	t.Run("echo does not pad a short run to the bar", func(t *testing.T) {
+		quietEcho := echo
+		quietEcho.NoSpeechProb = 0.5
+		segs := []whisperSegment{speech(1, 2, "Real line"), quiet(10, "Soft one"), quiet(12, "Soft two"), quietEcho}
+		_, dropped := filterHallucinationsWith(segs, true, prompt)
+		assert.Equal(t, map[string]int{dropReasonPromptEcho: 1}, dropReasonCounts(dropped))
+	})
+}
+
 // R3: the POC failure. Silent credits, an invented outro, nothing after it.
 func TestFilterHallucinations_R3TailDropsThePOCOutro(t *testing.T) {
 	segs := []whisperSegment{
@@ -397,11 +576,11 @@ func TestFilterHallucinationsWith_TailRuleOnlyAtTheFileEnd(t *testing.T) {
 	}
 	segs := []whisperSegment{speech(1, 2, "Loud line"), quiet(3, 4, "soft one"), quiet(4, 5, "soft two"), quiet(5, 6, "soft three")}
 
-	kept, dropped := filterHallucinationsWith(segs, true)
+	kept, dropped := filterHallucinationsWith(segs, true, "")
 	assert.Len(t, kept, 1, "at the end of the film the quiet run is credits over score")
 	assert.Len(t, dropped, 3)
 
-	kept, dropped = filterHallucinationsWith(segs, false)
+	kept, dropped = filterHallucinationsWith(segs, false, "")
 	assert.Len(t, kept, 4, "mid-file the same run is dialogue before a pause")
 	assert.Empty(t, dropped)
 }
