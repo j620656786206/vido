@@ -369,3 +369,67 @@ func TestClassify_EnglishStreamsSkipForcedAndPreferFull(t *testing.T) {
 	})
 	assert.Equal(t, []int{3, 4}, byTitle.EnStreams)
 }
+
+// disc-2026-10-mine-accented-names-truncated AC #1/#2: names with accented
+// letters are whole candidates — The Rings of Power's official subtitles
+// taught 凱薩督姆 to "Khazad-d", 法拉松 to "Pharaz" and 盧恩 to "Rh".
+func TestCandidates_AccentedNamesAreWhole(t *testing.T) {
+	assert.Equal(t, []string{"Khazad-dûm"}, candidates("They fled to Khazad-dûm."))
+	assert.Equal(t, []string{"Pharazôn"}, candidates("We must tell Pharazôn."))
+	assert.Equal(t, []string{"Rhûn", "Míriel"}, candidates("The road to Rhûn is long, Míriel."))
+	assert.Equal(t, []string{"Númenor"}, candidates("Welcome to Númenor."))
+	// CR H1/M4: other scripts never join or become a candidate.
+	assert.Equal(t, []string{"Gandalf", "Rivendell"}, candidates("I saw Gandalf的朋友 and 他去了 Rivendell today"))
+	assert.Empty(t, candidates("He said Привет Борис."))
+}
+
+func TestMentionsWord_UnicodeBoundaries(t *testing.T) {
+	cases := []struct {
+		text, term string
+		want       bool
+	}{
+		{"The road to Rhûn.", "Rh", false},  // the old byte-wise check said yes
+		{"The road to Rhûn.", "Rhûn", true}, // whole word
+		{"Rhûn's armies", "Rhûn", true},     // apostrophe ends the word
+		{"KHAZAD-DÛM", "Khazad-dûm", true},  // case-insensitive, accent too
+		{"Pharazôn", "Pharaz", false},       // a fragment is not the word
+		{"Ask Walter.", "Walt", false},
+		{"Ask Walter.", "Walter", true},
+		{"Gandalf的朋友", "Gandalf", true}, // Han after a name still ends the word (CR M3)
+		{"見到Gandalf了", "Gandalf", true},
+	}
+	for _, tc := range cases {
+		assert.Equal(t, tc.want, MentionsWord(tc.text, tc.term), "%q in %q", tc.term, tc.text)
+	}
+}
+
+func TestMine_LearnsAccentedNamesWhole(t *testing.T) {
+	// Varied lines, as real dialogue is: the name is the only thing they share.
+	segs := []Segment{
+		{En: "We march to Khazad-dûm.", Zh: "我們前往凱薩督姆"},
+		{En: "The doors of Khazad-dûm are shut.", Zh: "凱薩督姆的大門關了"},
+		{En: "Is Khazad-dûm far?", Zh: "凱薩督姆很遠嗎？"},
+		{En: "Nobody leaves Khazad-dûm.", Zh: "沒有人離開凱薩督姆"},
+		{En: "Tell Pharazôn.", Zh: "告訴法拉松"},
+		{En: "Where is Pharazôn now?", Zh: "法拉松現在在哪？"},
+		{En: "I serve Pharazôn.", Zh: "我效忠法拉松"},
+		{En: "Even Pharazôn was afraid.", Zh: "連法拉松都怕了"},
+		{En: "The east of Rhûn burns.", Zh: "盧恩以東在燃燒"},
+		{En: "They came from Rhûn.", Zh: "他們從盧恩來"},
+		{En: "Is that Rhûn?", Zh: "那是盧恩嗎？"},
+		{En: "Far beyond Rhûn, nothing.", Zh: "盧恩之外，什麼也沒有"},
+	}
+	for i := 0; i < 6; i++ {
+		segs = append(segs, Segment{En: "We need to go now.", Zh: "我們現在得走了"})
+	}
+	byName := map[string]string{}
+	for _, tm := range Mine(segs, Options{}) {
+		byName[tm.Src] = tm.Zh
+	}
+	assert.Equal(t, "凱薩督姆", byName["Khazad-dûm"])
+	assert.Equal(t, "法拉松", byName["Pharazôn"])
+	assert.Equal(t, "盧恩", byName["Rhûn"])
+	for _, frag := range []string{"Khazad-d", "Pharaz", "Rh"} {
+		assert.NotContains(t, byName, frag)
+	}
+}

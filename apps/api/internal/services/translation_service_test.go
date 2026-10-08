@@ -331,6 +331,22 @@ func TestSplitHarvestTrailer(t *testing.T) {
 		_, terms := splitHarvestTrailer("[1] 你好\n===TERMS===\nVecna=>Vecna\nDemogorgon=>魔王獸")
 		assert.Equal(t, map[string]string{"Demogorgon": "魔王獸"}, terms)
 	})
+
+	t.Run("a pair written backwards is turned around (NAS: 馬言者=>The Neigh-sayer)", func(t *testing.T) {
+		// disc-2026-10-mine-accented-names-truncated AC #3: the rendering is
+		// always Chinese; the two rows on the NAS had it in the source column.
+		_, terms := splitHarvestTrailer("[1] 你好\n===TERMS===\n馬言者=>The Neigh-sayer\n風舞市長=>Mayor Winddancer\nCelebrimbor=>凱勒布瑞博")
+		assert.Equal(t, map[string]string{
+			"The Neigh-sayer":  "馬言者",
+			"Mayor Winddancer": "風舞市長",
+			"Celebrimbor":      "凱勒布瑞博",
+		}, terms)
+	})
+
+	t.Run("no Chinese on either side is not a rendering", func(t *testing.T) {
+		_, terms := splitHarvestTrailer("[1] 你好\n===TERMS===\nKhazad-dûm=>Khazad-dum\nDemogorgon=>魔王獸")
+		assert.Equal(t, map[string]string{"Demogorgon": "魔王獸"}, terms)
+	})
 }
 
 func TestTranslationService_TranslateWithGlossaryHarvest_ReturnsTrailerTerms(t *testing.T) {
