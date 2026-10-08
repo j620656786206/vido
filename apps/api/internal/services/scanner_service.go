@@ -440,11 +440,18 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 	removedCount, err := s.detectRemovedFiles(ctx, untrustedRoots, untrustedLibraries)
 	if err != nil {
 		s.logger.Error("failed to detect removed files", "error", err)
-	} else if removedCount > 0 {
+	}
+	// Episodes too (disc-2026-10-episode-rows-outlive-deleted-files): a
+	// deleted episode file goes back to "known episode, no local file".
+	removedEpisodes, err := s.detectRemovedEpisodeFiles(ctx, untrustedRoots, untrustedLibraries)
+	if err != nil {
+		s.logger.Error("failed to detect removed episode files", "error", err)
+	}
+	if total := removedCount + removedEpisodes; total > 0 {
 		s.mu.Lock()
-		s.progress.FilesRemoved = removedCount
+		s.progress.FilesRemoved = total
 		s.mu.Unlock()
-		s.logger.Info("detected removed files", "count", removedCount)
+		s.logger.Info("detected removed files", "count", total, "movies", removedCount, "episodes", removedEpisodes)
 	}
 
 	// Aggregate series file sizes (Story 9c-3 AC #8)
@@ -908,6 +915,71 @@ func (s *ScannerService) detectRemovedFiles(ctx context.Context, untrustedRoots 
 			"movies_kept", protected, "folders", untrustedRoots)
 	}
 	return removedCount, nil
+}
+
+// episodeRemovalRepo is the slice of the episode repository the removed-file
+// pass needs. *repository.EpisodeRepository satisfies it; the scanner's
+// episodeRepo is asserted against it so the wide interface (and every mock of
+// it) does not grow.
+type episodeRemovalRepo interface {
+	FindFilesForRemovalCheck(ctx context.Context) ([]repository.EpisodeFileRef, error)
+	ClearMissingFile(ctx context.Context, episodeID, filePath string) (bool, error)
+}
+
+// detectRemovedEpisodeFiles is detectRemovedFiles for episodes
+// (disc-2026-10-episode-rows-outlive-deleted-files, ⚖️ Alexyu option A):
+// an episode whose file no longer exists loses its file_path — the state
+// every reader already treats as "no local file" — instead of gaining an
+// is_removed flag each of them would have to learn. The next scan that finds
+// the file again writes the path back onto the same row (Upsert matches
+// series + season + episode), so there is nothing to restore by hand.
+//
+// The same mount protection as movies: nothing under a folder this scan
+// could not vouch for is touched, matched by path and by the series' library.
+func (s *ScannerService) detectRemovedEpisodeFiles(ctx context.Context, untrustedRoots []string, untrustedLibraries map[string]bool) (int, error) {
+	repo, ok := s.episodeRepo.(episodeRemovalRepo)
+	if !ok {
+		return 0, nil
+	}
+	refs, err := repo.FindFilesForRemovalCheck(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query episode files: %w", err)
+	}
+
+	cleared, protected := 0, 0
+	for _, ref := range refs {
+		if ctx.Err() != nil {
+			return cleared, ctx.Err()
+		}
+		_, err := os.Stat(ref.FilePath)
+		if err == nil {
+			continue
+		}
+		if !os.IsNotExist(err) {
+			s.logger.Warn("error checking episode file existence", "path", ref.FilePath, "error", err)
+			continue
+		}
+		if underAnyRoot(ref.FilePath, untrustedRoots) || (ref.LibraryID != "" && untrustedLibraries[ref.LibraryID]) {
+			protected++
+			continue
+		}
+		done, err := repo.ClearMissingFile(ctx, ref.ID, ref.FilePath)
+		if err != nil {
+			s.logger.Error("failed to clear missing episode file", "id", ref.ID, "path", ref.FilePath, "error", err)
+			continue
+		}
+		if !done {
+			continue // re-ingested at another path while we looked — keep it
+		}
+		cleared++
+		s.logger.Info("episode file gone — now shown as no local file", "id", ref.ID, "path", ref.FilePath)
+	}
+
+	if protected > 0 {
+		s.logger.Warn("SCANNER_ROOT_UNTRUSTED: kept episodes whose folder was unreachable or empty this scan — not clearing their files",
+			"episodes_kept", protected, "folders", untrustedRoots)
+	}
+	return cleared, nil
 }
 
 // rootForms returns the spellings a movie's stored (symlink-resolved,
