@@ -177,3 +177,31 @@ func TestChineseSubtitleVerdict_DetectedLanguage(t *testing.T) {
 		})
 	}
 }
+
+// disc-2026-10-subtitle-filter-series-phase-2 AC #3: the series verdict is the
+// episode verdict that most needs handling.
+func TestWorstChineseSubtitle(t *testing.T) {
+	cases := []struct {
+		name string
+		in   []ChineseSubtitle
+		want ChineseSubtitle
+		ok   bool
+	}{
+		{"no episodes", nil, "", false},
+		{"all Traditional", []ChineseSubtitle{ChineseSubtitleZhHant, ChineseSubtitleZhHant}, ChineseSubtitleZhHant, true},
+		{"one missing makes it missing", []ChineseSubtitle{ChineseSubtitleZhHant, ChineseSubtitleNone, ChineseSubtitleZhHant}, ChineseSubtitleNone, true},
+		{"missing beats unknown", []ChineseSubtitle{ChineseSubtitleUnknown, ChineseSubtitleNone}, ChineseSubtitleNone, true},
+		{"one unknown blocks has", []ChineseSubtitle{ChineseSubtitleZhHant, ChineseSubtitleUnknown}, ChineseSubtitleUnknown, true},
+		{"unknown beats Simplified", []ChineseSubtitle{ChineseSubtitleZhHans, ChineseSubtitleUnknown}, ChineseSubtitleUnknown, true},
+		{"Simplified beats untold", []ChineseSubtitle{ChineseSubtitleZh, ChineseSubtitleZhHans, ChineseSubtitleZhHant}, ChineseSubtitleZhHans, true},
+		{"untold beats Traditional", []ChineseSubtitle{ChineseSubtitleZhHant, ChineseSubtitleZh}, ChineseSubtitleZh, true},
+		{"garbage reads as unknown", []ChineseSubtitle{ChineseSubtitleZhHant, "zh_future"}, ChineseSubtitleUnknown, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := WorstChineseSubtitle(tc.in)
+			assert.Equal(t, tc.ok, ok)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}

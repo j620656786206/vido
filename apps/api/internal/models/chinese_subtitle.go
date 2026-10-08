@@ -364,3 +364,45 @@ func ChineseSubtitleOfTrack(language, title, detected string) ChineseSubtitle {
 	}
 	return ""
 }
+
+// chineseSubtitleNeed ranks how much a verdict needs the user's attention:
+// missing Chinese first, then "we do not know", then Simplified only, then
+// Chinese of untold script, then Traditional. An unrecognised value ranks as
+// unknown.
+func chineseSubtitleNeed(c ChineseSubtitle) int {
+	switch c {
+	case ChineseSubtitleNone:
+		return 5
+	case ChineseSubtitleZhHans:
+		return 3
+	case ChineseSubtitleZh:
+		return 2
+	case ChineseSubtitleZhHant:
+		return 1
+	}
+	return 4 // unknown, or anything unreadable
+}
+
+// WorstChineseSubtitle folds per-episode verdicts into the series verdict
+// (disc-2026-10-subtitle-filter-series-phase-2, SM ruling 1): the one that
+// most needs handling wins — any episode missing Chinese makes the series
+// "missing"; one unknown episode keeps the series from claiming "has".
+// ok=false when there were no verdicts at all (no episode with a file).
+func WorstChineseSubtitle(verdicts []ChineseSubtitle) (ChineseSubtitle, bool) {
+	if len(verdicts) == 0 {
+		return "", false
+	}
+	worst := verdicts[0]
+	if !worst.IsValid() {
+		worst = ChineseSubtitleUnknown
+	}
+	for _, v := range verdicts[1:] {
+		if !v.IsValid() {
+			v = ChineseSubtitleUnknown
+		}
+		if chineseSubtitleNeed(v) > chineseSubtitleNeed(worst) {
+			worst = v
+		}
+	}
+	return worst, true
+}

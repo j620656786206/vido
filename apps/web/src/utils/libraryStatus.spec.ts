@@ -390,3 +390,25 @@ describe('subtitleLangLabel', () => {
     expect(subtitleLangLabel('JPN')).toEqual({ label: 'JPN', family: 'other' });
   });
 });
+
+// disc-2026-10-subtitle-filter-series-phase-2 AC #6: a SERIES row carries no
+// tracks and is never searched online — its chineseSubtitle is now rolled up
+// from its episodes by the backend, and the badge reads only that.
+describe('deriveSubtitleStatus — series rolled up from episodes', () => {
+  const series = (chineseSubtitle: ChineseSubtitle) =>
+    m('success', { chineseSubtitle, subtitleStatus: 'not_searched' });
+
+  it('《末日光明》with one English-only episode → 缺中文, a poster exception', () => {
+    expect(deriveSubtitleStatus(series('none'))?.label).toBe('缺中文');
+    expect(pickPosterBadge(series('none'))?.label).toBe('缺中文');
+  });
+
+  it('every episode Traditional → 繁中, steady (no poster badge)', () => {
+    expect(deriveSubtitleStatus(series('zh_hant'))?.label).toBe('繁中');
+    expect(pickPosterBadge(series('zh_hant'))).toBeNull();
+  });
+
+  it('one unread episode → unknown, no badge', () => {
+    expect(deriveSubtitleStatus(series('unknown'))).toBeNull();
+  });
+});

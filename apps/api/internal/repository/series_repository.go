@@ -603,7 +603,15 @@ func (r *SeriesRepository) GetStats(ctx context.Context) (*MediaStats, error) {
 // Do not hand-roll a SELECT column list anywhere in this file — see the movie-side
 // note on movieSelectColumns; the same drift shipped here.
 // TestEverySeriesReadPathReturnsEveryColumn guards this.
-const seriesSelectColumns = `
+//
+// The last column is not a stored one: seriesChineseSubtitleSQL, the series'
+// "has Chinese subtitles" verdict rolled up from its episodes
+// (disc-2026-10-subtitle-filter-series-phase-2). Every read path selects it
+// through this list, so they all agree.
+var seriesSelectColumns = seriesBaseColumns + ",\n\t" + seriesChineseSubtitleSQL("series") + " AS chinese_subtitle_rollup\n"
+
+// seriesBaseColumns are the stored columns, in scanSeries order.
+const seriesBaseColumns = `
 	id, title, original_title, first_air_date, last_air_date, genres, rating,
 	overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
 	status, original_language, imdb_id, tmdb_id, in_production,
@@ -627,11 +635,11 @@ func notRemovedSeriesQualified(alias string) string {
 // seriesSelectColumnsQualified returns seriesSelectColumns with every column qualified
 // by the given table alias, for queries that join series against series_fts.
 func seriesSelectColumnsQualified(alias string) string {
-	cols := strings.Split(seriesSelectColumns, ",")
+	cols := strings.Split(seriesBaseColumns, ",")
 	for i, c := range cols {
 		cols[i] = alias + "." + strings.TrimSpace(c)
 	}
-	return strings.Join(cols, ", ")
+	return strings.Join(cols, ", ") + ", " + seriesChineseSubtitleSQL(alias) + " AS chinese_subtitle_rollup"
 }
 
 // seriesListFilterConditions turns the library filter params (genres / year_min / year_max /
@@ -689,7 +697,11 @@ func seriesListFilterConditions(params ListParams, alias string) ([]string, []in
 	// chinese_subtitle groups (has / missing / unknown), matched through the
 	// SAME verdict function the badge uses (AC #3). ANDs with everything above.
 	if groups, ok := params.Filters["chinese_subtitle"].([]string); ok && len(groups) > 0 {
-		if cond, cargs := chineseSubtitleFilterCondition(groups, col); cond != "" {
+		table := alias
+		if table == "" {
+			table = "series"
+		}
+		if cond, cargs := seriesChineseSubtitleFilterCondition(groups, table); cond != "" {
 			conditions = append(conditions, cond)
 			args = append(args, cargs...)
 		}
@@ -704,6 +716,7 @@ func scanSeries(scanner interface {
 }) (models.Series, error) {
 	var s models.Series
 	var genresJSON string
+	var chineseRollup sql.NullString
 
 	err := scanner.Scan(
 		&s.ID,
@@ -750,6 +763,7 @@ func scanSeries(scanner interface {
 		&s.DoubanVoteCount,
 		&s.CreatedAt,
 		&s.UpdatedAt,
+		&chineseRollup,
 	)
 	if err != nil {
 		return s, err
@@ -762,7 +776,15 @@ func scanSeries(scanner interface {
 	// disc-2026-10-subtitle-filter-disagrees-with-badges AC #1/#3: the badge's
 	// "has Chinese subtitles" verdict. Computed HERE and nowhere else; the
 	// library filter runs the same function in SQL (vido_chinese_subtitle).
-	s.ChineseSubtitle = models.ChineseSubtitleVerdict(string(s.SubtitleStatus), s.SubtitleLanguage.String, s.SubtitleTracks.String)
+	//
+	// disc-2026-10-subtitle-filter-series-phase-2: for a series that verdict is
+	// rolled up from its episodes in SQL (seriesChineseSubtitleSQL, the last
+	// selected column) — the same expression the filter matches on. The Go
+	// fallback only covers a value the SQL could not give.
+	s.ChineseSubtitle = models.ChineseSubtitle(chineseRollup.String)
+	if !s.ChineseSubtitle.IsValid() {
+		s.ChineseSubtitle = models.ChineseSubtitleVerdict(string(s.SubtitleStatus), s.SubtitleLanguage.String, s.SubtitleTracks.String)
+	}
 
 	// Populate the wire-exposed Credits only when cast/crew is non-empty, so omitempty
 	// drops it for never-edited series (manual Metadata-Editor edits are the only writer).

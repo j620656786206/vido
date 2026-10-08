@@ -75,3 +75,77 @@ func chineseSubtitleFilterCondition(groups []string, col func(string) string) (s
 	return fmt.Sprintf("%s(%s, %s, %s) IN (%s)", chineseSubtitleSQLFunc,
 		col("subtitle_status"), col("subtitle_language"), col("subtitle_tracks"), placeholders), args
 }
+
+// worstChineseSubtitleSQLFunc is the SQL aggregate over models.WorstChineseSubtitle:
+// the episode verdict that most needs handling
+// (disc-2026-10-subtitle-filter-series-phase-2). NULL over zero rows. Same
+// caveat as vido_chinese_subtitle — queries only, never an index/view/trigger.
+const worstChineseSubtitleSQLFunc = "vido_worst_chinese_subtitle"
+
+func init() {
+	if err := sqlite.RegisterFunction(worstChineseSubtitleSQLFunc, &sqlite.FunctionImpl{
+		NArgs:         1,
+		Deterministic: true,
+		MakeAggregate: func(sqlite.FunctionContext) (sqlite.AggregateFunction, error) {
+			return &worstChineseSubtitleAgg{}, nil
+		},
+	}); err != nil {
+		panic(err)
+	}
+}
+
+type worstChineseSubtitleAgg struct {
+	verdicts []models.ChineseSubtitle
+}
+
+func (a *worstChineseSubtitleAgg) Step(_ *sqlite.FunctionContext, args []driver.Value) error {
+	if len(args) == 1 {
+		a.verdicts = append(a.verdicts, models.ChineseSubtitle(sqlText(args[0])))
+	}
+	return nil
+}
+
+func (a *worstChineseSubtitleAgg) WindowInverse(*sqlite.FunctionContext, []driver.Value) error {
+	return fmt.Errorf("%s cannot be used as a window function", worstChineseSubtitleSQLFunc)
+}
+
+func (a *worstChineseSubtitleAgg) WindowValue(*sqlite.FunctionContext) (driver.Value, error) {
+	if worst, ok := models.WorstChineseSubtitle(a.verdicts); ok {
+		return string(worst), nil
+	}
+	return nil, nil
+}
+
+func (a *worstChineseSubtitleAgg) Final(*sqlite.FunctionContext) {}
+
+// seriesChineseSubtitleSQL is the ONE expression for a series' "has Chinese
+// subtitles" verdict (disc-2026-10-subtitle-filter-series-phase-2 AC #1–#3):
+// the worst verdict among its episodes that have a file; a series with none of
+// those falls back to its own row. `table` is how the outer query names the
+// series table ("series", or the FTS join's "s") — it must be explicit, a bare
+// `id` inside the subquery would resolve to episodes.id.
+func seriesChineseSubtitleSQL(table string) string {
+	return fmt.Sprintf(`COALESCE(
+		(SELECT %[1]s(%[2]s(e.subtitle_status, e.subtitle_language, e.subtitle_tracks))
+		   FROM episodes e
+		  WHERE e.series_id = %[3]s.id AND e.file_path IS NOT NULL AND e.file_path != ''),
+		%[2]s(%[3]s.subtitle_status, %[3]s.subtitle_language, %[3]s.subtitle_tracks))`,
+		worstChineseSubtitleSQLFunc, chineseSubtitleSQLFunc, table)
+}
+
+// seriesChineseSubtitleFilterCondition is chineseSubtitleFilterCondition for
+// series: the same groups, matched against seriesChineseSubtitleSQL so the
+// filter and the field cannot disagree.
+func seriesChineseSubtitleFilterCondition(groups []string, table string) (string, []interface{}) {
+	var args []interface{}
+	for _, g := range groups {
+		for _, v := range models.ChineseSubtitleFilterVerdicts(g) {
+			args = append(args, string(v))
+		}
+	}
+	if len(args) == 0 {
+		return "", nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(args)), ", ")
+	return fmt.Sprintf("%s IN (%s)", seriesChineseSubtitleSQL(table), placeholders), args
+}

@@ -86,6 +86,27 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create imdb_id index: %v", err)
 	}
 
+	// disc-2026-10-subtitle-filter-series-phase-2: every series read rolls its
+	// "has Chinese subtitles" verdict up from episodes, so the table must exist.
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS episodes (
+			id TEXT PRIMARY KEY,
+			series_id TEXT NOT NULL,
+			season_number INTEGER NOT NULL DEFAULT 1,
+			episode_number INTEGER NOT NULL DEFAULT 1,
+			file_path TEXT,
+			subtitle_status TEXT DEFAULT 'not_searched',
+			subtitle_path TEXT,
+			subtitle_language TEXT,
+			subtitle_tracks TEXT,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create episodes table: %v", err)
+	}
+
 	return db
 }
 
