@@ -266,8 +266,8 @@ func TestSubtitleTranslatorPromptVersion_PinsPromptText(t *testing.T) {
 	sb.WriteString(BuildEpisodeSection("S01E03 · Pin Episode"))
 	digest := fmt.Sprintf("%x", sha256.Sum256([]byte(sb.String())))
 
-	assert.Equal(t, "m1-v4", SubtitleTranslatorPromptVersion)
-	assert.Equal(t, "896ab9fb9bbe010168254814a7c21b90448a539de4e107855ae645155490ff78", digest,
+	assert.Equal(t, "m1-v5", SubtitleTranslatorPromptVersion)
+	assert.Equal(t, "b579f1da258ba62d8e1db58c48dfcf0cbf599df138b47613e4b1e6967f208783", digest,
 		"prompt text changed — bump SubtitleTranslatorPromptVersion and update this digest in the SAME edit (P11)")
 }
 
@@ -287,4 +287,23 @@ func TestBuildEpisodeSection_RendersOneLineOutsideTheMetadataSection(t *testing.
 func TestBuildEpisodeSection_BlankLabelRendersNothing(t *testing.T) {
 	assert.Equal(t, "", BuildEpisodeSection(""))
 	assert.Equal(t, "", BuildEpisodeSection("  \n\t"))
+}
+
+// disc-2026-10-translation-gender-default: English "you" carries no gender, so
+// the prompt must default to 你 and reserve 妳 for lines that show the listener
+// is female (See S01E02: 8–12 men addressed as 妳). The See line is the WRONG
+// example, so a later prompt edit cannot quietly drop the case that started it.
+func TestSubtitleTranslatorSystemPrompt_SecondPersonDefaultsToNi(t *testing.T) {
+	p := SubtitleTranslatorSystemPrompt
+	assert.Contains(t, p, `Render it as 你 (plural 你們) by default`)
+	assert.Contains(t, p, `Use 妳 ONLY when the subtitles show the person spoken to is female`)
+	assert.Contains(t, p, `The evidence may come from any line of this batch or of the read-only context`)
+	assert.Contains(t, p, `Use 妳們 only when every person addressed is shown to be female`)
+	assert.Contains(t, p, `When unsure, use 你`)
+	assert.Contains(t, p, "[1] You, of all people, might know them.   → [1] 你大概是最可能認識他們的人。")
+	assert.Contains(t, p, "WRONG (nothing in the subtitles says the listener is a woman):\n[1] 妳大概是最可能認識他們的人。")
+	assert.Contains(t, p, "[2] You were right.        → [2] 妳說得對。")
+	// Rule 8 sits in the rules list, before the alignment section it must
+	// not be read as part of.
+	assert.Less(t, strings.Index(p, `8. "You" has no gender`), strings.Index(p, "## Per-cue alignment"))
 }

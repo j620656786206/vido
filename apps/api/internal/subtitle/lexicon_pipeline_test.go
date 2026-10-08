@@ -68,7 +68,7 @@ func TestProcessItem_LocalizationLevelSourceFeedsTheVersion(t *testing.T) {
 		WithLocalizationLevelSource(func(context.Context) prompts.LocalizationLevel { return prompts.LocalizationOTT }))
 	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
 	require.NoError(t, err)
-	assert.Equal(t, "m1-v4+zh-tw-lex-1+ott", h.runs.lastUpdate(t).PromptVersion,
+	assert.Equal(t, "m1-v5+zh-tw-lex-1+ott", h.runs.lastUpdate(t).PromptVersion,
 		"the level rides PromptVersion so an ott cache entry is never served to a literal viewer")
 }
 

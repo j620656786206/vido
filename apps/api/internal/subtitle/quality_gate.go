@@ -175,8 +175,8 @@ var anchorDigits = regexp.MustCompile(`\d{2,}`)
 //   - the rendering of every harvested term (the model's own ===TERMS===) the
 //     source mentions.
 //
-// Proper nouns are NOT anchored by their English spelling: the m1-v4 prompt
-// renders names in Chinese, so the English token is expected to vanish.
+// Proper nouns are NOT anchored by their English spelling: the translator prompt
+// (since m1-v4) renders names in Chinese, so the English token is expected to vanish.
 // Glossary and harvest give the rendering to look for instead.
 func AnchorsFor(source []SubtitleBlock, glossary []prompts.GlossaryEntry, harvested map[string]string) map[int][]string {
 	out := make(map[int][]string, len(source))
