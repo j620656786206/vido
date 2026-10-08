@@ -74,6 +74,21 @@ def cell(frame, box):
     return crop, thumb
 
 
+def build_cells(frames_dir, tracks):
+    """One cell per track; drop a crop that repeats one from the last two minutes."""
+    cells, recent = [], []
+    for t in tracks:
+        frame = Image.open(f"{frames_dir}/f{t['best'] // 2 + 1:05d}.jpg").convert("RGB")
+        crop, thumb = cell(frame, t["box"])
+        h = dhash(crop)
+        recent = [(s, x) for s, x in recent if t["best"] - s <= 120]
+        if any(bin(h ^ x).count("1") <= 6 for _, x in recent):
+            continue
+        recent.append((t["best"], h))
+        cells.append((t, crop, thumb))
+    return cells
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("frames"); ap.add_argument("tracks"); ap.add_argument("out")
@@ -83,17 +98,7 @@ def main():
     out = pathlib.Path(args.out); (out / "sheets").mkdir(parents=True, exist_ok=True)
     tracks = sorted(json.load(open(args.tracks))["track_list"], key=lambda t: t["best"])
 
-    # Build cells; drop a crop that repeats one from the last two minutes.
-    cells, recent = [], []
-    for t in tracks:
-        frame = Image.open(f"{args.frames}/f{t['best'] // 2 + 1:05d}.jpg").convert("RGB")
-        crop, thumb = cell(frame, t["box"])
-        h = dhash(crop)
-        recent = [(s, x) for s, x in recent if t["best"] - s <= 120]
-        if any(bin(h ^ x).count("1") <= 6 for _, x in recent):
-            continue
-        recent.append((t["best"], h))
-        cells.append((t, crop, thumb))
+    cells = build_cells(args.frames, tracks)
 
     cw, chh = CROP_W + 6 + THUMB_W, LABEL + max(CROP_H, THUMB_W * 9 // 16 + 4)
     per = COLS * ROWS
@@ -134,7 +139,7 @@ def main():
             for it in items:
                 if 1 <= it["cell"] <= len(group):
                     t = group[it["cell"] - 1][0]
-                    found.append({**it, "sec": t["best"], "start": t["start"], "end": t["end"], "sheet": p.name,
+                    found.append({**it, "sec": t["best"], "start": t["start"], "end": t["end"], "sheet": p.name, "box": t["box"],
                                   "translate": it["kind"] in STORY_KINDS and it["focus"]})
 
     with concurrent.futures.ThreadPoolExecutor(args.workers) as pool:
