@@ -28,6 +28,7 @@ Usage:
       [--grid 4 --tile-width 384 --dedupe 10]     # the second run's settings
       [--step 3 --zoom-width 1280 --zoom-previous]  # added in the third run
       [--zoom-next]                                  # added in the fourth run
+      [--focus]                                      # added in the sixth run
   The first run (2026-10-08) was the defaults: --grid 3 --tile-width 512, no dedupe.
   Needs: pip install anthropic pillow
 """
@@ -68,9 +69,10 @@ SCHEMA = {
                         "enum": ["caption", "book", "sign", "note", "screen", "credits", "logo", "other"],
                     },
                     "needs_translation": {"type": "boolean"},
+                    "focus": {"type": "boolean"},
                     "zh": {"type": "string"},
                 },
-                "required": ["tile", "text", "kind", "needs_translation", "zh"],
+                "required": ["tile", "text", "kind", "needs_translation", "focus", "zh"],
                 "additionalProperties": False,
             },
         },
@@ -78,8 +80,9 @@ SCHEMA = {
             "type": "array",
             "items": {
                 "type": "object",
-                "properties": {"tile": {"type": "integer"}, "what": {"type": "string"}},
-                "required": ["tile", "what"],
+                "properties": {"tile": {"type": "integer"}, "what": {"type": "string"},
+                               "focus": {"type": "boolean"}},
+                "required": ["tile", "what", "focus"],
                 "additionalProperties": False,
             },
         },
@@ -95,13 +98,22 @@ paper — as above: tile is always 1; give the exact English text, kind, \
 needs_translation, and a natural Taiwan Traditional Chinese rendering (a \
 published book gets its established Taiwan title; proper names are \
 transliterated the way Taiwan subtitles do). Leave small_text empty. If no \
-text is actually readable, return empty lists."""
+text is actually readable, return empty lists.
+
+focus says whether the SHOT is showing this text to the viewer: a close-up or \
+insert shot of it, the text in focus and near the centre or held on screen, \
+or a card laid over the picture ("3 YEARS LATER"). Background text — street \
+and parking signs, licence plates, posters on a wall, book spines on a \
+shelf, words on clothing, a van passing by — is focus false unless the \
+camera is pointing at it."""
 
 # What gets translated is decided by KIND, not by the model's sense of whether
 # a word "needs" it (spike round 3, Alexyu 2026-10-08): story text always
 # does — a location card that is only a name included — credits, studio logos
 # and watermarks never do.
 STORY_KINDS = {"caption", "book", "sign", "note", "screen", "other"}
+# ...and only when the shot is showing it (round 6, after Lioness: a realistic
+# show is full of background signs, plates and posters nobody needs read).
 
 PROMPT = """This image is a {cols}x{rows} grid of frames sampled from a TV episode, \
 read left to right, top to bottom. Tile times: {times}.
@@ -126,7 +138,14 @@ nothing, return an empty list.
 Separately, in small_text, list the tiles that show an object which clearly \
 carries text you cannot read at this size — a book cover held up, a page, a \
 sign, a screen — with a few words on what it is. Those frames will be looked \
-at again at full resolution."""
+at again at full resolution; give each one the same focus judgement.
+
+focus says whether the SHOT is showing this text to the viewer: a close-up or \
+insert shot of it, the text in focus and near the centre or held on screen, \
+or a card laid over the picture ("3 YEARS LATER"). Background text — street \
+and parking signs, licence plates, posters on a wall, book spines on a \
+shelf, words on clothing, a van passing by — is focus false unless the \
+camera is pointing at it."""
 
 
 def mmss(sec: float) -> str:
@@ -200,6 +219,8 @@ def main() -> int:
     ap.add_argument("--zoom-width", type=int, default=0, help="width of the zoomed frame; 0 = full resolution")
     ap.add_argument("--zoom-previous", action="store_true",
                     help="also zoom the sampled frame before each flagged one (dedupe may have dropped it)")
+    ap.add_argument("--focus", action="store_true",
+                    help="translate and zoom only text the shot is showing (focus), not background text")
     ap.add_argument("--zoom-next", action="store_true",
                     help="also zoom the sampled frame after each flagged one (text held up for 2-3 s)")
     args = ap.parse_args()
@@ -257,6 +278,8 @@ def main() -> int:
         with lock:
             raw[i] = got["items"]
             for st in got["small_text"]:
+                if args.focus and not st.get("focus", True):
+                    continue
                 zoom_requests.append((secs[max(1, min(len(secs), st["tile"])) - 1], st["what"]))
 
     def zoom(sec: int, what: str):
@@ -318,8 +341,11 @@ def main() -> int:
         "grids": len(grids), "zoomed_frames": len(todo),
         "input_tokens": spent["in"], "output_tokens": spent["out"], "usd": round(spent["usd"], 4),
         "zoom_width": args.zoom_width, "zoom_previous": args.zoom_previous, "zoom_next": args.zoom_next,
+        "focus_rule": args.focus,
         "findings": [{**{k: f[k] for k in ("time", "start", "end", "text", "kind", "needs_translation", "zh", "stage")},
-                      "translate": f["kind"] in STORY_KINDS} for f in findings],
+                      "focus": f.get("focus"),
+                      "translate": f["kind"] in STORY_KINDS and (not args.focus or bool(f.get("focus")))}
+                     for f in findings],
     }
     (out / "findings.json").write_text(json.dumps(result, ensure_ascii=False, indent=1))
     print(json.dumps({k: v for k, v in result.items() if k != "findings"}, ensure_ascii=False))
