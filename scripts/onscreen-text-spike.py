@@ -27,6 +27,7 @@ Usage:
       [--model claude-opus-5-5] [--effort low] [--step 2] [--budget 3.0]
       [--grid 4 --tile-width 384 --dedupe 10]     # the second run's settings
       [--step 3 --zoom-width 1280 --zoom-previous]  # added in the third run
+      [--zoom-next]                                  # added in the fourth run
   The first run (2026-10-08) was the defaults: --grid 3 --tile-width 512, no dedupe.
   Needs: pip install anthropic pillow
 """
@@ -199,6 +200,8 @@ def main() -> int:
     ap.add_argument("--zoom-width", type=int, default=0, help="width of the zoomed frame; 0 = full resolution")
     ap.add_argument("--zoom-previous", action="store_true",
                     help="also zoom the sampled frame before each flagged one (dedupe may have dropped it)")
+    ap.add_argument("--zoom-next", action="store_true",
+                    help="also zoom the sampled frame after each flagged one (text held up for 2-3 s)")
     args = ap.parse_args()
     cols = args.grid
     tiles_per = cols * cols
@@ -284,10 +287,11 @@ def main() -> int:
     # 55:08 because 55:06 had been zoomed, and the second book in the scene
     # (1984) only shows up readable in the later frame.
     wanted = dict(zoom_requests)
-    if args.zoom_previous:
-        for sec, what in zoom_requests:
-            if sec - args.step >= 0:
-                wanted.setdefault(sec - args.step, what)
+    for sec, what in zoom_requests:
+        if args.zoom_previous and sec - args.step >= 0:
+            wanted.setdefault(sec - args.step, what)
+        if args.zoom_next and sec + args.step < len(frames) * args.step:
+            wanted.setdefault(sec + args.step, what)
     todo = sorted(wanted.items())
     print(f"zooming into {len(todo)} frames", file=sys.stderr)
     with concurrent.futures.ThreadPoolExecutor(args.workers) as pool:
@@ -313,7 +317,7 @@ def main() -> int:
         "frames": len(frames), "frames_kept": len(kept),
         "grids": len(grids), "zoomed_frames": len(todo),
         "input_tokens": spent["in"], "output_tokens": spent["out"], "usd": round(spent["usd"], 4),
-        "zoom_width": args.zoom_width, "zoom_previous": args.zoom_previous,
+        "zoom_width": args.zoom_width, "zoom_previous": args.zoom_previous, "zoom_next": args.zoom_next,
         "findings": [{**{k: f[k] for k in ("time", "start", "end", "text", "kind", "needs_translation", "zh", "stage")},
                       "translate": f["kind"] in STORY_KINDS} for f in findings],
     }
