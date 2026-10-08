@@ -1108,6 +1108,24 @@ func main() {
 	} else {
 		slog.Warn("episode subtitle-track sweep disabled: episode repository lacks UpdateSubtitleTracks")
 	}
+	// disc-2026-10-movie-subtitle-tracks-unknown-refresh: movies whose
+	// subtitle tracks were never read (old scans, or NFO tech info that made
+	// enrichment skip the probe) get probed once — at boot and after every
+	// scan, since the NFO path still leaves new ones unknown.
+	stopMovieTracks := func() {}
+	if movieTracksRepo, ok := repos.Movies.(services.MovieSubtitleTracksBackfillRepo); ok {
+		movieTracksCtx, movieTracksCancel := context.WithCancel(context.Background())
+		defer movieTracksCancel()
+		movieTracks := services.NewMovieSubtitleTracksBackfillService(movieTracksRepo, ffprobeService, slog.Default())
+		scannerService.AppendOnScanComplete(func() { movieTracks.Trigger(movieTracksCtx) })
+		movieTracks.RunAfter(movieTracksCtx, 75*time.Second)
+		stopMovieTracks = func() {
+			movieTracksCancel()
+			movieTracks.Wait()
+		}
+	} else {
+		slog.Warn("movie subtitle-track backfill disabled: movie repository lacks FindMissingSubtitleTracks")
+	}
 	glossaryMineHandler := handlers.NewGlossaryMineHandler(officialMiner)
 	localizationHandler := handlers.NewLocalizationHandler(localizationSettings)                 // sub-7-4 GET/PUT /subtitles/localization
 	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr", "sonarr") // Story 13-4a + 13-4b
@@ -1613,10 +1631,11 @@ func main() {
 	usageReportCancel()
 	usageReportScheduler.Stop()
 
-	// Stop the episode subtitle-track sweep — waits for an in-flight probe to
-	// return, before db.Close() below (Rule 14).
-	slog.Info("Stopping episode subtitle-track sweep...")
+	// Stop the episode subtitle-track sweep and the movie backfill — each
+	// waits for an in-flight probe to return, before db.Close() below (Rule 14).
+	slog.Info("Stopping episode subtitle-track sweep and movie subtitle-track backfill...")
 	stopEpisodeTracks()
+	stopMovieTracks()
 	stopSeasonDetails()
 
 	// Stop retry scheduler

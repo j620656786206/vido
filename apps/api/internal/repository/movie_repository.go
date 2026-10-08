@@ -236,7 +236,9 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 			video_resolution = ?,
 			audio_codec = ?,
 			audio_channels = ?,
-			subtitle_tracks = ?,
+			-- NULL ("unknown") never replaces a stored answer — see
+			-- UpdateEnrichedMetadata.
+			subtitle_tracks = COALESCE(?, subtitle_tracks),
 			hdr_format = ?,
 			production_countries = ?,
 			credits = ?,

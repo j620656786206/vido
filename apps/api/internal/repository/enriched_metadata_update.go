@@ -86,7 +86,11 @@ func (r *MovieRepository) UpdateEnrichedMetadata(ctx context.Context, movie *mod
 			video_resolution = ?,
 			audio_codec = ?,
 			audio_channels = ?,
-			subtitle_tracks = ?,
+			-- NULL is "unknown" and never replaces a stored answer: enrichment
+			-- that skipped the probe (NFO tech info) still holds the NULL it
+			-- loaded, and must not erase what the subtitle-track backfill
+			-- wrote meanwhile (disc-2026-10-movie-subtitle-tracks-unknown-refresh).
+			subtitle_tracks = COALESCE(?, subtitle_tracks),
 			hdr_format = ?,
 			updated_at = ?
 		WHERE id = ?
@@ -263,4 +267,64 @@ func (r *SeriesRepository) FindMissingCredits(ctx context.Context, limit int) ([
 		return nil, fmt.Errorf("error iterating series missing credits: %w", err)
 	}
 	return list, nil
+}
+
+// FindMissingSubtitleTracks lists movies with a file whose subtitle_tracks is
+// still NULL — "we don't know whether it has Chinese subtitles"
+// (disc-2026-10-movie-subtitle-tracks-unknown-refresh). Scans before
+// disc-2026-10-subtitle-filter-disagrees-with-badges left an empty probe as
+// NULL, and enrichment still skips the probe when NFO already supplied the
+// tech info, so nothing else ever re-reads these rows. `[]` (probed, no
+// subtitles) is a known answer and is NOT listed.
+//
+// Paged by id (afterID "" = from the start): rows that stay NULL — a file on
+// an unmounted share, a probe that fails — are listed every pass, and a
+// fixed first page would let them shut the rest out for good.
+func (r *MovieRepository) FindMissingSubtitleTracks(ctx context.Context, afterID string, limit int) ([]models.Movie, error) {
+	query := fmt.Sprintf(`SELECT %s FROM movies
+		WHERE file_path IS NOT NULL AND file_path != ''
+		  AND subtitle_tracks IS NULL
+		  AND is_removed = 0
+		  AND id > ?
+		ORDER BY id ASC LIMIT ?`, movieSelectColumns)
+	rows, err := r.db.QueryContext(ctx, query, afterID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query movies missing subtitle tracks: %w", err)
+	}
+	defer rows.Close()
+	var movies []models.Movie
+	for rows.Next() {
+		movie, err := scanMovie(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		movies = append(movies, movie)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies missing subtitle tracks: %w", err)
+	}
+	return movies, nil
+}
+
+// UpdateSubtitleTracksIfMissing writes subtitle_tracks ONLY while the row
+// still has none, so a scan that stored a value while the backfill was
+// probing is never overwritten. written=false means another writer got there
+// first (or the row is gone) — not an error. updated_at is left alone: this
+// is a derived field filled in the background, not an edit of the movie.
+func (r *MovieRepository) UpdateSubtitleTracksIfMissing(ctx context.Context, id, tracksJSON string) (written bool, err error) {
+	if id == "" {
+		return false, fmt.Errorf("movie id cannot be empty")
+	}
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE movies SET subtitle_tracks = ? WHERE id = ? AND subtitle_tracks IS NULL`,
+		tracksJSON, id,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to update movie subtitle tracks: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to read rows affected: %w", err)
+	}
+	return n == 1, nil
 }
