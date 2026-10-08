@@ -63,6 +63,8 @@ Claude Opus 5.5（dev）；對抗式 CR 換模型（Sonnet 5.5）。
   - L6／L7 記錄不修。
   - 閘門：`go vet`、`go test ./...` 全綠、`staticcheck` 乾淨、`lint:all` 0 errors。
 
+- 2026-10-08 /ship：PR #722。
+
 ### File List
 
 - apps/api/internal/subtitle/mine/mine.go ＋ mine_test.go
