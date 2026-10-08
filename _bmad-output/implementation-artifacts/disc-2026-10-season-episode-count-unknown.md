@@ -59,6 +59,8 @@ Claude Opus 5.5（dev）；對抗式 CR 換模型（Sonnet 5.5）。
 - 2026-10-08 對抗式 CR（Sonnet 5.5）：0H／2M／4L。修 M1（缺資料的影集改成「休息 12 小時」再問，不是整個 process 都不問——還沒播的季會播、TMDb 暫時壞掉會好）、M2（一輪上限 5000，休息中的影集不會擠掉其他影集）、L3（影集層級的集數只補空的，不蓋掉打開季清單時寫的精確數字）、補 Trigger 合併測試。L4（寬的 Update）、L5（關機只取消不等待）記錄不修。
   - 閘門：`go vet`、`go test ./...` 全綠、本單測試 `-race` ×2、`staticcheck` 乾淨、`lint:all` 0 errors。
 
+- 2026-10-08 /ship：PR #723。
+
 ### Discovery Triage
 
 - **③（不修）** `MediaIngestService.UpsertSeason` 讀的 `series.seasons` JSON 欄是死欄位（沒有 SELECT／寫入），那段永遠拿不到資料；可清掉。留在 Dev Notes，不另立。
