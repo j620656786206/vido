@@ -281,3 +281,40 @@ func (r *SeasonRepository) Upsert(ctx context.Context, season *models.Season) er
 	season.CreatedAt = existing.CreatedAt
 	return r.Update(ctx, season)
 }
+
+// SeasonDetailsGap is a series whose seasons still lack TMDb detail.
+type SeasonDetailsGap struct {
+	SeriesID string
+	TMDbID   int64
+}
+
+// FindSeriesNeedingSeasonDetails lists matched, not-removed series that have
+// at least one season with no episode count or no TMDb id — the background
+// season-detail backfill's worklist (disc-2026-10-season-episode-count-unknown).
+// The scanner creates seasons bare, before the series is matched, and nothing
+// filled them afterwards: on the NAS all 134 seasons were empty.
+func (r *SeasonRepository) FindSeriesNeedingSeasonDetails(ctx context.Context, limit int) ([]SeasonDetailsGap, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT DISTINCT s.id, s.tmdb_id
+		  FROM series s
+		  JOIN seasons se ON se.series_id = s.id
+		 WHERE s.tmdb_id > 0
+		   AND (s.is_removed = 0 OR s.is_removed IS NULL)
+		   AND (se.episode_count IS NULL OR se.tmdb_id IS NULL)
+		 ORDER BY s.id
+		 LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list series needing season details: %w", err)
+	}
+	defer rows.Close()
+
+	var out []SeasonDetailsGap
+	for rows.Next() {
+		var g SeasonDetailsGap
+		if err := rows.Scan(&g.SeriesID, &g.TMDbID); err != nil {
+			return nil, fmt.Errorf("failed to scan season gap: %w", err)
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
+}

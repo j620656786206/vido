@@ -1075,6 +1075,21 @@ func main() {
 	// subtitle tracks once (ffprobe) and store them with its sidecars, so the
 	// season list and the library filter need no probe. After every scan, and
 	// once after boot for the episodes scanned before this existed.
+	// disc-2026-10-season-episode-count-unknown: seasons are created bare at
+	// scan time; fill their TMDb detail (episode count, name, poster) after
+	// boot and after every scan.
+	stopSeasonDetails := func() {}
+	if seasonDetailsRepo, ok := repos.Seasons.(services.SeasonDetailsRepo); ok {
+		seasonDetailsCtx, seasonDetailsCancel := context.WithCancel(context.Background())
+		defer seasonDetailsCancel()
+		stopSeasonDetails = seasonDetailsCancel
+		seasonDetails := services.NewSeasonDetailsBackfillService(seasonDetailsRepo, tmdbService, slog.Default())
+		scannerService.AppendOnScanComplete(func() { seasonDetails.Trigger(seasonDetailsCtx) })
+		seasonDetails.RunAfter(seasonDetailsCtx, 90*time.Second)
+	} else {
+		slog.Warn("season details backfill disabled: season repository lacks FindSeriesNeedingSeasonDetails")
+	}
+
 	// Hoisted so the graceful-shutdown block stops it before db.Close().
 	stopEpisodeTracks := func() {}
 	if tracksRepo, ok := repos.Episodes.(services.EpisodeSubtitleTracksRepo); ok {
@@ -1602,6 +1617,7 @@ func main() {
 	// return, before db.Close() below (Rule 14).
 	slog.Info("Stopping episode subtitle-track sweep...")
 	stopEpisodeTracks()
+	stopSeasonDetails()
 
 	// Stop retry scheduler
 	slog.Info("Stopping retry scheduler...")
