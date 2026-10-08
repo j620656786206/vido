@@ -228,6 +228,20 @@ const (
 	// stops being the likelier story. Tuned blind from one episode — the
 	// 10-minute ASR clip verifies it.
 	hallucinationRepeatRun = 5
+	// hallucinationSpacedRepeatRun / hallucinationSpacedRepeatGapSeconds: the
+	// OTHER loop shape (disc-2026-10-asr-repeat-run-bridging). Over score,
+	// whisper emits one identical line per 30-second window — the 10-minute
+	// See clip (sent whole, before chunk-at-silence) kept four of them because
+	// four is under hallucinationRepeatRun. Chunked runs filter each ~120 s
+	// chunk on its own, so a loop is caught only where 3+ windows land in one
+	// chunk; a loop split across a cut can still leave a stray line.
+	// Real repeated shouting is seconds apart ("Face me!" ×2, 「轉過來看我」×3
+	// inside 16 s), so identical lines that keep coming 20 s+ apart are the
+	// decoder, not the actor. Three, not two: a short answer ("Yes.") said
+	// twice half a minute apart is ordinary dialogue, and letting one stray
+	// fake line through costs less than eating a real one.
+	hallucinationSpacedRepeatRun        = 3
+	hallucinationSpacedRepeatGapSeconds = 20.0
 	// hallucinationDropRatioWarn is the share of dropped segments above which
 	// the caller should shout: the POC's real-vs-generated gap was ~5%
 	// (1029 official cues vs 1082 generated), so a fifth of the file
@@ -240,7 +254,10 @@ const (
 	dropReasonSilence    = "silence"
 	dropReasonRepetition = "repetition"
 	dropReasonRepeatRun  = "repeat_run"
-	dropReasonTail       = "tail"
+	// dropReasonRepeatSpaced: the same line, again and again, 20 s+ apart —
+	// see hallucinationSpacedRepeatRun.
+	dropReasonRepeatSpaced = "repeat_spaced"
+	dropReasonTail         = "tail"
 	// dropReasonMusicOnly: the segment's text is only music marks (♪♪) —
 	// whisper's way of saying "score, no words". Not a hallucination in the
 	// strict sense, but not a subtitle either: it would be paid for in
@@ -262,25 +279,25 @@ const (
 // could genuinely say; two or more names in a row are not dialogue.
 const promptEchoMinRunes = 12
 
-// filterPromptEcho removes segments whose text is a substring of the prompt
-// the request carried (case- and punctuation-insensitive), at least
-// promptEchoMinRunes long. PURE like filterHallucinations; a run without a
-// prompt returns its input untouched.
-func filterPromptEcho(segs []whisperSegment, prompt string) (kept []whisperSegment, dropped []droppedSegment) {
+// promptEchoMatcher returns the test for a segment being a slice of the prompt
+// the request carried (case- and punctuation-insensitive, at least
+// promptEchoMinRunes long, or a list of prompt names). A run without a prompt
+// gets nil: nothing is an echo.
+//
+// It MARKS rather than removes (disc-2026-10-asr-repeat-run-bridging): the
+// caller feeds it into filterHallucinationsWith alongside the other rules, so
+// an echo sitting between two groups of the same shouted line keeps them apart
+// instead of splicing them into one run long enough to look like a loop.
+func promptEchoMatcher(prompt string) func(text string) bool {
 	norm := normalizeForEcho(prompt)
 	if norm == "" {
-		return segs, nil
+		return nil
 	}
 	names := promptNameSet(prompt)
-	for _, seg := range segs {
-		text := normalizeForEcho(seg.Text)
-		if (len([]rune(text)) >= promptEchoMinRunes && strings.Contains(norm, text)) || isNameList(seg.Text, names) {
-			dropped = append(dropped, droppedSegment{Segment: seg, Reason: dropReasonPromptEcho})
-			continue
-		}
-		kept = append(kept, seg)
+	return func(raw string) bool {
+		text := normalizeForEcho(raw)
+		return (len([]rune(text)) >= promptEchoMinRunes && strings.Contains(norm, text)) || isNameList(raw, names)
 	}
-	return kept, dropped
 }
 
 // promptNameSet is the prompt's comma-separated names, normalized.
@@ -381,7 +398,7 @@ type droppedSegment struct {
 // empty result belongs at the whole-FILE level, where "everything vanished"
 // really is a bug (see TranscriptionDetail / transcribeAudio).
 func filterHallucinations(segs []whisperSegment) (kept []whisperSegment, dropped []droppedSegment) {
-	return filterHallucinationsWith(segs, true)
+	return filterHallucinationsWith(segs, true, "")
 }
 
 // filterHallucinationsWith is filterHallucinations with the R3 tail rule
@@ -390,16 +407,22 @@ func filterHallucinations(segs []whisperSegment) (kept []whisperSegment, dropped
 // (disc-2026-10-asr-chunk-at-silence, CR 1 — on a 120 s grid every cut sits
 // in a pause, so every chunk's last lines are "quiet speech before a pause",
 // exactly what the looser tail bar would eat).
-func filterHallucinationsWith(segs []whisperSegment, applyTail bool) (kept []whisperSegment, dropped []droppedSegment) {
+//
+// prompt is the name prompt the request carried ("" when none): segments that
+// echo it are marked prompt_echo here, in place, like every other rule.
+func filterHallucinationsWith(segs []whisperSegment, applyTail bool, prompt string) (kept []whisperSegment, dropped []droppedSegment) {
 	if len(segs) == 0 {
 		return nil, nil
 	}
 
 	reasons := make([]string, len(segs))
+	isEcho := promptEchoMatcher(prompt)
 
-	// R0 music-only, R1 silence, R2 per-segment repetition.
+	// R0 prompt echo / music-only, R1 silence, R2 per-segment repetition.
 	for i, seg := range segs {
 		switch {
+		case isEcho != nil && isEcho(seg.Text):
+			reasons[i] = dropReasonPromptEcho
 		case IsMusicOnlyText(seg.Text):
 			reasons[i] = dropReasonMusicOnly
 		case seg.NoSpeechProb > hallucinationNoSpeechThreshold && seg.AvgLogprob < hallucinationLogprobThreshold:
@@ -409,20 +432,29 @@ func filterHallucinationsWith(segs []whisperSegment, applyTail bool) (kept []whi
 		}
 	}
 
-	// R2b repeat runs: N+ consecutive segments with identical text keep the
-	// FIRST one (a real repeated line is said once and echoed; a decoder loop
-	// emits it forever).
+	// R2b repeat runs: a stretch of segments with identical text keeps the
+	// FIRST one when it is a loop (a real repeated line is said once and
+	// echoed; a decoder loop emits it forever). Only segments no other rule
+	// has already claimed count (disc-2026-10-asr-repeat-run-bridging): four
+	// real shouts plus one same-text window judged silence are four shouts,
+	// not a five-long loop. A claimed segment with the SAME text stays inside
+	// the stretch without adding to it; one with different text (a prompt
+	// echo between two groups of shouts) ends it, like any other line.
+	//
+	// Two shapes are a loop:
+	//   - hallucinationRepeatRun+ in a row, however close (a stuck decoder);
+	//   - hallucinationSpacedRepeatRun+ in a row with every gap between
+	//     starts at least hallucinationSpacedRepeatGapSeconds (whisper emitting
+	//     one line per 30-second window over score — nobody shouts the same
+	//     words at half-minute intervals).
 	for i := 0; i < len(segs); {
+		key := normalizedSegmentText(segs[i])
 		j := i + 1
-		for j < len(segs) && normalizedSegmentText(segs[j]) == normalizedSegmentText(segs[i]) {
+		for j < len(segs) && normalizedSegmentText(segs[j]) == key {
 			j++
 		}
-		if runLen := j - i; runLen >= hallucinationRepeatRun && normalizedSegmentText(segs[i]) != "" {
-			for k := i + 1; k < j; k++ {
-				if reasons[k] == "" {
-					reasons[k] = dropReasonRepeatRun
-				}
-			}
+		if key != "" {
+			markRepeatRun(segs[i:j], reasons[i:j])
 		}
 		i = j
 	}
@@ -433,11 +465,24 @@ func filterHallucinationsWith(segs []whisperSegment, applyTail bool) (kept []whi
 	// run, which let one compression-ratio drop pull two otherwise-innocent
 	// quiet lines out with it. The looser bar is only defensible where every
 	// member earns it.
-	tailStart := len(segs)
-	for applyTail && tailStart > 0 && segs[tailStart-1].NoSpeechProb > hallucinationTailNoSpeechThreshold {
+	//
+	// A prompt echo is transparent here: it used to be removed before this
+	// filter ran (disc-2026-10-asr-repeat-run-bridging moved it in place), so
+	// it neither ends the run nor counts toward hallucinationTailMinRun.
+	tailStart, tailRun := len(segs), 0
+	for applyTail && tailStart > 0 {
+		prev := tailStart - 1
+		if reasons[prev] == dropReasonPromptEcho {
+			tailStart--
+			continue
+		}
+		if segs[prev].NoSpeechProb <= hallucinationTailNoSpeechThreshold {
+			break
+		}
 		tailStart--
+		tailRun++
 	}
-	if applyTail && len(segs)-tailStart >= hallucinationTailMinRun {
+	if applyTail && tailRun >= hallucinationTailMinRun {
 		for i := tailStart; i < len(segs); i++ {
 			if reasons[i] == "" {
 				reasons[i] = dropReasonTail
@@ -453,6 +498,42 @@ func filterHallucinationsWith(segs []whisperSegment, applyTail bool) (kept []whi
 		dropped = append(dropped, droppedSegment{Segment: seg, Reason: reasons[i]})
 	}
 	return kept, dropped
+}
+
+// markRepeatRun applies R2b to one stretch of identical-text segments.
+func markRepeatRun(run []whisperSegment, reasons []string) {
+	var live []int
+	for k := range run {
+		if reasons[k] == "" {
+			live = append(live, k)
+		}
+	}
+	if len(live) < 2 {
+		return
+	}
+	reason := ""
+	switch {
+	case len(live) >= hallucinationRepeatRun:
+		reason = dropReasonRepeatRun
+	case len(live) >= hallucinationSpacedRepeatRun && evenlySpacedApart(run, live):
+		reason = dropReasonRepeatSpaced
+	default:
+		return
+	}
+	for _, k := range live[1:] {
+		reasons[k] = reason
+	}
+}
+
+// evenlySpacedApart is true when every consecutive pair in idx starts at least
+// hallucinationSpacedRepeatGapSeconds after the one before it.
+func evenlySpacedApart(run []whisperSegment, idx []int) bool {
+	for n := 1; n < len(idx); n++ {
+		if run[idx[n]].Start-run[idx[n-1]].Start < hallucinationSpacedRepeatGapSeconds {
+			return false
+		}
+	}
+	return true
 }
 
 // normalizedSegmentText is the comparison key for repeat-run detection.

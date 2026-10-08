@@ -361,11 +361,9 @@ func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, fil
 			"file", filename, "segments", len(vt.Segments), "tightened", n, "words", len(vt.Words))
 	}
 
-	// CR M2: a prompted decoder may "hear" the prompt over silence — strip
-	// those slices before the score-based rules, which are blind to them.
-	echoKept, echoDropped := filterPromptEcho(vt.Segments, ASRPromptFromContext(ctx))
-	kept, dropped := filterHallucinationsWith(echoKept, !IsMidFileChunk(ctx))
-	dropped = append(echoDropped, dropped...)
+	// CR M2: a prompted decoder may "hear" the prompt over silence — the
+	// filter marks those slices too; the score-based rules are blind to them.
+	kept, dropped := filterHallucinationsWith(vt.Segments, !IsMidFileChunk(ctx), ASRPromptFromContext(ctx))
 	detail := TranscriptionDetail{
 		SRT:          segmentsToSRT(kept),
 		Unfiltered:   segmentsToSRT(vt.Segments),

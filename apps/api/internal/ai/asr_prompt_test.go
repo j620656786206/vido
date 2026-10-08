@@ -47,14 +47,14 @@ func TestFilterPromptEcho(t *testing.T) {
 		{Start: 5, End: 8, Text: "Speak to Paris."},            // dialogue that mentions a name — kept
 		{Start: 8, End: 9, Text: "Maghra, no!"},                // kept: not a prompt slice
 	}
-	kept, dropped := filterPromptEcho(segs, prompt)
+	kept, dropped := filterHallucinationsWith(segs, true, prompt)
 	assert.Len(t, dropped, 2)
 	for _, d := range dropped {
 		assert.Equal(t, dropReasonPromptEcho, d.Reason)
 	}
 	assert.Equal(t, []string{"Paris?", "Speak to Paris.", "Maghra, no!"}, []string{kept[0].Text, kept[1].Text, kept[2].Text})
 
-	same, none := filterPromptEcho(segs, "")
+	same, none := filterHallucinationsWith(segs, true, "")
 	assert.Nil(t, none)
 	assert.Equal(t, segs, same, "no prompt → untouched")
 }
@@ -74,7 +74,7 @@ func TestFilterPromptEcho_NameListOutOfOrder(t *testing.T) {
 		{Start: 7, End: 8, Text: "Jerlamarel's children, Kofun, Haniwa."},                             // dialogue
 		{Start: 8, End: 9, Text: "Maghra."},                                                           // one name — a line
 	}
-	kept, dropped := filterPromptEcho(segs, prompt)
+	kept, dropped := filterHallucinationsWith(segs, true, prompt)
 	assert.Len(t, dropped, 4)
 	var texts []string
 	for _, k := range kept {
