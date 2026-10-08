@@ -107,8 +107,8 @@ type MovieRepositoryInterface interface {
 	// Needed by: Story 9R-16 (generation-batch preview)
 	CountMissingZhHantSubtitle(ctx context.Context) (int, error)
 
-	// CountZhHantSubtitle counts movies that HAVE a zh-Hant subtitle on record —
-	// the inverse of missingZhHantSubtitleWhere over on-disk, not-removed movies
+	// CountZhHantSubtitle counts on-disk, not-removed movies whose Chinese-
+	// subtitle verdict (the badge/filter rule) is Traditional, from any source
 	// Needed by: Story ux3-1-6 (home-summary coverage cell)
 	CountZhHantSubtitle(ctx context.Context) (int, error)
 
@@ -220,8 +220,8 @@ type SeriesRepositoryInterface interface {
 	GetStats(ctx context.Context) (*MediaStats, error)
 
 	// CountZhHantCovered counts not-removed series that have ≥1 on-disk episode
-	// AND no on-disk episode missing a zh-Hant subtitle (a zero-episode series
-	// is NOT covered — no vacuous truth)
+	// AND whose rolled-up Chinese-subtitle verdict is Traditional (a
+	// zero-episode series is NOT covered — no vacuous truth)
 	// Needed by: Story ux3-1-6 (home-summary coverage cell)
 	CountZhHantCovered(ctx context.Context) (int, error)
 
