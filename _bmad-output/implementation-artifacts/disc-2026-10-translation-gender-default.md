@@ -1,6 +1,6 @@
 # Disc：英文的 you 看不出男女時，翻譯一律用「你」，確定是女性才用「妳」
 
-Status: review
+Status: done
 
 **Source:** `eval-see-s01e02-asr-vs-official.md` 討論會清單第 7 項（2026-10-06 See S01E02 party mode）；⚖️ 規則已定：「不確定是男是女就用『你』，只有確定是女性才用『妳』」。⚖️ 2026-10-08 Alexyu 選 A 開工。
 
