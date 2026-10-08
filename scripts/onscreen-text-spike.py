@@ -26,6 +26,7 @@ Usage:
   .venv/bin/python scripts/onscreen-text-spike.py VIDEO.mkv OUTDIR \\
       [--model claude-opus-5-5] [--effort low] [--step 2] [--budget 3.0]
       [--grid 4 --tile-width 384 --dedupe 10]     # the second run's settings
+      [--step 3 --zoom-width 1280 --zoom-previous]  # added in the third run
   The first run (2026-10-08) was the defaults: --grid 3 --tile-width 512, no dedupe.
   Needs: pip install anthropic pillow
 """
@@ -86,12 +87,20 @@ SCHEMA = {
     "additionalProperties": False,
 }
 
-ZOOM_PROMPT = """This is one full-resolution frame from a TV episode at {time}. \
-A smaller view suggested it shows {what}. List the on-screen text a viewer \
-would need translated, exactly as above: tile is always 1; give the exact \
-English text, kind, needs_translation, and a natural Taiwan Traditional \
-Chinese rendering (a published book gets its established Taiwan title). \
-Leave small_text empty. If no text is actually readable, return empty lists."""
+ZOOM_PROMPT = """This is one larger frame from a TV episode at {time}. \
+A smaller view suggested it shows {what}. List EVERY piece of readable \
+on-screen text in the frame — there may be more than one book, sign or \
+paper — as above: tile is always 1; give the exact English text, kind, \
+needs_translation, and a natural Taiwan Traditional Chinese rendering (a \
+published book gets its established Taiwan title; proper names are \
+transliterated the way Taiwan subtitles do). Leave small_text empty. If no \
+text is actually readable, return empty lists."""
+
+# What gets translated is decided by KIND, not by the model's sense of whether
+# a word "needs" it (spike round 3, Alexyu 2026-10-08): story text always
+# does — a location card that is only a name included — credits, studio logos
+# and watermarks never do.
+STORY_KINDS = {"caption", "book", "sign", "note", "screen", "other"}
 
 PROMPT = """This image is a {cols}x{rows} grid of frames sampled from a TV episode, \
 read left to right, top to bottom. Tile times: {times}.
@@ -103,7 +112,10 @@ handwritten notes or letters, screens.
 
 For each one give the tile number (1-{tiles}), the exact English text, its \
 kind, needs_translation, and a natural Taiwan Traditional Chinese rendering \
-(for a published book use its established Taiwan title).
+(for a published book use its established Taiwan title). Proper names on \
+screen — people, places, organisations, as on a location card or a shop \
+sign — still need translating: transliterate them the way Taiwan subtitles \
+do.
 
 Also list opening/closing credits, studio logos and watermarks if you see \
 them, with needs_translation false. Do not list dialogue subtitles, text you \
@@ -184,6 +196,9 @@ def main() -> int:
     ap.add_argument("--dedupe", type=int, default=0,
                     help="perceptual-hash distance (bits of 64) below which a frame counts as a repeat; 0 = keep all")
     ap.add_argument("--safety-every", type=int, default=10, help="with --dedupe, still keep every Nth frame")
+    ap.add_argument("--zoom-width", type=int, default=0, help="width of the zoomed frame; 0 = full resolution")
+    ap.add_argument("--zoom-previous", action="store_true",
+                    help="also zoom the sampled frame before each flagged one (dedupe may have dropped it)")
     args = ap.parse_args()
     cols = args.grid
     tiles_per = cols * cols
@@ -245,9 +260,10 @@ def main() -> int:
         with lock:
             if spent["usd"] >= args.budget:
                 return
+        scale = ["-vf", f"scale={args.zoom_width}:-2"] if args.zoom_width else []
         frame = subprocess.run(
             ["ffmpeg", "-nostdin", "-v", "error", "-ss", str(sec), "-i", args.video,
-             "-frames:v", "1", "-f", "image2", "-c:v", "mjpeg", "-q:v", "3", "-"],
+             "-frames:v", "1", *scale, "-f", "image2", "-c:v", "mjpeg", "-q:v", "3", "-"],
             check=True, capture_output=True).stdout
         got = ask(frame, ZOOM_PROMPT.format(time=mmss(sec), what=what))
         for it in got["items"]:
@@ -267,7 +283,12 @@ def main() -> int:
     # One look per sampled frame. Not "one per shot": the first run skipped
     # 55:08 because 55:06 had been zoomed, and the second book in the scene
     # (1984) only shows up readable in the later frame.
-    todo = sorted({sec: what for sec, what in zoom_requests}.items())
+    wanted = dict(zoom_requests)
+    if args.zoom_previous:
+        for sec, what in zoom_requests:
+            if sec - args.step >= 0:
+                wanted.setdefault(sec - args.step, what)
+    todo = sorted(wanted.items())
     print(f"zooming into {len(todo)} frames", file=sys.stderr)
     with concurrent.futures.ThreadPoolExecutor(args.workers) as pool:
         for f in [pool.submit(zoom, sec, what) for sec, what in todo]:
@@ -292,7 +313,9 @@ def main() -> int:
         "frames": len(frames), "frames_kept": len(kept),
         "grids": len(grids), "zoomed_frames": len(todo),
         "input_tokens": spent["in"], "output_tokens": spent["out"], "usd": round(spent["usd"], 4),
-        "findings": [{k: f[k] for k in ("time", "start", "end", "text", "kind", "needs_translation", "zh", "stage")} for f in findings],
+        "zoom_width": args.zoom_width, "zoom_previous": args.zoom_previous,
+        "findings": [{**{k: f[k] for k in ("time", "start", "end", "text", "kind", "needs_translation", "zh", "stage")},
+                      "translate": f["kind"] in STORY_KINDS} for f in findings],
     }
     (out / "findings.json").write_text(json.dumps(result, ensure_ascii=False, indent=1))
     print(json.dumps({k: v for k, v in result.items() if k != "findings"}, ensure_ascii=False))
