@@ -201,7 +201,7 @@ describe('deriveSubtitleStatus — AC #4 scenarios as the frontend receives them
     if (group === 'missing') expect(['缺中文', '無字幕源', '已略過', '未翻譯']).toContain(s?.label);
   });
 
-  it('繁中 and 中文 are steady (poster stays quiet); 簡中 is info, 缺中文 neutral', () => {
+  it('繁中 and 中文 are steady (poster stays quiet); 簡中 is info, 缺中文 warning (j2-d)', () => {
     const hant = deriveSubtitleStatus(m('success', { chineseSubtitle: 'zh_hant' }));
     expect(hant?.className).toContain('--success-tint');
     expect(hant?.steadyState).toBe(true);
@@ -213,7 +213,9 @@ describe('deriveSubtitleStatus — AC #4 scenarios as the frontend receives them
     expect(hans?.className).not.toContain('--accent-tint');
     const none = deriveSubtitleStatus(m('success', { chineseSubtitle: 'none' }));
     expect(none?.label).toBe('缺中文');
-    expect(none?.className).toContain('--bg-tertiary');
+    expect(none?.className).toContain('--warning-tint');
+    expect(none?.className).toContain('--warning-text');
+    expect(none?.className).not.toContain('--bg-tertiary');
     expect(none?.steadyState).toBeFalsy();
   });
 

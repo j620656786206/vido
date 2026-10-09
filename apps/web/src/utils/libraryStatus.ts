@@ -183,7 +183,11 @@ export function deriveSubtitleStatus(media: Media | undefined): StatusDescriptor
 
   // 3. Known to have no Chinese (English only, nothing, Cantonese only, or
   // searched online and not found) — ⚖️ D2 wording: say 中文 out loud.
-  if (media.chineseSubtitle === 'none') return { label: '缺中文', className: TINT.neutral };
+  // Warning, not neutral (disc-2026-10-missing-chinese-badge-tint-drift, ⚖️
+  // Alexyu A): the spec (flow-j-specs/j2-d, J2-3 + J2-6) draws it orange —
+  // colour is urgency, and 缺中文 is the one "missing" state the user can act
+  // on (產生字幕). 無字幕源／已略過／未翻譯 above stay neutral.
+  if (media.chineseSubtitle === 'none') return { label: '缺中文', className: TINT.warning };
 
   // 4. Genuinely unknown.
   return null;
