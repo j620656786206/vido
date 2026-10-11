@@ -1,6 +1,6 @@
 # Story: 港澳片也保留原本的說法；「只轉字」真的只轉字
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-10-hk-mo-mainland-rule`（由 `backlog-mainland-rule-three-predicates`／PR #670 立案）。
 **⚖️ 裁定：** Alexyu 2026-10-05——「港片、澳門片也保留原本的說法」。延伸同日的 B 裁定（陸劇：轉成繁體字、保留原意，「只是做字的轉換，不轉換成台灣用語」）。
@@ -131,6 +131,18 @@ Claude Opus 5.5（claude-opus-5-5）
 - 判定：**不通過**，留在 review。新開 `disc-2026-10-production-countries-never-filled`（跟 credits 同型：只在比對當下寫、從沒補過）。
 - **判定：不通過，留在 review。**
 
+### 正式機驗證 2026-10-12（重驗）
+
+- 前一次不通過的原因（正式機 `production_countries` 全空）已由 `disc-2026-10-production-countries-never-filled`（PR #741）修好。NAS 更新到 `main-7318f07`（部署前備份在 `/mnt/cache/appdata/vido/backups/pre-countries-20261012-0040/`），開機補抓後影集 81/81、電影 44/45 有國家；凡人修仙傳 `CN`、天龍八部 `HK`。
+- 實測：丟棄容器 `vido-evalclip`（DB 是部署後正式 DB 的 `.backup` 副本，只掛 `/scratch`；正式 Vido 與片庫都沒寫入），給三部影集各放同一句簡中字幕「这个软件的质量很好，视频信息在网络上」，打 `POST /api/v1/subtitles/convert`：
+  - 凡人修仙傳（CN）→「這個軟件的質量很好，視頻信息在網絡上」✅ 字變繁體、陸用語保留
+  - 天龍八部（HK）→ 同上 ✅ 港片也保留（Alexyu 2026-10-05 裁定）
+  - 戰酋（US）→「這個軟體的品質很好，影片資訊在網路上」✅ 一般片照舊換成台灣說法
+- 材料：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261012/`（`fanren`／`tianlong`／`us` 的 zh-Hans／zh-Hant SRT、`hkmo.log`）。花費 US$0（只用 OpenCC）。
+- **判定：通過 → done。**
+
 ## Change Log
 
 - 2026-10-05 建立（Bob create-story，依 Alexyu 裁定「港澳片也保留原本的說法」）＋實作 T1–T5（Opus 5.5 dev-story），status → review。
+- 2026-10-11 正式機驗證不通過（國家欄全空），留在 review。
+- 2026-10-12 PR #741 部署後重驗通過（CN／HK 保留原說法、US 換台灣說法），status → done。
