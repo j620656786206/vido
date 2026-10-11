@@ -1,6 +1,6 @@
 # Story: 媒體庫的「字幕」篩選跟海報標籤說同一件事：有沒有中文字幕（第一階段：電影）
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-10-subtitle-filter-disagrees-with-badges`（P2，Alexyu 2026-10-06 看本機 POC 時發現；sprint-status.yaml:1163）。
 **⚖️ 裁定（Alexyu 2026-10-06）：** 「缺字幕」＝**沒有中文字幕**。片內中文軌、影片旁邊的中文字幕檔、Vido 生成或下載的中文字幕，都算「有」；只有英文算「缺」。**標籤與篩選用同一套規則。** 影集要靠每集摘要（`disc-2026-10-episode-list-subtitle-badge`）。
@@ -278,6 +278,15 @@ Claude Opus 5.5（Amelia，dev-story，非互動模式，2026-10-06）
 - **③** 影集的中文字幕結論要改成各集彙總，且每集的旁邊字幕檔結果要存進資料庫 → `disc-2026-10-subtitle-filter-series-phase-2`（建單時已立；雙向：該條目指回本單、`disc-2026-10-episode-list-subtitle-badge.md` Dev Notes 已加註）。
 - **③** 12 部電影 `subtitle_tracks` 是 NULL，「讀過沒字幕」的那些永遠不會被重新讀（`enrichment_service.go:758-760`、`:773-776`）→ `disc-2026-10-movie-subtitle-tracks-unknown-refresh`（建單時已立）。
 - **③** 首頁「字幕覆蓋率」只數 `subtitle_language = 'zh-Hant'`（`movie_repository.go:1031-1035`，`home_summary_service.go:157`），片內有繁中軌的片不算已覆蓋，首頁因此一直給「產生字幕」的門（`HomeReadoutBand.tsx:405`、`:424`）——第三套定義 → `disc-2026-10-home-coverage-counts-only-vido-zh-hant`（建單時已立）。
+
+
+### 正式機驗證 2026-10-11
+
+- 環境：NAS 正式機 `Vido` 跑 `main-959ac69`（映像 `sha256:2fe55178…`，ghcr `vido@sha256:12ab5761…`，Docker workflow run 37863292141 對 `959ac698` 成功）。容器 2026-10-10 00:45 就已是這個映像，`docker pull` 後 digest 不變，所以沒有再跑 `rebuild_container`；DB 已先備份到 `/mnt/cache/appdata/vido/backups/pre-verify-20261011-2155/`（db／wal／shm＋`.backup` 一致副本）。
+- 要花錢的項目在丟棄容器 `vido-evalclip`（DB 是上述備份的副本，`/scratch` 掛載，沒設 `VIDO_ASR_*`）跑；正式 Vido 沒按生成。材料與 log：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261011/`（`clip.log`、`full.log`、SRT）。
+- `GET /api/v1/library?chinese_subtitle=missing` → 45 部（電影 8、影集 37），每一部 `chinese_subtitle=none`。
+- UI 媒體庫勾「缺中文字幕」（Playwright，捲到底）：45 個海報標籤＝**42 個「缺中文」**（`--warning-tint`／`--warning-text`）＋ **3 個「失敗」**（芳華、長安的荔枝、大奉打更人——`parse_status=failed`，檔名比對失敗）。「失敗」是生命週期例外，照 ux3-0-2 規則優先於字幕標籤，不是篩選錯；篩出來的沒有任何一部掛「繁中／中文」。
+- **判定：通過 → done。**
 
 ## Change Log
 

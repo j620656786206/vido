@@ -1,6 +1,6 @@
 # Bugfix: 「聽聲音生成字幕」的報價改用這條路線自己量到的翻譯費率，不再少報一半
 
-Status: review
+Status: done
 
 **Source:** Alexyu 2026-10-05。See S01E02 單集「生成字幕」按鈕報價 US$0.80，實際花 US$1.36（多 70%）。產品原則：「會諂媚的讀數比沒有讀數更糟」。同時吸收 `disc-2026-09-asr-route-translation-rate-unmeasured`（P3，2026-09-17 dsr-6a CR 懷疑過、當時未查證；這次有實測，確認是真的）。
 
@@ -102,6 +102,16 @@ Claude Opus 5.5（claude-opus-5-5）
 - `docs/deployment.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `_bmad-output/implementation-artifacts/bugfix-generation-estimate-under-quotes.md`
+
+
+### 正式機驗證 2026-10-11
+
+- 環境：NAS 正式機 `Vido` 跑 `main-959ac69`（映像 `sha256:2fe55178…`，ghcr `vido@sha256:12ab5761…`，Docker workflow run 37863292141 對 `959ac698` 成功）。容器 2026-10-10 00:45 就已是這個映像，`docker pull` 後 digest 不變，所以沒有再跑 `rebuild_container`；DB 已先備份到 `/mnt/cache/appdata/vido/backups/pre-verify-20261011-2155/`（db／wal／shm＋`.backup` 一致副本）。
+- 要花錢的項目在丟棄容器 `vido-evalclip`（DB 是上述備份的副本，`/scratch` 掛載，沒設 `VIDO_ASR_*`）跑；正式 Vido 沒按生成。材料與 log：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261011/`（`clip.log`、`full.log`、SRT）。
+- 丟棄容器裡 See S01E02（片段無字幕軌 → 聽聲音路線）：`GET /api/v1/episodes/792f235f…/transcribe/estimate` → `plan=full, route=asr, runtime_minutes=56.95, model_id=claude-sonnet-5, estimated_usd=1.57`（舊版 $0.80）。
+- 正式機同一集現在走片內英文字幕（`route=extract`，$0.46），所以 $1.57 只能在聽聲音路線上看到。
+- 對照實際：10 分鐘片段聽聲音＋翻譯實花 $0.189（換算整集約 $1.08），報價往上偏，方向正確。
+- **判定：通過 → done。**
 
 ## Change Log
 

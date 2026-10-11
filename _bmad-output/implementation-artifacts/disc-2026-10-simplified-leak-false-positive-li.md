@@ -1,6 +1,6 @@
 # Disc：「里」不再被當成簡體字——帕里斯、英里這類句子不會再整句被退回英文
 
-Status: review
+Status: done
 
 **Source:** 2026-10-06 See S01E02 第二次 NAS 實測（`eval-see-s01e02-asr-vs-official.md`「第二次實測」）：568 句裡 **15 句留成英文**，log 全是 `reason=simplified_leak`，14 句含「帕里斯」、1 句含「英里」。
 
@@ -75,6 +75,15 @@ N/A — no out-of-scope work discovered
 - `apps/api/internal/subtitle/quality_gate_test.go`（改）
 - `_bmad-output/implementation-artifacts/disc-2026-10-simplified-leak-false-positive-li.md`（新）
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`（改）
+
+
+### 正式機驗證 2026-10-11
+
+- 環境：NAS 正式機 `Vido` 跑 `main-959ac69`（映像 `sha256:2fe55178…`，ghcr `vido@sha256:12ab5761…`，Docker workflow run 37863292141 對 `959ac698` 成功）。容器 2026-10-10 00:45 就已是這個映像，`docker pull` 後 digest 不變，所以沒有再跑 `rebuild_container`；DB 已先備份到 `/mnt/cache/appdata/vido/backups/pre-verify-20261011-2155/`（db／wal／shm＋`.backup` 一致副本）。
+- 要花錢的項目在丟棄容器 `vido-evalclip`（DB 是上述備份的副本，`/scratch` 掛載，沒設 `VIDO_ASR_*`）跑；正式 Vido 沒按生成。材料與 log：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261011/`（`clip.log`、`full.log`、SRT）。
+- 丟棄容器用整集 S01E02 複本重翻（`route=translate`、第 8 軌、568 句、`cache_hits=0`、花 $0.400）：`stubborn_count=0`（10/6 是 15）。
+- 原本留成英文的 15 句（#29、53、100、117、128、152、171、250、351、428、434、438、464、466、516）全部是中文，例：#29「去跟芭麗絲談談。」、#516「能跨越千里傳話 的機器。」；Paris 全集 13 次都寫「芭麗絲」（第 1 季官方寫法）。
+- **判定：通過 → done。**
 
 ## Change Log
 

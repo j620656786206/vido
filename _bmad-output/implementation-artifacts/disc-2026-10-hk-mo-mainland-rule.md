@@ -121,6 +121,16 @@ Claude Opus 5.5（claude-opus-5-5）
 - _bmad-output/implementation-artifacts/backlog-mainland-rule-three-predicates.md（AC drift reference — see Completion Notes）
 - _bmad-output/implementation-artifacts/sprint-status.yaml
 
+
+### 正式機驗證 2026-10-11
+
+- 環境：NAS 正式機 `Vido` 跑 `main-959ac69`（映像 `sha256:2fe55178…`，ghcr `vido@sha256:12ab5761…`，Docker workflow run 37863292141 對 `959ac698` 成功）。容器 2026-10-10 00:45 就已是這個映像，`docker pull` 後 digest 不變，所以沒有再跑 `rebuild_container`；DB 已先備份到 `/mnt/cache/appdata/vido/backups/pre-verify-20261011-2155/`（db／wal／shm＋`.backup` 一致副本）。
+- 要花錢的項目在丟棄容器 `vido-evalclip`（DB 是上述備份的副本，`/scratch` 掛載，沒設 `VIDO_ASR_*`）跑；正式 Vido 沒按生成。材料與 log：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261011/`（`clip.log`、`full.log`、SRT）。
+- 轉換本身沒問題：容器內 `/usr/share/opencc/s2tw.json` 存在；「这个软件的质量很好，视频信息在网络上」→ s2tw「這個軟件的質量很好，視頻信息在網絡上」、s2twp「這個軟體的質量很好，影片資訊在網路上」。
+- **但正式機上這條規則不會被觸發：** 唯讀查 DB（21:4x 與 22:04 各讀一次），`movies` 55 部、`series` 81 部的 `production_countries` **全部是 NULL**（`original_language` 也全空），連 凡人修仙傳／劍來／天龍八部 都是空的（`updated_at` 2026-10-06）。`zhtw.Finalize` 的國家只從這兩欄來（`subtitle_countries.go`、`batch.go`、`request_trigger.go`），所以任何陸港澳片的簡中字幕都會被當成一般片、照舊 s2twp＋詞庫換成台灣說法。
+- 判定：**不通過**，留在 review。新開 `disc-2026-10-production-countries-never-filled`（跟 credits 同型：只在比對當下寫、從沒補過）。
+- **判定：不通過，留在 review。**
+
 ## Change Log
 
 - 2026-10-05 建立（Bob create-story，依 Alexyu 裁定「港澳片也保留原本的說法」）＋實作 T1–T5（Opus 5.5 dev-story），status → review。

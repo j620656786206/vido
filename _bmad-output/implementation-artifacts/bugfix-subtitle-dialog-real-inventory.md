@@ -1,6 +1,6 @@
 # Bugfix: 「管理字幕」列出這部片真正有的字幕，不再說假話
 
-Status: review
+Status: done
 
 **Source:** Alexyu 2026-10-05 在 NAS 上打開《末日光明》S01E02 的管理字幕，視窗寫「尚無字幕／此影片目前沒有任何字幕軌」——但這集片內有英文字幕軌，旁邊還有一份 `.zh-TW.srt`。⚖️ Alexyu 選 B：「打開視窗時，真的去看這一集」。
 
@@ -127,6 +127,15 @@ Claude Opus 5.5（claude-opus-5-5）
 - _bmad-output/screenshots/flow-f-subtitle-v2/f1-spec-inventory.png（新）
 - _bmad-output/pen-tokens.json
 - _bmad-output/implementation-artifacts/sprint-status.yaml
+
+
+### 正式機驗證 2026-10-11
+
+- 環境：NAS 正式機 `Vido` 跑 `main-959ac69`（映像 `sha256:2fe55178…`，ghcr `vido@sha256:12ab5761…`，Docker workflow run 37863292141 對 `959ac698` 成功）。容器 2026-10-10 00:45 就已是這個映像，`docker pull` 後 digest 不變，所以沒有再跑 `rebuild_container`；DB 已先備份到 `/mnt/cache/appdata/vido/backups/pre-verify-20261011-2155/`（db／wal／shm＋`.backup` 一致副本）。
+- 要花錢的項目在丟棄容器 `vido-evalclip`（DB 是上述備份的副本，`/scratch` 掛載，沒設 `VIDO_ASR_*`）跑；正式 Vido 沒按生成。材料與 log：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261011/`（`clip.log`、`full.log`、SRT）。
+- `GET /api/v1/movies/15f8f9d9…/subtitles/inventory`（阿凡達：火與燼）0.33 秒回：旁邊字幕檔 1 個（`…QuickIO.zh-TW.srt`，`zh-Hant`）；片內軌 `zh-Hans`「Chinese Simplified」、`zh-Hant`「Mandarin, Traditional」、`yue`「Cantonese, Traditional」、`en` SDH，另 22 種語言。
+- UI（Playwright 對正式機，1440 寬）：「管理字幕」列出 繁中 本地檔案／簡中・繁中・粵語・英文 片內字幕＋「另有 22 種其他語言的片內字幕」。把 inventory 回應人為延遲 3 秒時，對話框寫「正在讀取這部片的字幕…」，沒有出現「沒有字幕」。
+- **判定：通過 → done。**
 
 ## Change Log
 
