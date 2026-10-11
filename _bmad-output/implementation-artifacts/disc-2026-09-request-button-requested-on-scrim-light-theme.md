@@ -1,6 +1,6 @@
 # Bugfix: 日巡主題下，海報上的「已請求 · 處理中」看得清楚了
 
-Status: review
+Status: done
 
 **Source:** dsr-2 create-story 盤點時發現（2026-09-16，sprint-status `disc-2026-09-request-button-requested-on-scrim-light-theme`，P2）。Alexyu 2026-10-06 從候選中選定。
 
@@ -88,6 +88,15 @@ Claude Opus 5.5（claude-opus-5-5）
 - `apps/web/src/components/media/PosterCard.spec.tsx`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `_bmad-output/implementation-artifacts/disc-2026-09-request-button-requested-on-scrim-light-theme.md`
+
+
+### 正式機驗證 2026-10-11
+
+- 環境：NAS 正式機 `Vido` 跑 `main-959ac69`（映像 `sha256:2fe55178…`，ghcr `vido@sha256:12ab5761…`，Docker workflow run 37863292141 對 `959ac698` 成功）。容器 2026-10-10 00:45 就已是這個映像，`docker pull` 後 digest 不變，所以沒有再跑 `rebuild_container`；DB 已先備份到 `/mnt/cache/appdata/vido/backups/pre-verify-20261011-2155/`（db／wal／shm＋`.backup` 一致副本）。
+- 要花錢的項目在丟棄容器 `vido-evalclip`（DB 是上述備份的副本，`/scratch` 掛載，沒設 `VIDO_ASR_*`）跑；正式 Vido 沒按生成。材料與 log：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261011/`（`clip.log`、`full.log`、SRT）。
+- Playwright 對正式機探索頁（電影），日巡（`vido:theme=light`）滑到海報上：藥丸「已請求 · 處理中」字色 `rgb(7,84,105)`、底 `rgba(19,145,178,0.2)` 疊在不透明 `--bg-secondary #f0e7d3` 上 → **5.57:1**；夜行 6.93:1。截圖看得清楚。
+- 註：正式機唯一的請求（夜巡毒梟）不在探索頁前幾頁，所以測試時只把 `/api/v1/requests` 回應裡那筆的 tmdb_id 換成第一張電影卡（不寫入正式機）；顏色、底色都是正式機實際的 CSS。
+- **判定：通過 → done。**
 
 ## Change Log
 

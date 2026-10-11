@@ -64,3 +64,11 @@ Status: done
 - `apps/api/internal/repository/home_summary_queries_test.go`
 - `_bmad-output/implementation-artifacts/disc-2026-10-home-coverage-counts-only-vido-zh-hant.md`（新）
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+### 正式機驗證 2026-10-11
+
+- 環境：NAS 正式機 `Vido` 跑 `main-959ac69`（映像 `sha256:2fe55178…`，ghcr `vido@sha256:12ab5761…`，Docker workflow run 37863292141 對 `959ac698` 成功）。容器 2026-10-10 00:45 就已是這個映像，`docker pull` 後 digest 不變，所以沒有再跑 `rebuild_container`；DB 已先備份到 `/mnt/cache/appdata/vido/backups/pre-verify-20261011-2155/`（db／wal／shm＋`.backup` 一致副本）。
+- 要花錢的項目在丟棄容器 `vido-evalclip`（DB 是上述備份的副本，`/scratch` 掛載，沒設 `VIDO_ASR_*`）跑；正式 Vido 沒按生成。材料與 log：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261011/`（`clip.log`、`full.log`、SRT）。
+- 首頁「繁中字幕」：`GET /api/v1/home-summary` → `coverage={covered:49,total:136}`，畫面顯示「49/136」（日巡、夜行都一樣）。
+- 更新前的數字沒能先記（正式機 10-10 就已更新）；改用舊算法對同一份 DB 重算：電影 `subtitle_language='zh-Hant'` 3 部＋影集每集都繁中 0 部 ≈ **3/136**。X 從約 3 變成 49。
+- **判定：看起來正常（status 本來就是 done，只補紀錄）。**
