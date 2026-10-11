@@ -82,7 +82,7 @@ Status: done
   - [x] 測試：只補空欄、不覆蓋、TMDb 沒給 → tried、抓失敗 → failed 下次再試、ctx 取消就停。
   - [x] `main.go` 比照 credits backfill：型別斷言、自己的可取消 ctx、`RunAfter(ctx, 60*time.Second)`。
 - [x] T5 註解（AC #6）＋檢查（AC #7）
-- [ ] T6 正式機實測（AC #8，部署後）— ⏳ 刻意延後：要等合併、ghcr 映像更新、NAS 重建後才能量；比照 `disc-2026-10-series-credits-empty` T5 的做法，部署後補「正式機驗證」一節再轉 done。
+- [x] T6 正式機實測（AC #8）— 2026-10-12 通過，見 Dev Agent Record「正式機驗證 2026-10-12」。
 
 全部後端 → 不需要拆單（前端 0 個 task）。
 
@@ -168,6 +168,23 @@ Claude Opus 5.5（Amelia，dev-story；2026-10-11）
 - `_bmad-output/implementation-artifacts/disc-2026-10-production-countries-never-filled.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
+### 正式機驗證 2026-10-12
+
+- 環境：部署前先備份 `vido.db`／`-wal`／`-shm` 到 NAS `/mnt/cache/appdata/vido/backups/pre-countries-20261012-0040/`；`docker pull` 拿到新映像 `sha256:11c9640d…`（ghcr `vido@sha256:65fc060c…`），`rebuild_container Vido` 後容器 `VIDO_VERSION=main-7318f07`（PR #741 的合併 commit）。
+- **AC #8(a) 通過：** 重開約 1 分鐘後 log 出現 `context facets backfill pass finished movies_filled=45 series_filled=81 tmdb_has_none=0 failed=0`。
+- **AC #8(b) 通過：** 唯讀查 DB（00:45、00:47、00:51 各讀一次，數字相同）：
+  - 有 tmdb_id 的電影 45 部：類別 45/45、國家 44/45（There's No Way Out，TMDb 本來就沒有出品國家）；沒 tmdb_id 的 10 部照規格不碰。
+  - 影集 81/81：國家與類別都有值；含 CN／HK／MO 的影集 36 部。
+  - 凡人修仙傳 `CN`、劍來 `CN`、天龍八部 `HK`；電影 鏢人：風起大漠 `CN`、尋秦記 `HK,CN`。
+- **AC #8(c) 通過：** 重驗 `disc-2026-10-hk-mo-mainland-rule`，在丟棄容器 `vido-evalclip`（DB 是部署後正式 DB 的 `.backup` 副本、只掛 `/scratch`）對三部影集各放一個內容相同的簡中字幕，打 `POST /api/v1/subtitles/convert`（只用 OpenCC，不花錢）：
+  - 凡人修仙傳（CN）→「這個軟件的質量很好，視頻信息在網絡上」（字變繁體、用語保留）
+  - 天龍八部（HK）→ 同上
+  - 戰酋（US）→「這個軟體的品質很好，影片資訊在網路上」（照舊換成台灣說法）
+  - 材料：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261012/`（三組 SRT＋`hkmo.log`）。
+- **發現一個新問題（不是這張的範圍）：** 補上的類別全是**簡體字**（剧情、动作冒险、动画…），還有英文的「Sci-Fi & Fantasy」「War & Politics」。直接問 TMDb：`language=zh-TW` 的類別名稱本來就回簡體（`/genre/movie/list` 的 zh-TW 與 zh-CN 一模一樣），所以比對路徑存的也一樣，bugfix-d（#244）以為 zh-TW 會給繁體已經不成立。以前類別幾乎是空的看不出來；補完之後，媒體庫「類型」篩選（`/api/v1/library/genres`）會列出 20 個簡體／英文名稱。依規則不回退，開 `disc-2026-10-genre-names-simplified`。
+- 花費：US$0。
+- 判定：**通過**。
+
 ## Change Log
 
 | 日期 | 內容 |
@@ -176,3 +193,4 @@ Claude Opus 5.5（Amelia，dev-story；2026-10-11）
 | 2026-10-11 | Amelia dev-story：比對時用窄 writer 存國家；開機 60 秒補抓舊列的國家與類別（只補空欄、不動 updated_at）；9 條新測試；全套測試／staticcheck／lint 綠。T6 正式機實測待部署。 |
 | 2026-10-11 | Code review 0H/1M/3L：M1（手動列的類別不補）、L2（關機前停補抓）、L4（手動選片真 DB 讀回國家）已修；L3 接受。 |
 | 2026-10-11 | PR #741 CI 全綠合併；T6 正式機驗證待 NAS 更新後補。 |
+| 2026-10-12 | 正式機驗證通過（國家 44/45＋81/81、類別 45/45＋81/81、hk-mo 規則實測生效）；發現類別是簡體 → 開 disc-2026-10-genre-names-simplified。 |
