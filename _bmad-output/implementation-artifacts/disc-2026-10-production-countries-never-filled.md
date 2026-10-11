@@ -1,6 +1,6 @@
 # Disc：片子的「出品國家」從沒存進資料庫——陸港澳片「只轉字」在正式機從沒生效
 
-Status: review
+Status: done
 
 **Source:** 2026-10-11 正式機驗證 `disc-2026-10-hk-mo-mainland-rule`（PR #740）。s2tw 轉換本身是對的，但正式機每一部片的 `production_countries` 都是 NULL，規則永遠不會觸發。
 
@@ -175,3 +175,4 @@ Claude Opus 5.5（Amelia，dev-story；2026-10-11）
 | 2026-10-11 | Bob create-story（根因兩層＋genres 併入）。 |
 | 2026-10-11 | Amelia dev-story：比對時用窄 writer 存國家；開機 60 秒補抓舊列的國家與類別（只補空欄、不動 updated_at）；9 條新測試；全套測試／staticcheck／lint 綠。T6 正式機實測待部署。 |
 | 2026-10-11 | Code review 0H/1M/3L：M1（手動列的類別不補）、L2（關機前停補抓）、L4（手動選片真 DB 讀回國家）已修；L3 接受。 |
+| 2026-10-11 | PR #741 CI 全綠合併；T6 正式機驗證待 NAS 更新後補。 |
