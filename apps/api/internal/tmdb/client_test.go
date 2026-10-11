@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -290,9 +291,11 @@ func TestClient_RateLimiting(t *testing.T) {
 	// This test verifies that the rate limiter correctly throttles requests
 	// TMDb rate limit: 40 requests per 10 seconds
 
-	requestCount := 0
+	// The handler runs on one goroutine per request, so the count must be
+	// atomic — a plain ++ lost an update on CI (expected 5, actual 4).
+	var requestCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
+		requestCount.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"page": 1, "results": [], "total_pages": 0, "total_results": 0}`))
@@ -327,7 +330,7 @@ func TestClient_RateLimiting(t *testing.T) {
 	elapsed := time.Since(start)
 
 	// Verify all requests completed
-	assert.Equal(t, numRequests, requestCount)
+	assert.Equal(t, int32(numRequests), requestCount.Load())
 
 	// Rate limiter should allow burst of up to 40 requests, so 5 requests
 	// should complete quickly (within 1 second, allowing for test overhead)
