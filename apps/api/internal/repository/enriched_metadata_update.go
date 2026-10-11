@@ -45,9 +45,15 @@ import (
 // Deliberately NOT written here (enrichment never assigns them, so writing them
 // back from a possibly-stale copy could only ever lose someone else's work):
 // the five subtitle-delivery columns, file_path, file_size, library_id,
-// is_removed, rating, original_language, status, production_countries, credits,
-// spoken_languages. subtitle_tracks IS written — it is ffprobe/NFO technical
-// data that enrichment genuinely produces, not delivery state.
+// is_removed, rating, original_language, status, spoken_languages.
+// subtitle_tracks IS written — it is ffprobe/NFO technical data that
+// enrichment genuinely produces, not delivery state.
+//
+// credits and production_countries ARE produced by enrichment now (sub-7-3,
+// sub-7-2b) but each has its own narrow writer instead of a slot here:
+// UpdateCredits, and UpdateProductionCountries in context_facets.go. Until
+// disc-2026-10-production-countries-never-filled nothing wrote the countries
+// at all — sub-7-2b put them on the model and this list silently dropped them.
 func (r *MovieRepository) UpdateEnrichedMetadata(ctx context.Context, movie *models.Movie) error {
 	if movie == nil {
 		return fmt.Errorf("movie cannot be nil")

@@ -80,6 +80,16 @@ type recordingSeriesRepo struct {
 	creditsWrites []string
 	lastCredits   *models.Credits
 	events        *[]string
+	// disc-2026-10-production-countries-never-filled
+	countriesWrites map[string]models.NullString
+}
+
+func (m *recordingSeriesRepo) UpdateProductionCountries(_ context.Context, id string, countries models.NullString) error {
+	if m.countriesWrites == nil {
+		m.countriesWrites = map[string]models.NullString{}
+	}
+	m.countriesWrites[id] = countries
+	return nil
 }
 
 func (m *recordingSeriesRepo) UpdateEnrichedMetadata(_ context.Context, s *models.Series) error {

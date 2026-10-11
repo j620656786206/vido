@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/tmdb"
 )
 
@@ -425,6 +426,7 @@ func (s *EnrichmentService) persistMovieMatch(ctx context.Context, movie *models
 	if err := s.movieRepo.UpdateEnrichedMetadata(ctx, movie); err != nil {
 		return fmt.Errorf("%w: update movie: %w", ErrEnrichPersist, err)
 	}
+	s.persistCountries(ctx, s.movieRepo, movie.ID, movie.ProductionCountriesJSON)
 	s.persistCredits(ctx, s.movieRepo.UpdateCredits, movie.ID, credits)
 	if touchScope {
 		s.touchGlossaryScope(ctx, movie.ID)
@@ -437,9 +439,41 @@ func (s *EnrichmentService) persistSeriesMatch(ctx context.Context, series *mode
 	if err := s.seriesRepo.UpdateEnrichedMetadata(ctx, series); err != nil {
 		return fmt.Errorf("%w: update series: %w", ErrEnrichPersist, err)
 	}
+	s.persistCountries(ctx, s.seriesRepo, series.ID, series.ProductionCountriesJSON)
 	s.persistCredits(ctx, s.seriesRepo.UpdateCredits, series.ID, credits)
 	s.touchGlossaryScope(ctx, series.ID)
 	return nil
+}
+
+// productionCountriesWriter is the countries-only writer both concrete
+// repositories have (disc-2026-10-production-countries-never-filled). It is
+// asserted rather than added to the repository interfaces so the dozens of
+// test doubles that never see a match need no new method.
+type productionCountriesWriter interface {
+	UpdateProductionCountries(ctx context.Context, id string, countriesJSON models.NullString) error
+}
+
+var (
+	_ productionCountriesWriter = (*repository.MovieRepository)(nil)
+	_ productionCountriesWriter = (*repository.SeriesRepository)(nil)
+)
+
+// persistCountries stores the countries the match put on the model.
+// UpdateEnrichedMetadata deliberately leaves the column alone, which is why
+// sub-7-2b's countries never reached the database. Nothing to write (TMDb gave
+// none) keeps the stored value. Fail-soft: a failed write is logged and the
+// match stands, like persistCredits.
+func (s *EnrichmentService) persistCountries(ctx context.Context, repo any, id string, countriesJSON models.NullString) {
+	if !countriesJSON.Valid || countriesJSON.String == "" {
+		return
+	}
+	w, ok := repo.(productionCountriesWriter)
+	if !ok {
+		return
+	}
+	if err := w.UpdateProductionCountries(ctx, id, countriesJSON); err != nil {
+		s.logger.Warn("production countries write failed; match kept without them", "id", id, "error", err)
+	}
 }
 
 // applyTMDbSeriesDetails is applyTMDbMovieDetails' series counterpart, with the

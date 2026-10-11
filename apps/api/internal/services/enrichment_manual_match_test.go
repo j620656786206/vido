@@ -172,6 +172,7 @@ func TestApplyTMDbMatch_Movie_WritesTheMatchAndReadsBack(t *testing.T) {
 		Movie: tmdb.Movie{ID: 550, Title: "鬥陣俱樂部", OriginalTitle: "Fight Club", Overview: "失眠的上班族",
 			ReleaseDate: "1999-10-15", PosterPath: strptr("/fc.jpg"), BackdropPath: strptr("/fc-bg.jpg"), VoteAverage: 8.4},
 		Runtime: 139, Genres: []tmdb.Genre{{ID: 18, Name: "劇情"}},
+		ProductionCountries: []tmdb.Country{{ISO31661: "US", Name: "United States of America"}},
 	}
 	m := env.seedMovie(t, &models.Movie{Title: "[Raws] fc.mkv", ParseStatus: models.ParseStatusFailed})
 
@@ -183,6 +184,9 @@ func TestApplyTMDbMatch_Movie_WritesTheMatchAndReadsBack(t *testing.T) {
 	assert.Equal(t, "鬥陣俱樂部", got.Title)
 	assert.Equal(t, "/fc.jpg", got.PosterPath.String)
 	assert.Equal(t, int64(139), got.Runtime.Int64)
+	// disc-2026-10-production-countries-never-filled: read back from the DB —
+	// before the fix the countries lived only on the in-memory model.
+	assert.Equal(t, []models.ProductionCountry{{ISO3166_1: "US", Name: "United States of America"}}, got.ProductionCountries)
 	assert.Equal(t, models.ParseStatusSuccess, got.ParseStatus)
 	assert.Equal(t, string(models.MetadataSourceManual), got.MetadataSource.String,
 		"a user-picked match is the user's word — nothing automatic may overwrite it")
@@ -198,7 +202,7 @@ func TestApplyTMDbMatch_Series_WritesTheMatchAndReadsBack(t *testing.T) {
 	env := newMatchEnv(t)
 	env.tmdb.tvResp = &tmdb.TVShowDetails{
 		TVShow: tmdb.TVShow{ID: 1396, Name: "絕命毒師", OriginalName: "Breaking Bad", Overview: "化學老師",
-			FirstAirDate: "2008-01-20", PosterPath: strptr("/bb.jpg"), VoteAverage: 8.9},
+			FirstAirDate: "2008-01-20", PosterPath: strptr("/bb.jpg"), VoteAverage: 8.9, OriginCountry: []string{"US"}},
 		Genres: []tmdb.Genre{{ID: 18, Name: "劇情"}},
 	}
 	s := env.seedSeries(t, &models.Series{Title: "breaking bad s01", ParseStatus: models.ParseStatusFailed})
@@ -213,6 +217,8 @@ func TestApplyTMDbMatch_Series_WritesTheMatchAndReadsBack(t *testing.T) {
 	assert.Equal(t, "/bb.jpg", got.PosterPath.String)
 	assert.Equal(t, "2008-01-20", got.FirstAirDate)
 	assert.Equal(t, []string{"劇情"}, got.Genres)
+	assert.Equal(t, []models.ProductionCountry{{ISO3166_1: "US"}}, got.ProductionCountries,
+		"origin_country fallback, read back from the DB (disc-2026-10-production-countries-never-filled)")
 	assert.Equal(t, models.ParseStatusSuccess, got.ParseStatus)
 	assert.Equal(t, string(models.MetadataSourceManual), got.MetadataSource.String)
 	require.NotNil(t, got.Credits)

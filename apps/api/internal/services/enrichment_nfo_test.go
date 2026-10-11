@@ -115,6 +115,17 @@ type mockMovieRepoForNFO struct {
 	wideUpdatedMovie *models.Movie
 	creditsWrites    []string // sub-7-3: ids handed to the narrow UpdateCredits writer
 	lastCredits      *models.Credits
+	// disc-2026-10-production-countries-never-filled: what reached the
+	// countries-only writer (the enrichment writer does not write the column).
+	countriesWrites map[string]models.NullString
+}
+
+func (m *mockMovieRepoForNFO) UpdateProductionCountries(_ context.Context, id string, countries models.NullString) error {
+	if m.countriesWrites == nil {
+		m.countriesWrites = map[string]models.NullString{}
+	}
+	m.countriesWrites[id] = countries
+	return nil
 }
 
 // Update records SEPARATELY from UpdateEnrichedMetadata. Enrichment must not use
