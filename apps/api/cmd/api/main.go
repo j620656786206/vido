@@ -732,6 +732,21 @@ func main() {
 	} else {
 		slog.Warn("glossary seeding from TMDb credits disabled: TMDb service exposes no credits client")
 	}
+	// disc-2026-10-production-countries-never-filled: no matched row ever got
+	// its production countries stored (the enrichment writer skipped the
+	// column), and rows matched before sub-7-2b have no genres either — so the
+	// CN/HK/MO "keep the original wording" rule never fired. One pass after
+	// boot fills only what is empty; new matches now store their own.
+	// Stopped in the graceful-shutdown block, before db.Close().
+	stopFacetsBackfill := func() {}
+	movieFacets, okFM := repos.Movies.(services.MovieContextFacetsRepo)
+	seriesFacets, okFS := repos.Series.(services.SeriesContextFacetsRepo)
+	if !okFM || !okFS {
+		slog.Warn("context facets backfill disabled: repositories do not expose FindMissingContextFacets", "movies", okFM, "series", okFS)
+	} else {
+		stopFacetsBackfill = services.NewContextFacetsBackfillService(movieFacets, seriesFacets, tmdbService, slog.Default()).
+			RunAfter(context.Background(), 60*time.Second)
+	}
 	// dsr-2b-a AC #1/#5: POST /metadata/apply writes a user-picked TMDb match
 	// through enrichment (details → row → cast → glossary scope). Wired AFTER the
 	// seeder so an applied match stores its cast, and OUTSIDE the credits-client
@@ -1636,6 +1651,9 @@ func main() {
 	slog.Info("Stopping episode subtitle-track sweep and movie subtitle-track backfill...")
 	stopEpisodeTracks()
 	stopMovieTracks()
+	// disc-2026-10-production-countries-never-filled: same rule — the facets
+	// backfill may be mid-write.
+	stopFacetsBackfill()
 	stopSeasonDetails()
 
 	// Stop retry scheduler

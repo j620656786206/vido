@@ -77,6 +77,10 @@ func TestEnrichMovie_SearchPath_FillsGenresAndCountriesFromDetails(t *testing.T)
 	require.NoError(t, err)
 	assert.Equal(t, []models.ProductionCountry{{ISO3166_1: "US", Name: "United States of America"}, {ISO3166_1: "DE", Name: "Germany"}}, countries)
 	assert.Equal(t, models.ParseStatusSuccess, repo.updatedMovie.ParseStatus)
+	// disc-2026-10-production-countries-never-filled: UpdateEnrichedMetadata does
+	// not write the column, so the model alone never reached the database.
+	require.Contains(t, repo.countriesWrites, "movie-1", "the countries must go through their own writer")
+	assert.JSONEq(t, `[{"iso_3166_1":"US","name":"United States of America"},{"iso_3166_1":"DE","name":"Germany"}]`, repo.countriesWrites["movie-1"].String)
 }
 
 func TestEnrichMovie_SearchPath_DetailsFailureStillLandsTheMatch(t *testing.T) {
@@ -137,7 +141,11 @@ func TestEnrichSeries_FillsGenresAndCountriesFromDetails(t *testing.T) {
 	assert.Equal(t, 1, tmdbFake.tvCalls)
 	assert.Equal(t, []string{"劇情", "犯罪"}, seriesRepo.updated.Genres)
 	assert.Equal(t, []models.ProductionCountry{{ISO3166_1: "US", Name: "United States of America"}}, seriesRepo.updated.ProductionCountries)
-	assert.True(t, seriesRepo.updated.ProductionCountriesJSON.Valid, "the JSON column is what the repository writes")
+	assert.True(t, seriesRepo.updated.ProductionCountriesJSON.Valid)
+	// disc-2026-10-production-countries-never-filled: and it actually reaches the
+	// countries-only writer — UpdateEnrichedMetadata leaves the column alone.
+	require.Contains(t, seriesRepo.countriesWrites, "series-1")
+	assert.JSONEq(t, `[{"iso_3166_1":"US","name":"United States of America"}]`, seriesRepo.countriesWrites["series-1"].String)
 }
 
 // TMDb's TV details frequently ship an empty production_countries while
@@ -157,6 +165,8 @@ func TestEnrichSeries_FallsBackToOriginCountry(t *testing.T) {
 
 	require.NotNil(t, seriesRepo.updated)
 	assert.Equal(t, []models.ProductionCountry{{ISO3166_1: "CN"}}, seriesRepo.updated.ProductionCountries)
+	require.Contains(t, seriesRepo.countriesWrites, "series-1")
+	assert.JSONEq(t, `[{"iso_3166_1":"CN","name":""}]`, seriesRepo.countriesWrites["series-1"].String)
 }
 
 func TestEnrichSeries_DetailsFailureStillLandsTheMatch(t *testing.T) {
