@@ -75,6 +75,7 @@ For non-trivial features, work **architecture-first**: outline the design and va
 
 1. Run `python3 scripts/export-pen-screenshots.py` (requires Pencil.app running)
    - The script spawns its own Pencil MCP server in **stdio** mode (Pencil 1.1.61 removed the old `--http`/`--http-port` transport) — safe to run even when Pencil MCP is already active
+   - It also writes two snapshots CI checks against: `_bmad-output/pen-tokens.json` (design tokens) and `_bmad-output/pen-node-ids.json` (every frame/group/instance id — `scripts/check-design-refs.py` fails when a component's `Design ref:`/`Implements:` header names a node that no longer exists). `--snapshot-only` refreshes just the two snapshots without re-rendering PNGs.
 2. Screenshots are saved to `_bmad-output/screenshots/`, one folder per **user flow**. Each flow folder holds both desktop (`-d`) and mobile (`-m`) screens; filenames are the canvas frame codes (e.g. `b3p-d.png`, `b3p-m.png`):
    - `flow-a-browse-v2/` — Browse: empty / loading / grid / list / no-results / error (A′ pilot series)
    - `flow-b-detail-interaction/` — Hover / Context Menus / Detail menus / Image-load Fallback spec (B9)

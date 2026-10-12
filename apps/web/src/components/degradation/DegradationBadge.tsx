@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
+// Design ref: ux-design.pen — no current screen frame; the v1 detail-panel frame was removed; this badge is not mounted anywhere (disc-2026-10-more-unmounted-components).
 import { cn } from '../../lib/utils';
 import type { DegradationLevel } from './types';
 

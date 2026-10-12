@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen G4 Batch Subtitle Processing Desktop (NXijD)
+// Design ref: ux-design.pen — no current screen frame; flow G v1 frame G4 was removed with the v1 designs on 2026-09-10; not mounted anywhere (disc-2026-10-more-unmounted-components).
 // Mobile peek per Screen G6 (fUtqO). Screen-section component — no Reusable
 // Component node in the .pen; G4/G6 are screen frames (Rule 21 Design-ref form).
 import { useState, useCallback, useEffect } from 'react';

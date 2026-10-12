@@ -39,6 +39,14 @@ OUT_DIR = os.path.join(PROJECT_ROOT, "_bmad-output", "screenshots")
 # Machine-readable dump of the .pen's variables, so CI (which cannot run
 # Pencil) can still check the design file for token drift.
 TOKEN_SNAPSHOT = Path(PROJECT_ROOT) / "_bmad-output" / "pen-tokens.json"
+# Every frame / group / component-instance id in the .pen, so CI can check that
+# the `Design ref:` / `Implements:` headers in apps/web/src point at nodes that
+# still exist (scripts/check-design-refs.py, disc-2026-09-rule21-node-existence-
+# unguarded). A separate file: it is ~100 KB and changes on every design edit.
+NODE_ID_SNAPSHOT = Path(PROJECT_ROOT) / "_bmad-output" / "pen-node-ids.json"
+# --snapshot-only: write the two snapshots and skip the PNG export (a full
+# re-render is non-deterministic, so a code-only change should not need one).
+SNAPSHOT_ONLY = "--snapshot-only" in sys.argv[1:]
 # The app shipped as Pencil.app and was renamed to Pen.app (1.2.2, found at story
 # sub-1-7a). Probe both rather than hardcoding either — a hardcoded path turns the
 # next rename into "the export script is broken" instead of "the app moved".
@@ -521,8 +529,11 @@ def main():
         # Send initialized notification
         mcp_send(proc, None, "notifications/initialized", {})
 
+        saved = 0
+        if SNAPSHOT_ONLY:
+            print("--snapshot-only: skipping the PNG export")
         # Create output directories
-        for flow_dir, _ in SCREENS.values():
+        for flow_dir, _ in ({} if SNAPSHOT_ONLY else SCREENS).values():
             os.makedirs(os.path.join(OUT_DIR, flow_dir), exist_ok=True)
 
         # Export screenshots via execute+Export in chunks (get_screenshot is gone
@@ -532,8 +543,9 @@ def main():
         chunk_size = 20
         # Two passes: thumbnails at 1x, the text-dense doc pages at 2x so there is
         # resolution left to spend after the width constraint below.
-        thumb_ids = [n for n, (f, _) in SCREENS.items() if f not in READABLE_FLOWS]
-        readable_ids = [n for n, (f, _) in SCREENS.items() if f in READABLE_FLOWS]
+        screens = {} if SNAPSHOT_ONLY else SCREENS
+        thumb_ids = [n for n, (f, _) in screens.items() if f not in READABLE_FLOWS]
+        readable_ids = [n for n, (f, _) in screens.items() if f in READABLE_FLOWS]
         req_id = 10
         for scale, node_ids in ((1, thumb_ids), (2, readable_ids)):
             for ci in range(0, len(node_ids), chunk_size):
@@ -548,8 +560,7 @@ def main():
                     failed_chunks += 1
                     print(f"  FAIL: export chunk at {scale}x - {resp.get('error') if resp else 'no response'}")
 
-        saved = 0
-        for node_id, (flow_dir, filename) in SCREENS.items():
+        for node_id, (flow_dir, filename) in screens.items():
             src = os.path.join(tmpdir, f"{node_id}.png")
             if not os.path.exists(src):
                 print(f"  SKIP: {filename} - not exported")
@@ -570,7 +581,8 @@ def main():
             saved += 1
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-        print(f"\nDone! Saved {saved}/{len(SCREENS)} screenshots to {OUT_DIR}")
+        if not SNAPSHOT_ONLY:
+            print(f"\nDone! Saved {saved}/{len(SCREENS)} screenshots to {OUT_DIR}")
 
         # --- token snapshot -------------------------------------------------
         # CI cannot run Pencil, so the .pen's variables are dumped here into a
@@ -583,6 +595,7 @@ def main():
         js = """
 const v = GetVariables();
 let rawGap = 0, rawPad = 0, rawSize = 0, rawLine = 0, clipped = 0, masters = 0;
+const nodeIds = [];
 // bugfix-text-on-artwork-flow-f-l-docs: text in a theme-FLIPPING token whose
 // nearest filled ancestor is artwork (an image) or a fill frozen in one theme
 // (a literal, non-transparent hex — solid or gradient stop) goes dark-on-dark in 日巡.
@@ -605,6 +618,7 @@ const frozen = (f) => {
 };
 const flips = [];
 Get((n, c) => {
+  if (n.type === "frame" || n.type === "group" || n.type === "ref") nodeIds.push(n.id);
   if (c.problems) clipped++;
   if (n.type === "text" && typeof n.fill === "string" && FLIPPING.test(n.fill)) {
     let p = c.parentCtx;
@@ -630,7 +644,7 @@ Get((n, c) => {
 Print(JSON.stringify({ variables: v.variables, themes: v.themes,
   raw: { gap: rawGap, padding: rawPad, fontSize: rawSize, lineHeight: rawLine },
   counts: { clippingWarnings: clipped, masters: masters, artworkTextFlips: flips.length },
-  artworkTextFlipNodes: flips.slice(0, 50) }));
+  artworkTextFlipNodes: flips.slice(0, 50), nodeIds: nodeIds }));
 """
         resp = mcp_call(proc, req_id + 500, "tools/call", {
             "name": "execute", "arguments": {"filePath": PEN_FILE, "input": js},
@@ -652,7 +666,17 @@ Print(JSON.stringify({ variables: v.variables, themes: v.themes,
         # 畫面數由 Python 端填，因為流程群組內部分層之後，設計稿那邊已經數不到
         # 「深度 1 的 frame」了——SCREENS 才是唯一準確的來源。
         payload["counts"]["exportedScreens"] = len(SCREENS)
-        payload["penSha256"] = hashlib.sha256(open(PEN_FILE, "rb").read()).hexdigest()
+        pen_sha = hashlib.sha256(open(PEN_FILE, "rb").read()).hexdigest()
+        payload["penSha256"] = pen_sha
+        node_ids = sorted(set(payload.pop("nodeIds", [])))
+        if not node_ids:
+            print("ERROR: could not read .pen node ids - node id snapshot NOT written")
+            sys.exit(1)
+        NODE_ID_SNAPSHOT.write_text(
+            json.dumps({"penSha256": pen_sha, "nodeIds": node_ids}, indent=0) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Node id snapshot: {NODE_ID_SNAPSHOT.name} ({len(node_ids)} ids)")
         TOKEN_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
         TOKEN_SNAPSHOT.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -666,7 +690,7 @@ Print(JSON.stringify({ variables: v.variables, themes: v.themes,
         # script is that the committed PNGs match the .pen; exiting 0 after
         # writing 136/156 is precisely how a stale screenshot survives review
         # (it did, 2026-08-20 — b4p-d shipped one revision behind the design).
-        if failed_chunks or saved != len(SCREENS):
+        if not SNAPSHOT_ONLY and (failed_chunks or saved != len(SCREENS)):
             print(f"ERROR: incomplete export ({saved}/{len(SCREENS)}, "
                   f"{failed_chunks} failed chunk(s)) - do NOT commit these screenshots")
             sys.exit(1)
