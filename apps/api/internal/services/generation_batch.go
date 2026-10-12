@@ -410,6 +410,19 @@ func (p *GenerationBatchProcessor) ActivityProgress() (active bool, percentDone,
 	return active, percentDone, current, total, currentItem
 }
 
+// ActiveMediaID is the item the running batch is on, for the Activity row's
+// step (disc-2026-10-activity-generation-progress-detail).
+func (p *GenerationBatchProcessor) ActiveMediaID() (mediaID string, ok bool) {
+	p.withLock(func() {
+		b := p.activeBatch
+		if b == nil || b.Status != GenerationBatchStatusRunning {
+			return
+		}
+		mediaID, ok = b.CurrentMediaID, b.CurrentMediaID != ""
+	})
+	return mediaID, ok
+}
+
 // Cancel stops the active generation batch, if any (AC 2). Idempotent: the
 // in-flight item's pipeline ctx is cancelled, queued items never start.
 func (p *GenerationBatchProcessor) Cancel() {

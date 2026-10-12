@@ -32,6 +32,7 @@ import { GenerationBatchDialogV2 } from '../subtitle/GenerationBatchDialogV2';
 import { GenerationWorkspace } from '../subtitle/GenerationWorkspaceV2';
 import type {
   ActivitySummary,
+  ActiveJobStep,
   ActiveJobsSection,
   PendingSection,
   DownloadsSection,
@@ -68,6 +69,46 @@ const COUNTED_KINDS = new Set(['subtitle_batch', 'generation_batch']);
  * instead of `${percentDone}%`.
  */
 const NO_PERCENT_KINDS = new Set(['transcription']);
+
+/**
+ * disc-2026-10-activity-generation-progress-detail — the generating item's step,
+ * in the 管理字幕 stepper's words (提取音訊／轉錄／翻譯). A count is a real
+ * number the run reported (chunks / cues), never an estimate.
+ */
+const STEP_WORDS: Record<string, { idle: string; counted?: string; unit?: string }> = {
+  extracting: { idle: '提取音訊' },
+  transcribing: { idle: '轉錄中', counted: '轉錄', unit: '段' },
+  translating: { idle: '翻譯中', counted: '翻譯', unit: '句' },
+};
+
+function countedStep(step: ActiveJobStep | undefined) {
+  const words = step ? STEP_WORDS[step.phase] : undefined;
+  if (!step || !words?.counted || !step.total) return null;
+  return { label: words.counted, nums: `${step.current ?? 0}/${step.total}`, unit: words.unit };
+}
+
+/** One line for the batch row's detail: 「轉錄 2/6 段」 or 「轉錄中」. */
+function stepText(step: ActiveJobStep | undefined): string | null {
+  const counted = countedStep(step);
+  if (counted) return `${counted.label} ${counted.nums} ${counted.unit}`;
+  return step ? (STEP_WORDS[step.phase]?.idle ?? null) : null;
+}
+
+function StepReadout({ step }: { step: ActiveJobStep | undefined }) {
+  const counted = countedStep(step);
+  if (counted) {
+    return (
+      <span className="text-xs text-[var(--text-secondary)]" data-testid="activity-job-step">
+        {counted.label} <span className="font-mono">{counted.nums}</span> {counted.unit}
+      </span>
+    );
+  }
+  return (
+    <span className="text-xs text-[var(--text-secondary)]" data-testid="activity-job-step">
+      {(step && STEP_WORDS[step.phase]?.idle) ?? '進行中'}
+    </span>
+  );
+}
 
 /**
  * The four /activity sections say nothing. The spend card (sub-7-6c) is judged
@@ -108,7 +149,7 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
               {j.current ?? 0} / {j.total}
             </span>
           ) : NO_PERCENT_KINDS.has(j.kind) ? (
-            <span className="text-xs text-[var(--text-secondary)]">進行中</span>
+            <StepReadout step={j.step} />
           ) : (
             <span className="font-mono text-xs text-[var(--accent-text)]">{j.percentDone}%</span>
           );
@@ -116,9 +157,19 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
           <ActivityRow
             icon={meta.icon}
             title={meta.title}
-            detail={j.detail}
+            detail={
+              j.kind === 'generation_batch' && stepText(j.step)
+                ? [j.detail, stepText(j.step)].filter(Boolean).join(' · ')
+                : j.detail
+            }
             right={right}
-            progress={NO_PERCENT_KINDS.has(j.kind) ? undefined : j.percentDone}
+            progress={
+              NO_PERCENT_KINDS.has(j.kind)
+                ? countedStep(j.step)
+                  ? j.percentDone
+                  : undefined
+                : j.percentDone
+            }
             testId={`activity-job-${j.kind}`}
           />
         );

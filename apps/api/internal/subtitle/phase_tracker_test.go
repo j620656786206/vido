@@ -123,3 +123,41 @@ func TestPhaseTracker_ObservesHub(t *testing.T) {
 	require.True(t, ok, "Broadcast reaches the observer synchronously")
 	assert.Equal(t, "transcribing", got.Phase)
 }
+
+// disc-2026-10-activity-generation-progress-detail: the count rides the event
+// that carried it, and an event without one leaves none behind.
+func TestPhaseTracker_RecordsCounts(t *testing.T) {
+	tr := NewPhaseTracker()
+	tr.Observe(asrEvent(services.EventTranscriptionProgress, nil))
+	_, cur, total, ok := tr.Step(trackedID)
+	require.True(t, ok)
+	assert.Zero(t, cur)
+	assert.Zero(t, total, "the opening transcribing frame has no count")
+
+	tr.Observe(asrEvent(services.EventTranscriptionProgress, map[string]interface{}{"current": 2, "total": 6}))
+	phase, cur, total, _ := tr.Step(trackedID)
+	assert.Equal(t, "transcribing", phase)
+	assert.Equal(t, 2, cur)
+	assert.Equal(t, 6, total)
+
+	// translateAndPersist's 0% frame: a new phase, no count yet — the chunk
+	// count must not leak into it.
+	tr.Observe(asrEvent(services.EventTranscriptionTranslating, map[string]interface{}{"percentage": 0}))
+	phase, cur, total, _ = tr.Step(trackedID)
+	assert.Equal(t, "translating", phase)
+	assert.Zero(t, cur)
+	assert.Zero(t, total)
+
+	tr.Observe(asrEvent(services.EventTranscriptionTranslating, map[string]interface{}{"percentage": 18.2, "current": 120, "total": 659}))
+	_, cur, total, _ = tr.Step(trackedID)
+	assert.Equal(t, 120, cur)
+	assert.Equal(t, 659, total)
+
+	t.Run("a zero total is no count", func(t *testing.T) {
+		tr := NewPhaseTracker()
+		tr.Observe(asrEvent(services.EventTranscriptionProgress, map[string]interface{}{"current": 0, "total": 0}))
+		_, _, total, ok := tr.Step(trackedID)
+		require.True(t, ok)
+		assert.Zero(t, total)
+	})
+}

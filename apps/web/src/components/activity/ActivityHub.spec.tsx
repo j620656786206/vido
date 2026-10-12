@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   createRootRoute,
@@ -43,7 +43,7 @@ vi.mock('../subtitle/GenerationWorkspaceV2', () => ({
 import { useActivity } from '../../hooks/useActivity';
 import { useSubtitleSpend } from '../../hooks/useSubtitleSpend';
 import { ActivityHub } from './ActivityHub';
-import type { ActivitySummary } from '../../services/activityService';
+import type { ActivitySummary, ActiveJobStep } from '../../services/activityService';
 import type { SubtitleSpendSummary } from '../../services/subtitleSpendService';
 
 const mockUseActivity = vi.mocked(useActivity);
@@ -322,6 +322,87 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(row).toHaveTextContent('進行中');
     expect(row).not.toHaveTextContent('0%');
     expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  // disc-2026-10-activity-generation-progress-detail — the step the run reported.
+  describe('generation step', () => {
+    const transcriptionWith = (step?: ActiveJobStep, percentDone = 0) =>
+      mockUseActivity.mockReturnValue(
+        result({
+          data: summary({
+            activeJobs: {
+              status: 'ok',
+              jobs: [
+                { kind: 'transcription', percentDone, detail: 'See S01E02', current: 1, step },
+              ],
+            },
+          }),
+        })
+      );
+
+    it('a counted transcribing step reads 「轉錄 2/6 段」 and draws the bar', async () => {
+      transcriptionWith({ phase: 'transcribing', current: 2, total: 6 }, 33);
+      renderHub();
+      const row = await screen.findByTestId('activity-job-transcription');
+      expect(within(row).getByTestId('activity-job-step')).toHaveTextContent('轉錄 2/6 段');
+      expect(row).not.toHaveTextContent('進行中');
+      expect(within(row).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '33');
+    });
+
+    it('a counted translating step reads 「翻譯 120/659 句」', async () => {
+      transcriptionWith({ phase: 'translating', current: 120, total: 659 }, 18);
+      renderHub();
+      const row = await screen.findByTestId('activity-job-transcription');
+      expect(within(row).getByTestId('activity-job-step')).toHaveTextContent('翻譯 120/659 句');
+    });
+
+    it.each([
+      ['extracting', '提取音訊'],
+      ['transcribing', '轉錄中'],
+      ['translating', '翻譯中'],
+    ])('a %s step without a count names the stage and draws no bar', async (phase, words) => {
+      transcriptionWith({ phase });
+      renderHub();
+      const row = await screen.findByTestId('activity-job-transcription');
+      expect(within(row).getByTestId('activity-job-step')).toHaveTextContent(words);
+      expect(within(row).queryByRole('progressbar')).toBeNull();
+      expect(row).not.toHaveTextContent('0%');
+    });
+
+    it('no step (several jobs, or nothing reported yet) stays 「進行中」', async () => {
+      transcriptionWith(undefined);
+      renderHub();
+      const row = await screen.findByTestId('activity-job-transcription');
+      expect(within(row).getByTestId('activity-job-step')).toHaveTextContent('進行中');
+      expect(within(row).queryByRole('progressbar')).toBeNull();
+    });
+
+    it("the batch row keeps its item count and adds the current item's step to the detail", async () => {
+      mockUseActivity.mockReturnValue(
+        result({
+          data: summary({
+            activeJobs: {
+              status: 'ok',
+              jobs: [
+                {
+                  kind: 'generation_batch',
+                  percentDone: 15,
+                  detail: 'See S01E02',
+                  current: 3,
+                  total: 20,
+                  step: { phase: 'transcribing', current: 2, total: 6 },
+                },
+              ],
+            },
+          }),
+        })
+      );
+      renderHub();
+      const row = await screen.findByTestId('activity-job-generation_batch');
+      expect(row).toHaveTextContent('3 / 20');
+      expect(row).toHaveTextContent('See S01E02 · 轉錄 2/6 段');
+      expect(within(row).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '15');
+    });
   });
 
   it('[disc-2026-07-transcription-active-jobs] an unrecognized kind still falls back to a generic row (defensive baseline)', async () => {

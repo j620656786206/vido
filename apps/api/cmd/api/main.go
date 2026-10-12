@@ -1351,6 +1351,9 @@ func main() {
 		soloJobs = composedSoloJobs{transcriptionService, subtitleSoloRunner}
 	}
 	activityService := services.NewActivityService(scannerService, batchProcessor, generationBatchProcessor, soloJobs, downloadService, repos.ParseJobs)
+	// disc-2026-10-activity-generation-progress-detail: the generating rows show
+	// "轉錄 2/6 段" from the same hub observer the 管理字幕 reattach reads.
+	activityService.SetStepReader(generationPhases)
 	activityHandler := handlers.NewActivityHandler(activityService)
 
 	// Home v3 readout-band aggregate (ux3-1-6, tech-spec D1). The four in-flight

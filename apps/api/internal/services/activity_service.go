@@ -35,6 +35,31 @@ type ActivityService struct {
 	transcription batchJobSource      // TranscriptionService, solo jobs only (disc-2026-07-transcription-active-jobs)
 	downloads     downloadCountSource // reused from status_summary_service.go
 	parse         parseJobSource      // repository.ParseJobRepository (existing interface)
+	steps         GenerationStepReader
+}
+
+// SetStepReader wires the per-item progress the generating rows show. nil (the
+// default) keeps the rows as they were: no step.
+func (s *ActivityService) SetStepReader(r GenerationStepReader) { s.steps = r }
+
+// stepOf is the step for source's single active item, or nil.
+func (s *ActivityService) stepOf(source batchJobSource) *ActiveJobStep {
+	if s.steps == nil {
+		return nil
+	}
+	named, ok := source.(activeMediaSource)
+	if !ok {
+		return nil
+	}
+	mediaID, ok := named.ActiveMediaID()
+	if !ok || mediaID == "" {
+		return nil
+	}
+	phase, current, total, ok := s.steps.Step(mediaID)
+	if !ok {
+		return nil
+	}
+	return &ActiveJobStep{Phase: phase, Current: current, Total: total}
 }
 
 // batchJobSource is the active batch-subtitle job (subtitle.BatchProcessor). Primitive
@@ -91,6 +116,32 @@ type ActiveJob struct {
 	Detail      string `json:"detail,omitempty"` // current file / item (raw)
 	Current     int    `json:"current,omitempty"`
 	Total       int    `json:"total,omitempty"`
+	// Step is where the generating item is right now — "轉錄 2/6 段"
+	// (disc-2026-10-activity-generation-progress-detail, an additive field).
+	// transcription and generation_batch only; absent when unknown or when
+	// several solo jobs run (which one would it describe?).
+	Step *ActiveJobStep `json:"step,omitempty"`
+}
+
+// ActiveJobStep is one item's stage and, when the run reported one, its count:
+// transcribing = chunks done of total, translating = cues done of total.
+// Phase is extracting | transcribing | translating.
+type ActiveJobStep struct {
+	Phase   string `json:"phase"`
+	Current int    `json:"current,omitempty"`
+	Total   int    `json:"total,omitempty"`
+}
+
+// GenerationStepReader is the per-item progress the hub observer keeps
+// (subtitle.PhaseTracker.Step). ok=false: nothing recorded for the item.
+type GenerationStepReader interface {
+	Step(mediaID string) (phase string, current, total int, ok bool)
+}
+
+// activeMediaSource is the optional seam a job source implements to name the
+// ONE item it is generating; ok=false when idle or when several run.
+type activeMediaSource interface {
+	ActiveMediaID() (mediaID string, ok bool)
 }
 
 type PendingSection struct {
@@ -171,18 +222,26 @@ func (s *ActivityService) activeJobsSection() ActiveJobsSection {
 				Detail:      item,
 				Current:     cur,
 				Total:       total,
+				Step:        s.stepOf(s.generation),
 			})
 		}
 	}
 	if s.transcription != nil {
 		if active, pct, cur, total, item := s.transcription.ActivityProgress(); active {
-			jobs = append(jobs, ActiveJob{
+			job := ActiveJob{
 				Kind:        "transcription",
 				PercentDone: pct,
 				Detail:      item,
 				Current:     cur,
 				Total:       total,
-			})
+				Step:        s.stepOf(s.transcription),
+			}
+			// A counted step is the row's progress: the bar and percent_done
+			// follow the chunks / cues of the one running item.
+			if job.Step != nil && job.Step.Total > 0 {
+				job.PercentDone = job.Step.Current * 100 / job.Step.Total
+			}
+			jobs = append(jobs, job)
 		}
 	}
 	return ActiveJobsSection{Status: sectionOK, Jobs: jobs}
