@@ -1,6 +1,6 @@
 # Disc：聽寫把喊叫寫成「$%&!」，翻譯照抄進字幕
 
-Status: review
+Status: done
 
 **Source:** 2026-10-11 正式機驗證 `disc-2026-10-asr-music-only-dash`（PR #740），See S01E02 的 10 分鐘片段。
 
@@ -136,3 +136,4 @@ Claude Opus 5.5（claude-opus-5-5），Amelia dev-story，2026-10-12。
 |---|---|
 | 2026-10-12 | Bob create-story（R0 加 `symbol_only`：沒有字母和數字的句子丟掉；片內字幕軌那條路不動）。 |
 | 2026-10-12 | Amelia dev-story＋code review 0H/0M/2L（皆接受）；全套綠。T3 正式機實測待部署、要先給估價。 |
+| 2026-10-12 | PR #745 CI 全綠合併；T3 正式機實測待部署（先給估價）。 |
