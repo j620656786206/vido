@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
+// Design ref: ux-design.pen — no current screen frame; the v1 library-grid frame was removed; this banner is not mounted anywhere (disc-2026-10-more-unmounted-components).
 import { cn } from '../../lib/utils';
 import type { DegradationLevel, ServicesHealth } from './types';
 

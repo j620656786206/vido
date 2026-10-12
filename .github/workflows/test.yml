@@ -148,6 +148,12 @@ jobs:
       - name: Design token drift check
         run: python3 scripts/check-design-tokens.py
 
+      # 元件檔頭的 `Design ref:`／`Implements:` 寫著它對應設計稿上的哪個節點。lint 只看
+      # 格式，這一步拿 _bmad-output/pen-node-ids.json（匯出腳本寫的設計稿節點清單）
+      # 確認那個節點還在——設計稿刪掉一張畫面後，檔頭不能再指向空氣。
+      - name: Design ref node check
+        run: python3 scripts/check-design-refs.py
+
   # =============================================================================
   # Unit Tests (Vitest) — 不再等 lint；lint 紅跟 unit 紅是兩件事，一起看比較快
   # =============================================================================

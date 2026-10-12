@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen HP-1 Homepage Desktop (sAaCR)
+// Design ref: ux-design.pen — no current screen frame; the v1 homepage dashboard frame HP-1 was removed; replaced by RecentlyAddedRowV2 and not mounted anywhere (disc-2026-10-more-unmounted-components).
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ChevronDown, Film } from 'lucide-react';

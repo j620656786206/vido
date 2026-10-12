@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen I1 Subtitle Search Dialog [8-8] Desktop (cOrOR)
+// Design ref: ux-design.pen — no current screen frame; flow I v1 frame I1 was removed with the v1 designs on 2026-09-10; not mounted anywhere (disc-2026-10-more-unmounted-components).
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Search, X, ChevronDown, ChevronUp, Eye, Download, Check, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
