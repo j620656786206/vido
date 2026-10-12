@@ -459,6 +459,11 @@ func main() {
 	// Initialize SSE hub for real-time event broadcasting
 	sseHub := sse.NewHub()
 	defer sseHub.Close()
+	// Where each running subtitle generation is now, read by
+	// GET …/transcribe/status (disc-2026-10-reattach-progress-starts-at-extracting).
+	// Registered before any producer can broadcast.
+	generationPhases := subtitle.NewPhaseTracker()
+	sseHub.AddObserver(generationPhases.Observe)
 	slog.Info("SSE hub initialized")
 
 	// Initialize scanner service for media library scanning (Story 7.1)
@@ -1182,6 +1187,7 @@ func main() {
 	transcriptionEstimateService.SetDurationProber(routePredictor)
 	transcriptionEstimateService.SetEpisodeDurationWriter(repos.Episodes)
 	transcriptionHandler.SetEstimator(transcriptionEstimateService)
+	transcriptionHandler.SetPhaseReader(generationPhases)
 	// Pipeline mode: the click routes through the pipeline and the quote names
 	// the lane it will take. Legacy mode leaves both exactly as they were.
 	if subtitleSoloRunner != nil {

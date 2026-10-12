@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createRootRoute,
@@ -26,7 +26,9 @@ const h = vi.hoisted(() => ({
   },
   startTracking: vi.fn(),
   reset: vi.fn(),
-  genOptions: undefined as { onComplete?: (p: unknown) => void } | undefined,
+  genOptions: undefined as
+    | { onComplete?: (p: unknown) => void; onEndedUnobserved?: () => void }
+    | undefined,
   glossaryTerms: [{ id: 't1' }, { id: 't2' }, { id: 't3' }] as unknown[],
   // 9R-10c red line 1: the glossary is per-SHOW, so episode mode must query it
   // with the SERIES id while the transcribe target stays the episode id.
@@ -56,7 +58,10 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock('../../hooks/useGenerationProgress', () => ({
-  useGenerationProgress: (options?: { onComplete?: (p: unknown) => void }) => {
+  useGenerationProgress: (options?: {
+    onComplete?: (p: unknown) => void;
+    onEndedUnobserved?: () => void;
+  }) => {
     h.genOptions = options;
     return { progress: h.genState, startTracking: h.startTracking, reset: h.reset };
   },
@@ -513,7 +518,9 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     fireEvent.click(await findPricedGenerate());
 
     // No job id from a 409 and none from the status probe → attach without one.
-    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, undefined));
+    await waitFor(() =>
+      expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, undefined, { inProgress: false })
+    );
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
     expect(screen.queryByTestId('generation-trigger-error')).not.toBeInTheDocument();
   });
@@ -528,8 +535,32 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     fireEvent.click(await findPricedGenerate());
 
-    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'solo-7'));
+    await waitFor(() =>
+      expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'solo-7', {
+        inProgress: true,
+        jobId: 'solo-7',
+      })
+    );
     expect(mockedStatus).toHaveBeenCalledTimes(2);
+  });
+
+  // disc-2026-10-reattach-progress-starts-at-extracting
+  it('409 → the re-asked status also says where the run is, and the stepper starts there', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'inProgress' });
+    const running = {
+      inProgress: true,
+      jobId: 'solo-7',
+      phase: 'transcribing',
+      message: '語音辨識中…',
+    };
+    mockedStatus.mockResolvedValueOnce({ inProgress: false }).mockResolvedValue(running);
+    renderDialog();
+
+    fireEvent.click(await findPricedGenerate());
+
+    await waitFor(() =>
+      expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'solo-7', running)
+    );
   });
 
   it('an extract-lane estimate shows the five-stage stepper from the first frame (CR H1)', async () => {
@@ -1648,7 +1679,7 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
     expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
     expect(screen.getByText(`生成字幕 — ${title}`)).toBeInTheDocument();
     expect(h.startTracking).toHaveBeenCalledTimes(1);
-    expect(h.startTracking).toHaveBeenCalledWith(mediaId, undefined);
+    expect(h.startTracking).toHaveBeenCalledWith(mediaId, undefined, { inProgress: true });
     expect(screen.queryByTestId('action-generate-subtitle')).not.toBeInTheDocument();
     expect(screen.queryByTestId('generation-section')).not.toBeInTheDocument();
     expect(screen.getByText('關閉後生成會在背景繼續')).toBeInTheDocument();
@@ -1669,7 +1700,42 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
     renderDialog();
 
     expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
-    expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'solo-7');
+    expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'solo-7', {
+      inProgress: true,
+      jobId: 'solo-7',
+    });
+  });
+
+  // disc-2026-10-reattach-progress-starts-at-extracting
+  it('running when opened mid speech recognition → the stepper starts at 轉錄, not 抽取', async () => {
+    const running = {
+      inProgress: true,
+      jobId: 'solo-7',
+      phase: 'transcribing',
+      message: '語音辨識中…',
+    };
+    mockedStatus.mockResolvedValue(running);
+    renderDialog();
+
+    expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
+    expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID, 'solo-7', running);
+  });
+
+  it('the run ended before the stream listened → back to the list, which is re-read, and no re-attach', async () => {
+    mockedStatus.mockResolvedValue({ inProgress: true, jobId: 'solo-7' });
+    renderDialog();
+    expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
+    const inventoryReadsBefore = mockedInventory.mock.calls.length;
+
+    act(() => h.genOptions?.onEndedUnobserved?.());
+
+    expect(await screen.findByTestId('action-generate-subtitle')).toBeInTheDocument();
+    expect(screen.queryByTestId('generation-progress-v2')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockedInventory.mock.calls.length).toBeGreaterThan(inventoryReadsBefore)
+    );
+    // The cached "running" answer was replaced — the attach effect stays put.
+    expect(h.startTracking).toHaveBeenCalledTimes(1);
   });
 
   it('episode — running when opened → shows the progress and attaches to the EPISODE stream', async () => {
@@ -1752,7 +1818,7 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
     expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
     expect(mockedStatus).toHaveBeenCalledTimes(2);
     expect(h.startTracking).toHaveBeenCalledTimes(2);
-    expect(h.startTracking).toHaveBeenLastCalledWith(MOVIE_UUID, undefined);
+    expect(h.startTracking).toHaveBeenLastCalledWith(MOVIE_UUID, undefined, { inProgress: true });
     expect(screen.queryByTestId('action-generate-subtitle')).not.toBeInTheDocument();
     expect(mockedTrigger).toHaveBeenCalledTimes(1);
   });

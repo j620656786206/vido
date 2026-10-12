@@ -74,7 +74,10 @@ import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mo
 import { cn } from '../../lib/utils';
 // Shared subtitle-language labels (the detail page uses the same function, dsr-6b).
 import { subtitleLangLabel, type SubtitleLangFamily } from '../../utils/libraryStatus';
-import { transcriptionService } from '../../services/transcriptionService';
+import {
+  transcriptionService,
+  type TranscriptionStatus,
+} from '../../services/transcriptionService';
 import type { SubtitleInventory, SubtitleSearchResult } from '../../services/subtitleService';
 import { useGenerationProgress } from '../../hooks/useGenerationProgress';
 import { useGlossaryTerms } from '../../hooks/useGlossary';
@@ -296,9 +299,12 @@ export function ManageSubtitleDialogV2({
         .then((s) => s.inProgress),
     [isEpisode, mediaId]
   );
+  // Filled in below, once the query client and refreshEstimate exist.
+  const endedUnobservedRef = useRef<() => void>(() => {});
   const generation = useGenerationProgress({
     onComplete: () => onGenerationComplete?.(),
     probeInProgress,
+    onEndedUnobserved: () => endedUnobservedRef.current(),
   });
 
   const glossary = useGlossaryTerms(glossaryMediaId ?? mediaId, open);
@@ -350,6 +356,24 @@ export function ManageSubtitleDialogV2({
       queryKey: subtitleInventoryKeys.item(estimateMediaType, mediaId),
     });
   }, [queryClient, estimateMediaType, mediaId]);
+
+  // The run ended before the stream was listening (attach, or a run faster
+  // than the connect): back to the list, which now shows what it left. The
+  // cached "running" answer is overwritten first — left alone, the attach
+  // effect below would pull the dialog straight back into progress.
+  const onEndedUnobserved = useCallback(() => {
+    if (estimateMediaType) {
+      queryClient.setQueryData<TranscriptionStatus>(
+        transcriptionStatusKeys.item(estimateMediaType, mediaId),
+        { inProgress: false }
+      );
+    }
+    setGenView('idle');
+    refreshEstimate();
+  }, [queryClient, estimateMediaType, mediaId, refreshEstimate]);
+  useEffect(() => {
+    endedUnobservedRef.current = onEndedUnobserved;
+  }, [onEndedUnobserved]);
 
   // A run that failed may already have left the English SRT behind — the retry
   // is then translate-only and cheaper. Re-price whenever a run ends.
@@ -418,7 +442,7 @@ export function ManageSubtitleDialogV2({
             transcriptionService.getTranscriptionStatus(statusType, mediaId, signal),
           staleTime: 0,
         })
-        .then((fresh) => generation.startTracking(mediaId, fresh.jobId))
+        .then((fresh) => generation.startTracking(mediaId, fresh.jobId, fresh))
         .catch(() => generation.startTracking(mediaId, undefined));
     },
     onError: (error) => {
@@ -436,14 +460,17 @@ export function ManageSubtitleDialogV2({
   // Opened while a run is going → straight to its progress, attached to its
   // stream — the same attach the trigger's 409 does. Only from idle: an
   // answer must not pull the user out of a failure or the 尚未設定 panel.
-  const alreadyRunning = runStatus.data?.inProgress === true;
-  const runningJobId = runStatus.data?.jobId;
+  // The status also says where the run is, so the stepper starts at its real
+  // stage — not at 抽取 for the minutes speech recognition sends nothing
+  // (disc-2026-10-reattach-progress-starts-at-extracting).
+  const runningStatus = runStatus.data;
+  const alreadyRunning = runningStatus?.inProgress === true;
   const { startTracking } = generation;
   useEffect(() => {
     if (!open || !alreadyRunning || genView !== 'idle') return;
     setGenView('progress');
-    startTracking(mediaId, runningJobId);
-  }, [open, alreadyRunning, genView, startTracking, mediaId, runningJobId]);
+    startTracking(mediaId, runningStatus?.jobId, runningStatus);
+  }, [open, alreadyRunning, genView, startTracking, mediaId, runningStatus]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
