@@ -1,6 +1,6 @@
 # Disc：片子的「類型」存成簡體字（剧情、动作冒险），還有英文的 Sci-Fi & Fantasy
 
-Status: review
+Status: done
 
 **Source:** 2026-10-12 正式機驗證 `disc-2026-10-production-countries-never-filled`（PR #742）。開機補抓把 136 部片的類型補上了，但補上的全是簡體或英文，媒體庫「類型」篩選和列表的類型標籤都看得到。
 
@@ -204,3 +204,4 @@ Claude Opus 5.5（claude-opus-5-5），Amelia dev-story，2026-10-12。
 | 2026-10-12 | Bob create-story（TMDb 三種中文類型名都是簡體；在 `GenresJSON()` 出口統一換成前端 `GENRE_MAP` 的台灣用語＋migration 046 轉舊列）。 |
 | 2026-10-12 | Amelia dev-story：`GenresJSON` 出口統一換台灣用語＋migration 046＋篩選也轉（AC #8 併入）＋前後端對表測試；全套綠。T6 正式機實測待部署。 |
 | 2026-10-12 | Code review 0H/1M/3L：M1（探索詳細頁的 TMDb 類型）、L1（FillContextFacets 自己也轉）已修；L2、L3 接受。前端 300 檔 4680 條、Go 全套、staticcheck、lint 綠。 |
+| 2026-10-12 | PR #743 CI 全綠（17 pass、3 skipping）合併；T6 正式機驗證待 NAS 更新後補。 |
