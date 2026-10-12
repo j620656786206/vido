@@ -793,6 +793,23 @@ func (s *TranscriptionService) ActivityProgress() (active bool, percentDone, cur
 	return current > 0, 0, current, 0, currentItem
 }
 
+// ActiveMediaID names the one SOLO job running (legacy mode's solo clicks), for
+// the Activity row's step; ok=false when none or several run. Batch / pipeline
+// jobs are not counted here — the same rule as ActivityProgress.
+func (s *TranscriptionService) ActiveMediaID() (mediaID string, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for id, job := range s.inProgress {
+		if !job.Solo {
+			continue
+		}
+		n++
+		mediaID = id
+	}
+	return mediaID, n == 1
+}
+
 // eventTitle is the `title` every transcription_* payload carries (story
 // dsr-6d-c-2): the generation workspace's live log listens to these events
 // unfiltered and had no way to say WHICH film an event was about. It reads the
@@ -1016,7 +1033,17 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 					"names", len(strings.Split(prompt, ", ")), "runes", len([]rune(prompt)))
 			}
 		}
-		srtContent, err = s.transcribeAudio(asrCtx, audioPath, lang, scope)
+		srtContent, err = s.transcribeAudioWithProgress(asrCtx, audioPath, lang, scope, func(done, total int) {
+			s.broadcastEvent(EventTranscriptionProgress, map[string]interface{}{
+				"job_id":   jobID,
+				"media_id": mediaID,
+				"title":    s.eventTitle(mediaID),
+				"phase":    "transcribing",
+				"current":  done,
+				"total":    total,
+				"message":  transcriptionChunkMessage(done, total),
+			})
+		})
 		if err != nil {
 			err = explain("transcribing", err)
 			s.failJob(jobID, mediaID, fmt.Sprintf("transcribe: %v", err))
@@ -1223,6 +1250,14 @@ func transcriptionStageMessage(phase string) string {
 	default:
 		return ""
 	}
+}
+
+// transcriptionChunkMessage is the transcribing line once the audio is split:
+// the stage name plus which chunk is done (disc-2026-10-activity-generation-
+// progress-detail). Same words as transcriptionStageMessage, so the stepper
+// reads as one line that gained a count.
+func transcriptionChunkMessage(done, total int) string {
+	return fmt.Sprintf("%s（第 %d/%d 段）", transcriptionStageMessage("transcribing"), done, total)
 }
 
 // translationProgressMessage is the translating line with its percentage. It
@@ -1474,6 +1509,15 @@ func (s *TranscriptionService) chunkScope(mediaID, filePath string, trackIndex i
 // takes the same path as ONE chunk (start=0, grid 0), so the semantics do not
 // depend on the file size.
 func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, lang string, scope *asrChunkScope) (string, error) {
+	return s.transcribeAudioWithProgress(ctx, audioPath, lang, scope, nil)
+}
+
+// transcribeAudioWithProgress is transcribeAudio that also reports each
+// finished chunk — done of total, a stored chunk counting as done — so the
+// run can tell the dialog and the Activity page "轉錄 2/6 段"
+// (disc-2026-10-activity-generation-progress-detail). onChunk is only called
+// for a file split into two or more chunks; nil = no reports.
+func (s *TranscriptionService) transcribeAudioWithProgress(ctx context.Context, audioPath, lang string, scope *asrChunkScope, onChunk func(done, total int)) (string, error) {
 	needsChunk, err := ai.NeedsChunking(audioPath)
 	if err != nil {
 		return "", fmt.Errorf("check chunking: %w", err)
@@ -1514,6 +1558,7 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 		if v, ok := stored[i]; ok && v.StartMS == chunk.StartMS && v.DurationMS == chunk.DurationMS {
 			srtChunks = append(srtChunks, v.Filtered)
 			unfilteredChunks = append(unfilteredChunks, v.Unfiltered)
+			reportChunk(onChunk, needsChunk, i+1, len(chunks))
 			continue
 		} else if ok {
 			s.logger.Info("asr chunk cache: stored chunk cut elsewhere — transcribing again",
@@ -1542,6 +1587,7 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 		srtChunks = append(srtChunks, filtered)
 		unfilteredChunks = append(unfilteredChunks, unfiltered)
 		s.storeChunk(ctx, scope, i, chunkSeconds, asrChunkValue{Filtered: filtered, Unfiltered: unfiltered, StartMS: chunk.StartMS, DurationMS: chunk.DurationMS})
+		reportChunk(onChunk, needsChunk, i+1, len(chunks))
 	}
 
 	if !needsChunk {
@@ -1552,6 +1598,14 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 		ai.MergeSRTChunks(srtChunks, starts),
 		ai.MergeSRTChunks(unfilteredChunks, starts),
 	), nil
+}
+
+// reportChunk calls onChunk for a multi-chunk file only: one chunk is the
+// whole file, and "1/1" says nothing the stage name does not.
+func reportChunk(onChunk func(done, total int), chunked bool, done, total int) {
+	if onChunk != nil && chunked && total > 1 {
+		onChunk(done, total)
+	}
 }
 
 // loadStoredChunks is the ONE batched read per run: it asks for exactly this
@@ -2034,7 +2088,13 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 			"title":      s.eventTitle(mediaID),
 			"phase":      "translating",
 			"percentage": pct,
-			"message":    translationProgressMessage(pct),
+			// Cue counts for the Activity page's "翻譯 120/659 句"
+			// (disc-2026-10-activity-generation-progress-detail). pct is
+			// processed/total×100 (TranslateWithGlossaryHarvest), so this
+			// recovers the count exactly.
+			"current": int(math.Round(pct / 100 * float64(len(blocks)))),
+			"total":   len(blocks),
+			"message": translationProgressMessage(pct),
 		})
 	}
 

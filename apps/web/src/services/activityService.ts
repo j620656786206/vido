@@ -15,12 +15,24 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 export type SectionStatus = 'ok' | 'unavailable';
 
 /** An in-flight background job. `kind` drives the row's icon + title on the client. */
+/**
+ * Where the generating item is right now (disc-2026-10-activity-generation-progress-detail).
+ * `current`/`total`: transcribing = chunks, translating = cues; absent = no count yet.
+ */
+export interface ActiveJobStep {
+  phase: 'extracting' | 'transcribing' | 'translating' | string;
+  current?: number;
+  total?: number;
+}
+
 export interface ActiveJob {
   kind: 'scan' | 'subtitle_batch' | 'generation_batch' | 'transcription' | string;
   percentDone: number;
   detail?: string;
   current?: number;
   total?: number;
+  /** transcription / generation_batch only; absent when unknown. */
+  step?: ActiveJobStep;
 }
 export interface ActiveJobsSection {
   status: SectionStatus;

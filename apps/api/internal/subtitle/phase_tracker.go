@@ -35,6 +35,12 @@ type PhaseSnapshot struct {
 	// Percentage is translation_progress's 0–100 figure; nil when the event
 	// carried none (and always nil outside translating).
 	Percentage *float64
+	// Current of Total is the count the latest event carried — transcribing:
+	// chunks done; translating: cues translated
+	// (disc-2026-10-activity-generation-progress-detail). 0/0 = no count, which
+	// is also what an event WITHOUT one leaves behind: a count belongs to the
+	// event that sent it, never to the phase.
+	Current, Total int
 }
 
 // NewPhaseTracker returns an empty tracker; register Observe on the hub.
@@ -93,6 +99,9 @@ func (t *PhaseTracker) Observe(ev sse.Event) {
 		if phase == "translating" {
 			snap.Percentage = payloadNumber(ev.Data, "percentage")
 		}
+		if cur, total := payloadNumber(ev.Data, "current"), payloadNumber(ev.Data, "total"); cur != nil && total != nil && *total > 0 {
+			snap.Current, snap.Total = int(*cur), int(*total)
+		}
 		t.record(id, snap)
 	}
 }
@@ -104,6 +113,13 @@ func (t *PhaseTracker) Phase(mediaID string) (PhaseSnapshot, bool) {
 	defer t.mu.Unlock()
 	snap, ok := t.byMedia[mediaID]
 	return snap, ok
+}
+
+// Step is Phase in the shape services.GenerationStepReader takes (services
+// cannot import this package).
+func (t *PhaseTracker) Step(mediaID string) (phase string, current, total int, ok bool) {
+	snap, ok := t.Phase(mediaID)
+	return snap.Phase, snap.Current, snap.Total, ok
 }
 
 func (t *PhaseTracker) record(id string, snap PhaseSnapshot) {

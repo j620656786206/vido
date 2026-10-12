@@ -297,6 +297,21 @@ func (s *SoloRunner) ActivityProgress() (active bool, percentDone, current, tota
 	return current > 0, 0, current, 0, currentItem
 }
 
+// ActiveMediaID names the one item this runner is generating, for the
+// Activity row's step (disc-2026-10-activity-generation-progress-detail).
+// ok=false when idle or when several run.
+func (s *SoloRunner) ActiveMediaID() (mediaID string, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.jobs) != 1 {
+		return "", false
+	}
+	for ref := range s.jobs {
+		mediaID = ref.ID
+	}
+	return mediaID, true
+}
+
 // ActiveManualUsage is GET /ai/usage's live-spend figure for solo clicks
 // (9R-17 AC #3): the summed spend and ceiling of every running job. ok is
 // false when nothing is running — absent, never 0.

@@ -489,6 +489,11 @@ func TestSoloRunner_ActivityAndUsageSeeRunningJobs(t *testing.T) {
 	assert.True(t, active)
 	assert.Equal(t, 1, current)
 	assert.Equal(t, "怪奇物語", item)
+	// disc-2026-10-activity-generation-progress-detail: the one running item
+	// is named for the Activity row's step.
+	id, named := s.runner.ActiveMediaID()
+	assert.True(t, named)
+	assert.Equal(t, s.ref.ID, id)
 	spent, budget, ok := s.runner.ActiveManualUsage()
 	assert.True(t, ok)
 	assert.Equal(t, 0.0, spent)
@@ -498,6 +503,8 @@ func TestSoloRunner_ActivityAndUsageSeeRunningJobs(t *testing.T) {
 	s.runner.waitIdle()
 	active, _, _, _, _ = s.runner.ActivityProgress()
 	assert.False(t, active)
+	_, named = s.runner.ActiveMediaID()
+	assert.False(t, named, "idle names nothing")
 }
 
 // releaseSpyGuard records how many events the hub held when Release ran.
