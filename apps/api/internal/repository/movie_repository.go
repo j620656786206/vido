@@ -633,7 +633,9 @@ func movieListFilterConditions(params ListParams, alias string) ([]string, []int
 	args := []interface{}{}
 
 	if genres, ok := params.Filters["genres"].([]string); ok {
-		for _, g := range genres {
+		// Stored names are the Taiwan wording (models.CanonicalGenres), so a
+		// filter given in another spelling (an old 剧情 link) matches too.
+		for _, g := range models.CanonicalGenres(genres) {
 			conditions = append(conditions, col("genres")+" LIKE ?")
 			args = append(args, `%"`+g+`"%`)
 		}

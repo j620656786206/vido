@@ -250,7 +250,10 @@ func (c *LanguageFallbackClient) GetMovieDetailsWithFallback(ctx context.Context
 //
 // Merging per field keeps zh-TW for everything zh-TW actually has, and borrows
 // only the genuinely missing pieces. Genres come back populated in every
-// language, so zh-TW genre names now always win.
+// language, so zh-TW genre names now always win — but TMDb's zh-TW genre names
+// are themselves Simplified (剧情, 动作冒险; two TV genres are English only), so
+// the Taiwan wording is applied when they are stored (models.CanonicalGenres,
+// disc-2026-10-genre-names-simplified).
 func fillEmptyMovieFields(dst, src *MovieDetails) {
 	if dst == nil || src == nil {
 		return

@@ -181,6 +181,25 @@ describe('MediaDetailPanel', () => {
       expect(screen.getByTestId('detail-genres')).toHaveTextContent('冒險');
     });
 
+    it('shows TMDb genres in the Taiwan wording (TMDb zh-TW names are Simplified)', () => {
+      render(
+        <MediaDetailPanel
+          type="movie"
+          details={{
+            ...mockMovieDetails,
+            genres: [
+              { id: 18, name: '剧情' },
+              { id: 10765, name: 'Sci-Fi & Fantasy' },
+            ],
+          }}
+        />,
+        { wrapper: createWrapper() }
+      );
+      expect(screen.getByTestId('detail-genres')).toHaveTextContent('劇情');
+      expect(screen.getByTestId('detail-genres')).toHaveTextContent('科幻奇幻');
+      expect(screen.getByTestId('detail-genres')).not.toHaveTextContent('剧情');
+    });
+
     it('should render overview', () => {
       render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
         wrapper: createWrapper(),

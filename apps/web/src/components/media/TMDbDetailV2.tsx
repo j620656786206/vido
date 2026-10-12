@@ -26,6 +26,7 @@ import { DualRatingDisplay } from './DualRatingDisplay';
 import { DetailHeroV2 } from './DetailHeroV2';
 import { DetailSkeletonV2, DetailNotFoundV2, DetailLoadErrorV2 } from './DetailStatesV2';
 import { isNotFoundError } from '../../lib/apiError';
+import { tmdbGenreName } from '../../lib/genres';
 import { TmdbAttribution } from '../ui/TmdbAttribution';
 
 const WATCH_REGION = 'TW';
@@ -71,7 +72,7 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
   const title = isMovie ? movieDetails.data!.title : tvDetails.data!.name;
   const originalTitle = isMovie ? movieDetails.data!.originalTitle : tvDetails.data!.originalName;
   const releaseDate = isMovie ? movieDetails.data!.releaseDate : tvDetails.data!.firstAirDate;
-  const genreNames = data.genres?.map((g) => g.name).filter(Boolean) ?? [];
+  const genreNames = data.genres?.map(tmdbGenreName).filter(Boolean) ?? [];
   const director = isMovie ? creditsQuery.data?.crew?.find((c) => c.job === 'Director') : undefined;
   const owned = !ownership.isLoading && ownership.isOwned(tmdbId);
 

@@ -35,7 +35,7 @@ function createMovieInput(overrides: Partial<MovieInput> = {}): MovieInput {
     title: faker.lorem.words(3),
     release_date: faker.date.past({ years: 10 }).toISOString().split('T')[0],
     original_title: faker.lorem.words(3),
-    genres: [faker.helpers.arrayElement(['Action', 'Drama', 'Comedy', 'Thriller'])],
+    genres: [faker.helpers.arrayElement(['動作', '劇情', '喜劇', '驚悚'])], // stored in the Taiwan wording
     overview: faker.lorem.paragraph(),
     poster_path: `/posters/${faker.string.alphanumeric(10)}.jpg`,
     tmdb_id: faker.number.int({ min: 100000, max: 999999 }),
