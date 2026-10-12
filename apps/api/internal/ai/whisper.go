@@ -327,7 +327,13 @@ func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, fil
 		// (9R-4) has already re-tried — latching on it would let one bad
 		// minute disable hallucination filtering for the life of the process,
 		// silently and forever.
-		if status >= 400 && status < 500 {
+		//
+		// The same goes for a 4xx about the ACCOUNT rather than the format
+		// (disc-2026-09-asr-quota-429-treated-as-transient): a rejected key,
+		// a rate limit that outlived every retry, an empty balance. Each one
+		// latched the fallback, and the plain-SRT request then failed the
+		// same way.
+		if status >= 400 && status < 500 && !isAccountRejection(status, err) {
 			c.markVerboseUnsupported("engine rejected verbose_json", status, err)
 			return TranscriptionDetail{}, false, nil
 		}
@@ -407,6 +413,19 @@ func (c *WhisperClient) transcribeVerbose(ctx context.Context, audio []byte, fil
 	}
 
 	return detail, true, nil
+}
+
+// isAccountRejection is a 4xx that says nothing about verbose_json: the key,
+// the rate limit, or the balance.
+func isAccountRejection(status int, err error) bool {
+	if errors.Is(err, ErrAIQuotaExceeded) {
+		return true
+	}
+	switch status {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests:
+		return true
+	}
+	return false
 }
 
 // markVerboseUnsupported latches the fallback so a ten-chunk file probes once
@@ -561,6 +580,11 @@ func (c *WhisperClient) postTranscriptionWith(ctx context.Context, audio []byte,
 					"status_code", resp.StatusCode,
 					"body", string(respBody),
 				)
+				// An empty account answers 429 too, but waiting will not
+				// refill it: stop now, with a line the user can act on.
+				if credit := openAICreditExhausted(string(respBody)); credit != nil {
+					return "", false, fmt.Errorf("%w: %w", ErrWhisperAPIError, credit)
+				}
 				return "", isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d — %s", ErrWhisperAPIError, resp.StatusCode, string(respBody))
 			}
 

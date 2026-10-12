@@ -521,3 +521,20 @@ func (g *releaseSpyGuard) Release(ref MediaRef) {
 	g.onRelease(n)
 	g.fakeSoloGuard.Release(ref)
 }
+
+// disc-2026-09-asr-quota-429-treated-as-transient — an empty provider account
+// names the provider and the billing page, through every layer that wraps it.
+func TestFailureMessage_EmptyAccountSaysWhereToTopUp(t *testing.T) {
+	credit := &ai.CreditExhaustedError{Provider: "openai", Code: "insufficient_quota", BillingURL: ai.OpenAIBillingURL}
+	runErr := fmt.Errorf("subtitle pipeline: movie m1: asr fallback: %w",
+		fmt.Errorf("transcribe: %w", fmt.Errorf("transcribe chunk 1/6: %w", fmt.Errorf("%w: %w", ai.ErrWhisperAPIError, credit))))
+
+	message, detail := failureMessage(nil, runErr, nil)
+	assert.Equal(t, "OpenAI 帳號沒有額度了，儲值後再按一次生成", message)
+	assert.Equal(t, "OpenAI 帳號沒有額度了，請到 "+ai.OpenAIBillingURL+" 儲值後再按一次生成", detail)
+	assert.NotContains(t, detail, "{", "no JSON body")
+
+	anthropic := &ai.CreditExhaustedError{Provider: "anthropic", BillingURL: ai.AnthropicBillingURL}
+	message, _ = failureMessage(nil, fmt.Errorf("translate: %w", anthropic), nil)
+	assert.Equal(t, "Anthropic 帳號沒有額度了，儲值後再按一次生成", message)
+}
