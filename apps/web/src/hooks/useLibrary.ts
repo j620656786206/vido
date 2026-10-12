@@ -8,9 +8,6 @@ export const libraryKeys = {
   lists: () => [...libraryKeys.all, 'list'] as const,
   list: (params: LibraryListParams) => [...libraryKeys.lists(), params] as const,
   recent: (limit: number) => [...libraryKeys.all, 'recent', limit] as const,
-  searches: () => [...libraryKeys.all, 'search'] as const,
-  search: (query: string, params: LibraryListParams) =>
-    [...libraryKeys.searches(), query, params] as const,
   genres: () => [...libraryKeys.all, 'genres'] as const,
   stats: () => [...libraryKeys.all, 'stats'] as const,
   movieStats: () => [...libraryKeys.all, 'movie-stats'] as const,
@@ -49,16 +46,6 @@ export function useRecentlyAdded(limit: number = RECENT_LIMIT) {
     queryFn: () => libraryService.getRecentlyAdded(limit),
     staleTime: RECENT_STALE_TIME_MS,
     refetchInterval: RECENT_STALE_TIME_MS, // Auto-refresh on the same cadence
-  });
-}
-
-export function useLibrarySearch(query: string, params: LibraryListParams = {}) {
-  return useQuery({
-    queryKey: libraryKeys.search(query, params),
-    queryFn: () => libraryService.searchLibrary(query, params),
-    enabled: query.length >= 2,
-    staleTime: 60 * 1000, // 60s
-    gcTime: 5 * 60 * 1000, // 5min
   });
 }
 

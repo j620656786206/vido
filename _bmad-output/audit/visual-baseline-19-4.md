@@ -289,7 +289,6 @@ reference fixtures are unchanged except the four notes above: `library-sort-sele
 | `library-batch-progress` | `library/BatchProgress.tsx` | `screen-section` | default | viewport-fallback overlay |
 | `library-filter-panel` | `library/FilterPanel.tsx` | `screen-section` | default, hover, focus | Q-bucket — seeded filter facets |
 | `library-library-grid` | `library/LibraryGrid.tsx` | `screen-section` | default, hover, focus | |
-| `library-library-search-bar` | `library/LibrarySearchBar.tsx` | `screen-section` | default, hover, focus | |
 | `library-library-table` | `library/LibraryTable.tsx` | `screen-section` | default, hover, focus | |
 | `library-parse-failure-card` | `library/ParseFailureCard.tsx` | `screen-section` | default, hover, focus | defensive `parsedInfo.title: ''` + `filename: 'a.mkv'` keeps inner `useManualSearch` disabled (`params.query.length < 2`) |
 | `library-poster-card-menu` | `library/PosterCardMenu.tsx` | `screen-section` | default | |

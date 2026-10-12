@@ -118,7 +118,6 @@ import {
 } from '../../components/downloads/DownloadsStatesV2';
 import { BatchConfirmDialog } from '../../components/library/BatchConfirmDialog';
 import { BatchProgress } from '../../components/library/BatchProgress';
-import { LibrarySearchBar } from '../../components/library/LibrarySearchBar';
 import { LibraryTable } from '../../components/library/LibraryTable';
 import { ParseFailureCard } from '../../components/library/ParseFailureCard';
 import { PosterCardMenu } from '../../components/library/PosterCardMenu';
@@ -2413,14 +2412,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     penNode: 'screen-section',
     statesOnly: ['default'],
-  },
-  {
-    id: 'library-library-search-bar',
-    label: 'library/LibrarySearchBar',
-    component: LibrarySearchBar,
-    props: { onSearch: noop, initialQuery: '鬼滅之刃', resultCount: 15 },
-    penNode: 'screen-section',
-    width: 480,
   },
   {
     id: 'library-library-table',

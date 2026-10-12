@@ -319,61 +319,6 @@ describe('libraryService', () => {
     });
   });
 
-  describe('searchLibrary', () => {
-    it('[P1] calls GET /library/search with query param', async () => {
-      mockFetch.mockResolvedValue(
-        mockSuccessResponse({ items: [], totalItems: 0, page: 1, pageSize: 20, totalPages: 0 })
-      );
-
-      await libraryService.searchLibrary('batman');
-
-      const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toContain('/library/search?');
-      expect(url).toContain('q=batman');
-    });
-
-    it('[P1] includes type filter in search', async () => {
-      mockFetch.mockResolvedValue(
-        mockSuccessResponse({ items: [], totalItems: 0, page: 1, pageSize: 20, totalPages: 0 })
-      );
-
-      await libraryService.searchLibrary('test', { type: 'movie' });
-
-      const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toContain('q=test');
-      expect(url).toContain('type=movie');
-    });
-
-    it('[P1] includes pagination params in search', async () => {
-      mockFetch.mockResolvedValue(
-        mockSuccessResponse({ items: [], totalItems: 0, page: 2, pageSize: 10, totalPages: 0 })
-      );
-
-      await libraryService.searchLibrary('query', { page: 2, pageSize: 10 });
-
-      const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toContain('page=2');
-      expect(url).toContain('page_size=10');
-    });
-
-    it('[P1] omits type when "all"', async () => {
-      mockFetch.mockResolvedValue(
-        mockSuccessResponse({ items: [], totalItems: 0, page: 1, pageSize: 20, totalPages: 0 })
-      );
-
-      await libraryService.searchLibrary('test', { type: 'all' });
-
-      const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).not.toContain('type=');
-    });
-
-    it('[P1] throws on API error', async () => {
-      mockFetch.mockResolvedValue(mockErrorResponse(500, 'Search failed'));
-
-      await expect(libraryService.searchLibrary('test')).rejects.toThrow('Search failed');
-    });
-  });
-
   describe('getGenres', () => {
     it('[P1] calls GET /library/genres', async () => {
       const genres = ['科幻', '動作', '劇情', '恐怖'];
@@ -691,8 +636,7 @@ describe('libraryService', () => {
 
   // disc-2026-10-subtitle-filter-disagrees-with-badges AC #8 — confirmed against
   // [@contract-v1] (Story disc-2026-10-subtitle-filter-disagrees-with-badges AC #2) and
-  // [@contract-v1] (Story dsr-1b-a2 AC #1): list and search send the same filter set,
-  // and the frontend no longer sends subtitle_status.
+  // the frontend no longer sends subtitle_status.
   describe('chinese_subtitle filter param', () => {
     const ok = () =>
       mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 });
@@ -710,33 +654,6 @@ describe('libraryService', () => {
       await libraryService.listLibrary({ chineseSubtitle: '' });
       const url = mockFetch.mock.calls[0][0] as string;
       expect(url).not.toContain('chinese_subtitle');
-    });
-
-    it('[P0] searchLibrary sends the same filter set as listLibrary', async () => {
-      mockFetch.mockResolvedValue(
-        mockSuccessResponse({
-          results: [],
-          moviesPagination: null,
-          seriesPagination: null,
-          totalCount: 0,
-        })
-      );
-      await libraryService.searchLibrary('駭客', {
-        genres: '科幻',
-        yearMin: 1999,
-        yearMax: 2003,
-        unmatched: true,
-        chineseSubtitle: 'missing',
-      });
-      const url = new URL(mockFetch.mock.calls[0][0] as string, 'http://x');
-      expect(url.pathname).toMatch(/\/library\/search$/);
-      expect(url.searchParams.get('q')).toBe('駭客');
-      expect(url.searchParams.get('genres')).toBe('科幻');
-      expect(url.searchParams.get('year_min')).toBe('1999');
-      expect(url.searchParams.get('year_max')).toBe('2003');
-      expect(url.searchParams.get('unmatched')).toBe('true');
-      expect(url.searchParams.get('chinese_subtitle')).toBe('missing');
-      expect(url.searchParams.has('subtitle_status')).toBe(false);
     });
   });
 });

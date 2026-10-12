@@ -4,7 +4,6 @@ import type {
   LibraryItem,
   LibraryListResponse,
   LibraryListParams,
-  LibrarySearchResponse,
   LibraryStats,
   MediaStats,
   LibraryMovie,
@@ -82,31 +81,6 @@ export const libraryService = {
   async getRecentlyAdded(limit: number = 20): Promise<LibraryItem[]> {
     const response = await fetchApi<LibraryListResponse>(`/library/recent?limit=${limit}`);
     return response.items;
-  },
-
-  async searchLibrary(
-    query: string,
-    params: LibraryListParams = {}
-  ): Promise<LibrarySearchResponse> {
-    const searchParams = new URLSearchParams();
-    searchParams.set('q', query);
-    if (params.page) searchParams.set('page', String(params.page));
-    if (params.pageSize) searchParams.set('page_size', String(params.pageSize));
-    if (params.type && params.type !== 'all') searchParams.set('type', params.type);
-    if (params.sortBy) searchParams.set('sort_by', params.sortBy);
-    if (params.sortOrder) searchParams.set('sort_order', params.sortOrder);
-    // Same filter set as listLibrary — confirmed against [@contract-v1] (Story dsr-1b-a2
-    // AC #1): /library/search applies genres / year / unmatched / chinese_subtitle too, so
-    // a lit filter pill stays true while you type (disc-2026-09-library-search-ignores-filters).
-    // chinese_subtitle — confirmed against [@contract-v1] (Story disc-2026-10-subtitle-filter-
-    // disagrees-with-badges AC #2); the frontend no longer sends subtitle_status.
-    if (params.genres) searchParams.set('genres', params.genres);
-    if (params.yearMin) searchParams.set('year_min', String(params.yearMin));
-    if (params.yearMax) searchParams.set('year_max', String(params.yearMax));
-    if (params.unmatched) searchParams.set('unmatched', 'true');
-    if (params.chineseSubtitle) searchParams.set('chinese_subtitle', params.chineseSubtitle);
-
-    return fetchApi<LibrarySearchResponse>(`/library/search?${searchParams.toString()}`);
   },
 
   async deleteMovie(id: string): Promise<void> {
