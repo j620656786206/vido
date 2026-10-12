@@ -1,6 +1,6 @@
 # Disc：片尾配樂被聽寫成「Subs by www.zeoranger.co.uk」
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-09-whisper-credit-line-hallucination`（2026-09-19 由 `disc-2026-09-generation-resume-b-asr-chunk-store` 真機驗證時抽查字幕發現，P3）。2026-10-12 Alexyu 從 backlog 選 A。
 
