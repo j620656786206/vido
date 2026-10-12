@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GENRE_MAP, genreNamesFor, getGenreNames } from './genres';
+import { GENRE_MAP, genreNamesFor, getGenreNames, tmdbGenreName } from './genres';
 
 describe('genres utilities', () => {
   describe('GENRE_MAP', () => {
@@ -84,6 +84,19 @@ describe('genres utilities', () => {
       expect(tv).toContain('脫口秀');
       expect(tv).toContain('劇情');
       expect(tv).not.toContain('電視電影');
+    });
+  });
+
+  // disc-2026-10-genre-names-simplified: TMDb's zh-TW names are Simplified.
+  describe('tmdbGenreName', () => {
+    it('reads a known id in the Taiwan wording, whatever TMDb called it', () => {
+      expect(tmdbGenreName({ id: 18, name: '剧情' })).toBe('劇情');
+      expect(tmdbGenreName({ id: 10759, name: '动作冒险' })).toBe('動作冒險');
+      expect(tmdbGenreName({ id: 10765, name: 'Sci-Fi & Fantasy' })).toBe('科幻奇幻');
+    });
+
+    it("keeps TMDb's name for an id the table does not know", () => {
+      expect(tmdbGenreName({ id: 999999, name: '新类型' })).toBe('新类型');
     });
   });
 });

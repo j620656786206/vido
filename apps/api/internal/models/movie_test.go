@@ -83,7 +83,7 @@ func TestMovie_GenresJSON(t *testing.T) {
 		{
 			name:     "with genres",
 			genres:   []string{"Action", "Drama"},
-			expected: `["Action","Drama"]`,
+			expected: `["動作","劇情"]`, // stored in the Taiwan wording (CanonicalGenres)
 		},
 	}
 

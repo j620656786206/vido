@@ -698,10 +698,11 @@ func TestSeriesGenresSerialization(t *testing.T) {
 		t.Errorf("Expected 3 genres, got %d", len(found.Genres))
 	}
 
+	// Stored in the Taiwan wording (models.CanonicalGenres).
 	expectedGenres := map[string]bool{
-		"Drama":           true,
-		"Science Fiction": true,
-		"Thriller":        true,
+		"劇情": true,
+		"科幻": true,
+		"驚悚": true,
 	}
 
 	for _, genre := range found.Genres {

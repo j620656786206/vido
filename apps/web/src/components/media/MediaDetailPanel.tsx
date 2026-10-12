@@ -7,6 +7,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getImageUrl } from '../../lib/image';
+import { tmdbGenreName } from '../../lib/genres';
 import { TrailerEmbed } from './TrailerEmbed';
 import { MetadataSourceBadge } from './MetadataSourceBadge';
 import { FileInfo } from './FileInfo';
@@ -205,7 +206,7 @@ export function MediaDetailPanel({
                   key={genre.id}
                   className="rounded-full bg-[var(--bg-secondary)] px-3 py-1 text-xs text-[var(--text-secondary)]"
                 >
-                  {genre.name}
+                  {tmdbGenreName(genre)}
                 </span>
               ))}
             </div>

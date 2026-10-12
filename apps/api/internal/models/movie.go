@@ -378,11 +378,10 @@ func (m *Movie) ScanGenres(value interface{}) error {
 	return nil
 }
 
-// GenresJSON returns genres as JSON string for database storage
+// GenresJSON returns genres as JSON string for database storage, in the
+// Taiwan wording (CanonicalGenres — every genre write passes through here).
 func (m *Movie) GenresJSON() (string, error) {
-	if m.Genres == nil {
-		m.Genres = []string{}
-	}
+	m.Genres = CanonicalGenres(m.Genres)
 
 	bytes, err := json.Marshal(m.Genres)
 	if err != nil {

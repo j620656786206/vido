@@ -47,8 +47,10 @@ const TV_GENRE_IDS = [
 
 /**
  * The genre names a hand edit can pick from. These are the SAME strings the
- * library stores (enrichment writes TMDb's zh-TW `genre.name`), so an edit
- * round-trips — the old editor offered English keys and saved 「drama」 over 「劇情」.
+ * library stores: the API rewrites every genre into this table's Taiwan names
+ * when it saves (Go `models.CanonicalGenres` — TMDb's own zh-TW names are
+ * Simplified), so an edit round-trips. The old editor offered English keys and
+ * saved 「drama」 over 「劇情」. A Go test keeps GENRE_MAP and the API's table identical.
  */
 export function genreNamesFor(mediaType: 'movie' | 'series'): string[] {
   return (mediaType === 'movie' ? MOVIE_GENRE_IDS : TV_GENRE_IDS).map((id) => GENRE_MAP[id]);
@@ -57,6 +59,15 @@ export function genreNamesFor(mediaType: 'movie' | 'series'): string[] {
 /** TMDb genre ids for one content type, in TMDb's own list order (explore blocks). */
 export function genreIdsFor(contentType: 'movie' | 'tv'): number[] {
   return contentType === 'movie' ? [...MOVIE_GENRE_IDS] : [...TV_GENRE_IDS];
+}
+
+/**
+ * A TMDb genre object's name in the Taiwan wording. TMDb's own zh-TW names are
+ * Simplified (剧情, 动作冒险) or English (Sci-Fi & Fantasy), so a known id reads
+ * from GENRE_MAP; an id this table does not know keeps TMDb's name.
+ */
+export function tmdbGenreName(genre: { id: number; name: string }): string {
+  return GENRE_MAP[genre.id] ?? genre.name;
 }
 
 /** A genre id's zh-TW name; an id this table does not know reads 「ID 123」. */

@@ -37,7 +37,7 @@ function createSeriesInput(overrides: Partial<SeriesInput> = {}): SeriesInput {
     title: faker.lorem.words(3),
     first_air_date: faker.date.past({ years: 5 }).toISOString().split('T')[0],
     original_title: faker.lorem.words(3),
-    genres: [faker.helpers.arrayElement(['Drama', 'Comedy', 'Thriller', 'Sci-Fi'])],
+    genres: [faker.helpers.arrayElement(['劇情', '喜劇', '驚悚', '科幻'])], // stored in the Taiwan wording
     overview: faker.lorem.paragraph(),
     poster_path: `/posters/${faker.string.alphanumeric(10)}.jpg`,
     number_of_seasons: faker.number.int({ min: 1, max: 10 }),

@@ -91,7 +91,7 @@ const mockMovieDetails: MovieDetails = {
   revenue: 50000000,
   status: 'Released',
   tagline: '',
-  genres: [{ id: 1, name: '動作' }],
+  genres: [{ id: 28, name: '动作' }], // TMDb's zh-TW name is Simplified; the page shows 動作
   productionCountries: [],
   spokenLanguages: [],
   imdbId: 'tt1234567',

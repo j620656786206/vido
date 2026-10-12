@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/vido/api/internal/models"
@@ -78,7 +79,20 @@ func fillContextFacets(ctx context.Context, db *sql.DB, table, id, genresJSON st
 	}
 	genres := models.NullString{}
 	if genresJSON != "" && genresJSON != "[]" {
-		genres = models.NewNullString(genresJSON)
+		// Same Taiwan wording as every other genre write (models.GenresJSON),
+		// whoever built the JSON (disc-2026-10-genre-names-simplified CR).
+		var names []string
+		if err := json.Unmarshal([]byte(genresJSON), &names); err != nil {
+			return false, fmt.Errorf("%s genres are not a JSON list: %w", table, err)
+		}
+		holder := models.Movie{Genres: names}
+		canonical, err := holder.GenresJSON()
+		if err != nil {
+			return false, fmt.Errorf("failed to encode %s genres: %w", table, err)
+		}
+		if canonical != "[]" {
+			genres = models.NewNullString(canonical)
+		}
 	}
 	if !genres.Valid && (!countriesJSON.Valid || countriesJSON.String == "") {
 		return false, nil

@@ -96,7 +96,7 @@ func TestLibraryService_SaveMovieFromTMDb(t *testing.T) {
 		assert.Equal(t, int64(550), movie.TMDbID.Int64)
 		assert.Equal(t, "tt0137523", movie.IMDbID.String)
 		assert.Equal(t, "/movies/fight_club.mkv", movie.FilePath.String)
-		assert.Equal(t, []string{"Drama", "Thriller"}, movie.Genres)
+		assert.Equal(t, []string{"劇情", "驚悚"}, movie.Genres) // Taiwan wording (models.CanonicalGenres)
 		assert.Equal(t, models.ParseStatusSuccess, movie.ParseStatus)
 
 		// Verify it was saved to database
@@ -171,7 +171,7 @@ func TestLibraryService_SaveSeriesFromTMDb(t *testing.T) {
 		assert.Equal(t, "Breaking Bad", series.Title)
 		assert.Equal(t, int64(1396), series.TMDbID.Int64)
 		assert.Equal(t, "/series/breaking_bad", series.FilePath.String)
-		assert.Equal(t, []string{"Drama", "Crime"}, series.Genres)
+		assert.Equal(t, []string{"劇情", "犯罪"}, series.Genres) // Taiwan wording (models.CanonicalGenres)
 		assert.Equal(t, models.ParseStatusSuccess, series.ParseStatus)
 
 		// Verify it was saved to database
@@ -785,7 +785,7 @@ func TestLibraryService_GetDistinctGenres(t *testing.T) {
 	t.Run("returns deduplicated sorted genres", func(t *testing.T) {
 		genres, err := service.GetDistinctGenres(ctx)
 		require.NoError(t, err)
-		assert.Equal(t, []string{"Action", "Comedy", "Drama", "Thriller"}, genres)
+		assert.Equal(t, []string{"劇情", "動作", "喜劇", "驚悚"}, genres) // Taiwan wording, sorted by code point
 	})
 }
 

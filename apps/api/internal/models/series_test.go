@@ -224,7 +224,7 @@ func TestSeries_GenresJSON(t *testing.T) {
 
 		json, err := series.GenresJSON()
 		require.NoError(t, err)
-		assert.Equal(t, `["Drama","Thriller","Mystery"]`, json)
+		assert.Equal(t, `["劇情","驚悚","懸疑"]`, json) // Taiwan wording (CanonicalGenres)
 	})
 
 	t.Run("with empty genres", func(t *testing.T) {

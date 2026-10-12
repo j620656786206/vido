@@ -206,3 +206,49 @@ func TestFindMissingContextFacets_ListsMatchedRowsMissingEitherFacet(t *testing.
 	require.NoError(t, err)
 	assert.Empty(t, gotS, "once filled, the row leaves the list")
 }
+
+// disc-2026-10-genre-names-simplified AC #2: every genre write stores the
+// Taiwan wording — TMDb's zh-TW names are Simplified (剧情), and two TV genres
+// have only English names. A filter given in another spelling still matches.
+func TestGenreWrites_StoreTaiwanNames(t *testing.T) {
+	db := setupGlossaryDB(t)
+	ctx := context.Background()
+	movies := NewMovieRepository(db)
+	series := NewSeriesRepository(db)
+
+	require.NoError(t, movies.Create(ctx, &models.Movie{ID: "m1", Title: "A", TMDbID: models.NewNullInt64(1),
+		Genres: []string{"剧情", "Sci-Fi & Fantasy"}}))
+	got, err := movies.FindByID(ctx, "m1")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"劇情", "科幻奇幻"}, got.Genres)
+
+	// The backfill builds its JSON with GenresJSON (context_facets_backfill_service.go).
+	var m models.Movie
+	m.Genres = []string{"动画", "动作冒险", "剧情"}
+	js, err := m.GenresJSON()
+	require.NoError(t, err)
+	require.NoError(t, series.Create(ctx, &models.Series{ID: "s1", Title: "凡人修仙傳", TMDbID: models.NewNullInt64(106449)}))
+	written, err := series.FillContextFacets(ctx, "s1", js, models.NullString{})
+	require.NoError(t, err)
+	assert.True(t, written)
+	gotS, err := series.FindByID(ctx, "s1")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"動畫", "動作冒險", "劇情"}, gotS.Genres)
+
+	// Raw JSON straight into FillContextFacets is canonicalized too (CR).
+	require.NoError(t, series.Create(ctx, &models.Series{ID: "s2", Title: "劍來", TMDbID: models.NewNullInt64(2)}))
+	_, err = series.FillContextFacets(ctx, "s2", `["动画"]`, models.NullString{})
+	require.NoError(t, err)
+	gotS, err = series.FindByID(ctx, "s2")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"動畫"}, gotS.Genres)
+	_, err = series.FillContextFacets(ctx, "s2", `not json`, models.NullString{})
+	assert.Error(t, err)
+
+	params := NewListParams()
+	params.Filters["genres"] = []string{"剧情"} // an old link from before the fix
+	list, _, err := movies.List(ctx, params)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "m1", list[0].ID)
+}
