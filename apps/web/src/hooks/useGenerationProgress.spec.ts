@@ -8,6 +8,7 @@ class MockEventSource {
   url: string;
   listeners: Record<string, ((e: MessageEvent | Event) => void)[]> = {};
   onerror: ((e: Event) => void) | null = null;
+  onopen: ((e: Event) => void) | null = null;
   readyState = 0;
 
   constructor(url: string) {
@@ -32,6 +33,12 @@ class MockEventSource {
     const event =
       data !== undefined ? new MessageEvent(type, { data: JSON.stringify(data) }) : new Event(type);
     this.listeners[type]?.forEach((cb) => cb(event));
+  }
+
+  /** The connection is established (the browser's `open`). */
+  open() {
+    this.readyState = 1;
+    if (this.onopen) this.onopen(new Event('open'));
   }
 
   triggerError() {
@@ -856,6 +863,182 @@ describe('useGenerationProgress D6 subtitle_progress family (sub-4-3 AC #8)', ()
         )
       );
       expect(result.current.progress.phase).toBe('complete');
+    });
+  });
+
+  // disc-2026-10-reattach-progress-starts-at-extracting
+  describe('attaching to a run already going', () => {
+    it('starts at the stage the status endpoint reported, not at extracting', () => {
+      const { result } = renderHook(() => useGenerationProgress());
+      // The dialog passes the status answer itself.
+      const status = {
+        inProgress: true,
+        jobId: 'solo-1',
+        phase: 'transcribing',
+        message: '語音辨識中…',
+      };
+      act(() => result.current.startTracking(MOVIE_UUID, status.jobId, status));
+      expect(result.current.progress.phase).toBe('transcribing');
+      expect(result.current.progress.message).toBe('語音辨識中…');
+      expect(result.current.progress.percentage).toBeNull();
+    });
+
+    it('a translating start point keeps its percentage', () => {
+      const { result } = renderHook(() => useGenerationProgress());
+      act(() =>
+        result.current.startTracking(MOVIE_UUID, undefined, {
+          phase: 'translating',
+          percentage: 40,
+        })
+      );
+      expect(result.current.progress.phase).toBe('translating');
+      expect(result.current.progress.percentage).toBe(40);
+    });
+
+    it('no start point, or an unknown phase, starts at extracting as before', () => {
+      const { result } = renderHook(() => useGenerationProgress());
+      act(() => result.current.startTracking(MOVIE_UUID, 'solo-1'));
+      expect(result.current.progress.phase).toBe('extracting');
+      act(() =>
+        result.current.startTracking(MOVIE_UUID, 'solo-1', { phase: 'complete', percentage: 9 })
+      );
+      expect(result.current.progress.phase).toBe('extracting');
+      expect(result.current.progress.percentage).toBeNull();
+    });
+
+    describe('the run ended before the stream was listening', () => {
+      function attached(inProgress: boolean | Error) {
+        const probe = vi.fn(() =>
+          inProgress instanceof Error ? Promise.reject(inProgress) : Promise.resolve(inProgress)
+        );
+        const onComplete = vi.fn();
+        const onEndedUnobserved = vi.fn();
+        const { result } = renderHook(() =>
+          useGenerationProgress({ onComplete, probeInProgress: probe, onEndedUnobserved })
+        );
+        act(() => result.current.startTracking(MOVIE_UUID, 'solo-7', { phase: 'transcribing' }));
+        const es = MockEventSource.instances[MockEventSource.instances.length - 1];
+        return { result, es, probe, onComplete, onEndedUnobserved };
+      }
+
+      it('2s after the stream opens the server says idle → back to idle, lists refreshed, caller told', async () => {
+        const { result, es, probe, onComplete, onEndedUnobserved } = attached(false);
+        act(() => es.open());
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1999);
+        });
+        expect(probe).not.toHaveBeenCalled();
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1);
+        });
+
+        expect(probe).toHaveBeenCalledTimes(1);
+        expect(result.current.progress.phase).toBe('idle');
+        expect(onComplete).toHaveBeenCalledWith({ srtPath: null, zhSrtPath: null });
+        expect(onEndedUnobserved).toHaveBeenCalledTimes(1);
+        expect(es.readyState).toBe(2);
+
+        // Tracking is over: a late frame for the media changes nothing.
+        act(() =>
+          es.emit(
+            'transcription_progress',
+            wireEvent('transcription_progress', { phase: 'transcribing' })
+          )
+        );
+        expect(result.current.progress.phase).toBe('idle');
+      });
+
+      it('the server still says running → keep tracking, asked once', async () => {
+        const { result, es, probe, onEndedUnobserved } = attached(true);
+        act(() => es.open());
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10000);
+        });
+        expect(probe).toHaveBeenCalledTimes(1);
+        expect(result.current.progress.phase).toBe('transcribing');
+        expect(onEndedUnobserved).not.toHaveBeenCalled();
+        expect(es.readyState).toBe(1);
+      });
+
+      it('a terminal arriving before the probe cancels it', async () => {
+        const { result, es, probe, onEndedUnobserved } = attached(false);
+        act(() => es.open());
+        act(() =>
+          es.emit(
+            'transcription_complete',
+            wireEvent('transcription_complete', { job_id: 'solo-7', phase: 'complete' })
+          )
+        );
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+        expect(probe).not.toHaveBeenCalled();
+        expect(result.current.progress.phase).toBe('complete');
+        expect(onEndedUnobserved).not.toHaveBeenCalled();
+      });
+
+      it('a reset before the answer comes back is left alone', async () => {
+        let answer: (v: boolean) => void = () => {};
+        const probe = vi.fn(() => new Promise<boolean>((r) => (answer = r)));
+        const onEndedUnobserved = vi.fn();
+        const { result } = renderHook(() =>
+          useGenerationProgress({ probeInProgress: probe, onEndedUnobserved })
+        );
+        act(() => result.current.startTracking(MOVIE_UUID, 'solo-8'));
+        const es = MockEventSource.instances[MockEventSource.instances.length - 1];
+        act(() => es.open());
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(2000);
+        });
+        expect(probe).toHaveBeenCalledTimes(1);
+        act(() => result.current.reset());
+        await act(async () => {
+          answer(false);
+          await Promise.resolve();
+        });
+        expect(onEndedUnobserved).not.toHaveBeenCalled();
+      });
+
+      it('a failed probe keeps tracking', async () => {
+        const { result, es, onEndedUnobserved } = attached(new Error('offline'));
+        act(() => es.open());
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(2000);
+        });
+        expect(result.current.progress.phase).toBe('transcribing');
+        expect(onEndedUnobserved).not.toHaveBeenCalled();
+      });
+
+      it('every reconnect asks again', async () => {
+        const { es, probe } = attached(true);
+        act(() => es.open());
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(2000);
+        });
+        act(() => es.triggerError());
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10000);
+        });
+        const es2 = MockEventSource.instances[MockEventSource.instances.length - 1];
+        expect(es2).not.toBe(es);
+        act(() => es2.open());
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(2000);
+        });
+        expect(probe).toHaveBeenCalledTimes(2);
+      });
+
+      it('without probeInProgress nothing is asked (the workspace and batch dialog)', async () => {
+        const { result } = renderHook(() => useGenerationProgress());
+        act(() => result.current.startTracking(MOVIE_UUID, 'solo-9'));
+        const es = MockEventSource.instances[MockEventSource.instances.length - 1];
+        act(() => es.open());
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+        expect(result.current.progress.phase).toBe('extracting');
+      });
     });
   });
 });

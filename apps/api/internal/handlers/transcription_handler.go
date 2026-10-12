@@ -58,6 +58,16 @@ type TranscriptionHandler struct {
 	// (disc-2026-10-single-generate-ignores-embedded-english-a). nil = legacy
 	// mode: the click goes to TranscriptionService exactly as before.
 	solo SoloGenerator
+	// phases answers "where is this run now?" for the status route
+	// (disc-2026-10-reattach-progress-starts-at-extracting). nil = the
+	// status payload carries in_progress / job_id only, as before.
+	phases PhaseReader
+}
+
+// PhaseReader is the last progress a running generation reported.
+// *subtitle.PhaseTracker satisfies it.
+type PhaseReader interface {
+	Phase(mediaID string) (subtitle.PhaseSnapshot, bool)
 }
 
 // SoloGenerator is the pipeline-mode entry for one click on 生成字幕: route
@@ -104,6 +114,13 @@ func (h *TranscriptionHandler) SetEstimator(e TranscriptionEstimator) {
 // RegisterRoutes.
 func (h *TranscriptionHandler) SetSoloGenerator(g SoloGenerator) {
 	h.solo = g
+}
+
+// SetPhaseReader adds the running generation's current stage to the status
+// route, so a dialog that attaches mid-run starts its stepper there instead of
+// at 抽取 (disc-2026-10-reattach-progress-starts-at-extracting).
+func (h *TranscriptionHandler) SetPhaseReader(r PhaseReader) {
+	h.phases = r
 }
 
 // RegisterRoutes registers transcription routes on the given router group.
@@ -427,6 +444,25 @@ type TranscriptionStatusResponse struct {
 	// Absent for a batch / pool run and in legacy mode (additive,
 	// disc-2026-10-single-generate-ignores-embedded-english-a).
 	JobID string `json:"job_id,omitempty"`
+	// Phase is where the running generation is now — extracting |
+	// transcribing | translating — with its last message and, while
+	// translating, its percentage. Present only while in_progress and once the
+	// run has reported progress; a dialog without it starts at extracting
+	// (additive, disc-2026-10-reattach-progress-starts-at-extracting).
+	Phase      string   `json:"phase,omitempty"`
+	Message    string   `json:"message,omitempty"`
+	Percentage *float64 `json:"percentage,omitempty"`
+}
+
+// withPhase fills the stage fields of a running item's status.
+func (h *TranscriptionHandler) withPhase(resp TranscriptionStatusResponse, mediaID string) TranscriptionStatusResponse {
+	if !resp.InProgress || h.phases == nil {
+		return resp
+	}
+	if snap, ok := h.phases.Phase(mediaID); ok {
+		resp.Phase, resp.Message, resp.Percentage = snap.Phase, snap.Message, snap.Percentage
+	}
+	return resp
 }
 
 // TranscriptionStatus answers whether a subtitle generation is running for one
@@ -441,7 +477,7 @@ type TranscriptionStatusResponse struct {
 // @Tags         subtitles
 // @Produce      json
 // @Param        id path string true "Movie or episode ID (UUID)"
-// @Success      200 {object} APIResponse "data: {in_progress: bool, job_id?: string} — job_id only for a running solo click in pipeline mode"
+// @Success      200 {object} APIResponse "data: {in_progress: bool, job_id?: string, phase?: string, message?: string, percentage?: number} — job_id only for a running solo click in pipeline mode; phase/message/percentage only while running and once the run reported progress"
 // @Router       /api/v1/movies/{id}/transcribe/status [get]
 // @Router       /api/v1/episodes/{id}/transcribe/status [get]
 func (h *TranscriptionHandler) TranscriptionStatus(c *gin.Context) {
@@ -461,13 +497,13 @@ func (h *TranscriptionHandler) transcriptionStatusFor(mediaType string) gin.Hand
 			inProgress, jobID := h.solo.Status(subtitle.MediaRef{ID: id, MediaType: mediaType})
 			c.JSON(http.StatusOK, APIResponse{
 				Success: true,
-				Data:    TranscriptionStatusResponse{InProgress: inProgress, JobID: jobID},
+				Data:    h.withPhase(TranscriptionStatusResponse{InProgress: inProgress, JobID: jobID}, id),
 			})
 			return
 		}
 		c.JSON(http.StatusOK, APIResponse{
 			Success: true,
-			Data:    TranscriptionStatusResponse{InProgress: h.transcriptionService.IsInProgress(id)},
+			Data:    h.withPhase(TranscriptionStatusResponse{InProgress: h.transcriptionService.IsInProgress(id)}, id),
 		})
 	}
 }

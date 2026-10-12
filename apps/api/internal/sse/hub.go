@@ -88,6 +88,9 @@ type Hub struct {
 	unregister chan *Client
 	done       chan struct{}
 	closed     atomic.Bool
+
+	observersMu sync.RWMutex
+	observers   []func(Event)
 }
 
 // NewHub creates a new Hub and starts the Run goroutine
@@ -175,9 +178,26 @@ func (h *Hub) Unregister(client *Client) {
 	h.unregister <- client
 }
 
+// AddObserver registers fn to see every event passed to Broadcast — called
+// synchronously, before the event is queued, so it sees events the full
+// channel then drops too. fn runs on the broadcaster's goroutine: it must be
+// cheap (no I/O, no logging) and must not call Broadcast. Wiring only — call
+// it during startup (disc-2026-10-reattach-progress-starts-at-extracting).
+func (h *Hub) AddObserver(fn func(Event)) {
+	h.observersMu.Lock()
+	defer h.observersMu.Unlock()
+	h.observers = append(h.observers, fn)
+}
+
 // Broadcast sends an event to all connected clients.
 // Uses non-blocking send to avoid blocking the caller if the broadcast channel is full.
 func (h *Hub) Broadcast(event Event) {
+	h.observersMu.RLock()
+	for _, fn := range h.observers {
+		fn(event)
+	}
+	h.observersMu.RUnlock()
+
 	select {
 	case h.broadcast <- event:
 	default:

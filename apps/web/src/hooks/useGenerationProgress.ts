@@ -44,6 +44,15 @@ const SSE_RECONNECT_MS = 10000;
  * replay). Not a display clock (Rule 23): nothing on screen reads it.
  */
 const STALE_TERMINAL_PROBE_MS = 5000;
+/**
+ * How long after the stream opens we ask whether the run is still going
+ * (disc-2026-10-reattach-progress-starts-at-extracting). A run that ended
+ * before this client was listening sent its terminal to nobody — no replay —
+ * and the dialog would spin forever; one that ends after reaches us within
+ * milliseconds, so by now its terminal has closed tracking and the answer is
+ * ignored. Not a display clock (Rule 23): nothing on screen reads it.
+ */
+const ATTACH_PROBE_MS = 2000;
 /** The sentence shown when the job ended but its result event never arrived. */
 export const TERMINAL_LOST_MESSAGE = '字幕生成已結束，但結果通知沒有送到；請關閉後重新開啟查看結果';
 
@@ -135,8 +144,23 @@ const initialState: GenerationProgressState = {
 
 type ActivePhase = 'extracting' | 'transcribing' | 'translating';
 
+/**
+ * Where a run already going stands when we attach to it — the status
+ * endpoint's phase / message / percentage (disc-2026-10-reattach-progress-
+ * starts-at-extracting). Absent or unknown phase = start at extracting.
+ */
+export interface GenerationStartPoint {
+  phase?: string;
+  message?: string;
+  percentage?: number;
+}
+
+function isActivePhase(phase: string | undefined): phase is ActivePhase {
+  return phase === 'extracting' || phase === 'transcribing' || phase === 'translating';
+}
+
 type Action =
-  | { type: 'START' }
+  | { type: 'START'; from?: GenerationStartPoint }
   | { type: 'PHASE'; phase: ActivePhase; payload: GenerationEventPayload }
   | { type: 'COMPLETE'; payload: GenerationEventPayload }
   | { type: 'FAILED'; payload: GenerationEventPayload }
@@ -165,8 +189,15 @@ function route(state: GenerationProgressState, payload: GenerationEventPayload) 
 
 function reducer(state: GenerationProgressState, action: Action): GenerationProgressState {
   switch (action.type) {
-    case 'START':
-      return { ...initialState, phase: 'extracting' };
+    case 'START': {
+      const phase = isActivePhase(action.from?.phase) ? action.from.phase : 'extracting';
+      return {
+        ...initialState,
+        phase,
+        message: action.from?.message ?? '',
+        percentage: phase === 'translating' ? (action.from?.percentage ?? null) : null,
+      };
+    }
     case 'PHASE':
       // Merge-not-replace: keep the last message/jobId when an event omits them.
       return {
@@ -255,6 +286,15 @@ export interface UseGenerationProgressOptions {
    * the dialog forever). Resolves to in_progress. Absent = no fallback.
    */
   probeInProgress?: () => Promise<boolean>;
+  /**
+   * The run ended while we were not listening — the status said "running",
+   * then, ATTACH_PROBE_MS after the stream opened, "not running", and no
+   * terminal came (disc-2026-10-reattach-progress-starts-at-extracting). The
+   * hook has already gone back to idle and fired onComplete (nulls) so the
+   * caller's lists refresh; the outcome is whatever they now show. Only asked
+   * when probeInProgress is given.
+   */
+  onEndedUnobserved?: () => void;
 }
 
 export function useGenerationProgress(options?: UseGenerationProgressOptions) {
@@ -276,6 +316,9 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   const trackedJobIdRef = useRef<string | null>(null);
   /** CR M3 fallback: the one-shot probe timer after a D6 terminal. */
   const staleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** The one-shot "is it still running?" timer after the stream opens. */
+  const attachTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const onEndedUnobservedRef = useRef(options?.onEndedUnobserved);
   const probeRef = useRef(options?.probeInProgress);
   // CR sub-4-3 M7: the SEARCH engine is a second producer of `subtitle_progress`
   // for the same media_id, sharing the D6 terminal stages. A search completing
@@ -291,6 +334,9 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   useEffect(() => {
     probeRef.current = options?.probeInProgress;
   }, [options?.probeInProgress]);
+  useEffect(() => {
+    onEndedUnobservedRef.current = options?.onEndedUnobserved;
+  }, [options?.onEndedUnobserved]);
 
   const closeSSE = useCallback(() => {
     if (esRef.current) {
@@ -305,7 +351,50 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
       clearTimeout(staleTimerRef.current);
       staleTimerRef.current = undefined;
     }
+    if (attachTimerRef.current) {
+      clearTimeout(attachTimerRef.current);
+      attachTimerRef.current = undefined;
+    }
   }, []);
+
+  /**
+   * Once the stream is open, ask once whether the run is still going. "No"
+   * with tracking still open means its terminal went out before we were
+   * listening: stop tracking, back to idle, and let the caller re-read what
+   * the run left behind (disc-2026-10-reattach-progress-starts-at-extracting).
+   */
+  const scheduleAttachProbe = useCallback(
+    (es: EventSource) => {
+      if (!probeRef.current || mediaIdRef.current === null) return;
+      if (attachTimerRef.current) clearTimeout(attachTimerRef.current);
+      const trackedMedia = mediaIdRef.current;
+      attachTimerRef.current = setTimeout(() => {
+        attachTimerRef.current = undefined;
+        const probe = probeRef.current;
+        if (!probe || !mountedRef.current) return;
+        // Still the session we scheduled for? A terminal closes the stream; a
+        // reset or a new startTracking changes the media.
+        const stillWatching = () =>
+          mountedRef.current && esRef.current === es && mediaIdRef.current === trackedMedia;
+        if (!stillWatching()) return;
+        probe()
+          .then((inProgress) => {
+            if (inProgress || !stillWatching()) return;
+            mediaIdRef.current = null;
+            trackedJobIdRef.current = null;
+            d6PipelineSeenRef.current = false;
+            closeSSE();
+            dispatch({ type: 'RESET' });
+            onCompleteRef.current?.({ srtPath: null, zhSrtPath: null });
+            onEndedUnobservedRef.current?.();
+          })
+          .catch(() => {
+            // The probe itself failed: nothing honest to say — keep waiting.
+          });
+      }, ATTACH_PROBE_MS);
+    },
+    [closeSSE]
+  );
 
   /**
    * CR M3: the pipeline said the item ended but our job's terminal has not
@@ -454,6 +543,10 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
       // Unmapped (search-path) stages: ignore.
     });
 
+    es.onopen = () => {
+      if (mountedRef.current) scheduleAttachProbe(es);
+    };
+
     es.onerror = () => {
       if (!mountedRef.current) return;
       es.close();
@@ -462,7 +555,7 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
         if (mountedRef.current) connectRef.current();
       }, SSE_RECONNECT_MS);
     };
-  }, [closeSSE, parsePayload, scheduleStaleTerminalProbe]);
+  }, [closeSSE, parsePayload, scheduleStaleTerminalProbe, scheduleAttachProbe]);
 
   useEffect(() => {
     connectRef.current = connect;
@@ -480,20 +573,23 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
 
   /**
    * Open the stream and track one movie's generation job. Also the 409-attach
-   * path — safe to call when the job was already running server-side.
+   * path — safe to call when the job was already running server-side; `from`
+   * (the status endpoint's answer) starts the stepper where that run is.
    */
   const startTracking = useCallback(
-    (mediaId: string, jobId?: string | null) => {
+    (mediaId: string, jobId?: string | null, from?: GenerationStartPoint) => {
       // A retry's POST can resolve after 稍後再試 unmounted the dialog (dsr-6b CR
       // L7): opening a stream then would leak an EventSource nobody closes.
       if (!mountedRef.current) return;
       mediaIdRef.current = mediaId;
       trackedJobIdRef.current = jobId || null;
       d6PipelineSeenRef.current = false;
-      dispatch({ type: 'START' });
+      dispatch({ type: 'START', from });
       if (!esRef.current || esRef.current.readyState === 2) connect();
+      // Already open: no open event will come for this session — ask now.
+      else if (esRef.current.readyState === 1) scheduleAttachProbe(esRef.current);
     },
-    [connect]
+    [connect, scheduleAttachProbe]
   );
 
   /** Tear down the stream and return to idle (e.g. when the dialog closes). */

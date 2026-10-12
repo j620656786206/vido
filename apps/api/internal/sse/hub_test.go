@@ -282,3 +282,26 @@ func TestHub_DroppedBroadcastLogsTypeAndSizeNotThePayload(t *testing.T) {
 	assert.Less(t, len(logged), 500, "one short line, not the queue")
 	assert.Equal(t, 1, strings.Count(logged, "SSE broadcast channel full"))
 }
+
+// disc-2026-10-reattach-progress-starts-at-extracting: an observer sees every
+// broadcast, in order — including the ones the full channel then drops, so a
+// phase recorded from it never misses a step the clients missed.
+func TestHub_ObserverSeesEveryBroadcast(t *testing.T) {
+	// No Run loop: nothing drains the channel, so everything past its
+	// capacity is dropped by Broadcast.
+	hub := &Hub{
+		clients:    make(map[string]*Client),
+		broadcast:  make(chan Event, 2),
+		unregister: make(chan *Client, 1),
+		done:       make(chan struct{}),
+	}
+	var seen []any
+	hub.AddObserver(func(e Event) { seen = append(seen, e.Data) })
+
+	for i := 0; i < 5; i++ {
+		hub.Broadcast(Event{Type: EventScanProgress, Data: i})
+	}
+
+	assert.Equal(t, []any{0, 1, 2, 3, 4}, seen)
+	assert.Len(t, hub.broadcast, 2, "three events were dropped by the full channel")
+}

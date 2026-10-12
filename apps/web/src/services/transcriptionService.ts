@@ -101,6 +101,13 @@ export interface TranscriptionStatus {
   /** The running solo job's id (pipeline mode) — the terminal event to attach
    *  to is the one carrying it. Absent for a batch / pool run and in legacy mode. */
   jobId?: string;
+  /** Where the running generation is now — extracting | transcribing |
+   *  translating — with its last message and (translating only) percentage.
+   *  Present only while running and once the run reported progress
+   *  (disc-2026-10-reattach-progress-starts-at-extracting). */
+  phase?: string;
+  message?: string;
+  percentage?: number;
 }
 
 export const transcriptionService = {
