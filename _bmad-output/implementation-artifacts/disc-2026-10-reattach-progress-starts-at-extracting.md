@@ -129,6 +129,25 @@ Status: done
 - **lint 和格式：** `pnpm run lint:all` 0 errors（warning 都是原本就有的，這次改的檔案 eslint 0 警告）。`format:check` 綠。
 - **E2E：** grep 過 `transcribe/status` 的 E2E。mock 都回 `{in_progress:false}`，API 測試查的是不存在的 id。新欄位是可省略的，不影響這些測試。
 
+### 正式機驗證 2026-10-12
+
+- 環境：部署前備份到 NAS `/mnt/cache/appdata/vido/backups/pre-reattach-20261012-1527/`（db／wal／shm＋`.backup`），正式 Vido 更新到 `main-7ced9d0`（PR #747）。
+- 估價畫面寫 US$1.57（它抓整集 57 分鐘的長度），實際只放 10 分鐘片段。
+- 丟棄容器 `vido-evalclip`（DB 是部署前正式 DB 的 `.backup` 副本）跑 See S01E02 的 10 分鐘片段，跑的時候每秒問一次 `GET …/transcribe/status`（重開視窗時 dialog 問的就是它）：
+
+  | 時間 | status 回的階段 | 訊息 |
+  |---|---|---|
+  | 0–1 秒 | `extracting` | 抽取內嵌字幕中… → 正在提取音訊 |
+  | 2–51 秒 | `transcribing` | 正在轉錄音訊 |
+  | 52–81 秒 | `translating`（帶 `percentage`，到 100） | 正在翻譯成繁體中文（N%） |
+  | 82 秒起 | `in_progress:false`，沒有 phase | — |
+
+- 結果：語音辨識那 50 秒，修之前重開視窗會停在「抽取」；現在 status 回 `transcribing`，dialog 會直接從「轉錄」開始。翻譯中重開會帶百分比。結束後不再帶階段（紀錄有清掉）。
+- `subtitle_runs`：`asr|68 句|US$0.1996|completed`。材料：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261012-reattach/`（`status.log`、`clip.log`、兩份字幕）。丟棄容器跑完已刪。
+- **沒驗到的：** 瀏覽器擴充沒連上，所以沒有在真的畫面上關掉再打開視窗。畫面那一半（拿到起點就顯示那一步、2 秒後再問）只有前端單元測試證明。
+- 花費：US$0.20。
+- 判定：**通過（後端 API 實測；畫面靠單元測試）**。
+
 ### 範圍外（沒修）
 
 - **生成工作區** `GenerationWorkspaceV2`：接上時也是從 extracting 開始。它看的是批次快照，另外處理。
