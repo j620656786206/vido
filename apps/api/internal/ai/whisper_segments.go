@@ -272,6 +272,10 @@ const (
 	// three cues — disc-2026-10-asr-symbol-only-cues). Checked after
 	// music_only so ♪♪ keeps its own reason in the log.
 	dropReasonSymbolOnly = "symbol_only"
+	// dropReasonCreditLine: a subtitle group's signature whisper "heard" over
+	// credits music (「Subs by www.zeoranger.co.uk」 on HP4 —
+	// disc-2026-09-whisper-credit-line-hallucination). See credit_line.go.
+	dropReasonCreditLine = "credit_line"
 	// dropReasonPromptEcho: the segment is a verbatim slice of the name
 	// prompt we sent (disc-2026-10-asr-proper-names-inconsistent, CR M2) —
 	// whisper's known habit over silence or score, when given a prompt, is
@@ -424,7 +428,7 @@ func filterHallucinationsWith(segs []whisperSegment, applyTail bool, prompt stri
 	reasons := make([]string, len(segs))
 	isEcho := promptEchoMatcher(prompt)
 
-	// R0 prompt echo / music-only / symbol-only, R1 silence, R2 per-segment repetition.
+	// R0 prompt echo / music-only / symbol-only / credit line, R1 silence, R2 per-segment repetition.
 	for i, seg := range segs {
 		switch {
 		case isEcho != nil && isEcho(seg.Text):
@@ -433,6 +437,8 @@ func filterHallucinationsWith(segs []whisperSegment, applyTail bool, prompt stri
 			reasons[i] = dropReasonMusicOnly
 		case IsSymbolOnlyText(seg.Text):
 			reasons[i] = dropReasonSymbolOnly
+		case isCreditLineHallucination(seg.Text):
+			reasons[i] = dropReasonCreditLine
 		case seg.NoSpeechProb > hallucinationNoSpeechThreshold && seg.AvgLogprob < hallucinationLogprobThreshold:
 			reasons[i] = dropReasonSilence
 		case seg.CompressionRatio > hallucinationCompressionThreshold:
