@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { getImageUrl } from '../../lib/image';
-import { filenameToGradient } from './ColorPlaceholder';
+import { filenameToGradient } from '../../utils/filenameToGradient';
 import { fallbackInitial } from '../../utils/fallbackInitial';
 import type { StatusDescriptor } from '../../utils/libraryStatus';
 

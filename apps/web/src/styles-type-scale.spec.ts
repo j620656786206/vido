@@ -97,8 +97,6 @@ describe('type scale mobile step-down (DESIGN.md: 手機只縮標題)', () => {
     // A placeholder initial is sized to its tile, not to the viewport.
     ['components/library/PosterCardV2.tsx', 'text-3xl font-bold', 'tile initial'],
     ['components/media/DetailHeroV2.tsx', 'justify-center text-3xl', 'tile initial'],
-    ['components/media/ColorPlaceholder.tsx', 'text-4xl font-bold', 'tile initial'],
-    ['components/media/MediaDetailPanel.tsx', 'text-4xl font-bold leading-none', 'tile initial'],
   ];
 
   it('no source file goes above text-4xl (Display, 36)', () => {

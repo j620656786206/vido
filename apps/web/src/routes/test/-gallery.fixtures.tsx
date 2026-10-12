@@ -48,11 +48,7 @@ import { DetailNotFoundV2, DetailLoadErrorV2 } from '../../components/media/Deta
 import { RequestButton } from '../../components/requests/RequestButton';
 import { RequestRow } from '../../components/requests/RequestRow';
 import { PosterCardSkeleton } from '../../components/media/PosterCardSkeleton';
-import { ColorPlaceholder } from '../../components/media/ColorPlaceholder';
 import { AvailabilityBadge } from '../../components/media/AvailabilityBadge';
-import { MetadataSourceBadge } from '../../components/media/MetadataSourceBadge';
-import { TechBadge } from '../../components/media/TechBadge';
-import { TechBadgeGroup } from '../../components/media/TechBadgeGroup';
 import { DegradationBadge } from '../../components/degradation/DegradationBadge';
 import { ViewToggle } from '../../components/library/ViewToggle';
 import { FilterChips } from '../../components/library/FilterChips';
@@ -91,19 +87,15 @@ import {
 import { HighlightText } from '../../components/ui/HighlightText';
 import { SidePanel } from '../../components/ui/SidePanel';
 import { CreditsSection } from '../../components/media/CreditsSection';
-import { DetailPanelMenu } from '../../components/media/DetailPanelMenu';
 import { DetailNoMetadataV2 } from '../../components/media/DetailNoMetadataV2';
 import { ManualMatchDialogV2 } from '../../components/media/ManualMatchDialogV2';
 import { metadataKeys } from '../../hooks/useManualSearch';
-import { FileInfo } from '../../components/media/FileInfo';
 import { MediaGrid } from '../../components/media/MediaGrid';
 import { TrailerEmbed } from '../../components/media/TrailerEmbed';
-import { TVShowInfo } from '../../components/media/TVShowInfo';
 import { PlaceholderContent } from '../../components/degradation/PlaceholderContent';
 import { ServiceHealthBanner } from '../../components/degradation/ServiceHealthBanner';
 import { UnidentifiedFileCard } from '../../components/degradation/UnidentifiedFileCard';
 import { CollapsibleSection } from '../../components/dashboard/CollapsibleSection';
-import { QuickSearchBar } from '../../components/dashboard/QuickSearchBar';
 import { StatusIcon } from '../../components/downloads/StatusIcon';
 import { DownloadCardV2 } from '../../components/downloads/DownloadCardV2';
 import { DownloadsTableV2 } from '../../components/downloads/DownloadsTableV2';
@@ -118,12 +110,10 @@ import {
 } from '../../components/downloads/DownloadsStatesV2';
 import { BatchConfirmDialog } from '../../components/library/BatchConfirmDialog';
 import { BatchProgress } from '../../components/library/BatchProgress';
-import { LibraryTable } from '../../components/library/LibraryTable';
 import { ParseFailureCard } from '../../components/library/ParseFailureCard';
 import { PosterCardMenu } from '../../components/library/PosterCardMenu';
 import { SelectionToolbar } from '../../components/library/SelectionToolbar';
 import { SettingsGearDropdown } from '../../components/library/SettingsGearDropdown';
-import { TrailerModal } from '../../components/homepage/TrailerModal';
 import { FallbackStatusDisplay } from '../../components/manual-search/FallbackStatusDisplay';
 import { SearchResultCard } from '../../components/manual-search/SearchResultCard';
 import { SearchResultsGrid } from '../../components/manual-search/SearchResultsGrid';
@@ -163,7 +153,7 @@ import { QBittorrentStep } from '../../components/setup/QBittorrentStep';
 import { StepProgress } from '../../components/setup/StepProgress';
 import { WelcomeStep } from '../../components/setup/WelcomeStep';
 
-import type { CastMember, CrewMember, TVShowDetails } from '../../types/tmdb';
+import type { CastMember, CrewMember } from '../../types/tmdb';
 import type { ServicesHealth } from '../../components/degradation/types';
 import type { ParseStep } from '../../components/parse/types';
 import type { ScanProgressState } from '../../hooks/useScanProgress';
@@ -188,10 +178,7 @@ import {
   LibraryFilterSheetV2,
   sheetCountParams,
 } from '../../components/library/LibraryFilterSheetV2';
-import { LibraryGrid } from '../../components/library/LibraryGrid';
-import { RecentlyAdded } from '../../components/library/RecentlyAdded';
 import { ManualSearchDialog } from '../../components/manual-search/ManualSearchDialog';
-import { MediaDetailPanel } from '../../components/media/MediaDetailPanel';
 import { MetadataEditorDialog } from '../../components/metadata-editor/MetadataEditorDialog';
 import { FloatingParseProgressCard } from '../../components/parse/FloatingParseProgressCard';
 import { RetryQueueSection } from '../../components/parse/RetryQueueSection';
@@ -281,7 +268,7 @@ import { serviceStatusKeys } from '../../hooks/useServiceStatus';
 import type { FilterValues } from '../../components/library/FilterPanel';
 import type { OwnedMediaState } from '../../hooks/useOwnedMedia';
 import type { LibraryItem, LibraryMediaType } from '../../types/library';
-import type { Movie, MovieDetails, Credits } from '../../types/tmdb';
+import type { Movie } from '../../types/tmdb';
 import type { PaginatedDownloads, Download } from '../../services/downloadService';
 import type { QBConfigResponse } from '../../services/qbittorrent';
 import type { ConnectionEvent, ServiceHealth } from '../../services/healthService';
@@ -1393,14 +1380,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     width: 200,
   },
   {
-    id: 'media-color-placeholder',
-    label: 'media/ColorPlaceholder',
-    component: ColorPlaceholder,
-    props: { filename: '銀翼殺手 2049.mkv', height: 240 },
-    penNode: 'utility',
-    statesOnly: ['default'],
-  },
-  {
     id: 'media-availability-badge-owned',
     label: 'media/AvailabilityBadge (owned)',
     component: AvailabilityBadge,
@@ -1415,37 +1394,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     props: { variant: 'requested' },
     penNode: 'screen-section',
     statesOnly: ['default'],
-  },
-  {
-    id: 'media-metadata-source-badge',
-    label: 'media/MetadataSourceBadge',
-    component: MetadataSourceBadge,
-    props: { source: 'tmdb', fetchDate: '2026-01-15' },
-    penNode: 'screen-section',
-    statesOnly: ['default'],
-  },
-  {
-    id: 'media-tech-badge',
-    label: 'media/TechBadge',
-    component: TechBadge,
-    props: { label: 'H.265', category: 'video' },
-    penNode: 'L9m19', // + 9iTW3/f84BM/cUjyv (TechBadge-Audio/Subtitle/HDR)
-    statesOnly: ['default'],
-  },
-  {
-    id: 'media-tech-badge-group',
-    label: 'media/TechBadgeGroup',
-    component: TechBadgeGroup,
-    props: {
-      videoCodec: 'H.265',
-      videoResolution: '3840x2160',
-      audioCodec: 'DTS-HD',
-      audioChannels: 6,
-      hdrFormat: 'HDR10',
-    },
-    penNode: 'utility',
-    statesOnly: ['default'],
-    width: 360,
   },
 
   // ----- degradation/ -----
@@ -1835,31 +1783,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
   {
-    id: 'media-detail-panel-menu',
-    label: 'media/DetailPanelMenu',
-    // Internal open/close state via useState — opt into `open` via openTrigger
-    // (same pattern as library-sort-selector). Dropdown is absolutely-positioned
-    // inline (not Radix portal), so it stays inside the state div.
-    component: DetailPanelMenu,
-    props: { onReparse: noop, onExport: noop, onDelete: noop },
-    penNode: 'screen-section',
-    statesOnly: ['default', 'hover', 'focus', 'open'],
-    openTrigger: '[data-testid="detail-menu-trigger"]',
-    width: 240,
-  },
-  {
-    id: 'media-file-info',
-    label: 'media/FileInfo',
-    component: FileInfo,
-    props: {
-      filePath: '/volume1/Movies/銀翼殺手 2049 (2017) 2160p.HDR.mkv',
-      fileSize: 12_884_901_888,
-    },
-    penNode: 'utility',
-    statesOnly: ['default'],
-    width: 360,
-  },
-  {
     id: 'media-media-grid',
     label: 'media/MediaGrid',
     // Children id:0 keeps PosterCard's useMovieDetails/useTVShowDetails disabled
@@ -1912,51 +1835,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     props: { videoKey: 'dQw4w9WgXcQ', title: '銀翼殺手 2049' },
     penNode: 'screen-section',
     width: 360,
-  },
-  {
-    id: 'media-tv-show-info',
-    label: 'media/TVShowInfo',
-    component: TVShowInfo,
-    props: {
-      show: {
-        id: 0,
-        name: '測試影集',
-        originalName: 'Test TV Show',
-        overview: '這是一部測試影集',
-        firstAirDate: '2023-06-15',
-        lastAirDate: '2024-01-20',
-        posterPath: null,
-        backdropPath: null,
-        voteAverage: 8.5,
-        voteCount: 2000,
-        episodeRunTime: [45, 50],
-        numberOfSeasons: 3,
-        numberOfEpisodes: 30,
-        status: 'Returning Series',
-        type: 'Scripted',
-        tagline: '',
-        genres: [{ id: 1, name: '劇情' }],
-        createdBy: [],
-        networks: [
-          { id: 1, name: 'Netflix', logoPath: null },
-          { id: 2, name: 'HBO', logoPath: null },
-        ],
-        inProduction: true,
-        seasons: [],
-        // Present on the wire but not rendered by TVShowInfo — here only so the
-        // fixture actually satisfies TVShowDetails (typecheck 2026-09-06).
-        popularity: 0,
-        genreIds: [1],
-        originalLanguage: 'en',
-        originCountry: ['US'],
-        homepage: null,
-        languages: ['en'],
-        productionCountries: [],
-      } satisfies TVShowDetails,
-    },
-    penNode: 'screen-section',
-    statesOnly: ['default'],
-    width: 480,
   },
 
   // ----- degradation/ (P-bucket additions) -----
@@ -2043,15 +1921,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       testId: 'collapsible-section-demo',
     },
     penNode: 'utility',
-    width: 480,
-  },
-  {
-    id: 'dashboard-quick-search-bar',
-    label: 'dashboard/QuickSearchBar',
-    // useNavigate from @tanstack/react-router — provided by the app shell.
-    component: QuickSearchBar,
-    props: {},
-    penNode: 'screen-section',
     width: 480,
   },
 
@@ -2414,54 +2283,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
   {
-    id: 'library-library-table',
-    label: 'library/LibraryTable',
-    // Renders TanStack `Link`s — router context provided by app shell.
-    component: LibraryTable,
-    props: {
-      items: [
-        {
-          type: 'movie',
-          movie: {
-            id: 'movie-1',
-            title: '測試電影',
-            originalTitle: 'Test Movie',
-            releaseDate: '2023-06-15',
-            genres: ['動作', '冒險', '科幻'],
-            voteAverage: 8.5,
-            posterPath: null,
-            tmdbId: 123,
-            parseStatus: 'success',
-            createdAt: '2024-01-15T00:00:00Z',
-            updatedAt: '2024-01-15T00:00:00Z',
-          },
-        },
-        {
-          type: 'series',
-          series: {
-            id: 'series-1',
-            title: '測試影集',
-            originalTitle: 'Test Series',
-            firstAirDate: '2022-03-10',
-            genres: ['劇情'],
-            voteAverage: 9.1,
-            posterPath: null,
-            tmdbId: 456,
-            parseStatus: 'success',
-            createdAt: '2024-02-01T00:00:00Z',
-            updatedAt: '2024-02-01T00:00:00Z',
-          },
-        },
-      ],
-      isLoading: false,
-      sortBy: 'title',
-      sortOrder: 'asc',
-      onSort: noop,
-    },
-    penNode: 'screen-section',
-    width: 960,
-  },
-  {
     id: 'library-parse-failure-card',
     label: 'library/ParseFailureCard',
     // ParseFailureCard renders ManualSearchDialog (closed). The dialog mounts with
@@ -2544,26 +2365,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default', 'hover', 'focus', 'open'],
     openTrigger: '[data-testid="settings-gear-button"]',
     width: 320,
-  },
-
-  // ----- homepage/ (P-bucket additions) -----
-  {
-    id: 'homepage-trailer-modal',
-    label: 'homepage/TrailerModal',
-    // FLAG (Task 1 inventory correction): TrailerModal calls useQuery internally —
-    // should ideally be in Q-bucket. Defensive: tmdbId=0 ⇒ enabled=false ⇒ no network.
-    // Renders the "找不到預告片" empty state deterministically. Re-bucket to Q in Task 3
-    // if seeded video-key payload baseline is desired.
-    component: TrailerModal,
-    props: {
-      open: true,
-      onClose: noop,
-      mediaType: 'movie',
-      tmdbId: 0,
-      title: '鬥陣俱樂部',
-    },
-    penNode: 'screen-section',
-    statesOnly: ['default'],
   },
 
   // ----- manual-search/ (P-bucket additions) -----
@@ -3574,11 +3375,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     //
     // NOTE the seed uses `RECENT_LIMIT` — the same constant the hero passes to
     // useRecentlyAdded — because GalleryFixtureSeed writes onto the app's ONE
-    // shared QueryClient and last-fixture-wins across siblings on a key. The
-    // two `library-recently-added` fixtures below seed this same key with
-    // backdrop-less payloads, so when the gallery is browsed un-filtered they
-    // would blank this hero. Their own comment owns that trade; this one is
-    // pinned to the constant so at least the key can never drift from the hook.
+    // shared QueryClient and last-fixture-wins across siblings on a key, so the
+    // key can never drift from the hook.
     seedQueries: [
       {
         queryKey: libraryKeys.recent(RECENT_LIMIT),
@@ -3839,117 +3637,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
     viewport: { width: 390, height: 844 },
   },
-  {
-    id: 'library-library-grid',
-    label: 'library/LibraryGrid',
-    component: LibraryGrid,
-    props: {
-      items: [
-        {
-          type: 'movie',
-          movie: {
-            id: 'mov-1',
-            title: '駭客任務',
-            originalTitle: 'The Matrix',
-            releaseDate: '1999-03-31',
-            genres: ['動作', '科幻'],
-            voteAverage: 8.7,
-            overview: '紅藥丸或藍藥丸？',
-            posterPath: '/p-mov-1.jpg',
-            parseStatus: 'complete',
-            metadataSource: 'tmdb',
-            tmdbId: 603,
-            createdAt: '2026-04-10T08:00:00Z',
-            updatedAt: '2026-04-10T08:00:00Z',
-          },
-        },
-      ] satisfies LibraryItem[],
-      isLoading: false,
-      totalItems: 1,
-      density: 'medium',
-    },
-    penNode: 'screen-section',
-    width: 900,
-  },
-  // Story 19-9 AC #5: dual-state baselines for the Rule 23 canonical migration.
-  // `RecentlyAdded.tsx` reads `Date.now()` to decide if `createdAt` is within the
-  // 7-day "recent" window — that boolean controls the green 「新增」 badge render.
-  // BEFORE 19-9: a single fixture row baselined ONE state, and the baseline silently
-  // staled the moment the wall clock crossed `createdAt + 7d`. AFTER 19-9: the
-  // fixture is split into two rows with `clockTime` pinning the in-page wall clock
-  // to either side of the boundary — both branches get committed baselines.
-  {
-    id: 'library-recently-added/recent',
-    label: 'library/RecentlyAdded (recent — 新增 badge visible)',
-    component: RecentlyAdded,
-    penNode: 'screen-section',
-    width: 1200,
-    // 2026-05-15 is 3 days after createdAt 2026-05-12 → isWithin7Days = true → green badge renders.
-    clockTime: '2026-05-15T00:00:00Z',
-    seedQueries: [
-      {
-        queryKey: libraryKeys.recent(20),
-        data: [
-          {
-            type: 'movie',
-            movie: {
-              id: 'recent-mov-1',
-              title: '奧本海默',
-              originalTitle: 'Oppenheimer',
-              releaseDate: '2023-07-21',
-              genres: ['劇情', '歷史'],
-              voteAverage: 8.1,
-              overview: '原子彈之父。',
-              posterPath: '/p-recent-1.jpg',
-              parseStatus: 'complete',
-              metadataSource: 'tmdb',
-              tmdbId: 872585,
-              // Fixed createdAt — paired with clockTime above to deterministically place it
-              // INSIDE the 7-day "recent" window.
-              createdAt: '2026-05-12T08:00:00Z',
-              updatedAt: '2026-05-12T08:00:00Z',
-            },
-          },
-        ] satisfies LibraryItem[],
-      },
-    ],
-  },
-  {
-    id: 'library-recently-added/stale',
-    label: 'library/RecentlyAdded (stale — no badge)',
-    component: RecentlyAdded,
-    penNode: 'screen-section',
-    width: 1200,
-    // 2026-05-30 is 18 days after createdAt 2026-05-12 → isWithin7Days = false → no badge.
-    clockTime: '2026-05-30T00:00:00Z',
-    seedQueries: [
-      {
-        queryKey: libraryKeys.recent(20),
-        data: [
-          {
-            type: 'movie',
-            movie: {
-              id: 'recent-mov-1',
-              title: '奧本海默',
-              originalTitle: 'Oppenheimer',
-              releaseDate: '2023-07-21',
-              genres: ['劇情', '歷史'],
-              voteAverage: 8.1,
-              overview: '原子彈之父。',
-              posterPath: '/p-recent-1.jpg',
-              parseStatus: 'complete',
-              metadataSource: 'tmdb',
-              tmdbId: 872585,
-              // Same createdAt as the `recent` fixture — paired with the later clockTime
-              // above to deterministically place it OUTSIDE the 7-day window.
-              createdAt: '2026-05-12T08:00:00Z',
-              updatedAt: '2026-05-12T08:00:00Z',
-            },
-          },
-        ] satisfies LibraryItem[],
-      },
-    ],
-  },
 
   // ----- manual-search/ (Task 3) -----
   {
@@ -3975,76 +3662,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     penNode: 'screen-section',
     statesOnly: ['default'],
-  },
-
-  // ----- media/ (Task 3) -----
-  {
-    id: 'media-media-detail-panel',
-    label: 'media/MediaDetailPanel',
-    // details is a direct prop. No libraryId → TrailerSection skipped →
-    // useMediaTrailers never fires. No seedQueries required.
-    component: MediaDetailPanel,
-    props: {
-      type: 'movie',
-      details: {
-        id: 123,
-        title: '銀翼殺手 2049',
-        originalTitle: 'Blade Runner 2049',
-        overview:
-          '三十年後的反烏托邦世界，K（瑞恩·葛斯林 飾演）是洛杉磯警察局的一名 Blade Runner……',
-        releaseDate: '2017-10-06',
-        posterPath: '/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg',
-        backdropPath: '/ilRyazdMJwN05exqhwK4tMKBYZs.jpg',
-        voteAverage: 8.0,
-        voteCount: 12000,
-        popularity: 78.2,
-        genreIds: [878, 18],
-        originalLanguage: 'en',
-        adult: false,
-        video: false,
-        runtime: 164,
-        budget: 150000000,
-        revenue: 260000000,
-        status: 'Released',
-        tagline: '',
-        genres: [
-          { id: 878, name: '科幻' },
-          { id: 18, name: '劇情' },
-        ],
-        productionCountries: [{ iso31661: 'US', name: 'United States of America' }],
-        spokenLanguages: [{ englishName: 'English', iso6391: 'en', name: 'English' }],
-        imdbId: 'tt1856101',
-        homepage: null,
-      } satisfies MovieDetails,
-      credits: {
-        id: 123,
-        cast: [
-          { id: 1, name: '瑞恩·葛斯林', character: 'K', profilePath: null, order: 0 },
-          { id: 2, name: '哈里遜·福特', character: 'Rick Deckard', profilePath: null, order: 1 },
-        ],
-        crew: [
-          {
-            id: 10,
-            name: '丹尼·維勒納夫',
-            job: 'Director',
-            department: 'Directing',
-            profilePath: null,
-          },
-        ],
-      } satisfies Credits,
-      isLoading: false,
-      metadataSource: 'TMDb',
-      filePath: '/movies/Blade Runner 2049 (2017).mkv',
-      fileSize: 15728640000,
-      createdAt: '2024-03-20T10:30:00Z',
-      onPlay: noop,
-      onAddToList: noop,
-      onReparse: noop,
-      onExport: noop,
-      onDelete: noop,
-    },
-    penNode: 'screen-section',
-    width: 480,
   },
 
   // ----- metadata-editor/ (Task 3) -----

@@ -157,12 +157,8 @@ CI first-run decision tree (the implementer-facing form of this decision).
 | `ui-pagination` | `ui/Pagination.tsx` | `utility` | default, hover, focus | page 3 / 12 |
 | `media-poster-card` | `media/PosterCard.tsx` | `RusTY` (+`MQbvp`) | default, hover, focus | hover = the MQbvp affordances (play overlay, kebab, receding badge cluster); library-admin path (`metadataSource` set — the bugfix-10-4 H2 regressor); non-numeric id ⇒ no TMDb fetch in the snapshot |
 | `media-poster-card-skeleton` | `media/PosterCardSkeleton.tsx` | `utility` | default | |
-| `media-color-placeholder` | `media/ColorPlaceholder.tsx` | `utility` | default | deterministic gradient from filename |
 | `media-availability-badge-owned` | `media/AvailabilityBadge.tsx` | `screen-section` | default | variant `owned` |
 | `media-availability-badge-requested` | `media/AvailabilityBadge.tsx` | `screen-section` | default | variant `requested` |
-| `media-metadata-source-badge` | `media/MetadataSourceBadge.tsx` | `screen-section` | default | source `tmdb` |
-| `media-tech-badge` | `media/TechBadge.tsx` | `L9m19` (+`9iTW3`/`f84BM`/`cUjyv`) | default | category `video` |
-| `media-tech-badge-group` | `media/TechBadgeGroup.tsx` | `utility` | default | H.265 / 4K / DTS-HD 5.1 / HDR10 |
 | `degradation-degradation-badge` | `degradation/DegradationBadge.tsx` | `screen-section` | default | level `partial` |
 | `library-view-toggle` | `library/ViewToggle.tsx` | `screen-section` | default, hover, focus | view `grid` |
 | `library-filter-chips` | `library/FilterChips.tsx` | `jD7gF` | default, hover, focus | Component/FilterChip — 2 genres + year range + unmatched |
@@ -223,13 +219,10 @@ reference fixtures are unchanged except the four notes above: `library-sort-sele
 | `data-gallery-id` | Component | `data-pen-node` | States | Notes |
 |---|---|---|---|---|
 | `media-credits-section` | `media/CreditsSection.tsx` | `screen-section` | default | width 480 |
-| `media-detail-panel-menu` | `media/DetailPanelMenu.tsx` | `screen-section` | default, hover, focus, **open** | `openTrigger: '[data-testid="detail-menu-trigger"]'` (inline absolutely-positioned dropdown, not portaled) |
 | `media-fallback-failed` | `media/FallbackFailed.tsx` | `screen-section` | default | uses TanStack Link; app-shell router resolves |
 | `media-fallback-pending` | `media/FallbackPending.tsx` | `screen-section` | default | width 480 |
-| `media-file-info` | `media/FileInfo.tsx` | `utility` | default | width 360 |
 | `media-media-grid` | `media/MediaGrid.tsx` | `screen-section` | default | PosterCard children with `id:0` keep `useMovieDetails`/`useTVShowDetails` disabled — same defensive pattern as `media-poster-card` |
 | `media-trailer-embed` | `media/TrailerEmbed.tsx` | `screen-section` | default, hover, focus | only the "▶ 觀看預告片" trigger; iframe state explicitly excluded |
-| `media-tv-show-info` | `media/TVShowInfo.tsx` | `screen-section` | default | width 480 |
 
 #### `degradation/` (3 new — 1 utility + 2 screen-section)
 
@@ -245,7 +238,6 @@ reference fixtures are unchanged except the four notes above: `library-sort-sele
 |---|---|---|---|---|
 | `dashboard-collapsible-section` | `dashboard/CollapsibleSection.tsx` | `utility` | default, hover, focus | width 480; `useNavigate`-only, no data hooks |
 | `dashboard-download-panel` | `dashboard/DownloadPanel.tsx` | `screen-section` | default, hover, focus | Q-bucket — `seedQueries` for downloads list; `routePath` to /downloads |
-| `dashboard-quick-search-bar` | `dashboard/QuickSearchBar.tsx` | `screen-section` | default, hover, focus | width 480 |
 | `dashboard-recent-media-panel` | `dashboard/RecentMediaPanel.tsx` | `screen-section` | default, hover, focus | Q-bucket — seeded recent-media query; `routePath` to /library |
 
 #### `downloads/` (6 — 1 utility + 5 screen-section)
@@ -274,7 +266,6 @@ reference fixtures are unchanged except the four notes above: `library-sort-sele
 | `homepage-explore-block` | `homepage/ExploreBlock.tsx` | `screen-section` | default, hover, focus | Q-bucket — seeded explore items; `image.tmdb.org/**` aborted in spec ⇒ deterministic fallback paint |
 | `homepage-explore-blocks-list` | `homepage/ExploreBlocksList.tsx` | `screen-section` | default, hover, focus | Q-bucket — seeded explore blocks list |
 | `homepage-hero-banner` | `homepage/HeroBanner.tsx` | `screen-section` | default, hover, focus | Q-bucket — seeded hero; TMDb image abort applies |
-| `homepage-trailer-modal` | `homepage/TrailerModal.tsx` | `screen-section` | default | P-bucket via defensive `tmdbId: 0` (`useQuery` disabled) — empty-state render; viewport-fallback for `fixed inset-0` overlay |
 
 #### `learning/` (2 — 1 P + 1 Q, both screen-section)
 
@@ -288,11 +279,8 @@ reference fixtures are unchanged except the four notes above: `library-sort-sele
 | `library-batch-confirm-dialog` | `library/BatchConfirmDialog.tsx` | `screen-section` | default | plain `fixed inset-0`, viewport-fallback |
 | `library-batch-progress` | `library/BatchProgress.tsx` | `screen-section` | default | viewport-fallback overlay |
 | `library-filter-panel` | `library/FilterPanel.tsx` | `screen-section` | default, hover, focus | Q-bucket — seeded filter facets |
-| `library-library-grid` | `library/LibraryGrid.tsx` | `screen-section` | default, hover, focus | |
-| `library-library-table` | `library/LibraryTable.tsx` | `screen-section` | default, hover, focus | |
 | `library-parse-failure-card` | `library/ParseFailureCard.tsx` | `screen-section` | default, hover, focus | defensive `parsedInfo.title: ''` + `filename: 'a.mkv'` keeps inner `useManualSearch` disabled (`params.query.length < 2`) |
 | `library-poster-card-menu` | `library/PosterCardMenu.tsx` | `screen-section` | default | |
-| `library-recently-added` | `library/RecentlyAdded.tsx` | `screen-section` | default, hover, focus | Q-bucket — seeded recently-added |
 | `library-selection-toolbar` | `library/SelectionToolbar.tsx` | `screen-section` | default, hover, focus | |
 | `library-settings-gear-dropdown` | `library/SettingsGearDropdown.tsx` | `screen-section` | default, hover, focus, **open** | `openTrigger` opt-in (added by Task 4 to give the gear menu an open baseline) |
 
@@ -317,7 +305,6 @@ reference fixtures are unchanged except the four notes above: `library-sort-sele
 
 | `data-gallery-id` | Component | `data-pen-node` | States | Notes |
 |---|---|---|---|---|
-| `media-media-detail-panel` | `media/MediaDetailPanel.tsx` | `screen-section` | default, hover, focus | Q-bucket — seeded movie/TV details |
 
 #### `notifications/` (3 — all screen-section, default-only)
 
