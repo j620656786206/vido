@@ -6,7 +6,6 @@ import {
   useLibraryList,
   useLibraryGenres,
   useLibraryStats,
-  useLibrarySearch,
   useRecentlyAdded,
   useDeleteLibraryItem,
   useReparseItem,
@@ -28,7 +27,6 @@ import type {
 vi.mock('../services/libraryService', () => ({
   libraryService: {
     listLibrary: vi.fn(),
-    searchLibrary: vi.fn(),
     getRecentlyAdded: vi.fn(),
     getGenres: vi.fn(),
     getStats: vi.fn(),
@@ -215,69 +213,6 @@ describe('useLibraryStats', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe('Stats failed');
-  });
-});
-
-describe('useLibrarySearch', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('[P1] calls libraryService.searchLibrary with query', async () => {
-    const searchResponse = {
-      items: [],
-      totalItems: 0,
-      page: 1,
-      pageSize: 20,
-      totalPages: 0,
-    };
-    vi.mocked(libraryService.searchLibrary).mockResolvedValue(searchResponse);
-
-    const { result } = renderHook(() => useLibrarySearch('batman'), {
-      wrapper: createWrapper(),
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(libraryService.searchLibrary).toHaveBeenCalledWith('batman', {});
-    expect(result.current.data).toEqual(searchResponse);
-  });
-
-  it('[P1] does not fetch when query is shorter than 2 chars', () => {
-    const { result } = renderHook(() => useLibrarySearch('b'), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.fetchStatus).toBe('idle');
-    expect(libraryService.searchLibrary).not.toHaveBeenCalled();
-  });
-
-  it('[P1] does not fetch when query is empty', () => {
-    const { result } = renderHook(() => useLibrarySearch(''), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.fetchStatus).toBe('idle');
-    expect(libraryService.searchLibrary).not.toHaveBeenCalled();
-  });
-
-  it('[P1] passes additional params to search', async () => {
-    const searchResponse = {
-      items: [],
-      totalItems: 0,
-      page: 1,
-      pageSize: 20,
-      totalPages: 0,
-    };
-    vi.mocked(libraryService.searchLibrary).mockResolvedValue(searchResponse);
-
-    const { result } = renderHook(() => useLibrarySearch('test', { type: 'movie', page: 2 }), {
-      wrapper: createWrapper(),
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(libraryService.searchLibrary).toHaveBeenCalledWith('test', { type: 'movie', page: 2 });
   });
 });
 

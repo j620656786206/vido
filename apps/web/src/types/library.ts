@@ -310,17 +310,6 @@ export interface LibraryStats {
   totalCount: number;
 }
 
-export interface LibrarySearchResult {
-  type: 'movie' | 'series';
-  movie?: LibraryMovie;
-  series?: LibrarySeries;
-}
-
-export interface LibrarySearchResponse {
-  results: LibrarySearchResult[];
-  totalCount: number;
-}
-
 export interface BatchResult {
   successCount: number;
   failedCount: number;

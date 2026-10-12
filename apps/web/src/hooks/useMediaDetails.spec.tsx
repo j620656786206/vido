@@ -34,7 +34,6 @@ vi.mock('../services/libraryService', () => ({
     getMovieById: vi.fn(),
     getSeriesById: vi.fn(),
     listLibrary: vi.fn(),
-    searchLibrary: vi.fn(),
     getStats: vi.fn(),
     getGenres: vi.fn(),
     getRecentlyAdded: vi.fn(),
