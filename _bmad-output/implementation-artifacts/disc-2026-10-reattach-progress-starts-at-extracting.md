@@ -1,6 +1,6 @@
 # Disc：重開「管理字幕」接上進行中的生成，進度先卡在「抽取音訊」
 
-Status: review
+Status: done
 
 **Source:** 2026-10-05 `bugfix-dialog-reopen-shows-idle-during-run` 建 story 時立案（Rule 24 lane ③，P3）。
 
