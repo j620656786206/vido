@@ -1,6 +1,6 @@
 # Disc：AI 帳號沒錢時，Vido 當成「暫時塞車」一直重試
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-09-asr-quota-429-treated-as-transient`（2026-09-19 由 `disc-2026-09-generation-resume-b-asr-chunk-store` 真機驗證時發現，P3；證據是 NAS log 2026-09-18 23:33）。2026-10-13 Alexyu：「接著做 disc-2026-09-asr-quota-429-treated-as-transient」。
 
