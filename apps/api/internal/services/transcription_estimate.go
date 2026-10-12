@@ -69,6 +69,15 @@ type TranscriptionEstimate struct {
 	RuntimeKnown   bool    `json:"runtime_known"`
 	RuntimeSource  string  `json:"runtime_source"`
 	EstimatedUSD   float64 `json:"estimated_usd"`
+	// ResumedASRMinutes and CachedTranslationShare are the paid-for work an
+	// earlier, unfinished run left behind, already taken off EstimatedUSD
+	// (disc-2026-09-generation-resume-c, a [@contract-v2] widening: both
+	// omitted when there is none; RuntimeMinutes still means the whole film).
+	// ResumedASRMinutes: speech-recognition minutes stored (plan=full).
+	ResumedASRMinutes float64 `json:"resumed_asr_minutes,omitempty"`
+	// CachedTranslationShare: 0–1 of the English SRT's cues whose translation
+	// is cached (plan=translate_only).
+	CachedTranslationShare float64 `json:"cached_translation_share,omitempty"`
 }
 
 // TranscriptionEstimateTarget is the media row the handler already resolved and
@@ -93,6 +102,10 @@ type transcriptionPlanSource interface {
 	IsAvailable() bool
 	translationEnabled() bool
 	canResumeTranslateOnly(ctx context.Context, mediaType, mediaID string) bool
+	// The resume credit (disc-2026-09-generation-resume-c): work an earlier
+	// run paid for that this one will be served for free.
+	resumedASRMinutes(ctx context.Context, mediaID, filePath string, runtimeMinutes float64) float64
+	cachedTranslationShare(ctx context.Context, mediaType, mediaID string) float64
 }
 
 // TranscriptionEstimateService prices one single-item generation run.
@@ -188,28 +201,54 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 		plan = TranscriptionPlanTranslateOnly
 	}
 
-	usd := s.priceUSD(plan, translate, minutes, model)
+	var credit resumeCredit
+	switch {
+	case plan == TranscriptionPlanFull && s.plan.IsAvailable():
+		credit.asrMinutes = s.plan.resumedASRMinutes(ctx, target.MediaID, target.FilePath, minutes)
+	case plan == TranscriptionPlanTranslateOnly && translate:
+		// The cue keys carry the model id: look them up under the model this
+		// quote prices, which is the one the run will bill.
+		credit.translatedShare = s.plan.cachedTranslationShare(ai.WithModelID(ctx, model), target.MediaType, target.MediaID)
+	}
+
+	usd := s.priceUSD(plan, translate, minutes, model, credit)
 
 	return TranscriptionEstimate{
-		MediaID:               target.MediaID,
-		MediaType:             target.MediaType,
-		Plan:                  plan,
-		Route:                 string(route),
-		ASRAvailable:          s.plan.IsAvailable(),
-		SelfHostedASR:         s.selfHostedASR,
-		TranslationConfigured: translate,
-		ModelID:               model,
-		RuntimeMinutes:        minutes,
-		RuntimeKnown:          known,
-		RuntimeSource:         source,
-		EstimatedUSD:          usd.InexactFloat64(),
+		MediaID:                target.MediaID,
+		MediaType:              target.MediaType,
+		Plan:                   plan,
+		Route:                  string(route),
+		ASRAvailable:           s.plan.IsAvailable(),
+		SelfHostedASR:          s.selfHostedASR,
+		TranslationConfigured:  translate,
+		ModelID:                model,
+		RuntimeMinutes:         minutes,
+		RuntimeKnown:           known,
+		RuntimeSource:          source,
+		EstimatedUSD:           usd.InexactFloat64(),
+		ResumedASRMinutes:      credit.asrMinutes,
+		CachedTranslationShare: credit.translatedShare,
 	}
+}
+
+// resumeCredit is what an earlier, unfinished run already paid for. The zero
+// value is "nothing", which prices the whole film — the pre-resume quote.
+type resumeCredit struct {
+	asrMinutes      float64 // 0..minutes
+	translatedShare float64 // 0..1
 }
 
 // priceUSD composes the quote from the candidate list's own pricing functions —
 // no rate or formula is restated here (story dsr-6a AC #3).
-func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, minutes float64, model string) decimal.Decimal {
+//
+// credit takes off what an earlier run already paid for: stored ASR minutes
+// come off the speech-recognition half only (the translation of a film whose
+// transcription is unfinished has not started), and the cached share comes off
+// a translate-only resume.
+func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, minutes float64, model string, credit resumeCredit) decimal.Decimal {
 	asrRate := ai.EstimatedASRPerMinute(s.selfHostedASR)
+	mins := decimal.NewFromFloat(minutes)
+	asrMins := decimal.NewFromFloat(max(minutes-credit.asrMinutes, 0))
 	switch {
 	case plan == TranscriptionPlanExtract && translate:
 		// The batch consent list's extract price — LLM translation of the
@@ -221,15 +260,22 @@ func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, min
 		// paid call without a key — nothing is billed either way.
 		return decimal.Zero
 	case plan == TranscriptionPlanFull && translate:
-		return estimateUSD(RouteASR, minutes, asrRate, model)
+		if credit.asrMinutes <= 0 {
+			return estimateUSD(RouteASR, minutes, asrRate, model)
+		}
+		// estimateUSD's ASR formula with the stored minutes taken off its
+		// first term.
+		return roundUSD(asrMins.Mul(asrRate).Add(mins.Mul(asrLegTranslationRatePerMinute(model))))
 	case plan == TranscriptionPlanFull:
 		// English-only run: the translate leg is skipped, so only audio minutes bill.
-		return roundUSD(decimal.NewFromFloat(minutes).Mul(asrRate))
+		return roundUSD(asrMins.Mul(asrRate))
 	case translate:
 		// Translate-only resume still translates through the ASR leg's
 		// translateSRT, so it pays that leg's rate — NOT RouteExtract's, which
-		// is a cheaper, cached code path this run never takes.
-		return roundUSD(decimal.NewFromFloat(minutes).Mul(asrLegTranslationRatePerMinute(model)))
+		// is a cheaper, cached code path this run never takes. Cues already
+		// in the segment cache are not sent again.
+		share := decimal.NewFromFloat(min(max(credit.translatedShare, 0), 1))
+		return roundUSD(mins.Mul(asrLegTranslationRatePerMinute(model)).Mul(decimal.NewFromInt(1).Sub(share)))
 	default:
 		// Resume without a translation key does nothing billable.
 		return decimal.Zero

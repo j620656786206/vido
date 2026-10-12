@@ -27,6 +27,10 @@ type stubPlanSource struct {
 	translate bool
 	resumable bool
 	resumeAsk []string
+	// resume credit (disc-2026-09-generation-resume-c)
+	asrDone     float64
+	cachedShare float64
+	creditAsk   []string
 }
 
 func (s *stubPlanSource) IsAvailable() bool        { return s.available }
@@ -34,6 +38,14 @@ func (s *stubPlanSource) translationEnabled() bool { return s.translate }
 func (s *stubPlanSource) canResumeTranslateOnly(_ context.Context, mediaType, mediaID string) bool {
 	s.resumeAsk = append(s.resumeAsk, mediaType+":"+mediaID)
 	return s.resumable
+}
+func (s *stubPlanSource) resumedASRMinutes(_ context.Context, mediaID, _ string, runtimeMinutes float64) float64 {
+	s.creditAsk = append(s.creditAsk, "asr:"+mediaID)
+	return min(s.asrDone, runtimeMinutes)
+}
+func (s *stubPlanSource) cachedTranslationShare(_ context.Context, mediaType, mediaID string) float64 {
+	s.creditAsk = append(s.creditAsk, "translation:"+mediaType+":"+mediaID)
+	return s.cachedShare
 }
 
 // sixtyMinuteMovie has a measured duration, so no probe runs.
