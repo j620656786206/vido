@@ -240,6 +240,11 @@ func TestTestKey_ErrorClassification(t *testing.T) {
 			wantCode: "AI_QUOTA_EXCEEDED", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰有效，但目前已達用量上限",
 		},
 		{
+			name:     "an empty balance says top up, not try later",
+			err:      &ai.CreditExhaustedError{Provider: "anthropic", BillingURL: ai.AnthropicBillingURL},
+			wantCode: "AI_QUOTA_EXCEEDED", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰有效，但帳戶沒有額度了",
+		},
+		{
 			name:     "timeout is a network problem, not a key problem",
 			err:      ai.ErrAITimeout,
 			wantCode: "AI_TIMEOUT", wantHTTP: http.StatusBadGateway, wantMsg: "連線逾時，無法驗證金鑰",

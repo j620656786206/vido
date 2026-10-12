@@ -42,6 +42,13 @@ const TABLE: ReadonlyArray<{ match: readonly string[]; copy: FailureCopy }> = [
     match: ['transcription unavailable', 'API key not configured'],
     copy: { text: '語音辨識未設定', budget: false },
   },
+  // An empty provider account (disc-2026-09-asr-quota-429-treated-as-transient):
+  // the solo runner's sentence says 帳號沒有額度, the legacy path keeps the
+  // AI_CREDIT_EXHAUSTED code in its raw error.
+  {
+    match: ['AI_CREDIT_EXHAUSTED', '帳號沒有額度'],
+    copy: { text: 'AI 帳號沒有額度', budget: false },
+  },
   // The LLM side says AI_UNAUTHORIZED; the Whisper side says `status 401`.
   { match: ['AI_UNAUTHORIZED', 'status 401'], copy: { text: 'API 金鑰無效', budget: false } },
   {

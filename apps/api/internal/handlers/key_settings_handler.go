@@ -193,6 +193,7 @@ func (h *KeySettingsHandler) TestKey(c *gin.Context) {
 // Ordered most-specific first: an unauthorized error also satisfies
 // ErrAIProviderError (they are wrapped together), so it must be checked first.
 func classifyKeyTestError(err error) (code string, status int, message, suggestion string) {
+	var credit *ai.CreditExhaustedError
 	switch {
 	case errors.Is(err, ai.ErrAINotConfigured):
 		return "AI_NOT_CONFIGURED", http.StatusConflict,
@@ -209,6 +210,12 @@ func classifyKeyTestError(err error) (code string, status int, message, suggesti
 		return "AI_MODEL_NOT_FOUND", http.StatusBadGateway,
 			"金鑰可用，但設定的模型識別碼無效或已棄用",
 			"請將 CLAUDE_MODEL 設為現行模型後重啟，或移除該環境變數改用預設模型。"
+	case errors.As(err, &credit):
+		// An empty balance is a quota too (same code, so the client needs no
+		// change) — but "try later" will not fix it; topping up will
+		// (disc-2026-09-asr-quota-429-treated-as-transient).
+		return "AI_QUOTA_EXCEEDED", http.StatusBadGateway,
+			"金鑰有效，但帳戶沒有額度了", "請到 " + credit.BillingURL + " 儲值後再試。"
 	case errors.Is(err, ai.ErrAIQuotaExceeded):
 		// The key is VALID — it is the account that is rate-limited. Saying
 		// "invalid key" here would send the user to regenerate a working key.

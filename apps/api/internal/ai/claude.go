@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -274,6 +275,13 @@ func (p *ClaudeProvider) classifyErr(err error, timeout time.Duration) (retryabl
 			// sentinels keeps existing ErrAIProviderError consumers unchanged
 			// while letting the key-test endpoint identify a bad key exactly.
 			return false, fmt.Errorf("%w: %w: status %d", ErrAIProviderError, ErrAIUnauthorized, apiErr.StatusCode)
+		case http.StatusBadRequest:
+			// An empty Anthropic balance is a 400 ("Your credit balance is too
+			// low…"), not a 429 — say so instead of a bare "status 400"
+			// (disc-2026-09-asr-quota-429-treated-as-transient).
+			if strings.Contains(strings.ToLower(apiErr.RawJSON()+" "+apiErr.Error()), "credit balance") {
+				return false, &CreditExhaustedError{Provider: "anthropic", Code: "credit_balance_too_low", BillingURL: AnthropicBillingURL}
+			}
 		case http.StatusNotFound:
 			// 9R-1: a deprecated/invalid model id returns 404. This diagnostic was
 			// hard-won during that incident — keep it verbatim.

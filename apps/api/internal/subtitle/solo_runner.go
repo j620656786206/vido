@@ -439,6 +439,17 @@ func completeMessageForRoute(route string) string {
 // failureMessage turns the pipeline's outcome into the user-facing line plus
 // the diagnostic detail the panel shows under it.
 func failureMessage(run *models.SubtitleRun, runErr error, budget *ai.Budget) (message, detail string) {
+	// An empty provider account: say whose, and where to top it up — the raw
+	// error used to be the provider's whole JSON body
+	// (disc-2026-09-asr-quota-429-treated-as-transient). The detail is a
+	// sentence (it starts in CJK, so the panel shows it as prose) and carries
+	// 帳號沒有額度 for the workspace log's failureCopy table.
+	var credit *ai.CreditExhaustedError
+	if runErr != nil && errors.As(runErr, &credit) {
+		name := credit.DisplayName()
+		return name + " 帳號沒有額度了，儲值後再按一次生成",
+			name + " 帳號沒有額度了，請到 " + credit.BillingURL + " 儲值後再按一次生成"
+	}
 	switch {
 	case runErr != nil && errors.Is(runErr, ai.ErrBudgetExceeded):
 		snap := budget.Snapshot()

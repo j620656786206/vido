@@ -30,6 +30,17 @@ describe('failureCopy', () => {
     ],
     ['transcribe: whisper: API error: status 401 — {"error":"invalid key"}', 'API 金鑰無效', false],
     ['transcribe: whisper: OpenAI API key not configured', '語音辨識未設定', false],
+    // disc-2026-09-asr-quota-429-treated-as-transient: the solo runner's sentence, and the legacy raw error.
+    [
+      'OpenAI 帳號沒有額度了，請到 https://platform.openai.com/settings/organization/billing 儲值後再按一次生成',
+      'AI 帳號沒有額度',
+      false,
+    ],
+    [
+      'transcribe: transcribe chunk 1/6: whisper: API error: AI_CREDIT_EXHAUSTED: openai account has no credit left (insufficient_quota)',
+      'AI 帳號沒有額度',
+      false,
+    ],
     ['transcribe: whisper: request timed out', '處理逾時', false],
     ['extract audio: context deadline exceeded', '處理逾時', false],
   ])('%s → %s', (error, text, budget) => {
