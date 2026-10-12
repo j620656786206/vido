@@ -15,7 +15,7 @@
 import { Link } from '@tanstack/react-router';
 import { Check, Star } from 'lucide-react';
 import { getImageUrl } from '../../lib/image';
-import { filenameToGradient } from '../media/ColorPlaceholder';
+import { filenameToGradient } from '../../utils/filenameToGradient';
 import { pickPosterBadge } from '../../utils/libraryStatus';
 import type { LibraryMovie, LibrarySeries } from '../../types/library';
 import { fallbackInitial } from '../../utils/fallbackInitial';

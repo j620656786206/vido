@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
 import { cn } from '../../lib/utils';
 import { useApplyMetadata, useManualSearch } from '../../hooks/useManualSearch';
 import type { ManualSearchResultItem } from '../../services/metadata';
-import { filenameToGradient } from './ColorPlaceholder';
+import { filenameToGradient } from '../../utils/filenameToGradient';
 import { fallbackInitial } from '../../utils/fallbackInitial';
 
 export interface ManualMatchDialogV2Props {
