@@ -66,7 +66,7 @@ Status: done
   - [x] 表驅動測試放 `music_only_test.go`
 - [x] T2 `whisper_segments.go`：常數 `dropReasonSymbolOnly = "symbol_only"`，接到 R0（AC #2）
   - [x] 過濾測試（AC #3）
-- [ ] T3 正式機實測（AC #6，部署後，先給估價、等 Alexyu 同意）
+- [x] T3 正式機實測（AC #6）— 2026-10-12 跑了；字幕沒有符號句，但這次 Whisper 沒寫出 `$%&!`，規則沒被觸發，見「正式機驗證 2026-10-12」。
 
 全部後端，一個檔案的規則加一個常數，不用拆單。
 
@@ -118,6 +118,20 @@ Claude Opus 5.5（claude-opus-5-5），Amelia dev-story，2026-10-12。
 - **L1（接受）** 斷點續跑的聽寫段落快取（`services/asr_chunk_store.go:73-78`）存的是**已過濾**的 SRT。30 天內「跑到一半中斷」的片，續跑時拿回來的舊段落仍可能帶 `$%&!`。這只會發生在中斷過的片、只有一次，而且整部跑完後快取就會刪掉。要擋住它，得把快取版本號升到 v3，但那會讓所有中斷過的片重新付聽寫費，划不來。接受。
 - **L2（接受）** 單獨一個 `-`、`...`、`?!` 或只有表情符號的句子也會被丟掉。字幕上單獨出現這些沒有意義，故意這樣設計（Dev Notes 已寫）。
 
+### 正式機驗證 2026-10-12
+
+- 環境：部署前備份到 NAS `/mnt/cache/appdata/vido/backups/pre-symbol-*/`（db／wal／shm＋`.backup`），正式 Vido 更新到 `main-0411c00`（PR #745）。
+- 估價畫面寫 US$1.57（它抓整集 57 分鐘的長度），實際只放 10 分鐘片段。Alexyu 看過估價後同意跑。
+- 丟棄容器 `vido-evalclip`（DB 是部署前正式 DB 的 `.backup` 副本）重跑 See S01E02 的 10 分鐘片段：
+  - 80 秒跑完，`subtitle_runs`：`asr|75 句|US$0.2061|completed`。
+  - 材料：NAS `/mnt/cache/appdata/vido-eval-clip/verify-20261012-symbol/`（`clip.en.srt`、`clip.zh-Hant.srt`、`clip.log`）。
+- 結果：
+  - 英文字幕 75 句，**沒有任何只有符號的句子** ✅。
+  - **但這次 Whisper 沒有寫出 `$%&!`**：同一段打鬥，這次聽成 4:22.9「Hey!」、4:23.9「Hey, hey, hey!」、4:25.7「Hey!」。log 裡 `dropped_by_reason` 只有 `music_only`（4／12／13／6），`symbol_only` 出現 0 次。
+  - 也就是說，這條規則這次沒有東西可以丟。「真的把 `$%&!` 丟掉」目前只有單元測試證明（用 10/11 那 3 句原文）。Whisper 每次聽寫結果不同，下次再寫出符號句時，log 會出現 `symbol_only`。
+- 花費：US$0.21。
+- 判定：**通過（結果正確；規則本身沒被這次的聽寫觸發）**。
+
 ### Discovery Triage
 
 - N/A — no out-of-scope work discovered（Bob 建檔時）。
@@ -137,3 +151,4 @@ Claude Opus 5.5（claude-opus-5-5），Amelia dev-story，2026-10-12。
 | 2026-10-12 | Bob create-story（R0 加 `symbol_only`：沒有字母和數字的句子丟掉；片內字幕軌那條路不動）。 |
 | 2026-10-12 | Amelia dev-story＋code review 0H/0M/2L（皆接受）；全套綠。T3 正式機實測待部署、要先給估價。 |
 | 2026-10-12 | PR #745 CI 全綠合併；T3 正式機實測待部署（先給估價）。 |
+| 2026-10-12 | 正式機重跑 10 分鐘片段（US$0.21）：75 句無符號句；這次 Whisper 聽成「Hey!」，`symbol_only` 未觸發。 |
