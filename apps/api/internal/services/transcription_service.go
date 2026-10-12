@@ -1765,6 +1765,37 @@ func (s *TranscriptionService) translationRunVersion(ctx context.Context, metada
 	}
 }
 
+// translationInputs is everything a translate run feeds the model, resolved
+// once. translateSRT and the estimate's cache check both build it here, so the
+// estimate can only ever count a cue as "already translated" when the run
+// would actually find it (disc-2026-09-generation-resume-c AC #4).
+type translationInputs struct {
+	episodeRow  *models.Episode
+	glossaryKey string
+	glossary    []GlossaryPair
+	metadata    prompts.MediaMetadata
+	level       prompts.LocalizationLevel
+	version     models.RunVersion
+}
+
+func (s *TranscriptionService) translationInputsFor(ctx context.Context, mediaType, mediaID string) translationInputs {
+	episodeRow := s.episodeRowFor(ctx, mediaType, mediaID) // one read serves the key AND the sub-7-2a episode line
+	glossaryKey := glossaryKeyFor(mediaID, episodeRow)
+	glossary := s.loadGlossary(ctx, glossaryKey)
+	// 9R-8: the FR26 show context the extract leg has always had. Reuses the
+	// glossaryKey resolved just above, so an episode costs no extra row read.
+	metadata := s.mediaMetadataFor(ctx, mediaType, mediaID, glossaryKey)
+	level := s.localizationLevel(ctx)
+	return translationInputs{
+		episodeRow:  episodeRow,
+		glossaryKey: glossaryKey,
+		glossary:    glossary,
+		metadata:    metadata,
+		level:       level,
+		version:     s.translationRunVersion(ctx, metadata, glossary, level),
+	}
+}
+
 // episodeRowFor + glossaryKeyFor resolve which glossary a run feeds from and
 // harvests into (CR sub-5-5 H1). The glossary is per-SHOW: an episode run must
 // use its PARENT SERIES id — the key the F6 review panel and the pipeline path
@@ -2011,16 +2042,12 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// across the whole subtitle and across runs (keystone payoff).
 	// CR sub-5-5 H1: feed AND harvest key on the SHOW-level glossary — for an
 	// episode that is the parent series id, not the episode's own id.
-	episodeRow := s.episodeRowFor(ctx, mediaType, mediaID) // one read serves the key AND the sub-7-2a episode line
-	glossaryKey := glossaryKeyFor(mediaID, episodeRow)
-	glossary := s.loadGlossary(ctx, glossaryKey)
+	in := s.translationInputsFor(ctx, mediaType, mediaID)
+	episodeRow, glossaryKey, glossary, metadata := in.episodeRow, in.glossaryKey, in.glossary, in.metadata
 	if len(glossary) > 0 {
 		s.logger.Info("translating with per-show glossary",
 			"media_id", mediaID, "glossary_key", glossaryKey, "term_count", len(glossary))
 	}
-	// 9R-8: the FR26 show context the extract leg has always had. Reuses the
-	// glossaryKey resolved just above, so an episode costs no extra row read.
-	metadata := s.mediaMetadataFor(ctx, mediaType, mediaID, glossaryKey)
 	// CR M2: this leg has NO prompt caching — TranslateChunk (extract leg) can
 	// type-assert ai.CachingCompleter, TranslateWithGlossaryHarvest calls plain
 	// CompleteText — so the media-context section is re-sent, and re-billed, on
@@ -2029,8 +2056,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	// per item and brings the 9R-11 run budget ceiling forward accordingly.
 	// Rendered once here purely so an operator can tie a budget trip (or a
 	// proper-noun drift complaint) to whether context was actually applied.
-	level := s.localizationLevel(ctx)
-	version := s.translationRunVersion(ctx, metadata, glossary, level)
+	level, version := in.level, in.version
 	stampLedgerVersion(ctx, version, len(blocks)) // sub-7-6a
 	metadataChars := len(prompts.BuildMetadataSection(metadata))
 	s.logger.Info("translating with media context",
