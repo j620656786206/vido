@@ -107,7 +107,7 @@ Status: done
 - [x] T4 改兩處註解（AC #5）
 - [x] T5 篩選條件也套 `CanonicalGenres`（AC #8，dev 時併入）
 - [x] T7 CR 修正：`tmdbGenreName`（AC #9）、`FillContextFacets` 自己也轉（CR L1）
-- [ ] T6 正式機實測（AC #7，部署後）— ⏳ 刻意延後：要等合併、ghcr 映像更新、NAS 重建後才能量。
+- [x] T6 正式機實測（AC #7）— 2026-10-12 通過，見 Dev Agent Record「正式機驗證 2026-10-12」。
 
 全部後端（T1–T3）＋一個前端註解。前端 task 0 個實質改動，不用拆單。
 
@@ -170,6 +170,21 @@ Claude Opus 5.5（claude-opus-5-5），Amelia dev-story，2026-10-12。
 - **L2（接受）** migration 046 直接用現行的 `models.CanonicalGenres`，不是凍結一份副本。好處是跟寫入路徑不會分歧；代價是以後改表，「重跑舊 migration」的結果會跟著變。這個轉換是冪等的，接受。
 - **L3（接受，範圍外、不立案）** `GetDistinctGenres` 用字碼排序，中文不是照筆畫。這是本來就有的行為，跟這張無關，也不是 bug。
 
+### 正式機驗證 2026-10-12
+
+- 環境：部署前備份 `vido.db`／`-wal`／`-shm`＋`.backup` 一致副本到 NAS `/mnt/cache/appdata/vido/backups/pre-genres-20261012-0929/`；`docker pull` 後 `rebuild_container Vido`，容器 `VIDO_VERSION=main-1be9803`（PR #743 的合併 commit）。
+- 開機 log：`migration 046: genre names rewritten in the Taiwan wording rows=120`（其餘列的類型本來就跟台灣用語同字，例如 犯罪、家庭、奇幻）。
+- **AC #7(b) 通過：** `GET /api/v1/library/genres` 回 20 個名稱，全是台灣用語：冒險、劇情、動作、動作冒險、動畫、喜劇、奇幻、家庭、恐怖、愛情、懸疑、戰爭政治、犯罪、真人秀、科幻、科幻奇幻、紀錄、西部、電視電影、驚悚。
+- **AC #7(c) 通過：** 唯讀查 DB 兩次（09:32、09:36）：
+  - 簡體／英文名稱出現次數 0。
+  - 各類型的片數跟轉換前一樣，例如影集 劇情 58（原 剧情 58）、動作冒險 33、科幻奇幻 25；電影 冒險 19、動作 16。
+  - 凡人修仙傳 `["動畫","動作冒險","劇情"]`。
+- **AC #7(d) 通過：**
+  - API 篩選影集：`劇情`、`剧情`（舊連結）、`Drama` 都是 58 部（AC #8）。
+  - 本機 Playwright 開正式機 `/library?genres=劇情`：頁面有「劇情」、沒有任何簡體或英文類型。
+  - 不在片庫的 `/media/tv/1396`（絕命毒師，有「想要」按鈕）：顯示「劇情 / 犯罪」（AC #9）。
+- 花費：US$0。判定：**通過**。
+
 ### Discovery Triage
 
 - ① 沒進片庫的片的詳細頁也顯示 TMDb 簡體類型 → 併入 AC #9／T7（CR M1）。
@@ -205,3 +220,4 @@ Claude Opus 5.5（claude-opus-5-5），Amelia dev-story，2026-10-12。
 | 2026-10-12 | Amelia dev-story：`GenresJSON` 出口統一換台灣用語＋migration 046＋篩選也轉（AC #8 併入）＋前後端對表測試；全套綠。T6 正式機實測待部署。 |
 | 2026-10-12 | Code review 0H/1M/3L：M1（探索詳細頁的 TMDb 類型）、L1（FillContextFacets 自己也轉）已修；L2、L3 接受。前端 300 檔 4680 條、Go 全套、staticcheck、lint 綠。 |
 | 2026-10-12 | PR #743 CI 全綠（17 pass、3 skipping）合併；T6 正式機驗證待 NAS 更新後補。 |
+| 2026-10-12 | 正式機驗證通過（migration 046 改 120 列；類型清單 20 個全台灣用語；三種拼法篩選都 58 部；探索詳細頁顯示劇情 / 犯罪）。 |
