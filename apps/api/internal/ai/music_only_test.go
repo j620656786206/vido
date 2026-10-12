@@ -49,3 +49,35 @@ func TestFilterHallucinations_MusicOnlyRunIsNotCountedAsARepeatRun(t *testing.T)
 	assert.Equal(t, 4, dropReasonCounts(dropped)[dropReasonMusicOnly])
 	assert.Zero(t, dropReasonCounts(dropped)[dropReasonRepeatRun])
 }
+
+// disc-2026-10-asr-symbol-only-cues
+func TestIsSymbolOnlyText(t *testing.T) {
+	for _, s := range []string{"$%&!", "-$%&!", "- $%&!", "...", "?!", "#$%&!", "\u200b$%&!"} {
+		assert.True(t, IsSymbolOnlyText(s), "%q", s)
+	}
+	for _, s := range []string{"", "   ", "Ugh!", "3!", "啊！", "-Hello", "♪ lyrics ♪", "$5"} {
+		assert.False(t, IsSymbolOnlyText(s), "%q", s)
+	}
+}
+
+// See S01E02's 10-minute clip (2026-10-11): whisper wrote shouting during a
+// fight as 「$%&!」 three times, and translation copied it into the
+// subtitle as 「$%&！」. A line with no letter and no digit is not a subtitle.
+func TestFilterHallucinations_R0SymbolOnly(t *testing.T) {
+	segs := []whisperSegment{
+		speech(263.886, 264.166, "-$%&!"),
+		speech(264.546, 264.686, "$%&!"),
+		speech(265, 267, "Face me!"),
+		speech(268, 269, "♪♪"),
+		speech(270, 271, "3!"),
+		speech(272, 273, "Ugh!"),
+		speech(284.566, 285.966, "$%&!"),
+	}
+	kept, dropped := filterHallucinations(segs)
+
+	counts := dropReasonCounts(dropped)
+	assert.Equal(t, 3, counts[dropReasonSymbolOnly])
+	assert.Equal(t, 1, counts[dropReasonMusicOnly], "♪♪ stays music_only — the log tells the two apart")
+	require.Len(t, kept, 3)
+	assert.Equal(t, []string{"Face me!", "3!", "Ugh!"}, []string{kept[0].Text, kept[1].Text, kept[2].Text})
+}

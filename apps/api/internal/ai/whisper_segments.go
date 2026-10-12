@@ -266,6 +266,12 @@ const (
 	// these in subtitle.FilterSDH (sub-6-4); this is the same rule for the
 	// speech-recognition leg.
 	dropReasonMusicOnly = "music_only"
+	// dropReasonSymbolOnly: no letter and no digit, only symbols — whisper's
+	// way of writing shouting or a bleeped swear (「$%&!」). Translation
+	// copied it into the subtitle as 「$%&！」 (See S01E02's 10-minute clip,
+	// three cues — disc-2026-10-asr-symbol-only-cues). Checked after
+	// music_only so ♪♪ keeps its own reason in the log.
+	dropReasonSymbolOnly = "symbol_only"
 	// dropReasonPromptEcho: the segment is a verbatim slice of the name
 	// prompt we sent (disc-2026-10-asr-proper-names-inconsistent, CR M2) —
 	// whisper's known habit over silence or score, when given a prompt, is
@@ -418,13 +424,15 @@ func filterHallucinationsWith(segs []whisperSegment, applyTail bool, prompt stri
 	reasons := make([]string, len(segs))
 	isEcho := promptEchoMatcher(prompt)
 
-	// R0 prompt echo / music-only, R1 silence, R2 per-segment repetition.
+	// R0 prompt echo / music-only / symbol-only, R1 silence, R2 per-segment repetition.
 	for i, seg := range segs {
 		switch {
 		case isEcho != nil && isEcho(seg.Text):
 			reasons[i] = dropReasonPromptEcho
 		case IsMusicOnlyText(seg.Text):
 			reasons[i] = dropReasonMusicOnly
+		case IsSymbolOnlyText(seg.Text):
+			reasons[i] = dropReasonSymbolOnly
 		case seg.NoSpeechProb > hallucinationNoSpeechThreshold && seg.AvgLogprob < hallucinationLogprobThreshold:
 			reasons[i] = dropReasonSilence
 		case seg.CompressionRatio > hallucinationCompressionThreshold:
