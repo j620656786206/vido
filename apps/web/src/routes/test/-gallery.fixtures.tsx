@@ -1191,6 +1191,15 @@ const CONSENT_GROUPED_SELECTED = new Set([
   '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f302',
 ]);
 
+// disc-2026-10-consent-list-resume-note: S01E02 was stopped halfway last time
+// (budget or an empty account) — 20 of its 51 minutes are already transcribed,
+// so it is cheaper than S01E01 and says why.
+const CONSENT_RESUMED_CANDIDATES: GenerationCandidate[] = CONSENT_GROUPED_CANDIDATES.map((c) =>
+  c.mediaId === '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f303'
+    ? { ...c, estimatedUsd: 0.19, resumedAsrMinutes: 20 }
+    : c
+);
+
 // sub-6-11: the operability set — two MATCHED films, one UNMATCHED film (so the
 // movies block splits in two) and the two-season series (so there is something
 // to collapse and something for a search to hit). One dataset drives all three
@@ -6019,6 +6028,22 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     // group headers postdate the 2026-08-10 F15 ratification (sub-5-3
     // function-first ruling; backlog-f15-f8-group-retry-pen-annotation).
     penNode: 'screen-section',
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/resumed',
+    label: 'subtitle/consent/CandidateListPanel (F15 已聽寫的部分不重算 — resume-c2)',
+    component: CandidateListPanel,
+    // The search opens the show's group, the way f15-search-hit does — a
+    // collapsed group would hide the very row under test.
+    props: consentOperabilityProps({
+      candidates: CONSENT_RESUMED_CANDIDATES,
+      selectedIds: CONSENT_GROUPED_SELECTED,
+      search: '怪奇',
+      searchQuery: '怪奇',
+    }),
+    width: 960,
+    penNode: 'screen-section', // Screen F15-D-v2 (pwMzT) — note VCmYz
     statesOnly: ['default'],
   },
   {

@@ -732,6 +732,29 @@ describe('CandidateListPanel — phone-width row (bugfix-f15-row-mobile-identity
     expect(subtitle).toHaveClass('@max-xl:whitespace-normal');
   });
 
+  it('a row with stored transcription says how much is not charged again (F15-D-v2)', () => {
+    renderOne({ runtimeMinutes: 98, runtimeKnown: true, resumedAsrMinutes: 40 });
+    expect(screen.getByTestId(`consent-row-subtitle-${M}`)).toHaveTextContent(
+      '無文字字幕軌 → 語音辨識 + 翻譯 · 1 小時 38 分 · 已聽寫 40 分鐘，不重算'
+    );
+    renderOne({ runtimeMinutes: 98, runtimeKnown: true, resumedAsrMinutes: 64.6 });
+    expect(screen.getByTestId(`consent-row-subtitle-${M}`)).toHaveTextContent(
+      '· 已聽寫 1 小時 5 分，不重算'
+    );
+  });
+
+  it('no sentence when nothing was taken off, or on an extract row', () => {
+    for (const over of [
+      { resumedAsrMinutes: undefined },
+      { resumedAsrMinutes: 0 },
+      { resumedAsrMinutes: 0.3 }, // rounds to 0 — never 「已聽寫 0 分鐘」
+      { route: 'extract' as const, resumedAsrMinutes: 40 },
+    ]) {
+      renderOne(over);
+      expect(screen.getByTestId(`consent-row-subtitle-${M}`)).not.toHaveTextContent('不重算');
+    }
+  });
+
   it('below 36rem the kind badge is gone — the route stays readable in the subtitle sentence', () => {
     renderOne();
     const kind = screen.getByTestId(`consent-row-kind-${M}`);

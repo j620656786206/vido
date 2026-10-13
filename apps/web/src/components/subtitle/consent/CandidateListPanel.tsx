@@ -191,8 +191,21 @@ function runtimeLabel(c: GenerationCandidate): string {
  */
 function routeSubtitle(c: GenerationCandidate): string {
   const route = c.route === 'extract' ? '內嵌英文字幕 → 翻譯' : '無文字字幕軌 → 語音辨識 + 翻譯';
-  const runtime = runtimeLabel(c);
-  return runtime ? `${route} · ${runtime}` : route;
+  const parts = [route, runtimeLabel(c), resumedLabel(c)].filter(Boolean);
+  return parts.join(' · ');
+}
+
+/**
+ * Why this row costs less than its neighbours (disc-2026-10-consent-list-
+ * resume-note, F15-D-v2 note VCmYz): an earlier run stopped by the budget or
+ * an empty account left its transcription stored, and the price already takes
+ * it off. Without the sentence one cheap episode in a season reads as a bug.
+ * Same format as the runtime beside it; nothing when nothing was taken off.
+ */
+function resumedLabel(c: GenerationCandidate): string {
+  const minutes = Math.round(c.resumedAsrMinutes ?? 0);
+  if (c.route !== 'asr' || minutes <= 0) return '';
+  return `已聽寫 ${formatRuntime(minutes)}，不重算`;
 }
 
 /**
