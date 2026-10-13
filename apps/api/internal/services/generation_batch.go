@@ -58,6 +58,11 @@ const (
 	GenerationBatchStatusCancelled     = "cancelled"
 	GenerationBatchStatusError         = "error"
 	GenerationBatchStatusBudgetCeiling = "budget_ceiling"
+	// CreditExhausted: the AI account itself has no money left
+	// (ai.CreditExhaustedError). Like the budget ceiling, the rest of the queue
+	// is paused, not failed — every next item would fail the same way, and
+	// after a top-up 下次繼續 picks them up.
+	GenerationBatchStatusCreditExhausted = "credit_exhausted"
 )
 
 // GenerationBatchItemStatus is one queue entry's state (dsr-6d-a AC #1
@@ -112,8 +117,12 @@ type GenerationBatchProgress struct {
 	BudgetUSD      float64 `json:"budget_usd"`
 	// ModelID is the model the batch was priced and run with (sub-7-6a,
 	// additive): "" = the deployment default (pre-sub-6-8a batches).
-	ModelID string                     `json:"model_id"`
-	Items   []GenerationBatchItemState `json:"items"`
+	ModelID string `json:"model_id"`
+	// CreditProvider ("openai"|"anthropic") and BillingURL say whose account
+	// ran dry and where to top it up; "" unless Status is credit_exhausted.
+	CreditProvider string                     `json:"credit_provider"`
+	BillingURL     string                     `json:"billing_url"`
+	Items          []GenerationBatchItemState `json:"items"`
 }
 
 // GenerationBatchItem is one enumerated queue entry. The exported fields are
@@ -699,7 +708,8 @@ func (p *GenerationBatchProcessor) seriesTitle(ctx context.Context, seriesID str
 
 // process runs the queue sequentially (one 轉錄中, rest 排隊中 — the shared
 // ai.Governor is the real AI throttle). Per-item failures continue the loop;
-// the budget ceiling pauses the remainder (AC 5/7).
+// the budget ceiling and an AI account with no credit pause the remainder
+// (AC 5/7; disc-2026-10-batch-stop-on-credit-exhausted-a).
 func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, items []GenerationBatchItem, budget *ai.Budget) {
 	// dsr-6d-a AC #4: a panic ends THIS batch with status error instead of
 	// taking the whole API process down. Every critical section below unlocks
@@ -731,6 +741,7 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 		p.markItem(batchID, i, item, GenerationBatchItemRunning, GenerationBatchItemReasonNone, budget)
 
 		err := p.runner.ExecuteGeneration(ctx, item.MediaID, item.MediaType, item.filePath, item.mediaDir)
+		var credit *ai.CreditExhaustedError
 		switch {
 		case err == nil:
 			p.logger.Info("generation batch item succeeded",
@@ -741,6 +752,21 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 			// The in-flight item died because the batch was cancelled — report
 			// cancelled, not failed (AC 2).
 			p.finish(batchID, GenerationBatchStatusCancelled, i+1, item, budget)
+			return
+		case errors.As(err, &credit):
+			// The account has no money left: every next item would fail the
+			// same way, so stop here and pause this item and the rest. Only the
+			// definite CreditExhaustedError — a bare ErrAIQuotaExceeded may be
+			// a rate limit (Gemini, Claude 429) and stays a per-item failure.
+			p.logger.Warn("generation batch stopped — AI account has no credit",
+				"batch_id", batchID, "index", i+1, "total", len(items),
+				"media_id", item.MediaID, "provider", credit.Provider)
+			p.withLock(func() {
+				if b := p.activeBatch; b != nil && b.BatchID == batchID {
+					b.CreditProvider, b.BillingURL = credit.Provider, credit.BillingURL
+				}
+			})
+			p.finish(batchID, GenerationBatchStatusCreditExhausted, i+1, item, budget)
 			return
 		case errors.Is(err, ai.ErrBudgetExceeded):
 			// AC 7: mid-item ceiling hit — this item and all remaining are paused.
@@ -857,7 +883,7 @@ func (p *GenerationBatchProcessor) finish(batchID, status string, currentIndex i
 				continue
 			}
 			switch status {
-			case GenerationBatchStatusBudgetCeiling:
+			case GenerationBatchStatusBudgetCeiling, GenerationBatchStatusCreditExhausted:
 				entry.Status = GenerationBatchItemPaused
 			case GenerationBatchStatusError:
 				if entry.Status == GenerationBatchItemRunning {
@@ -935,6 +961,8 @@ func batchEventData(b *GenerationBatchProgress, budget *ai.Budget, items []Gener
 		"spent_usd":        spent,
 		"budget_usd":       ceiling,
 		"model_id":         b.ModelID,
+		"credit_provider":  b.CreditProvider,
+		"billing_url":      b.BillingURL,
 		"items":            nil,
 		"changed_item":     nil,
 	}
