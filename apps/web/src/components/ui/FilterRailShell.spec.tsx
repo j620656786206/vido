@@ -2,6 +2,7 @@ import { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterRailShell } from './FilterRailShell';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 function renderRail(activeCount = 0) {
   return render(
@@ -98,5 +99,13 @@ describe('FilterRailShell', () => {
     expect(trigger).toHaveAttribute('data-rail-vt', 'trigger');
     // the group holds the badge too, so 「篩選 3」 travels as one piece
     expect(trigger).toContainElement(screen.getByTestId('test-rail-active-count'));
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-a — icon-only controls name themselves in the shared tooltip.
+describe('FilterRailShell — collapse control', () => {
+  it('收合篩選 shows its name on keyboard focus', async () => {
+    renderRail();
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '收合篩選' }), '收合篩選');
   });
 });

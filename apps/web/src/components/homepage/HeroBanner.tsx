@@ -29,6 +29,7 @@ import { getImageUrl, getBackdropSrcSet, getBackdropSizes } from '../../lib/imag
 import { deriveLifecycleStatus, deriveSubtitleStatus } from '../../utils/libraryStatus';
 import { cn } from '../../lib/utils';
 import type { LibraryItem, LibraryMovie, LibrarySeries } from '../../types/library';
+import { Tooltip } from '../ui/Tooltip';
 
 const HERO_MAX_ITEMS = 5;
 
@@ -373,52 +374,61 @@ export function HeroBanner() {
           className="absolute bottom-1 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full bg-[var(--overlay-scrim)] px-1"
           data-testid="hero-banner-dots"
         >
-          <button
-            type="button"
-            aria-label="上一部"
-            data-testid="hero-banner-prev"
-            onClick={() => goTo(activeIndex - 1)}
-            className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors duration-[var(--motion-touch)] hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          {items.map((item, idx) => (
+          <Tooltip content="上一部" side="top">
             <button
-              key={heroKey(item) + '-dot'}
               type="button"
-              aria-label={`切換到第 ${idx + 1} 部`}
-              aria-current={idx === activeIndex}
-              data-testid={`hero-banner-dot-${idx}`}
-              onClick={() => goTo(idx)}
-              className="flex h-11 min-w-[24px] items-center justify-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              aria-label="上一部"
+              data-testid="hero-banner-prev"
+              onClick={() => goTo(activeIndex - 1)}
+              className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors duration-[var(--motion-touch)] hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             >
-              {/* transition-all was animating every property the browser could
-                  interpolate, including the paint-heavy ones nobody asked for.
-                  Only two things actually change here — the pill's width and
-                  its colour — so only those two transition. Width is a layout
-                  property, but on an 8px-tall span inside a fixed-height row it
-                  reflows nothing, and the STRETCH is the meaning: the active
-                  dot elongates toward the slide it stands for. */}
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'h-2 rounded-full transition-[width,background-color] duration-[var(--motion-state)] ease-[var(--ease-settle)]',
-                  idx === activeIndex
-                    ? 'w-8 bg-[var(--text-on-scrim)]'
-                    : 'w-2 bg-[var(--text-on-scrim)]/70'
-                )}
-              />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </button>
+          </Tooltip>
+          {items.map((item, idx) => (
+            <Tooltip
+              key={heroKey(item) + '-dot'}
+              content={item.title ? `第 ${idx + 1} 部：${item.title}` : `第 ${idx + 1} 部`}
+              side="top"
+            >
+              <button
+                type="button"
+                aria-label={`切換到第 ${idx + 1} 部`}
+                aria-current={idx === activeIndex}
+                data-testid={`hero-banner-dot-${idx}`}
+                onClick={() => goTo(idx)}
+                className="flex h-11 min-w-[24px] items-center justify-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              >
+                {/* transition-all was animating every property the browser could
+                    interpolate, including the paint-heavy ones nobody asked for.
+                    Only two things actually change here — the pill's width and
+                    its colour — so only those two transition. Width is a layout
+                    property, but on an 8px-tall span inside a fixed-height row it
+                    reflows nothing, and the STRETCH is the meaning: the active
+                    dot elongates toward the slide it stands for. */}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'h-2 rounded-full transition-[width,background-color] duration-[var(--motion-state)] ease-[var(--ease-settle)]',
+                    idx === activeIndex
+                      ? 'w-8 bg-[var(--text-on-scrim)]'
+                      : 'w-2 bg-[var(--text-on-scrim)]/70'
+                  )}
+                />
+              </button>
+            </Tooltip>
           ))}
-          <button
-            type="button"
-            aria-label="下一部"
-            data-testid="hero-banner-next"
-            onClick={() => goTo(activeIndex + 1)}
-            className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors duration-[var(--motion-touch)] hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <Tooltip content="下一部" side="top">
+            <button
+              type="button"
+              aria-label="下一部"
+              data-testid="hero-banner-next"
+              onClick={() => goTo(activeIndex + 1)}
+              className="flex h-11 w-11 items-center justify-center text-[var(--text-on-scrim)]/80 transition-colors duration-[var(--motion-touch)] hover:text-[var(--text-on-scrim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
         </div>
       )}
     </section>

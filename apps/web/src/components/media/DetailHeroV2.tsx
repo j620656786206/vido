@@ -12,6 +12,7 @@ import { getImageUrl } from '../../lib/image';
 import { filenameToGradient } from '../../utils/filenameToGradient';
 import { fallbackInitial } from '../../utils/fallbackInitial';
 import type { StatusDescriptor } from '../../utils/libraryStatus';
+import { Tooltip } from '../ui/Tooltip';
 
 interface DetailHeroV2Props {
   backdropPath?: string | null;
@@ -71,15 +72,17 @@ export function DetailHeroV2({
       </div>
 
       {/* Back affordance */}
-      <button
-        type="button"
-        onClick={onBack}
-        aria-label="返回媒體庫"
-        data-testid="detail-back"
-        className="absolute left-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--overlay-scrim)] text-[var(--text-on-scrim)] backdrop-blur-sm transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-      >
-        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-      </button>
+      <Tooltip content="返回媒體庫" side="right">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="返回媒體庫"
+          data-testid="detail-back"
+          className="absolute left-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--overlay-scrim)] text-[var(--text-on-scrim)] backdrop-blur-sm transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </Tooltip>
 
       {/* Info block, overlapping the bottom of the backdrop */}
       <div className="relative px-4 pt-[180px] sm:px-8 sm:pt-[260px]">

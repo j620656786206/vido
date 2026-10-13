@@ -19,6 +19,7 @@ vi.mock('../../hooks/useExploreBlocks', () => ({
 }));
 
 import { useExploreBlockContent } from '../../hooks/useExploreBlocks';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const mockHook = vi.mocked(useExploreBlockContent);
 
@@ -443,6 +444,9 @@ describe('ExploreBlock', () => {
 
     expect(await screen.findByTestId('explore-block-scroll-left')).toBeInTheDocument();
     expect(screen.getByTestId('explore-block-scroll-right')).toBeInTheDocument();
+    // disc-2026-10-icon-only-controls-tooltip-a — icon-only, so named in the tooltip.
+    await expectTooltipOnFocus(screen.getByTestId('explore-block-scroll-left'), '向左捲動');
+    await expectTooltipOnFocus(screen.getByTestId('explore-block-scroll-right'), '向右捲動');
   });
 
   // bugfix-10-6 AC #2 (TA pass) — beyond DOM presence, the chevron click

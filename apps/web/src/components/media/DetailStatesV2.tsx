@@ -9,6 +9,7 @@
  * user the item had been removed.
  */
 import { AlertTriangle, ArrowLeft, FilmIcon } from 'lucide-react';
+import { Tooltip } from '../ui/Tooltip';
 
 export function DetailSkeletonV2() {
   return (
@@ -48,15 +49,17 @@ export function DetailNotFoundV2({
 }) {
   return (
     <div className="relative min-h-[60vh]">
-      <button
-        type="button"
-        onClick={onBack}
-        aria-label="返回媒體庫"
-        data-testid="detail-back"
-        className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-      >
-        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-      </button>
+      <Tooltip content="返回媒體庫" side="right">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="返回媒體庫"
+          data-testid="detail-back"
+          className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </Tooltip>
       <div
         data-testid="detail-not-found"
         className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center"
@@ -103,15 +106,17 @@ export function DetailLoadErrorV2({
 }: DetailLoadErrorV2Props) {
   return (
     <div className="relative min-h-[60vh]">
-      <button
-        type="button"
-        onClick={onBack}
-        aria-label="返回媒體庫"
-        data-testid="detail-back"
-        className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-      >
-        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-      </button>
+      <Tooltip content="返回媒體庫" side="right">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="返回媒體庫"
+          data-testid="detail-back"
+          className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </Tooltip>
       <div
         data-testid="detail-load-error"
         role="alert"

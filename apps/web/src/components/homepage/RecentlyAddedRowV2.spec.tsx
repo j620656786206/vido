@@ -33,6 +33,7 @@ vi.mock('../library/PosterCardV2', () => ({
 
 import { useRecentlyAdded } from '../../hooks/useLibrary';
 import { RecentlyAddedRowV2 } from './RecentlyAddedRowV2';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const mockUseRecentlyAdded = vi.mocked(useRecentlyAdded);
 
@@ -159,5 +160,15 @@ describe('RecentlyAddedRowV2 (own-content 最近新增 row — four states)', ()
     expect(chip.className).toContain('text-[var(--accent-text)]');
     expect(chip.className).not.toContain('warning');
     expect(chip.className).not.toContain('success');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-a — icon-only controls name themselves in the shared tooltip.
+describe('RecentlyAddedRowV2 — scroll arrows', () => {
+  it('向左／向右捲動 show their names on keyboard focus', async () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('a'), movie('b')] }));
+    render(<RecentlyAddedRowV2 />);
+    await expectTooltipOnFocus(screen.getByTestId('home-recent-scroll-left'), '向左捲動');
+    await expectTooltipOnFocus(screen.getByTestId('home-recent-scroll-right'), '向右捲動');
   });
 });

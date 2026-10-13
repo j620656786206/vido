@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { DetailSkeletonV2, DetailNotFoundV2, DetailLoadErrorV2 } from './DetailStatesV2';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 describe('DetailStatesV2', () => {
   it('skeleton is busy and renders no spinner', () => {
@@ -72,5 +73,13 @@ describe('DetailStatesV2', () => {
       fireEvent.click(retry);
       expect(onRetry).not.toHaveBeenCalled();
     });
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-a — icon-only controls name themselves in the shared tooltip.
+describe('DetailStatesV2 — back arrow', () => {
+  it('the not-found back arrow shows its name on keyboard focus', async () => {
+    render(<DetailNotFoundV2 onBack={() => {}} />);
+    await expectTooltipOnFocus(screen.getByTestId('detail-back'), '返回媒體庫');
   });
 });

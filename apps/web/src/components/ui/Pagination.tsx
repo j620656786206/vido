@@ -1,6 +1,7 @@
 // Implements: <utility — no .pen counterpart>
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Tooltip } from './Tooltip';
 
 interface PaginationProps {
   currentPage: number;
@@ -62,19 +63,21 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       aria-label="分頁導航"
     >
       {/* Previous button */}
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={isFirstPage}
-        className={cn(
-          'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
-          isFirstPage
-            ? 'text-[var(--text-muted)] cursor-not-allowed'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-        )}
-        aria-label="上一頁"
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
+      <Tooltip content="上一頁" side="top">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={isFirstPage}
+          className={cn(
+            'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
+            isFirstPage
+              ? 'text-[var(--text-muted)] cursor-not-allowed'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+          )}
+          aria-label="上一頁"
+        >
+          <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+        </button>
+      </Tooltip>
 
       {/* Page numbers */}
       {pages.map((page, index) => {
@@ -109,19 +112,21 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       })}
 
       {/* Next button */}
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={isLastPage}
-        className={cn(
-          'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
-          isLastPage
-            ? 'text-[var(--text-muted)] cursor-not-allowed'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-        )}
-        aria-label="下一頁"
-      >
-        <ChevronRight className="w-5 h-5" />
-      </button>
+      <Tooltip content="下一頁" side="top">
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={isLastPage}
+          className={cn(
+            'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
+            isLastPage
+              ? 'text-[var(--text-muted)] cursor-not-allowed'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+          )}
+          aria-label="下一頁"
+        >
+          <ChevronRight className="w-5 h-5" aria-hidden="true" />
+        </button>
+      </Tooltip>
     </nav>
   );
 }
