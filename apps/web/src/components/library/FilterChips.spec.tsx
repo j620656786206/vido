@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FilterChips } from './FilterChips';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 describe('FilterChips', () => {
   let onRemoveGenre: ReturnType<typeof vi.fn>;
@@ -231,5 +232,23 @@ describe('FilterChips', () => {
     expect(screen.getByText('不知道有沒有中文字幕')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '移除缺中文字幕篩選' }));
     expect(onRemoveChineseSubtitle).toHaveBeenCalledWith('missing');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the ✕ names itself in the shared tooltip.
+describe('FilterChips — chip ✕', () => {
+  it('a chip ✕ shows 移除篩選 on keyboard focus', async () => {
+    render(
+      <FilterChips
+        filters={{ genres: [], yearMin: 2000, yearMax: 2020 }}
+        onRemoveGenre={vi.fn()}
+        onRemoveYearMin={vi.fn()}
+        onRemoveYearMax={vi.fn()}
+        onRemoveYears={vi.fn()}
+        onRemoveUnmatched={vi.fn()}
+        onClearAll={vi.fn()}
+      />
+    );
+    await expectTooltipOnFocus(screen.getByLabelText('移除年份篩選'), '移除篩選');
   });
 });

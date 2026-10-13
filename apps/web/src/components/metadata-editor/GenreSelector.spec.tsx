@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GenreSelector } from './GenreSelector';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 function setup(selected: string[], options = ['動作', '劇情', '動畫']) {
   const onChange = vi.fn();
@@ -48,5 +49,13 @@ describe('GenreSelector', () => {
   it('hides ＋ 類型 once every option is picked', () => {
     setup(['動作', '劇情', '動畫']);
     expect(screen.queryByRole('button', { name: '類型' })).toBeNull();
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the ✕ names itself in the shared tooltip.
+describe('GenreSelector — chip ✕', () => {
+  it('shows 移除 on keyboard focus', async () => {
+    setup(['劇情']);
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '移除類型：劇情' }), '移除');
   });
 });

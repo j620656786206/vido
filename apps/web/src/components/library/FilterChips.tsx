@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { yearFilterLabel, type FilterValues } from './FilterPanel';
 import { chineseSubtitleChipLabel } from './chineseSubtitleFilter';
+import { Tooltip } from '../ui/Tooltip';
 
 interface FilterChipsProps {
   filters: FilterValues;
@@ -63,52 +64,60 @@ export function FilterChips({
           className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0"
         >
           {genre}
-          <button
-            onClick={() => onRemoveGenre(genre)}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
-            aria-label={`移除 ${genre} 篩選`}
-          >
-            <X className="h-3 w-3" />
-          </button>
+          <Tooltip content="移除篩選" side="top">
+            <button
+              onClick={() => onRemoveGenre(genre)}
+              className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
+              aria-label={`移除 ${genre} 篩選`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Tooltip>
         </span>
       ))}
 
       {hasYearRange ? (
         <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0">
           {yearFilterLabel(filters)}
-          <button
-            onClick={removeYearRange}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
-            aria-label="移除年份篩選"
-          >
-            <X className="h-3 w-3" />
-          </button>
+          <Tooltip content="移除篩選" side="top">
+            <button
+              onClick={removeYearRange}
+              className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
+              aria-label="移除年份篩選"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Tooltip>
         </span>
       ) : (
         <>
           {filters.yearMin !== undefined && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0">
               {yearFilterLabel({ yearMin: filters.yearMin })}
-              <button
-                onClick={onRemoveYearMin}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
-                aria-label="移除最早年份篩選"
-              >
-                <X className="h-3 w-3" />
-              </button>
+              <Tooltip content="移除篩選" side="top">
+                <button
+                  onClick={onRemoveYearMin}
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
+                  aria-label="移除最早年份篩選"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Tooltip>
             </span>
           )}
 
           {filters.yearMax !== undefined && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0">
               {yearFilterLabel({ yearMax: filters.yearMax })}
-              <button
-                onClick={onRemoveYearMax}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
-                aria-label="移除最晚年份篩選"
-              >
-                <X className="h-3 w-3" />
-              </button>
+              <Tooltip content="移除篩選" side="top">
+                <button
+                  onClick={onRemoveYearMax}
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
+                  aria-label="移除最晚年份篩選"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Tooltip>
             </span>
           )}
         </>
@@ -117,13 +126,15 @@ export function FilterChips({
       {filters.unmatched && (
         <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0">
           未匹配
-          <button
-            onClick={onRemoveUnmatched}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
-            aria-label="移除未匹配篩選"
-          >
-            <X className="h-3 w-3" />
-          </button>
+          <Tooltip content="移除篩選" side="top">
+            <button
+              onClick={onRemoveUnmatched}
+              className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
+              aria-label="移除未匹配篩選"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Tooltip>
         </span>
       )}
 
@@ -133,13 +144,15 @@ export function FilterChips({
           className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-[var(--accent-text)] max-sm:shrink-0"
         >
           {chineseSubtitleChipLabel(value)}
-          <button
-            onClick={() => onRemoveChineseSubtitle?.(value)}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
-            aria-label={`移除${chineseSubtitleChipLabel(value)}篩選`}
-          >
-            <X className="h-3 w-3" />
-          </button>
+          <Tooltip content="移除篩選" side="top">
+            <button
+              onClick={() => onRemoveChineseSubtitle?.(value)}
+              className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
+              aria-label={`移除${chineseSubtitleChipLabel(value)}篩選`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Tooltip>
         </span>
       ))}
 

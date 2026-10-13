@@ -413,3 +413,19 @@ describe('ScanProgressCard — header controls', () => {
     await expectTooltipOnFocus(screen.getByTestId('scan-close-btn'), '取消掃描');
   });
 });
+
+// disc-2026-10-icon-only-controls-tooltip-c — the finished card's ✕.
+describe('ScanProgressCard — dismiss ✕', () => {
+  it('shows 關閉 on keyboard focus', async () => {
+    vi.useRealTimers();
+    render(
+      <ScanProgressCard
+        state={completeState}
+        onCancel={vi.fn()}
+        onToggleMinimize={vi.fn()}
+        onDismiss={vi.fn()}
+      />
+    );
+    await expectTooltipOnFocus(screen.getByTestId('scan-dismiss-btn'), '關閉');
+  });
+});

@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { isImeComposing } from '../../utils/keyboard';
+import { Tooltip } from '../ui/Tooltip';
 
 export interface CastEditorProps {
   cast: string[];
@@ -46,14 +47,16 @@ export function CastEditor({ cast, onChange, labelId }: CastEditorProps) {
           className="inline-flex h-7 items-center gap-0.5 rounded-full bg-[var(--bg-tertiary)] pl-3 pr-0.5 text-xs text-[var(--text-secondary)]"
         >
           {name}
-          <button
-            type="button"
-            onClick={() => onChange(cast.filter((c) => c !== name))}
-            aria-label={`移除演員：${name}`}
-            className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-[var(--bg-primary)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          <Tooltip content="移除" side="top">
+            <button
+              type="button"
+              onClick={() => onChange(cast.filter((c) => c !== name))}
+              aria-label={`移除演員：${name}`}
+              className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-[var(--bg-primary)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </Tooltip>
         </span>
       ))}
       {adding ? (

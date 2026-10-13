@@ -189,7 +189,12 @@ describe('MetadataEditorDialog', () => {
     await userEvent.setup({ pointerEventsCheck: 0 }).click(scrim);
     expect(onClose).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: '關閉' }));
+    // ui/Dialog's own ✕ is hidden here (closeClassName); jsdom ignores the CSS.
+    await user.click(
+      screen
+        .getAllByRole('button', { name: '關閉視窗' })
+        .find((b) => !b.className.split(/\s+/).includes('hidden'))!
+    );
     await user.click(screen.getByRole('button', { name: '取消' }));
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledTimes(3);

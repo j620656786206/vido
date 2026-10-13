@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { ExploreBlockEditModal } from './ExploreBlockEditModal';
 import type { ExploreBlock } from '../../services/exploreBlockService';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const createMutation = { mutateAsync: vi.fn(async () => undefined), isPending: false };
 const updateMutation = { mutateAsync: vi.fn(async () => undefined), isPending: false };
@@ -251,5 +252,13 @@ describe('ExploreBlockEditModal', () => {
       expect(screen.getByTestId('explore-block-genre-10759')).toHaveTextContent('動作冒險');
       expect(screen.getByTestId('explore-block-genre-999')).toHaveAttribute('aria-pressed', 'true');
     });
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the ✕ names itself in the shared tooltip.
+describe('ExploreBlockEditModal — ✕', () => {
+  it('is named 關閉視窗 and shows it on keyboard focus', async () => {
+    renderModal();
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '關閉視窗' }), '關閉視窗');
   });
 });

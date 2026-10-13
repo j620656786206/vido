@@ -38,6 +38,7 @@ import { tmdbService } from '../../services/tmdb';
 import { requestService, type RequestCoverage } from '../../services/requestService';
 import type { TVShowDetails } from '../../types/tmdb';
 import { SeasonEpisodeTreeDialog } from './SeasonEpisodeTreeDialog';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const show = {
   id: 1429,
@@ -239,5 +240,15 @@ describe('SeasonEpisodeTreeDialog (L3-D-v2 He04g)', () => {
     await userEvent.click(within(screen.getByTestId('season-tree-master')).getByRole('checkbox'));
     expect(screen.getByTestId('season-tree-confirm')).toBeDisabled();
     expect(screen.getByRole('alert')).toHaveTextContent('第 1 季第 2 集已在媒體庫中');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the ✕ names itself in the shared tooltip.
+describe('SeasonEpisodeTreeDialog — ✕', () => {
+  it('is named 關閉視窗 and shows it on keyboard focus', async () => {
+    renderTree();
+    const close = screen.getByTestId('season-tree-close');
+    expect(close).toHaveAccessibleName('關閉視窗');
+    await expectTooltipOnFocus(close, '關閉視窗');
   });
 });

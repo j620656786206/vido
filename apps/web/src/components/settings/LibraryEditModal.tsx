@@ -169,14 +169,16 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
               {isEditMode ? '編輯媒體庫' : '新增媒體庫'}
             </h3>
           </DialogTitle>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="關閉"
-            className="rounded-[var(--radius-sm)] p-1 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <Tooltip content="關閉視窗" side="bottom">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="關閉視窗"
+              className="rounded-[var(--radius-sm)] p-1 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
         </div>
 
         {error && (
@@ -263,7 +265,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                         aria-label={`移除路徑 ${p.path}`}
                         className="ml-2 flex size-11 shrink-0 items-center justify-center sm:size-8 rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
                     </Tooltip>
                   </div>

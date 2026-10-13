@@ -190,15 +190,17 @@ export function ScanProgressCard({
               {state.isCancelled ? '掃描已取消' : '掃描完成'}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="rounded-[var(--radius-sm)] p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
-            aria-label="關閉"
-            data-testid="scan-dismiss-btn"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <Tooltip content="關閉" side="top">
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="rounded-[var(--radius-sm)] p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+              aria-label="關閉"
+              data-testid="scan-dismiss-btn"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Stats summary */}

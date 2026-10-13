@@ -70,7 +70,13 @@ describe('LibraryEditModal', () => {
   it('gives icon-only buttons accessible names (retro-11-AI1b)', () => {
     render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: '關閉' })).toBeInTheDocument();
+    // ui/Dialog's own ✕ shares the name but is hidden (closeClassName="hidden");
+    // jsdom has no CSS, so pick the one the dialog draws itself.
+    expect(
+      screen
+        .getAllByRole('button', { name: '關閉視窗' })
+        .find((b) => !b.className.split(/\s+/).includes('hidden'))
+    ).toBeDefined();
     expect(screen.getByRole('button', { name: '移除路徑 /media/movies' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '新增路徑' })).toBeInTheDocument();
   });
@@ -470,7 +476,7 @@ describe('LibraryEditModal — dialog behaviour', () => {
     render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
     const dialog = screen.getByRole('dialog');
     const closes = Array.from(dialog.querySelectorAll('button')).filter(
-      (b) => b.getAttribute('aria-label') === '關閉' || b.textContent === '關閉視窗'
+      (b) => b.getAttribute('aria-label') === '關閉視窗' || b.textContent === '關閉視窗'
     );
     expect(
       closes.filter((b) => b.offsetParent !== null || !b.className.includes('hidden'))
@@ -515,5 +521,16 @@ describe('LibraryEditModal — icon-only path controls', () => {
       '移除路徑'
     );
     await expectTooltipOnFocus(screen.getByRole('button', { name: '新增路徑' }), '新增路徑');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the drawn ✕ names itself in the tooltip.
+describe('LibraryEditModal — ✕', () => {
+  it('shows 關閉視窗 on keyboard focus', async () => {
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+    const close = screen
+      .getAllByRole('button', { name: '關閉視窗' })
+      .find((b) => !b.className.split(/\s+/).includes('hidden'))!;
+    await expectTooltipOnFocus(close, '關閉視窗');
   });
 });

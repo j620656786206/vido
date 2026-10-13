@@ -21,6 +21,7 @@ import { MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
 import { GenreSelector } from './GenreSelector';
 import { CastEditor } from './CastEditor';
 import { PosterField, type PosterChoice, type PosterPhase } from './PosterField';
+import { Tooltip } from '../ui/Tooltip';
 
 const metadataSchema = z.object({
   title: z.string().min(1, '片名為必填'),
@@ -231,12 +232,14 @@ function EditorBody({
       <SheetGrabber />
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-4 pr-2 sm:pl-6">
         <DialogTitle className="text-base font-semibold">修改資訊</DialogTitle>
-        <DialogClose
-          aria-label="關閉"
-          className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-        >
-          <X className="h-[18px] w-[18px]" aria-hidden="true" />
-        </DialogClose>
+        <Tooltip content="關閉視窗" side="bottom">
+          <DialogClose
+            aria-label="關閉視窗"
+            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+          >
+            <X className="h-[18px] w-[18px]" aria-hidden="true" />
+          </DialogClose>
+        </Tooltip>
       </div>
 
       <form

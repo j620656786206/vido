@@ -44,6 +44,7 @@ import {
   type TreeSeason,
   type TreeSelection,
 } from '../../utils/requestSelection';
+import { Tooltip } from '../ui/Tooltip';
 
 /** Episodes shown before 顯示其餘 N 集 (the drawn S1 lists E01–E06). */
 const EPISODE_PREVIEW = 6;
@@ -244,15 +245,17 @@ function TreeBody({
             {title} · 影集
           </DialogDescription>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="關閉"
-          data-testid="season-tree-close"
-          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-        >
-          <X className="size-[18px]" aria-hidden="true" />
-        </button>
+        <Tooltip content="關閉視窗" side="bottom">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="關閉視窗"
+            data-testid="season-tree-close"
+            className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+          >
+            <X className="size-[18px]" aria-hidden="true" />
+          </button>
+        </Tooltip>
       </div>
       <div className="h-px shrink-0 bg-[var(--border-subtle)]" />
 
