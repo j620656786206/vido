@@ -76,8 +76,13 @@ export function Tooltip({ content, children, side = 'right', delay, openOnPress 
         closeOnClick={openOnPress ? false : undefined}
       />
       <BaseTooltip.Portal>
-        <BaseTooltip.Positioner side={side} sideOffset={8}>
-          <BaseTooltip.Popup className="z-[80] flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-primary)] shadow-[var(--shadow-lg)] data-[starting-style]:opacity-0 data-[ending-style]:opacity-0">
+        {/* The z-index belongs on the POSITIONER: Base UI places it with a
+            transform, so it is its own stacking context and a z on the popup
+            only ranks inside it — every dialog (z-50) and sheet (z-[70]/[71])
+            then buried the tooltip (disc-2026-10-tooltip-hidden-in-dialog).
+            90 tops the highest dialog, the logout confirm at z-[80]. */}
+        <BaseTooltip.Positioner side={side} sideOffset={8} className="z-[90]">
+          <BaseTooltip.Popup className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-primary)] shadow-[var(--shadow-lg)] data-[starting-style]:opacity-0 data-[ending-style]:opacity-0">
             {content}
           </BaseTooltip.Popup>
         </BaseTooltip.Positioner>
