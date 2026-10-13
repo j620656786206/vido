@@ -1,6 +1,19 @@
-# Golden sample v1（黃金樣本）
+# Golden sample（黃金樣本）
 
 同一份 200 句英文字幕考卷，考每一個翻譯模型。`cmd/grade` 讀這裡的 `golden-v1.jsonl`（`go:embed`），sub-7-8c 的「試跑 20 句」讀前 20 句。
+
+## v2 的考法（2026-10-14 起，`eval.SampleVersion = "golden-v2"`）
+
+考卷內容跟 v1 一樣，200 句一句沒改，資料檔也還是 `golden-v1.jsonl`。只有考法改了：**考試時附上角色名對照表，做法跟正式版一樣。**
+
+- 對照表從每一句的 `names` 欄位建出來，每個人名取**第一個**譯法。三個來源（`tos`、`sita`、`trap`）各自一份對照表，就像正式版「一部片一份詞彙表」。
+- 一批句子只帶自己來源的人名。一批如果跨兩個來源，就把兩邊的對照表合起來送。
+- 報告的 `glossary_version` 是整份對照表的雜湊值。
+- **v1 的考法（不附對照表）還留著，當對照組用**：`cmd/grade --no-glossary`，報告會標成 `golden-v1`。它量的是「片子在 TMDb 找不到、沒有對照表的時候，模型自己能不能把人名翻得前後一致」。這種報告不能 `--merge`。
+- **取捨**：`sita` 原本是「人名一致性」的考題，附上對照表之後，考的變成「模型有沒有照對照表翻」。`trap` 裡的人名題也一樣。要看模型自己翻得一不一致，請用 `--no-glossary` 那組分數。
+- 本機模型用「模型自己的格式」考的時候：
+  - Hy-MT2 改用官方的術語模板，只列出這一句和它的上下文裡真的出現的人名。
+  - TranslateGemma 的官方格式放不進對照表，所以一律算成 v1 的考法。
 
 ## 來源與授權
 
@@ -57,7 +70,7 @@ python3 scripts/build-golden.py            # 下載兩對字幕、對齊、合�
 python3 scripts/build-golden.py --cache-dir /tmp/vido-golden-src   # 字幕檔快取位置（.srt 不進 repo）
 ```
 
-手寫的部分全部在 `authored-v1.json`（第二參考譯法、人名表、40 句陷阱）。改了它就重跑腳本；改了句子的**組成**（增刪、換來源）要把 `eval.SampleVersion` 從 `golden-v1` 往上 bump，已發布的等級表要全部重評（sub-7-8b）。
+手寫的部分全部在 `authored-v1.json`（第二參考譯法、人名表、40 句陷阱）。改了它就重跑腳本；改了句子的**組成**（增刪、換來源）要把 `eval.SampleVersion` 往上 bump（現在是 `golden-v2`），已發布的等級表要全部重評（sub-7-8b）。
 
 ## 評分怎麼算
 

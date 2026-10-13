@@ -268,7 +268,7 @@ func TestRun_LocalNativeStyleSkipsFailedCuesAndNeedsNoKeyWithoutJudge(t *testing
 	d := localDeps(t, fakeLocal{prompts: &sent, failIDs: map[string]bool{cues[2].Text: true}}, &judgeCalls)
 	d.apiKey = "" // rules only + local model: no Claude key needed
 	cfg, err := parseFlags([]string{"--openai-base-url", "http://nas:8080/v1", "--openai-model", "hy-mt2-7b",
-		"--prompt-style", "native", "--limit", "4", "--no-judge", "--trace"})
+		"--prompt-style", "native", "--limit", "4", "--no-judge", "--trace", "--no-glossary"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,14 +301,14 @@ func TestNativeTranslator_StopsAfterConsecutiveFailures(t *testing.T) {
 		fail[c.Text] = true
 	}
 	var sent []string
-	got, err := nativeTranslator(fakeLocal{prompts: &sent, failIDs: fail}, nativeTranslateGemma, io.Discard)(context.Background(), cues[:10])
+	got, err := nativeTranslator(fakeLocal{prompts: &sent, failIDs: fail}, nativeTranslateGemma, nil, io.Discard)(context.Background(), cues[:10])
 	if err == nil || len(sent) != nativeMaxConsecutiveFailures || len(got) != 0 {
 		t.Fatalf("want a stop after %d failures, got err=%v sent=%d got=%d", nativeMaxConsecutiveFailures, err, len(sent), len(got))
 	}
 }
 
 func TestNativePrompt_TranslateGemmaWording(t *testing.T) {
-	p, err := nativePrompt(nativeTranslateGemma, "Hello.", []string{"ignored"})
+	p, err := nativePrompt(nativeTranslateGemma, "Hello.", []string{"ignored"}, nil)
 	if err != nil || !strings.HasPrefix(p, "You are a professional English (en) to Traditional Chinese (zh-TW) translator.") ||
 		!strings.HasSuffix(p, "into Traditional Chinese:\n\n\nHello.") || strings.Contains(p, "ignored") {
 		t.Fatalf("translategemma prompt: %q %v", p, err)
@@ -395,5 +395,131 @@ func TestRejudge_BudgetStopSavesAndFails(t *testing.T) {
 	}
 	if judged != n || got.SecondaryUnjudged != 12-n || got.ZeroRateSecondary == nil {
 		t.Fatalf("saved report must be consistent: judged=%d n=%d unjudged=%d", judged, n, got.SecondaryUnjudged)
+	}
+}
+
+// recordingModel is the production-prompt fake that also keeps every
+// translator prompt (system + user) it was sent, so a test can see what the
+// translator was told.
+type recordingModel struct {
+	fakeModel
+	systems *[]string
+}
+
+func (r recordingModel) CompleteText(ctx context.Context, sys, usr string, max int) (string, error) {
+	if !strings.Contains(sys, "資深審稿人") {
+		*r.systems = append(*r.systems, sys+"\n"+usr)
+	}
+	return r.fakeModel.CompleteText(ctx, sys, usr, max)
+}
+
+func TestRun_GoldenV2SendsTheNameGlossary(t *testing.T) {
+	var systems []string
+	calls := 0
+	d := testDeps(t, fakeModel{})
+	m := recordingModel{fakeModel: fakeModel{judgeScore: 2, usdPerCall: 0.001, calls: &calls}, systems: &systems}
+	d.newCompleter = func(_, model string) ai.TextCompleter { m.model = model; return m }
+
+	cfg, _ := parseFlags([]string{"--model", "claude-haiku-4-5", "--limit", "20", "--no-judge"})
+	rep, err := run(context.Background(), cfg, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.SampleVersion != "golden-v2" || rep.GlossaryVersion == "" {
+		t.Fatalf("v2 stamps: sample=%q glossary=%q", rep.SampleVersion, rep.GlossaryVersion)
+	}
+	joined := strings.Join(systems, "\n")
+	for _, want := range []string{"## Glossary — MANDATORY fixed renderings:", "- Thom → 湯姆", "- Celia → 希莉亞"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("translator prompt is missing %q", want)
+		}
+	}
+	if strings.Contains(joined, "Sita →") {
+		t.Fatal("the first 20 cues are all tos: a batch only carries its own source's names")
+	}
+
+	systems = nil
+	cfg, _ = parseFlags([]string{"--model", "claude-haiku-4-5", "--limit", "20", "--no-judge", "--no-glossary"})
+	rep, err = run(context.Background(), cfg, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.SampleVersion != eval.SampleVersionNoGlossary || rep.GlossaryVersion != "" {
+		t.Fatalf("--no-glossary stamps: %q / %q", rep.SampleVersion, rep.GlossaryVersion)
+	}
+	if strings.Contains(strings.Join(systems, "\n"), "## Glossary — MANDATORY fixed renderings:") {
+		t.Fatal("--no-glossary must send the v1 prompt, with no glossary section")
+	}
+}
+
+func TestRun_NativeHyMTUsesTheTerminologyTemplate(t *testing.T) {
+	var sent []string
+	judgeCalls := 0
+	d := localDeps(t, fakeLocal{prompts: &sent}, &judgeCalls)
+	d.apiKey = ""
+	cfg, err := parseFlags([]string{"--openai-base-url", "http://nas/v1", "--openai-model", "hy-mt2-7b",
+		"--prompt-style", "native", "--limit", "3", "--no-judge"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := run(context.Background(), cfg, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// tos-01 "You're a jerk, Thom." / tos-02 "Look Celia, …" / tos-03 has no name.
+	if !strings.HasPrefix(sent[0], "Reference the following translations:\nThom translates to 湯姆\n\n") || strings.Contains(sent[0], "Celia") {
+		t.Fatalf("cue 1 lists only its own names: %q", sent[0])
+	}
+	if !strings.Contains(sent[1], "Celia translates to 希莉亞") || strings.Contains(sent[1], "Thom translates") {
+		t.Fatalf("cue 2 lists only its own name, Celia (Thom is only in its context): %q", sent[1])
+	}
+	if !strings.HasPrefix(sent[2], "[Background Information]\n") || strings.Contains(sent[2], "translates to") {
+		t.Fatalf("a nameless cue keeps its context instead of a glossary: %q", sent[2])
+	}
+	if rep.SampleVersion != eval.SampleVersion || rep.GlossaryVersion == "" {
+		t.Fatalf("hymt native sends the glossary, so it is the v2 exam: %+v", rep)
+	}
+}
+
+func TestRun_NativeTranslateGemmaIsTheNoGlossaryExam(t *testing.T) {
+	var sent []string
+	judgeCalls := 0
+	d := localDeps(t, fakeLocal{prompts: &sent}, &judgeCalls)
+	cfg, _ := parseFlags([]string{"--openai-base-url", "http://nas/v1", "--openai-model", "translategemma:12b",
+		"--prompt-style", "native", "--limit", "2"})
+	rep, err := run(context.Background(), cfg, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(sent[0], "translates to") || rep.SampleVersion != eval.SampleVersionNoGlossary || rep.GlossaryVersion != "" {
+		t.Fatalf("TranslateGemma's template has no glossary slot, so it must be stamped v1: %+v", rep)
+	}
+	if !strings.Contains(rep.JudgeNote, "TranslateGemma 的官方格式沒有放對照表的位置") {
+		t.Fatalf("the report must say the template could not carry the glossary: %q", rep.JudgeNote)
+	}
+}
+
+func TestMerge_RefusesTheNoGlossaryExam(t *testing.T) {
+	_, err := ratingFromReport(eval.Report{ModelID: "claude-haiku-4-5", Grade: eval.GradeA, SampleVersion: eval.SampleVersionNoGlossary})
+	if err == nil || !strings.Contains(err.Error(), eval.SampleVersionNoGlossary) {
+		t.Fatalf("a --no-glossary report must not reach the ratings table: %v", err)
+	}
+}
+
+func TestRun_CustomSampleWithoutNamesIsTheNoGlossaryExam(t *testing.T) {
+	calls := 0
+	d := testDeps(t, fakeModel{judgeScore: 2, usdPerCall: 0.001, calls: &calls})
+	tmp := t.TempDir() + "/s.jsonl"
+	sample := `{"id":"a","source":"trap","text":"Hello there.","refs":["你好。","哈囉。"],"names":{},"traps":["slang"],"attribution":"t"}` + "\n"
+	if err := writeFile(tmp, sample); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ := parseFlags([]string{"--model", "claude-haiku-4-5", "--sample", tmp, "--no-judge"})
+	rep, err := run(context.Background(), cfg, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.SampleVersion != eval.SampleVersionNoGlossary || rep.GlossaryVersion != "" {
+		t.Fatalf("an empty glossary sends nothing, so it is not the v2 exam: %q / %q", rep.SampleVersion, rep.GlossaryVersion)
 	}
 }

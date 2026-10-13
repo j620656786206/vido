@@ -116,6 +116,7 @@ jobs:
             echo "cost=$(jq -r .cost_usd "$R")"
             echo "judge=$(jq -r .judge_model "$R")"
             echo "prompt=$(jq -r .prompt_version "$R")"
+            echo "sample=$(jq -r .sample_version "$R")"
           } >> "$GITHUB_OUTPUT"
 
       # 同名 head 分支重跑會更新同一個 PR，不會開第二個（visual-regression.yml 同一招）。
@@ -133,7 +134,7 @@ jobs:
           body: |
             ## 這個 PR 在做什麼
 
-            `${{ inputs.model_id }}` 用黃金樣本（200 句，`golden-v1`）考過了：**${{ steps.result.outputs.grade }}**。
+            `${{ inputs.model_id }}` 用黃金樣本（200 句，`${{ steps.result.outputs.sample }}`）考過了：**${{ steps.result.outputs.grade }}**。
             合併後，選模型的畫面會把「尚未評測」換成「品質 ${{ steps.result.outputs.grade }}」，旁邊註明是哪次實測、誰當裁判。
 
             | 0 分率 | 2 分率 | 這次花費 | 裁判 | prompt 版本 |

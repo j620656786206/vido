@@ -62,11 +62,15 @@ func guessNativeTemplate(model string) string {
 // simplified characters on the NAS (2026-10-13 smoke test). It has no context
 // slot, so prev is unused.
 //
-// hymt: Tencent Hy-MT2's English prompts (model card "Prompt Templates"):
-// the default template for the first cue, the background-information template
-// when there are preceding lines. The target uses the card's full language
-// name; Taiwan vocabulary is left to Vido's finalizer, as in production.
-func nativePrompt(template, text string, prev []string) (string, error) {
+// hymt: Tencent Hy-MT2's English prompts (model card "Prompt Templates").
+// When the cue ITSELF names someone in the glossary (golden-v2): the
+// terminology template — "Reference the following translations:" then one
+// "X translates to Y" line per such name. Otherwise: the default template for
+// the first cue, the background-information template when there are
+// preceding lines. The card has no combined terminology+background template;
+// keying on the cue's own names keeps context for every nameless line. The target uses the card's full language name;
+// Taiwan vocabulary is left to Vido's finalizer, as in production.
+func nativePrompt(template, text string, prev []string, terms []eval.NameTerm) (string, error) {
 	switch template {
 	case nativeTranslateGemma:
 		return "You are a professional English (en) to Traditional Chinese (zh-TW) translator. " +
@@ -75,6 +79,16 @@ func nativePrompt(template, text string, prev []string) (string, error) {
 			"Produce only the Traditional Chinese translation, without any additional explanations or commentary. " +
 			"Please translate the following English text into Traditional Chinese:\n\n\n" + text, nil
 	case nativeHyMT:
+		if len(terms) > 0 {
+			var sb strings.Builder
+			sb.WriteString("Reference the following translations:\n")
+			for _, t := range terms {
+				sb.WriteString(t.Source + " translates to " + t.Target + "\n")
+			}
+			sb.WriteString("\nTranslate the following text into Traditional Chinese. " +
+				"Note that you must ONLY output the translated result without any additional explanation:\n\n" + text)
+			return sb.String(), nil
+		}
 		if len(prev) == 0 {
 			return "Translate the following text into Traditional Chinese. " +
 				"Note that you should only output the translated result without any additional explanation:\n\n" + text, nil
@@ -91,7 +105,10 @@ func nativePrompt(template, text string, prev []string) (string, error) {
 // the model fails on is left absent (the rule layer scores it "missing"), so
 // one bad reply does not void the run; a stopped ctx, an exhausted budget, or
 // a run of consecutive failures ends it, keeping what was already translated.
-func nativeTranslator(completer ai.TextCompleter, template string, stderr io.Writer) eval.Translator {
+//
+// glossaries (nil = none) are the per-source name glossaries; each prompt
+// carries only the terms its cue or context mentions.
+func nativeTranslator(completer ai.TextCompleter, template string, glossaries map[string][]eval.NameTerm, stderr io.Writer) eval.Translator {
 	return func(ctx context.Context, cues []eval.Cue) (map[string]string, error) {
 		got := make(map[string]string, len(cues))
 		failures := 0
@@ -100,7 +117,11 @@ func nativeTranslator(completer ai.TextCompleter, template string, stderr io.Wri
 			for j := max(0, i-nativeContextCues); j < i; j++ {
 				prev = append(prev, cues[j].Text)
 			}
-			prompt, err := nativePrompt(template, c.Text, prev)
+			var terms []eval.NameTerm
+			if glossaries != nil {
+				terms = eval.TermsIn(glossaries[c.Source], c.Text)
+			}
+			prompt, err := nativePrompt(template, c.Text, prev, terms)
 			if err != nil {
 				return got, err
 			}

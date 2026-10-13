@@ -19,9 +19,20 @@ import (
 )
 
 // SampleVersion is stamped on every report so a grade can be traced to the
-// exact set of cues it was measured on. Changing the sample bumps this and
-// invalidates every published rating (sub-7-8b re-grades).
-const SampleVersion = "golden-v1"
+// exact exam it was measured on. Changing the sample — or how it is set —
+// bumps this and invalidates every published rating (sub-7-8b re-grades).
+//
+// golden-v2 (golden-v2-exam-with-name-glossary) is the same 200 cues as v1,
+// examined the way the app translates: each source's `names` go into the
+// translator prompt as a fixed-rendering glossary (NameGlossaries). The data
+// file keeps its v1 name because its content did not change.
+const SampleVersion = "golden-v2"
+
+// SampleVersionNoGlossary stamps a run of the same cues WITHOUT the name
+// glossary (cmd/grade --no-glossary, or a native template with no glossary
+// slot): the v1 exam, kept as the control for "can the model stay consistent
+// on its own" — what a show with no TMDb match gets. Never mergeable.
+const SampleVersionNoGlossary = "golden-v1"
 
 //go:embed golden/golden-v1.jsonl
 var goldenV1 []byte
@@ -64,7 +75,7 @@ var (
 	goldenErr  error
 )
 
-// Golden returns the embedded golden-v1 sample, parsed and validated once.
+// Golden returns the embedded sample (golden-v1.jsonl), parsed and validated once.
 func Golden() ([]Cue, error) {
 	goldenOnce.Do(func() {
 		goldenCues, goldenErr = ParseJSONL(goldenV1)
