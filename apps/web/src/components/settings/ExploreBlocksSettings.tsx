@@ -23,6 +23,7 @@ import type { ExploreBlock } from '../../services/exploreBlockService';
 import { sortLabel } from './exploreBlockSort';
 import { ExploreBlockEditModal } from './ExploreBlockEditModal';
 import { genreLabel, parseGenreIdList } from '../../lib/genres';
+import { Tooltip } from '../ui/Tooltip';
 
 /** C10 rRMJl: 32 solid squares on desktop, 44 on a phone (touch). */
 // No hover colour in the base: Tailwind orders same-property utilities by its
@@ -170,44 +171,52 @@ export function ExploreBlocksSettings() {
               </div>
 
               <div className="flex basis-full items-center justify-end gap-1 sm:basis-auto sm:gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleMove(index, 'up')}
-                  disabled={index === 0 || reorderBlocks.isPending}
-                  aria-label={`上移 ${block.name}`}
-                  data-testid={`explore-block-move-up-${block.id}`}
-                  className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
-                >
-                  <ArrowUp className="size-3.5" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleMove(index, 'down')}
-                  disabled={index === blocks.length - 1 || reorderBlocks.isPending}
-                  aria-label={`下移 ${block.name}`}
-                  data-testid={`explore-block-move-down-${block.id}`}
-                  className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
-                >
-                  <ArrowDown className="size-3.5" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalMode({ type: 'edit', block })}
-                  aria-label={`編輯 ${block.name}`}
-                  data-testid={`explore-block-edit-${block.id}`}
-                  className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
-                >
-                  <Pencil className="size-3.5" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDeleteId(block.id)}
-                  aria-label={`刪除 ${block.name}`}
-                  data-testid={`explore-block-delete-${block.id}`}
-                  className={`${ACTION_BTN} hover:bg-[var(--error-tint)] hover:text-[var(--error-text)]`}
-                >
-                  <Trash2 className="size-3.5" aria-hidden="true" />
-                </button>
+                <Tooltip content="上移" side="top">
+                  <button
+                    type="button"
+                    onClick={() => handleMove(index, 'up')}
+                    disabled={index === 0 || reorderBlocks.isPending}
+                    aria-label={`上移 ${block.name}`}
+                    data-testid={`explore-block-move-up-${block.id}`}
+                    className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
+                  >
+                    <ArrowUp className="size-3.5" aria-hidden="true" />
+                  </button>
+                </Tooltip>
+                <Tooltip content="下移" side="top">
+                  <button
+                    type="button"
+                    onClick={() => handleMove(index, 'down')}
+                    disabled={index === blocks.length - 1 || reorderBlocks.isPending}
+                    aria-label={`下移 ${block.name}`}
+                    data-testid={`explore-block-move-down-${block.id}`}
+                    className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
+                  >
+                    <ArrowDown className="size-3.5" aria-hidden="true" />
+                  </button>
+                </Tooltip>
+                <Tooltip content="編輯" side="top">
+                  <button
+                    type="button"
+                    onClick={() => setModalMode({ type: 'edit', block })}
+                    aria-label={`編輯 ${block.name}`}
+                    data-testid={`explore-block-edit-${block.id}`}
+                    className={`${ACTION_BTN} ${NEUTRAL_HOVER}`}
+                  >
+                    <Pencil className="size-3.5" aria-hidden="true" />
+                  </button>
+                </Tooltip>
+                <Tooltip content="刪除" side="top">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(block.id)}
+                    aria-label={`刪除 ${block.name}`}
+                    data-testid={`explore-block-delete-${block.id}`}
+                    className={`${ACTION_BTN} hover:bg-[var(--error-tint)] hover:text-[var(--error-text)]`}
+                  >
+                    <Trash2 className="size-3.5" aria-hidden="true" />
+                  </button>
+                </Tooltip>
               </div>
             </li>
           );

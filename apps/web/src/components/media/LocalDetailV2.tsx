@@ -52,6 +52,7 @@ import { DetailSkeletonV2, DetailNotFoundV2, DetailLoadErrorV2 } from './DetailS
 import { isNotFoundError } from '../../lib/apiError';
 import { TmdbAttribution } from '../ui/TmdbAttribution';
 import { deriveLifecycleStatus, deriveSubtitleStatus } from '../../utils/libraryStatus';
+import { Tooltip } from '../ui/Tooltip';
 
 const WATCH_REGION = 'TW';
 
@@ -251,20 +252,22 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
         />
       )}
       {filePath && (
-        <button
-          type="button"
-          onClick={copyPath}
-          aria-label="複製檔案路徑"
-          data-testid="action-copy-path"
-          className={`${actionBasis} order-4 justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:w-11 sm:grow-0 sm:basis-auto sm:px-0`}
-        >
-          {copied ? (
-            <Check className="h-4 w-4 text-[var(--success-text)]" />
-          ) : (
-            <Copy className="h-4 w-4" />
-          )}
-          <span className="text-sm font-medium sm:hidden">複製路徑</span>
-        </button>
+        <Tooltip content="複製檔案路徑" side="top">
+          <button
+            type="button"
+            onClick={copyPath}
+            aria-label="複製檔案路徑"
+            data-testid="action-copy-path"
+            className={`${actionBasis} order-4 justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] sm:w-11 sm:grow-0 sm:basis-auto sm:px-0`}
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-[var(--success-text)]" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+            <span className="text-sm font-medium sm:hidden">複製路徑</span>
+          </button>
+        </Tooltip>
       )}
     </>
   );

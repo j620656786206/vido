@@ -32,6 +32,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Eye, EyeOff } from 'lucide-react';
 import { AuthError, authService } from '../../services/authService';
 import { authKeys } from '../../hooks/useAuthStatus';
+import { Tooltip } from '../ui/Tooltip';
 
 interface LoginFormProps {
   /** True when the user arrived here by pressing 登出 rather than by being turned away. */
@@ -159,20 +160,22 @@ export function LoginForm({ justLoggedOut = false }: LoginFormProps) {
           {/* The value here is a random string out of the user's own .env, typed
               on a phone keyboard more often than not. Being able to look at it
               is error PREVENTION, which is cheaper than the lockout it avoids. */}
-          <button
-            type="button"
-            onClick={() => setReveal((v) => !v)}
-            data-testid="reveal-password"
-            aria-pressed={reveal}
-            aria-label={reveal ? '隱藏密碼' : '顯示密碼'}
-            className="absolute inset-y-0 right-0 flex h-11 w-11 items-center justify-center self-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors duration-[var(--motion-touch)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-          >
-            {reveal ? (
-              <EyeOff className="h-4 w-4" aria-hidden="true" />
-            ) : (
-              <Eye className="h-4 w-4" aria-hidden="true" />
-            )}
-          </button>
+          <Tooltip content={reveal ? '隱藏密碼' : '顯示密碼'} side="top">
+            <button
+              type="button"
+              onClick={() => setReveal((v) => !v)}
+              data-testid="reveal-password"
+              aria-pressed={reveal}
+              aria-label={reveal ? '隱藏密碼' : '顯示密碼'}
+              className="absolute inset-y-0 right-0 flex h-11 w-11 items-center justify-center self-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors duration-[var(--motion-touch)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
+              {reveal ? (
+                <EyeOff className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Eye className="h-4 w-4" aria-hidden="true" />
+              )}
+            </button>
+          </Tooltip>
         </div>
 
         {/* Reserved slot: the height is held whether or not there is an error, so

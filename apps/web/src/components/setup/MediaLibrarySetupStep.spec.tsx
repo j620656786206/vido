@@ -8,6 +8,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MediaLibrarySetupStep } from './MediaLibrarySetupStep';
 import type { StepProps } from './SetupWizard';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const libraries = [
   { id: 'a', path: '/media/movies', contentType: 'movie' as const },
@@ -90,5 +91,13 @@ describe('MediaLibrarySetupStep', () => {
       data: { libraries: [libraries[0], { id: 'c', path: '  ', contentType: 'movie' }] },
     });
     expect(screen.getByTestId('next-button')).toBeDisabled();
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-b — icon-only controls name themselves in the shared tooltip.
+describe('MediaLibrarySetupStep — remove control', () => {
+  it('移除此媒體庫 shows its name on keyboard focus', async () => {
+    renderStep();
+    await expectTooltipOnFocus(screen.getByTestId('library-remove-0'), '移除此媒體庫');
   });
 });

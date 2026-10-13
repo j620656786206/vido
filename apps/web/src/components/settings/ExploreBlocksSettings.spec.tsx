@@ -5,6 +5,7 @@ import React from 'react';
 import { ExploreBlocksSettings } from './ExploreBlocksSettings';
 import { MOVIE_SORT_OPTIONS, sortLabel } from './exploreBlockSort';
 import type { ExploreBlock } from '../../services/exploreBlockService';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const listResult = {
   data: undefined as { blocks: ExploreBlock[] } | undefined,
@@ -306,5 +307,19 @@ describe('ExploreBlocksSettings', () => {
         /^影集 · 首播日期（新→舊） · 12 部$/
       );
     });
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-b — icon-only controls name themselves in the shared tooltip.
+describe('ExploreBlocksSettings — row actions', () => {
+  it('上移／下移／編輯／刪除 show their names on keyboard focus', async () => {
+    listResult.data = {
+      blocks: [makeBlock({ id: 'a', name: '熱門電影' }), makeBlock({ id: 'b', name: '熱門影集' })],
+    };
+    renderSettings();
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '下移 熱門電影' }), '下移');
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '上移 熱門影集' }), '上移');
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '編輯 熱門電影' }), '編輯');
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '刪除 熱門電影' }), '刪除');
   });
 });

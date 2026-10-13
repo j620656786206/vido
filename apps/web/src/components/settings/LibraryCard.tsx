@@ -9,6 +9,7 @@ import { Film, Tv, MoreVertical, Trash2, Pencil, FolderOpen } from 'lucide-react
 import { cn } from '../../lib/utils';
 import { useDeleteLibrary } from '../../hooks/useMediaLibrary';
 import type { MediaLibraryWithPaths } from '../../services/mediaLibraryService';
+import { Tooltip } from '../ui/Tooltip';
 
 interface LibraryCardProps {
   library: MediaLibraryWithPaths;
@@ -75,16 +76,18 @@ export function LibraryCard({ library, autoSubtitleSupported, onEdit }: LibraryC
             a block box gets the line's strut (E1-D baseline, 2px). */}
         <div>
           <DropdownMenu.Root modal={false}>
-            <DropdownMenu.Trigger asChild>
-              <button
-                type="button"
-                className="-m-3.5 rounded-[var(--radius-sm)] p-3.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] sm:m-0 sm:p-1"
-                aria-label={`${library.name} 的操作`}
-                data-testid="library-menu-button"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button>
-            </DropdownMenu.Trigger>
+            <Tooltip content="更多操作" side="top">
+              <DropdownMenu.Trigger asChild>
+                <button
+                  type="button"
+                  className="-m-3.5 rounded-[var(--radius-sm)] p-3.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] sm:m-0 sm:p-1"
+                  aria-label={`${library.name} 的操作`}
+                  data-testid="library-menu-button"
+                >
+                  <MoreVertical className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </DropdownMenu.Trigger>
+            </Tooltip>
             <DropdownMenu.Portal>
               <DropdownMenu.Content
                 align="end"

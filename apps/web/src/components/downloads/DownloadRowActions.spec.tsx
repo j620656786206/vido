@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DownloadRowActions } from './DownloadRowActions';
 import type { Download, TorrentStatus } from '../../services/downloadService';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 // The hook, not matchMedia: `false` is what the global test-setup stub yields, so every existing
 // test below runs exactly as before; the phone block flips it.
@@ -186,5 +187,17 @@ describe('DownloadRowActions — phone ⋯ reports upward (dsr-4b-2 D8-M-v2)', (
     );
     await user.click(screen.getByRole('button', { name: `更多動作：${NAME}` }));
     expect(await screen.findByRole('menuitem', { name: '移除（保留檔案）' })).toBeInTheDocument();
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-b — icon-only controls name themselves in the shared tooltip.
+describe('DownloadRowActions — icon-only', () => {
+  it('the state button and 更多動作 show their names on keyboard focus', async () => {
+    setup('downloading');
+    await expectTooltipOnFocus(screen.getByRole('button', { name: `暫停 ${NAME}` }), '暫停');
+    await expectTooltipOnFocus(
+      screen.getByRole('button', { name: `更多動作：${NAME}` }),
+      '更多動作'
+    );
   });
 });

@@ -14,6 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { LibraryCard } from './LibraryCard';
 import type { MediaLibraryWithPaths } from '../../services/mediaLibraryService';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 vi.mock('../../hooks/useMediaLibrary', () => ({
   useDeleteLibrary: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -170,5 +171,13 @@ describe('LibraryCard — ⋮ menu', () => {
     expect(screen.getByTestId('confirm-delete-button')).toBeInTheDocument();
     fireEvent.click(screen.getByText('取消'));
     expect(screen.queryByTestId('confirm-delete-button')).not.toBeInTheDocument();
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-b — icon-only controls name themselves in the shared tooltip.
+describe('LibraryCard — menu button', () => {
+  it('the ⋮ shows 更多操作 on keyboard focus', async () => {
+    render(<LibraryCard library={libraryWith(true)} autoSubtitleSupported onEdit={vi.fn()} />);
+    await expectTooltipOnFocus(screen.getByTestId('library-menu-button'), '更多操作');
   });
 });
