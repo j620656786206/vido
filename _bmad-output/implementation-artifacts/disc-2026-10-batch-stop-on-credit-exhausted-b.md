@@ -1,6 +1,6 @@
 # Disc：AI 帳號沒錢時，批次整批停下來（b：畫面）
 
-Status: review
+Status: done
 
 **Source:** 同 `disc-2026-10-batch-stop-on-credit-exhausted-a`。2026-10-13 Alexyu：「沒錢就整批停，補生成工作區那一列新的文字『AI 帳號沒有額度』的設計稿」。
 
