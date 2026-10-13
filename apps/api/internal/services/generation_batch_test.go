@@ -471,7 +471,7 @@ func TestGenerationBatch_SingleFlight(t *testing.T) {
 	// AC 10: surfaces as an activity source while running.
 	active, _, cur, total, item := p.ActivityProgress()
 	assert.True(t, active)
-	assert.Equal(t, 1, cur)
+	assert.Equal(t, 0, cur, "nothing finished yet — the item is still running")
 	assert.Equal(t, 1, total)
 	assert.Equal(t, "A", item)
 
