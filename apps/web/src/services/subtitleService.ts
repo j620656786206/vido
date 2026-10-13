@@ -366,6 +366,12 @@ export interface GenerationCandidate {
    * older client renders exactly what it rendered before.
    */
   displayTitle?: string;
+  /**
+   * Minutes of speech recognition an earlier, unfinished run already paid
+   * for — already taken off `estimatedUsd` (disc-2026-09-generation-resume-c2,
+   * additive). Absent when nothing is stored, and on older servers.
+   */
+  resumedAsrMinutes?: number;
 }
 
 export interface GenerationCandidateSummary {
