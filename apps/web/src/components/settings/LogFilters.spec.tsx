@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { LogFilters } from './LogFilters';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 describe('LogFilters', () => {
   it('renders all level filter chips', () => {
@@ -119,5 +120,13 @@ describe('LogFilters', () => {
       expect(input.className).toContain('text-xs');
       expect(input.className).toContain('font-mono');
     });
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the ✕ names itself in the shared tooltip.
+describe('LogFilters — clear ✕', () => {
+  it('shows 清除搜尋 on keyboard focus', async () => {
+    render(<LogFilters level="" keyword="abc" onLevelChange={vi.fn()} onKeywordChange={vi.fn()} />);
+    await expectTooltipOnFocus(screen.getByLabelText('清除搜尋'), '清除搜尋');
   });
 });

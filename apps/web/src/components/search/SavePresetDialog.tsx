@@ -9,6 +9,7 @@ import {
   serializeFilters,
   type DiscoverFilters,
 } from '../../lib/discoverFilters';
+import { Tooltip } from '../ui/Tooltip';
 
 const PRESET_NAME_MAX_LENGTH = 30;
 
@@ -98,14 +99,16 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
           <h3 id="save-preset-modal-title" className="text-lg font-bold text-[var(--text-primary)]">
             儲存篩選條件
           </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="關閉"
-            className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)]"
-          >
-            <X className="h-[18px] w-[18px]" />
-          </button>
+          <Tooltip content="關閉視窗" side="bottom">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="關閉視窗"
+              className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)]"
+            >
+              <X className="h-[18px] w-[18px]" aria-hidden="true" />
+            </button>
+          </Tooltip>
         </div>
 
         <p className="mb-4 text-sm text-[var(--text-secondary)]">

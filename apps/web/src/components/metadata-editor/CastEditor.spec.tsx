@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CastEditor } from './CastEditor';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 function setup(cast: string[]) {
   const onChange = vi.fn();
@@ -103,5 +104,13 @@ describe('CastEditor', () => {
     fireEvent.change(box, { target: { value: '下野ㄏㄨㄥˊ' } });
     fireEvent.keyDown(box, { key: 'Escape', isComposing: true });
     expect(screen.getByRole('textbox', { name: '新增演員' })).toHaveValue('下野ㄏㄨㄥˊ');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the ✕ names itself in the shared tooltip.
+describe('CastEditor — chip ✕', () => {
+  it('shows 移除 on keyboard focus', async () => {
+    setup(['花江夏樹']);
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '移除演員：花江夏樹' }), '移除');
   });
 });

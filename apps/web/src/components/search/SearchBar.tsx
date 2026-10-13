@@ -5,6 +5,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { isImeComposing } from '../../utils/keyboard';
+import { Tooltip } from '../ui/Tooltip';
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
@@ -69,15 +70,17 @@ export function SearchBar({
                    focus:ring-[var(--accent-primary)] focus:border-transparent transition-colors"
       />
       {value && (
-        <button
-          onClick={handleClear}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]
-                     transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] rounded"
-          aria-label="清除搜尋"
-          type="button"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        <Tooltip content="清除搜尋" side="bottom">
+          <button
+            onClick={handleClear}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]
+                       transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] rounded"
+            aria-label="清除搜尋"
+            type="button"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

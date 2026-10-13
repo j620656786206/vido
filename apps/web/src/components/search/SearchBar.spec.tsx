@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SearchBar } from './SearchBar';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 describe('SearchBar', () => {
   beforeEach(() => {
@@ -143,5 +144,14 @@ describe('SearchBar', () => {
     vi.advanceTimersByTime(300);
 
     expect(onSearch).toHaveBeenCalledWith('Demon Slayer');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the ✕ names itself in the shared tooltip.
+describe('SearchBar — clear ✕', () => {
+  it('shows 清除搜尋 on keyboard focus', async () => {
+    vi.useRealTimers();
+    render(<SearchBar onSearch={vi.fn()} initialQuery="test" />);
+    await expectTooltipOnFocus(screen.getByLabelText('清除搜尋'), '清除搜尋');
   });
 });

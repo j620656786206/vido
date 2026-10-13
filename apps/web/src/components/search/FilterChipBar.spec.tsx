@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterChipBar } from './FilterChipBar';
 import type { DiscoverFilters } from '../../lib/discoverFilters';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const baseFilters: DiscoverFilters = { genre: [], platform: [], sortBy: 'popularity' };
 
@@ -119,5 +120,19 @@ describe('FilterChipBar', () => {
     );
     fireEvent.click(screen.getByTestId('save-preset-button'));
     expect(onSavePreset).toHaveBeenCalledTimes(1);
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the ✕ names itself in the shared tooltip.
+describe('FilterChipBar — chip ✕', () => {
+  it('a chip ✕ shows 移除篩選 on keyboard focus', async () => {
+    render(
+      <FilterChipBar
+        filters={{ ...baseFilters, genre: [16] }}
+        onChange={vi.fn()}
+        onClearAll={vi.fn()}
+      />
+    );
+    await expectTooltipOnFocus(screen.getByLabelText('移除類型：動畫篩選'), '移除篩選');
   });
 });

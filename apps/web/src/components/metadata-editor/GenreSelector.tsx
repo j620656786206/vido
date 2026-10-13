@@ -11,6 +11,7 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Plus, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Tooltip } from '../ui/Tooltip';
 
 export interface GenreSelectorProps {
   selected: string[];
@@ -35,14 +36,16 @@ export function GenreSelector({ selected, options, onChange, labelId }: GenreSel
           className="inline-flex h-7 items-center gap-0.5 rounded-full bg-[var(--accent-tint)] pl-3 pr-0.5 text-xs text-[var(--accent-text)]"
         >
           {genre}
-          <button
-            type="button"
-            onClick={() => onChange(selected.filter((g) => g !== genre))}
-            aria-label={`移除類型：${genre}`}
-            className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-[var(--accent-subtle)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          <Tooltip content="移除" side="top">
+            <button
+              type="button"
+              onClick={() => onChange(selected.filter((g) => g !== genre))}
+              aria-label={`移除類型：${genre}`}
+              className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-[var(--accent-subtle)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </Tooltip>
         </span>
       ))}
       {remaining.length > 0 && (

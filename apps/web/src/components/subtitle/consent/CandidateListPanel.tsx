@@ -53,6 +53,7 @@ import {
 } from './consentSelection';
 import { buildConsentRows, CONSENT_SORTS, type ConsentRow, type ConsentSort } from './consentRows';
 import type { KeySource } from '../../../services/keySettingsService';
+import { Tooltip } from '../../ui/Tooltip';
 
 /**
  * Rows below which the list renders WHOLE, with no virtualizer (sub-6-11 AC #3).
@@ -920,15 +921,17 @@ export function CandidateListPanel({
                 className="min-w-0 flex-1 bg-transparent text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] [&::-webkit-search-cancel-button]:appearance-none"
               />
               {search !== '' && (
-                <button
-                  type="button"
-                  onClick={() => onSearchChange('')}
-                  aria-label="清除搜尋"
-                  data-testid="consent-search-clear"
-                  className="ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
-                >
-                  <X aria-hidden="true" className="h-3.5 w-3.5" />
-                </button>
+                <Tooltip content="清除搜尋" side="bottom">
+                  <button
+                    type="button"
+                    onClick={() => onSearchChange('')}
+                    aria-label="清除搜尋"
+                    data-testid="consent-search-clear"
+                    className="ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+                  >
+                    <X aria-hidden="true" className="h-3.5 w-3.5" />
+                  </button>
+                </Tooltip>
               )}
             </div>
             {/* One native <select> at both widths. On a phone the platform opens

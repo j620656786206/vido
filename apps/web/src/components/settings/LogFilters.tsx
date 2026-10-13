@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { isImeComposing } from '../../utils/keyboard';
+import { Tooltip } from '../ui/Tooltip';
 
 const LOG_LEVELS = ['ERROR', 'WARN', 'INFO', 'DEBUG'] as const;
 
@@ -98,14 +99,16 @@ export function LogFilters({ level, keyword, onLevelChange, onKeywordChange }: L
           data-testid="log-keyword-input"
         />
         {inputValue && (
-          <button
-            onClick={handleClearKeyword}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-            aria-label="清除搜尋"
-            data-testid="log-keyword-clear"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <Tooltip content="清除搜尋" side="bottom">
+            <button
+              onClick={handleClearKeyword}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+              aria-label="清除搜尋"
+              data-testid="log-keyword-clear"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>

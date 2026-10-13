@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SavePresetDialog } from './SavePresetDialog';
 import type { DiscoverFilters } from '../../lib/discoverFilters';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 // Mock the TanStack Query mutation hook so the dialog is unit-testable.
 const mutateAsync = vi.fn();
@@ -124,5 +125,13 @@ describe('SavePresetDialog', () => {
     isPending = true;
     render(<SavePresetDialog filters={filters} onClose={vi.fn()} />);
     expect(screen.getByTestId('save-preset-confirm')).toHaveTextContent('儲存中…');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-c — the ✕ names itself in the shared tooltip.
+describe('SavePresetDialog — ✕', () => {
+  it('is named 關閉視窗 and shows it on keyboard focus', async () => {
+    render(<SavePresetDialog filters={filters} onClose={vi.fn()} />);
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '關閉視窗' }), '關閉視窗');
   });
 });

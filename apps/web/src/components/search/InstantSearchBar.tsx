@@ -14,6 +14,7 @@ import {
   searchOptionId,
   type NavigableItem,
 } from './SearchSuggestions';
+import { Tooltip } from '../ui/Tooltip';
 
 interface InstantSearchBarProps {
   variant?: 'desktop' | 'mobile';
@@ -172,15 +173,17 @@ export function InstantSearchBar({
           data-testid="instant-search-input"
         />
         {value && (
-          <button
-            type="button"
-            onClick={() => setValue('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none"
-            aria-label="清除搜尋"
-            data-testid="instant-search-clear"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <Tooltip content="清除搜尋" side="bottom">
+            <button
+              type="button"
+              onClick={() => setValue('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none"
+              aria-label="清除搜尋"
+              data-testid="instant-search-clear"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </Tooltip>
         )}
       </div>
 

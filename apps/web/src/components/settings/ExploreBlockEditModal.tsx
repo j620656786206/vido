@@ -10,6 +10,7 @@ import { genreIdsFor, genreLabel, parseGenreIdList } from '../../lib/genres';
 import { useCreateExploreBlock, useUpdateExploreBlock } from '../../hooks/useExploreBlocks';
 import type { ExploreBlock, ExploreBlockContentType } from '../../services/exploreBlockService';
 import { getSortOptions } from './exploreBlockSort';
+import { Tooltip } from '../ui/Tooltip';
 
 interface ExploreBlockEditModalProps {
   block?: ExploreBlock; // undefined = create mode
@@ -125,14 +126,16 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
           >
             {isEditMode ? '編輯探索區塊' : '新增探索區塊'}
           </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="關閉"
-            className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)]"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <Tooltip content="關閉視窗" side="bottom">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="關閉視窗"
+              className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)]"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
         </div>
 
         {error && (

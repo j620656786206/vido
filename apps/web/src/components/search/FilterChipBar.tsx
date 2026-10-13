@@ -4,6 +4,7 @@
 import { Plus, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { activeFilterChips, type DiscoverFilters } from '../../lib/discoverFilters';
+import { Tooltip } from '../ui/Tooltip';
 
 interface FilterChipBarProps {
   filters: DiscoverFilters;
@@ -59,13 +60,15 @@ export function FilterChipBar({
       {chips.map((chip) => (
         <span key={chip.key} data-testid={`filter-chip-${chip.key}`} className={chipClass}>
           {chip.label}
-          <button
-            onClick={() => onChange(chip.next)}
-            className={removeClass}
-            aria-label={`移除${chip.label}篩選`}
-          >
-            <X className="h-3 w-3" />
-          </button>
+          <Tooltip content="移除篩選" side="top">
+            <button
+              onClick={() => onChange(chip.next)}
+              className={removeClass}
+              aria-label={`移除${chip.label}篩選`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Tooltip>
         </span>
       ))}
 
