@@ -339,6 +339,12 @@ type GenerationCandidate struct {
 	// whose titles differ. Parsing the SxxEyy substring back out of the title
 	// would be the fragile alternative.
 	EpisodeNumber int `json:"episode_number"`
+
+	// ResumedASRMinutes is how much of this film's speech recognition an
+	// earlier, unfinished run already paid for (disc-2026-09-generation-
+	// resume-c2) — already taken off EstimatedUSD and every model's quote.
+	// Absent when nothing is stored. Additive on the [@contract-v1] envelope.
+	ResumedASRMinutes float64 `json:"resumed_asr_minutes,omitempty"`
 }
 
 // GenerationCandidateSummary is the aggregate the footer renders.
@@ -473,6 +479,10 @@ type GenerationCandidateService struct {
 	// supported state: the sweep then behaves exactly as it did before, probing
 	// every un-persisted row.
 	routeCache RouteCache
+	// resume says how much of each ASR film an earlier run already
+	// transcribed (disc-2026-09-generation-resume-c2). nil = every film is
+	// quoted whole, as before.
+	resume candidateResumeCredit
 	// fileIdentity supplies the size+mtime the cache key is built from. Always
 	// osFileIdentity in production; tests replace it so invalidation can be
 	// asserted without a real file.
@@ -529,6 +539,24 @@ const writableProbeTimeout = 3 * time.Second
 // package tests replace it with a permissive probe in TestMain because their
 // fixture paths do not exist on disk.
 var defaultWritableProbe = fsprobe.ProbeWritableContext
+
+// candidateResumeCredit is the part of TranscriptionService the consent list
+// reads: the same stored-transcription answer the single estimate gives.
+type candidateResumeCredit interface {
+	resumedASRMinutesMany(ctx context.Context, queries []resumeQuery) map[string]float64
+}
+
+// SetResumeCredit lets the quote take off speech recognition an earlier run
+// already paid for. Production passes the TranscriptionService whose chunk
+// store the run reads.
+func (s *GenerationCandidateService) SetResumeCredit(r *TranscriptionService) {
+	if r == nil {
+		// A typed nil in the interface would pass the nil check in Analyze.
+		s.resume = nil
+		return
+	}
+	s.resume = r
+}
 
 // SetSSEHub wires live progress. Nil-safe: without a hub the sweep still runs
 // and the snapshot still updates, callers just have to poll for it.
@@ -793,6 +821,15 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		}
 		return false, code, filepath.Base(dir)
 	}
+	// Pass 1 decides every row's route; pass 2 prices them. The split exists so
+	// the resume credit can be read for all ASR rows in two queries between
+	// them (disc-2026-09-generation-resume-c2), and only for ASR rows — an
+	// extract row served by its stored tracks never touches the disk.
+	type quotable struct {
+		row   candidateRow
+		route RoutePrediction
+	}
+	quoted := make([]quotable, 0, len(rows))
 	for i, row := range rows {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -846,27 +883,46 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		case RouteExtract:
 			result.Summary.ExtractCount++
 		}
+		quoted = append(quoted, quotable{row: row, route: route})
+	}
 
+	var resumed map[string]float64
+	if s.resume != nil {
+		var queries []resumeQuery
+		for _, q := range quoted {
+			if q.route != RouteASR {
+				continue
+			}
+			minutes, _, _ := q.row.runtimeMinutes()
+			queries = append(queries, resumeQuery{mediaID: q.row.id, filePath: q.row.filePath, runtimeMinutes: minutes})
+		}
+		resumed = s.resume.resumedASRMinutesMany(ctx, queries)
+	}
+
+	for _, q := range quoted {
+		row, route := q.row, q.route
 		minutes, known, runtimeSource := row.runtimeMinutes()
+		credit := resumed[row.id]
 		// CR L6: computed ONCE — the summary total below reuses this instead of
 		// re-deriving the same decimal for every writable candidate.
-		defaultUSD := estimateUSD(route, minutes, asrRate, defaultModel)
+		defaultUSD := estimateUSDWithCredit(route, minutes, credit, asrRate, defaultModel)
 		c := GenerationCandidate{
-			MediaID:        row.id,
-			MediaType:      row.mediaType,
-			Title:          row.title,
-			Route:          route,
-			RuntimeMinutes: minutes,
-			RuntimeKnown:   known,
-			RuntimeSource:  runtimeSource,
-			PosterPath:     row.posterPath,
-			TMDbMatched:    row.tmdbMatched,
-			DisplayTitle:   candidateDisplayTitle(row.title, row.filePath, row.mediaType, row.tmdbMatched),
-			EstimatedUSD:   defaultUSD.InexactFloat64(),
-			SeriesID:       row.seriesID,
-			SeriesTitle:    row.seriesTitle,
-			SeasonNumber:   row.seasonNumber,
-			EpisodeNumber:  row.episodeNumber,
+			MediaID:           row.id,
+			MediaType:         row.mediaType,
+			Title:             row.title,
+			Route:             route,
+			RuntimeMinutes:    minutes,
+			RuntimeKnown:      known,
+			RuntimeSource:     runtimeSource,
+			PosterPath:        row.posterPath,
+			TMDbMatched:       row.tmdbMatched,
+			DisplayTitle:      candidateDisplayTitle(row.title, row.filePath, row.mediaType, row.tmdbMatched),
+			EstimatedUSD:      defaultUSD.InexactFloat64(),
+			SeriesID:          row.seriesID,
+			SeriesTitle:       row.seriesTitle,
+			SeasonNumber:      row.seasonNumber,
+			EpisodeNumber:     row.episodeNumber,
+			ResumedASRMinutes: credit,
 		}
 		// sub-6-1 AC #4: the same write probe the pipeline runs, done here so the
 		// consent list shows the blocker before a cent is committed. Memoised
@@ -881,7 +937,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			// model's number by work that cannot happen.
 			for _, m := range quoteModels {
 				est := result.EstimatesByModel[m]
-				usd := estimateUSD(route, minutes, asrRate, m)
+				usd := estimateUSDWithCredit(route, minutes, credit, asrRate, m)
 				modelTotals[m] = modelTotals[m].Add(usd)
 				est.PerCandidate[c.MediaID] = usd.InexactFloat64()
 				result.EstimatesByModel[m] = est
@@ -1040,6 +1096,20 @@ func (s *GenerationCandidateService) storeRoute(ctx context.Context, key string,
 		s.logger.Debug("route cache write failed — the next analysis probes this file again",
 			"key", key, "error", err)
 	}
+}
+
+// estimateUSDWithCredit is estimateUSD with an earlier run's stored speech
+// recognition taken off the ASR half (disc-2026-09-generation-resume-c2). The
+// translation half stays whole: it has not started for a film whose
+// transcription is unfinished, and the consent list does not count cached
+// translations (2026-09-18 ruling). Zero credit is exactly estimateUSD.
+func estimateUSDWithCredit(route RoutePrediction, minutes, resumedASRMinutes float64, asrRate decimal.Decimal, model string) decimal.Decimal {
+	if route != RouteASR || resumedASRMinutes <= 0 {
+		return estimateUSD(route, minutes, asrRate, model)
+	}
+	mins := decimal.NewFromFloat(minutes)
+	asrMins := decimal.NewFromFloat(max(minutes-resumedASRMinutes, 0))
+	return roundUSD(asrMins.Mul(asrRate).Add(mins.Mul(asrLegTranslationRatePerMinute(model))))
 }
 
 // estimateUSD prices one item.
