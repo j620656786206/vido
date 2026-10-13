@@ -411,7 +411,12 @@ func (p *GenerationBatchProcessor) ActivityProgress() (active bool, percentDone,
 		if b == nil || b.Status != GenerationBatchStatusRunning {
 			return
 		}
-		active, current, total, currentItem = true, b.CurrentIndex, b.TotalItems, b.CurrentItem
+		// current is how many items are FINISHED (success + fail) — the dialog's
+		// 已完成 and the workspace's strip count the same way. CurrentIndex is
+		// the item being worked on (1-based): shown here it read 3 / 10 beside
+		// the dialog's 2 / 10, and 10% the moment item 1 started
+		// (disc-2026-09-activity-batch-row-count-in-flight-index).
+		active, current, total, currentItem = true, b.SuccessCount+b.FailCount, b.TotalItems, b.CurrentItem
 	})
 	if active && total > 0 {
 		percentDone = current * 100 / total

@@ -496,7 +496,7 @@ func TestGenerationBatchItems_ActivityProgressUnchanged(t *testing.T) {
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
 		active, _, current, total, item := p.ActivityProgress()
-		return active && current == 1 && total == 3 && item == "A"
+		return active && current == 0 && total == 3 && item == "A"
 	}, time.Second, time.Millisecond)
 	close(release)
 	waitUntilIdle(t, p)
