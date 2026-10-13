@@ -1,144 +1,117 @@
 # Vido
 
-**自架的家庭劇院媒體管理工具，把繁體中文字幕這件事做到底。**
-線上找字幕、找不到就用語音辨識生字幕——最後都轉成繁中。（直接抽出影片內嵌字幕來翻譯，開發中）
+**自架在 NAS 上的影音管理工具，專門幫沒有中文字幕的影片做出繁體中文字幕。**
+影片裡有英文字幕，就抽出來翻成繁中；完全沒有字幕，就先聽聲音、再翻。翻出來用的是台灣用語。
 
-> **English**: Vido is a self-hosted media manager for your NAS home theater, built around one problem: getting Traditional Chinese subtitles for content that doesn't have them. It searches online subtitle sources and falls back to speech recognition when none are available, then translates and converts the result to zh-TW. (Extracting embedded subtitles for translation is still in development.)
+> **English**: Vido is a self-hosted media manager for your NAS, built around one problem: getting Traditional Chinese (Taiwan) subtitles for videos that don't have them. If a video carries an English subtitle track, Vido extracts and translates it; if it has no subtitles at all, Vido transcribes the audio first and then translates. Translations use Taiwanese vocabulary and keep character names consistent.
 
 ---
 
 ## 為什麼做這個
 
-想看的劇散在 Netflix、Disney+ 各家平台，每看一部就要切換一次。所以我架了 NAS，把影集和電影收在自己家裡，當成家庭劇院用。
+我在家裡架了 NAS 當家庭劇院，用了一陣子才發現真正卡住的地方：**很多影片只有英文字幕，或者根本沒有字幕。**
 
-但做完之後才發現真正的問題：**網路上的資源很多都沒有中文字幕**。片子有了，體驗卻缺一塊。
+原本用的字幕工具對繁中處理得不好，線上字幕網站對冷門片或新片也常常找不到。翻出來的字幕一下「視頻」、一下「質量」，角色名每集都翻得不一樣。
 
-所以這個工具最初想解決兩件事：
-
-1. 影片裡**已經有字幕**（通常是英文）→ 翻成繁中
-2. 影片裡**沒有字幕** → 上網找現成的
-
-開發之後又撞到第二個問題：**線上字幕資源比想像中少很多**。射手網、OpenSubtitles 對冷門片或新片經常是空的。於是策略變成一條有優先序的路徑：
+所以 Vido 的字幕流程是這樣：
 
 ```
-影片內嵌字幕  →  線上字幕來源  →  ASR 語音辨識
-（開發中）       （射手網 / OpenSubtitles）  （前兩者都沒有時，聽聲音生字幕再翻）
+影片裡已經有中文字幕  →  直接用，不花錢
+影片裡有英文字幕      →  抽出來，翻成繁中
+完全沒有字幕          →  先聽聲音轉成英文，再翻成繁中
 ```
 
-目前線上搜尋與 ASR 已經可用，第一段「抽出內嵌字幕直接翻譯」還在做——現在只做到偵測影片裡有哪些字幕軌。
-
-字幕解決了，接著才是把媒體庫整理好的那些事——繁中 metadata、字幕組檔名解析、下載監控，那些是為了讓這個家庭劇院真的能用而長出來的。
+字幕之外，Vido 也幫你把媒體庫整理好：繁中的片名與介紹、海報、季集清單，讓這個家庭劇院真的好用。
 
 ## 目前能做什麼
 
 **字幕（核心）**
 
-- **線上字幕搜尋與下載** — 串接射手網（ASSRT）與 OpenSubtitles，自動評分挑最合適的版本
-- **簡轉繁** — opencc 轉換，並可批次處理整個媒體庫
-- **AI 字幕增強** — 用詞表（glossary）維持同一部劇的譯名一致（需自備 AI API key，見下方環境變數）
-- **語音辨識生字幕** — 沒有現成字幕時，抽出音軌用 Whisper 轉錄。**目前僅支援電影**，影集入口開發中；靜音片段（如片尾）偶爾會產生幻覺字幕，VAD 過濾開發中
-- **字幕軌偵測** — 掃描影片內嵌與外掛字幕，標示語言與狀態
+- **翻譯影片裡的英文字幕** — 從 mkv／mp4 抽出英文字幕軌，翻成繁中。有好幾條英文軌時優先用一般版，畫面上的強制字幕也會一起翻。單部的「生成字幕」和批次都會先看片內有沒有字幕
+- **聽聲音生字幕** — 沒有字幕的電影和影集，先用語音辨識（OpenAI Whisper，或你自架的相容服務）轉成英文，再翻成繁中。音檔切成兩分鐘一段，並會過濾常見的幻聽，例如只有音樂符號的句子、重複的假台詞、假署名
+- **台灣用語** — 內建台灣用語詞庫，有三種在地化程度可以選（「設定 → 字幕設定」）。中國大陸、香港、澳門的片子只把字轉成繁體，保留原本的說法
+- **角色名前後一致** — 比對到 TMDb 時，自動把演員與角色名放進詞彙表；也會從片庫裡已有的官方繁中字幕學人名譯法。詞彙表可以匯出、匯入
+- **花多少錢先講清楚** — 會花錢的按鈕按下去之前，先顯示預估金額；每次都可以挑翻譯模型，看得到價格與品質等級。每次執行有花費上限，超過會暫停，已經做好的部分會保留，下次只做剩下的；AI 帳號沒錢時會整批停下並告訴你。活動頁看得到「本月 AI 花費」
+- **字幕狀態一目瞭然** — 季清單標出每一集有沒有中文字幕，可以篩選「缺中文字幕」，首頁顯示繁中字幕覆蓋率
+- **簡轉繁** — 用官方 OpenCC 轉換，可以批次處理整個媒體庫
 
 **媒體庫**
 
-- **繁中優先的 metadata** — TMDB (zh-TW) → 豆瓣 → Wikipedia 多來源 fallback（豆瓣與 Wikipedia 預設關閉，需自行開啟）
-- **AI 字幕組檔名解析** — 解析 `[字幕組][作品名][01][1080p][BIG5]` 這種命名，內建學習機制與自動重試
-- **下載監控** — 串接 qBittorrent，即時進度
-- **媒體庫管理** — 遞迴掃描、多磁碟區支援
-- **瀏覽與探索** — 首頁媒體牆、進階搜尋、詳情頁（雙評分、季集列表、推薦、觀看平台、預告）
-- **活動中心** — 集中檢視解析／下載／字幕處理的進行狀況
-- **設定引導** — 首次啟動的 setup wizard
+- **繁中優先的資料** — 片名、介紹、海報以 TMDb（zh-TW）為主，可選擇開啟 Wikipedia 補充。豆瓣也可以開啟，但目前常被擋，效果有限
+- **AI 檔名解析** — 看得懂格式很亂的檔名，比對出是哪一部片；認錯或沒認出來時，可以手動選對的那部
+- **媒體庫管理** — 遞迴掃描、多個資料夾與磁碟區、換海報、修改資訊、備份與還原
+- **瀏覽與探索** — 首頁媒體牆、進階搜尋、詳情頁（評分、季集列表、推薦、觀看平台、預告）
+- **活動中心** — 看得到字幕做到第幾段、第幾句，以及每月 AI 花費
+- **設定引導** — 首次啟動時一步步帶你完成設定
+- **外觀** — 深色「夜行」與淺色「日巡」兩種主題，手機上也能完整操作
 
-**開發中**
+**選配整合（本來就有在用才需要）**
 
-- **抽取內嵌字幕來翻譯** — 目前只做到偵測有哪些字幕軌，還沒把內容抽出來翻。這是字幕 pipeline 改版的主軸（優先序：內嵌 → 線上 → ASR）
-- **Request 系統** — 一鍵「想要」＋ Radarr/Sonarr 串接
+- **qBittorrent** — 在 Vido 裡看下載進度，以及檔案進媒體庫了沒
+- **Sonarr／Radarr** — 連線後可以在 Vido 裡管理想看清單與缺集，入庫後自動處理字幕
+
+**目前的限制**
+
+- 字幕只能從**英文**翻成繁中，日文、韓文等其他語言還不支援
+- 字幕翻譯只能用 **Claude**（Gemini 目前只用在檔名解析）
+- 線上字幕網站（射手網、OpenSubtitles）的搜尋目前沒有開放設定，字幕主要靠片內字幕與語音辨識
+- 畫面上的字（招牌、書名、字卡）還不會翻
 
 > ⚠️ **專案狀態**：積極開發中，設計為**單人使用**，目前主要在作者自己的 NAS 上運行。歡迎試用與[回報問題](#回報問題)，但還不建議用於關鍵用途。
 >
-> 🔒 **存取控制（V0.1.1）**：設定環境變數 `VIDO_AUTH_PASSWORD` 即可為整個 App（UI + API）加上一道共用密碼登入。**要把這個實例分享給別人、或讓它超出信任的家用網路前，強烈建議先設定。** 留空則維持舊的無登入行為——此時**請只在家用網路內使用**，遠端存取請走 VPN、Tailscale 或反向代理加驗證，不要把服務直接暴露到公開網路。未設定密碼時，任何能連到伺服器的人都能完全控制它（讀取／修改設定與 API 金鑰、下載資料庫備份、加入下載任務）。
+> 🔒 **存取控制**：設定環境變數 `VIDO_AUTH_PASSWORD` 即可為整個 App（UI + API）加上一道共用密碼登入（`latest` 映像才有，v0.1.1 還沒有）。**要把這個實例分享給別人、或讓它超出信任的家用網路前，強烈建議先設定。** 留空則維持舊的無登入行為——此時**請只在家用網路內使用**，遠端存取請走 VPN、Tailscale 或反向代理加驗證，不要把服務直接暴露到公開網路。未設定密碼時，任何能連到伺服器的人都能完全控制它（讀取／修改設定與 API 金鑰、下載資料庫備份、加入下載任務）。
 
-## 快速開始
+## 安裝
 
-需要 Docker 與 Docker Compose。
-
-如果你使用 Synology 或 QNAP NAS，請直接參考平台安裝指南；不需要在 NAS 上
-下載原始碼或自行建置 image：
+Vido 用 Docker 安裝，跑在你自己的 NAS 上。請照你的 NAS 平台看安裝指南，不需要下載原始碼：
 
 - [Synology DSM／Container Manager 安裝指南](docs/synology-installation-guide.zh-TW.md)
 - [QNAP QTS／Container Station 安裝指南](docs/qnap-installation-guide.zh-TW.md)
 - [Unraid 安裝指南](docs/unraid-installation-guide.zh-TW.md)（[English](docs/unraid-installation-guide.md)）
 
-### 從原始碼啟動（開發者）
+裝好之後打開網頁，第一次會有設定精靈帶你完成初始設定。
 
-以下流程會從原始碼建置，適合開發者；NAS 使用者請使用上面的平台指南。
+> 🧩 **要用 AI 字幕，請先確認這幾件事**（上面的安裝指南正在更新，有衝突時以這裡為準）：
+>
+> 1. **加上 `VIDO_SUBTITLE_PIPELINE_MODE=pipeline`**。沒加的話，Vido 不會讀片內的英文字幕，只會走「聽聲音」（之後會改成預設）。
+> 2. **填入 `CLAUDE_API_KEY`**。如果想在網頁上（設定精靈或「設定 → 金鑰設定」）填金鑰，要先設 `ENCRYPTION_KEY`，不然網頁會存不了。
+> 3. **媒體資料夾要能寫入**。產生的字幕會存在影片旁邊，所以掛載媒體資料夾時不要加 `:ro`，`PUID`／`PGID` 也要對那個資料夾有寫入權限。
+>
+> 完全沒有字幕的片要先聽聲音，還需要 `OPENAI_API_KEY`，或把 `ASR_BASE_URL` 指到自架的語音辨識服務。
 
-```bash
-git clone https://github.com/j620656786206/vido.git
-cd vido
+### 會花多少錢
 
-# 設定媒體庫路徑與 API key
-cp .env.example .env
-#   MEDIA_PATH=/path/to/your/media
-#   TMDB_API_KEY=your_key        # 選填：正式映像檔已內建一把 TMDB 金鑰，想用自己的額度再填
-#   OPENAI_API_KEY=your_key      # 選填，啟用語音辨識生字幕（雲端 API，會計費）
+Vido 本身免費。AI 字幕的費用是付給你自己的 Claude（或 OpenAI）帳號，按下去之前 Vido 會先顯示預估金額。以預設的翻譯模型為例，作者自己 NAS 上的實測：
 
-docker compose up -d
-```
+| 影片                                 | 大約花費                    |
+| ------------------------------------ | --------------------------- |
+| 影集一集（約一小時），片內有英文字幕 | US$0.3～0.5                 |
+| 電影一部（約兩小時），片內有英文字幕 | US$0.9～1.2                 |
+| 影集一集，沒有字幕、要先聽聲音       | 約 US$1.4（只有一集的紀錄） |
 
-開啟 `http://localhost:8080`，依照 setup wizard 完成初始設定。
+可以在畫面上改選比較便宜的模型，大約只要上面的四成，但翻壞的句子會比較多。
+
+### 常用設定
+
+這些都是 Docker 的環境變數，在安裝指南的 compose 設定裡填。
+
+| 設定                                | 要填嗎                          | 用途                                                                                  |
+| ----------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
+| `VIDO_SUBTITLE_PIPELINE_MODE`       | 要用 AI 字幕就填 `pipeline`     | 先讀片內字幕，有英文字幕就直接翻；不填只會聽聲音                                      |
+| `CLAUDE_API_KEY`                    | 要用 AI 字幕就要填              | 把字幕翻成繁中（目前只支援 Claude）                                                   |
+| `OPENAI_API_KEY`                    | 選填                            | 沒字幕的片要聽聲音時使用（OpenAI 語音辨識，會計費）                                   |
+| `ASR_BASE_URL`、`ASR_MODEL`         | 選填                            | 改用自架的語音辨識服務（例如 Speaches、WhisperLive），不用 OpenAI key，也不花雲端費用 |
+| `ENCRYPTION_KEY`                    | 想在網頁上填金鑰就要填          | 32 個字以上的隨機字串，用來加密存放你的金鑰                                           |
+| `AI_RUN_BUDGET_USD`                 | 選填，預設 `5`                  | 每次執行最多花幾美元。超過會暫停，已經做好的部分會保留，下次只做剩下的                |
+| `VIDO_AUTH_PASSWORD`                | 建議填                          | 整個 Vido 的登入密碼，見上面的「存取控制」                                            |
+| `PUID`、`PGID`                      | 依你的 NAS                      | 容器用哪個使用者身分執行，要能寫入媒體資料夾                                          |
+| `AI_PROVIDER`                       | 只有 Claude key 的話填 `claude` | 讓檔名解析也用 Claude（預設是 Gemini）                                                |
+| `TMDB_API_KEY`                      | 不用                            | 映像已經內建一把；想用自己的額度再填                                                  |
+| `ENABLE_WIKIPEDIA`、`ENABLE_DOUBAN` | 選填                            | 開啟片名、介紹的補充來源                                                              |
+
+完整的設定清單見 [`.env.example`](.env.example)。
 
 Vido 有一個預設關閉的「匿名使用回報」（開關在「設定 → 連線設定」最底下）：送什麼、不送什麼見 [匿名使用回報](docs/usage-report.zh-TW.md)（[English](docs/usage-report.md)）。
-
-**基本環境變數**
-
-| 變數                    | 預設      | 說明                                                                                                                                        |
-| ----------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MEDIA_PATH`            | `./media` | 媒體庫路徑（以唯讀方式掛載）                                                                                                                |
-| `TMDB_API_KEY`          | （內建）  | 自己的 TMDB API key。正式映像檔已內建一把（非商業授權、出處聲明已內建），設定頁填的或這裡填的都會優先於內建；從原始碼自行編譯則沒有內建金鑰 |
-| `TMDB_DEFAULT_LANGUAGE` | `zh-TW`   | metadata 語言偏好                                                                                                                           |
-| `VIDO_PORT`             | `8080`    | 對外埠號                                                                                                                                    |
-| `ENABLE_DOUBAN`         | `false`   | 開啟豆瓣 metadata fallback                                                                                                                  |
-| `ENABLE_WIKIPEDIA`      | `false`   | 開啟 Wikipedia metadata fallback                                                                                                            |
-
-**字幕 AI 功能（需自備 API key）**
-
-字幕翻譯與語音辨識走的是雲端 API，**會依用量計費**。不設定這些變數時，其餘功能照常運作，只有 AI 相關的字幕功能會停用。
-
-| 變數                       | 預設     | 說明                                                                                                      |
-| -------------------------- | -------- | --------------------------------------------------------------------------------------------------------- |
-| `AI_PROVIDER`              | `gemini` | 文字 AI 供應商，`gemini` 或 `claude`                                                                      |
-| `GEMINI_API_KEY`           | —        | Gemini key（`AI_PROVIDER=gemini` 時用於檔名解析；字幕翻譯目前僅支援 Claude）                              |
-| `CLAUDE_API_KEY`           | —        | Claude key（`AI_PROVIDER=claude` 時使用；字幕翻譯亦使用）                                                 |
-| `OPENAI_API_KEY`           | —        | Whisper 語音辨識用                                                                                        |
-| `ASR_BASE_URL`             | —        | 指向自架的 OpenAI 相容 ASR 服務即可省下雲端費用                                                           |
-| `ASR_MODEL`                | —        | 自架引擎的 model id                                                                                       |
-| `VIDO_ASR_WORD_TIMESTAMPS` | `true`   | 向語音辨識多要「每個字的時間」讓字幕貼著開口出現（音檔已切成兩分鐘一段，不再整段聽不到）；設 `false` 可關 |
-| `VIDO_ASR_NAME_PROMPT`     | `false`  | 把劇中角色名交給語音辨識當提示；實測對人名沒幫助、偶爾把名單念進字幕，預設關                              |
-| `AI_RUN_BUDGET_USD`        | `5.0`    | 單次執行的費用上限，超過就中止並標記為暫停                                                                |
-
-> 💡 想完全避開雲端費用，可以把 `ASR_BASE_URL` 指到自架的 OpenAI 相容引擎（例如 Speaches、WhisperLive），語音辨識就會走本機。
-
-完整的變數清單見 [`.env.example`](.env.example)。
-
-正式環境可套用資源限制設定：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
-
-## 技術架構
-
-| 層   | 技術                                                         |
-| ---- | ------------------------------------------------------------ |
-| 前端 | React 19、TanStack Router/Query、Tailwind CSS v4             |
-| 後端 | Go 1.25、Gin、SQLite (WAL + FTS5)                            |
-| 字幕 | 官方 C++ OpenCC helper（簡→繁）、Whisper（語音辨識）、ffmpeg |
-| 部署 | Docker、單一容器                                             |
-
-## 開發
-
-開發環境設定、建置與測試指令請見 [docs/development.md](docs/development.md)。
 
 ## 回報問題
 
@@ -149,23 +122,23 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 回報時請盡量附上（issue 表單會引導你填）：
 
 1. **執行環境** — NAS 平台（Unraid／Synology／QNAP／其他）與安裝方式
-2. **版本** — image tag（例如 `v0.1.0`、`latest`），或執行 `docker inspect vido --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'` 取得確切 commit
+2. **版本** — image tag（例如 `latest`、`v0.1.1`），或執行 `docker inspect vido --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'` 取得確切 commit
 3. **重現步驟** — 做了什麼、預期看到什麼、實際看到什麼
 4. **Logs** — `docker logs vido --tail 100` 的輸出（貼上前請檢查裡面沒有 API key）
 
 不確定是不是 bug 也沒關係，先開再說。
 
+## 想一起開發
+
+歡迎！開發環境、建置、測試指令與技術架構，請看 [開發指南](docs/development.md)。
+
 ## 授權
 
-**Vido 原始碼採 Apache-2.0**；Docker image 內的第三方元件依各自授權散布。
-
-先前的 Go OpenCC binding 會帶入 GPL-2.0 傳遞相依；該 binding 與 `liuzl/da`、`liuzl/cedar-go` 已經移除。正式條款見根目錄 [`LICENSE`](LICENSE)；Docker image 的第三方 SBOM、字典與 notices 仍須依各自授權處理。
-
-簡繁轉換已改為只使用官方 C++ OpenCC helper，Go GPL binding 已從 production dependency graph 移除。每次 release 仍須依 SBOM、字典 inventory 與第三方 notices 流程審核，詳見 [`docs/opencc-helper-migration.md`](docs/opencc-helper-migration.md) 與 [`docs/licenses/opencc.md`](docs/licenses/opencc.md)。
+**Vido 原始碼採 Apache-2.0**（見 [`LICENSE`](LICENSE)）；Docker image 內的第三方元件依各自授權散布。
 
 ## 第三方服務與資料來源
 
 - **TMDB** — This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.
-  （本應用程式使用 TMDB 與 TMDB API，但未經 TMDB 認可、認證或核准。）此為 [TMDB API 條款](https://www.themoviedb.org/api-terms-of-use) §3 要求的原句，不得改寫；App 內同樣顯示於「設定 → API 金鑰」的 TMDB 欄位與各詳情頁頁尾（story sub-6-9）。
+  （本應用程式使用 TMDB 與 TMDB API，但未經 TMDB 認可、認證或核准。）此為 [TMDB API 條款](https://www.themoviedb.org/api-terms-of-use) §3 要求的原句，不得改寫；App 內同樣顯示於「設定 → 金鑰設定」的 TMDB 欄位與各詳情頁頁尾（story sub-6-9）。
 - **豆瓣** — 繁中 metadata 的補充來源之一，透過解析公開網頁取得（HTML scraping，非官方 API）。網站改版時可能失效，屬 best-effort 的 fallback。
 - **Wikipedia** — metadata fallback 來源。
