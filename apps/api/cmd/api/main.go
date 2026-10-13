@@ -1291,6 +1291,10 @@ func main() {
 	// sub-6-10a AC #1: the sweep's route probe is the only thing that ever
 	// measures an episode's length — let it keep what it measured.
 	generationCandidateService.SetEpisodeDurationWriter(repos.Episodes)
+	// disc-2026-09-generation-resume-c2: an ASR row's quote takes off what an
+	// earlier, unfinished run already transcribed — the same answer the
+	// single estimate gives, read from the same chunk store.
+	generationCandidateService.SetResumeCredit(transcriptionService)
 	generationCandidatesHandler := handlers.NewGenerationCandidatesHandler(generationCandidateService)
 	// FR12 manual trigger (sub-1-6 AC #4). The route is registered in EVERY
 	// mode so the API surface does not change shape with an env var; a nil
