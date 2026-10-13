@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ViewToggle } from './ViewToggle';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 describe('ViewToggle', () => {
   it('renders grid and list buttons', () => {
@@ -57,5 +58,14 @@ describe('ViewToggle', () => {
   it('has data-testid for test targeting', () => {
     render(<ViewToggle view="grid" onViewChange={vi.fn()} />);
     expect(screen.getByTestId('view-toggle')).toBeInTheDocument();
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-a — icon-only controls name themselves in the shared tooltip.
+describe('ViewToggle — icon-only', () => {
+  it('both modes show their names on keyboard focus', async () => {
+    render(<ViewToggle view="grid" onViewChange={vi.fn()} />);
+    await expectTooltipOnFocus(screen.getByLabelText('格狀檢視'), '格狀檢視');
+    await expectTooltipOnFocus(screen.getByLabelText('列表檢視'), '列表檢視');
   });
 });

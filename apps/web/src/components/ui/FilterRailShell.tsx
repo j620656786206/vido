@@ -6,6 +6,7 @@
 // The body (a FilterPanel) and the footer content stay rail-specific via slots.
 import { useId, type ReactNode, type Ref } from 'react';
 import { PanelLeftClose } from 'lucide-react';
+import { Tooltip } from './Tooltip';
 
 interface FilterRailShellProps {
   /** testid for the <aside> root (e.g. `discover-filter-rail`). */
@@ -83,17 +84,19 @@ export function FilterRailShell({
         </div>
         {/* aria-expanded: the button lives inside the rail, so whenever it exists the rail is
             open. No aria-controls — collapsed, the rail is unmounted and the id would dangle. */}
-        <button
-          type="button"
-          ref={collapseButtonRef}
-          onClick={onCollapse}
-          data-testid={collapseTestId}
-          aria-label="收合篩選"
-          aria-expanded={true}
-          className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
-        >
-          <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden="true" />
-        </button>
+        <Tooltip content="收合篩選" side="right">
+          <button
+            type="button"
+            ref={collapseButtonRef}
+            onClick={onCollapse}
+            data-testid={collapseTestId}
+            aria-label="收合篩選"
+            aria-expanded={true}
+            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+          >
+            <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden="true" />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Scrollable filter body — keeps the footer pinned for long control lists */}

@@ -71,15 +71,17 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
             </Link>
           )}
           {!collapsed && (
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              aria-label="收合側邊欄"
-              data-testid="sidebar-collapse-toggle"
-              className="ml-auto flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
-            >
-              <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
-            </button>
+            <Tooltip content="收合側邊欄" side="right">
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                aria-label="收合側邊欄"
+                data-testid="sidebar-collapse-toggle"
+                className="ml-auto flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+              >
+                <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </Tooltip>
           )}
         </div>
 

@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { DetailHeroV2 } from './DetailHeroV2';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 describe('DetailHeroV2', () => {
   it('renders the title, original title, status badges, meta and actions', () => {
@@ -102,5 +103,13 @@ describe('DetailHeroV2', () => {
       />
     );
     expect(screen.getByTestId('detail-poster-fallback')).toHaveTextContent(/^F$/);
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-a — icon-only controls name themselves in the shared tooltip.
+describe('DetailHeroV2 — back arrow', () => {
+  it('返回媒體庫 shows its name on keyboard focus', async () => {
+    render(<DetailHeroV2 title="X" posterPath={null} backdropPath={null} onBack={() => {}} />);
+    await expectTooltipOnFocus(screen.getByTestId('detail-back'), '返回媒體庫');
   });
 });

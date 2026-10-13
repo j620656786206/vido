@@ -22,6 +22,7 @@ vi.mock('../../hooks/useActivity', () => ({
 }));
 
 import { AppSidebar } from './AppSidebar';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 // LogoutButton (rendered by SidebarFooter) owns real router + query-client hooks;
 // this suite is about the shell chrome, so stub it out. Its own behaviour is
@@ -144,5 +145,13 @@ describe('AppSidebar — in-flight job badge (feat-nav-badge-inflight-jobs)', ()
     expect(badge.innerHTML).toContain('bg-[var(--accent-subtle)]');
     expect(badge.className).toContain('text-[var(--accent-text)]');
     expect(badge.outerHTML).not.toContain('bg-[var(--accent-primary)]');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-a — icon-only controls name themselves in the shared tooltip.
+describe('AppSidebar — collapse control', () => {
+  it('收合側邊欄 shows its name on keyboard focus', async () => {
+    renderSidebar();
+    await expectTooltipOnFocus(await screen.findByTestId('sidebar-collapse-toggle'), '收合側邊欄');
   });
 });

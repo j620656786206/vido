@@ -35,6 +35,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 
 import { useRecentlyAdded } from '../../hooks/useLibrary';
 import { HeroBanner, toHeroItems } from './HeroBanner';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const mockUseRecentlyAdded = vi.mocked(useRecentlyAdded);
 
@@ -313,5 +314,16 @@ describe('HeroBanner (Home v3 own-library static hero — ux3-1-8)', () => {
       document.querySelectorAll('[data-testid="hero-banner-slide"][data-active="true"]')
     ).toHaveLength(1);
     expect(activeSlide()!.textContent).toContain('電影 m1');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-a — icon-only controls name themselves in the shared tooltip.
+describe('HeroBanner — icon-only controls', () => {
+  it('prev/next and each dot name themselves on keyboard focus', async () => {
+    mockUseRecentlyAdded.mockReturnValue(result({ data: [movie('m1'), movie('m2')] }));
+    render(<HeroBanner />);
+    await expectTooltipOnFocus(screen.getByTestId('hero-banner-prev'), '上一部');
+    await expectTooltipOnFocus(screen.getByTestId('hero-banner-next'), '下一部');
+    await expectTooltipOnFocus(screen.getByTestId('hero-banner-dot-1'), '第 2 部：電影 m2');
   });
 });

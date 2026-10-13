@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { Pagination } from './Pagination';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 describe('Pagination', () => {
   it('should not render when totalPages is 1', () => {
@@ -97,5 +98,14 @@ describe('Pagination', () => {
     render(<Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />);
 
     expect(screen.getByLabelText('分頁導航')).toBeInTheDocument();
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-a — icon-only controls name themselves in the shared tooltip.
+describe('Pagination — icon-only arrows', () => {
+  it('上一頁／下一頁 show their names on keyboard focus', async () => {
+    render(<Pagination currentPage={2} totalPages={5} onPageChange={() => {}} />);
+    await expectTooltipOnFocus(screen.getByLabelText('上一頁'), '上一頁');
+    await expectTooltipOnFocus(screen.getByLabelText('下一頁'), '下一頁');
   });
 });

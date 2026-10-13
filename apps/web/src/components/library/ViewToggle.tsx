@@ -5,6 +5,7 @@
 // dsr-1 AC #2.)
 import { LayoutGrid, List } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Tooltip } from '../ui/Tooltip';
 
 export type ViewMode = 'grid' | 'list';
 
@@ -21,34 +22,38 @@ export function ViewToggle({ view, onViewChange }: ViewToggleProps) {
       className="flex gap-1"
       data-testid="view-toggle"
     >
-      <button
-        role="radio"
-        aria-checked={view === 'grid'}
-        aria-label="格狀檢視"
-        onClick={() => onViewChange('grid')}
-        className={cn(
-          'rounded p-2 transition-colors',
-          view === 'grid'
-            ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
-        )}
-      >
-        <LayoutGrid size={18} />
-      </button>
-      <button
-        role="radio"
-        aria-checked={view === 'list'}
-        aria-label="列表檢視"
-        onClick={() => onViewChange('list')}
-        className={cn(
-          'rounded p-2 transition-colors',
-          view === 'list'
-            ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
-        )}
-      >
-        <List size={18} />
-      </button>
+      <Tooltip content="格狀檢視" side="bottom">
+        <button
+          role="radio"
+          aria-checked={view === 'grid'}
+          aria-label="格狀檢視"
+          onClick={() => onViewChange('grid')}
+          className={cn(
+            'rounded p-2 transition-colors',
+            view === 'grid'
+              ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+          )}
+        >
+          <LayoutGrid size={18} aria-hidden="true" />
+        </button>
+      </Tooltip>
+      <Tooltip content="列表檢視" side="bottom">
+        <button
+          role="radio"
+          aria-checked={view === 'list'}
+          aria-label="列表檢視"
+          onClick={() => onViewChange('list')}
+          className={cn(
+            'rounded p-2 transition-colors',
+            view === 'list'
+              ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+          )}
+        >
+          <List size={18} aria-hidden="true" />
+        </button>
+      </Tooltip>
     </div>
   );
 }

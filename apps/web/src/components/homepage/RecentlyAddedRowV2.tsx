@@ -35,6 +35,7 @@ import { PosterCardV2 } from '../library/PosterCardV2';
 import { scrollByMotionSafe } from '../../lib/motion';
 import { cn } from '../../lib/utils';
 import type { LibraryItem, LibraryMovie, LibrarySeries } from '../../types/library';
+import { Tooltip } from '../ui/Tooltip';
 
 const SKELETON_COUNT = 8;
 
@@ -220,27 +221,31 @@ export function RecentlyAddedRowV2() {
               canScrollRight ? 'opacity-100' : 'opacity-0'
             )}
           />
-          <button
-            type="button"
-            onClick={() => scroll('left')}
-            aria-label="向左捲動"
-            data-testid="home-recent-scroll-left"
-            className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-[var(--shadow-lg)] ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scroll('right')}
-            aria-label="向右捲動"
-            data-testid="home-recent-scroll-right"
-            className={cn(
-              'absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] shadow-[var(--shadow-lg)] ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 lg:block',
-              canScrollRight ? 'opacity-70 hover:opacity-100' : 'pointer-events-none opacity-0'
-            )}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+          <Tooltip content="向左捲動" side="left">
+            <button
+              type="button"
+              onClick={() => scroll('left')}
+              aria-label="向左捲動"
+              data-testid="home-recent-scroll-left"
+              className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-[var(--shadow-lg)] ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
+            >
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </Tooltip>
+          <Tooltip content="向右捲動" side="right">
+            <button
+              type="button"
+              onClick={() => scroll('right')}
+              aria-label="向右捲動"
+              data-testid="home-recent-scroll-right"
+              className={cn(
+                'absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] shadow-[var(--shadow-lg)] ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-[var(--motion-state)] hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 lg:block',
+                canScrollRight ? 'opacity-70 hover:opacity-100' : 'pointer-events-none opacity-0'
+              )}
+            >
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </Tooltip>
           <div
             ref={scrollerRef}
             onScroll={() => {
