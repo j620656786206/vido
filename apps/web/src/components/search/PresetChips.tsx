@@ -8,6 +8,7 @@ import {
 } from '../../lib/discoverFilters';
 import { useDeleteFilterPreset, useFilterPresets } from '../../hooks/useFilterPresets';
 import type { FilterPreset } from '../../services/filterPresetService';
+import { Tooltip } from '../ui/Tooltip';
 
 const LONG_PRESS_MS = 500;
 
@@ -89,31 +90,38 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
       >
         <span className="text-xs text-[var(--text-muted)]">快速篩選：</span>
         {presets.map((preset) => (
-          <button
+          // The delete gesture is only discoverable through this hint, so it is
+          // in the shared tooltip — hover or Tab — not a browser title
+          // (disc-2026-10-text-label-hidden-reason).
+          <Tooltip
             key={preset.id}
-            data-testid={`preset-chip-${preset.id}`}
-            onClick={() => {
-              // A long-press already opened the delete dialog; touchend still
-              // synthesizes this click — swallow it so we don't apply the preset
-              // underneath the dialog (Task 3.4).
-              if (didLongPress.current) {
-                didLongPress.current = false;
-                return;
-              }
-              onApplyPreset(parsePresetFilters(preset));
-            }}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setPendingDelete(preset);
-            }}
-            onTouchStart={() => startLongPress(preset)}
-            onTouchEnd={cancelLongPress}
-            onTouchMove={cancelLongPress}
-            title={`套用「${preset.name}」（右鍵或長按可刪除）`}
-            className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-1 text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--text-primary)]"
+            content={`套用「${preset.name}」（右鍵或長按可刪除）`}
+            side="bottom"
           >
-            {preset.name}
-          </button>
+            <button
+              data-testid={`preset-chip-${preset.id}`}
+              onClick={() => {
+                // A long-press already opened the delete dialog; touchend still
+                // synthesizes this click — swallow it so we don't apply the preset
+                // underneath the dialog (Task 3.4).
+                if (didLongPress.current) {
+                  didLongPress.current = false;
+                  return;
+                }
+                onApplyPreset(parsePresetFilters(preset));
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setPendingDelete(preset);
+              }}
+              onTouchStart={() => startLongPress(preset)}
+              onTouchEnd={cancelLongPress}
+              onTouchMove={cancelLongPress}
+              className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3.5 py-1 text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--text-primary)]"
+            >
+              {preset.name}
+            </button>
+          </Tooltip>
         ))}
       </div>
 

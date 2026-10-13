@@ -153,12 +153,16 @@ export function DownloadsTableV2({
                 </td>
                 <td className="px-3 py-1">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className="shrink-0 rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
+                    {/* An abbreviation, so <abbr>: assistive tech can expand it,
+                        and the same badge on every row is not worth a tab stop
+                        each (disc-2026-10-text-label-hidden-reason). The card
+                        view spells qBittorrent out in full. */}
+                    <abbr
                       title="qBittorrent"
+                      className="shrink-0 rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)] no-underline"
                     >
                       qB
-                    </span>
+                    </abbr>
                     <span
                       className="truncate font-medium text-[var(--text-primary)]"
                       title={d.name}

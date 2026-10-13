@@ -178,3 +178,18 @@ describe('DownloadsTableV2 — import status (dl-import-2)', () => {
     expect(chip).toHaveAttribute('href', '/media/tv/s1');
   });
 });
+
+// disc-2026-10-text-label-hidden-reason — 「qB」 is an abbreviation, marked up as
+// one so assistive tech can expand it; no tab stop per row.
+describe('DownloadsTableV2 — the qB badge', () => {
+  it('is an <abbr> for qBittorrent and not focusable', () => {
+    renderTable();
+    const abbrs = screen.getAllByText('qB');
+    expect(abbrs.length).toBeGreaterThan(0);
+    for (const el of abbrs) {
+      expect(el.tagName).toBe('ABBR');
+      expect(el).toHaveAttribute('title', 'qBittorrent');
+      expect(el.tabIndex).toBe(-1);
+    }
+  });
+});

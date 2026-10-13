@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PresetChips } from './PresetChips';
 import type { FilterPreset } from '../../services/filterPresetService';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 // Mockable hook state.
 const deleteMutateAsync = vi.fn();
@@ -157,5 +158,17 @@ describe('PresetChips', () => {
     fireEvent.contextMenu(screen.getByTestId('preset-chip-p2'));
     expect(screen.getByTestId('preset-delete-dialog')).toHaveTextContent('刪除中…');
     expect(screen.getByTestId('preset-delete-dialog')).not.toHaveTextContent('刪除中...');
+  });
+});
+
+// disc-2026-10-text-label-hidden-reason — the delete gesture is discoverable
+// through the shared tooltip, not a browser title.
+describe('PresetChips — gesture hint', () => {
+  it('a chip shows how to delete it on keyboard focus', async () => {
+    render(<PresetChips onApplyPreset={vi.fn()} />);
+    await expectTooltipOnFocus(
+      screen.getByTestId('preset-chip-p1'),
+      '套用「2024年後韓劇」（右鍵或長按可刪除）'
+    );
   });
 });

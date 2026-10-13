@@ -190,6 +190,61 @@ function runtimeLabel(c: GenerationCandidate): string {
  * one sentence that told the user WHY the row costs money. On the 2026-09-03
  * production screenshot that was every single row.
  */
+/**
+ * A badge whose WHY decides what the user can do with the row (未匹配, 資料夾無法
+ * 寫入, 無法估價). The reason used to live in a browser `title` — invisible on a
+ * phone and to a keyboard — so it is in the shared tooltip now, opened by
+ * hover, Tab or a tap (DESIGN.md §Tooltips; disc-2026-10-text-label-hidden-
+ * reason). The trigger is a real button that does nothing else; its name is
+ * the badge plus the reason, the same words the tooltip shows.
+ */
+function ReasonBadge({
+  testId,
+  reason,
+  detail,
+  className,
+  children,
+}: {
+  testId: string;
+  reason: string;
+  detail?: string;
+  className: string;
+  children: string;
+}) {
+  // 「資料夾無法寫入：ro-folder」 already starts with the badge — never say it twice.
+  const head = reason.startsWith(children) ? reason : `${children}：${reason}`;
+  const name = detail ? `${head}，${detail}` : head;
+  return (
+    <Tooltip
+      side="top"
+      delay={0}
+      openOnPress
+      content={
+        detail ? (
+          <span className="flex flex-col gap-0.5 text-left">
+            <span className="font-semibold">{reason}</span>
+            <span className="break-all font-normal text-[var(--text-secondary)]">{detail}</span>
+          </span>
+        ) : (
+          reason
+        )
+      }
+    >
+      <button
+        type="button"
+        data-testid={testId}
+        aria-label={name}
+        className={cn(
+          'rounded-full px-2 py-0.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+          className
+        )}
+      >
+        {children}
+      </button>
+    </Tooltip>
+  );
+}
+
 function routeSubtitle(c: GenerationCandidate): string {
   const route = c.route === 'extract' ? '內嵌英文字幕 → 翻譯' : '無文字字幕軌 → 語音辨識 + 翻譯';
   const parts = [route, runtimeLabel(c), resumedLabel(c)].filter(Boolean);
@@ -364,23 +419,22 @@ function CandidateRow({
             「未匹配」 is none of those, and a grey badge half a row away does
             not read as being ABOUT the title. */}
         <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-2">
-          <span
-            className="truncate text-sm font-semibold text-[var(--text-primary)] @xl:text-base"
-            // sub-6-10b AC #3: an unmatched row shows the parser's cleaned-up
-            // guess, so hovering must still reveal what the file is really
-            // called — that is the string the user will look for on disk.
-            title={unmatched ? candidate.title : undefined}
-          >
+          <span className="truncate text-sm font-semibold text-[var(--text-primary)] @xl:text-base">
             {displayTitleOf(candidate)}
           </span>
           {unmatched && (
-            <span
-              data-testid={`consent-row-unmatched-${candidate.mediaId}`}
-              title="TMDb 沒有比對到，片名由檔名解析"
-              className="shrink-0 rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
+            // sub-6-10b AC #3: an unmatched row shows the parser's cleaned-up
+            // guess, so the real file name — the string the user will look
+            // for on disk — lives in this badge's tooltip, reachable by
+            // mouse, keyboard and a tap (disc-2026-10-text-label-hidden-reason).
+            <ReasonBadge
+              testId={`consent-row-unmatched-${candidate.mediaId}`}
+              reason="TMDb 沒有比對到，片名由檔名解析"
+              detail={`檔名：${candidate.title}`}
+              className="shrink-0 bg-[var(--bg-tertiary)] text-[var(--text-muted)]"
             >
               未匹配
-            </span>
+            </ReasonBadge>
           )}
         </span>
         {/* Subtitle: one truncated line beside the cluster on desktop; below
@@ -398,22 +452,22 @@ function CandidateRow({
           className="col-start-2 row-start-1 flex shrink-0 items-center gap-2 @xl:row-end-3"
         >
           {!writable && (
-            <span
-              data-testid={`consent-row-unwritable-${candidate.mediaId}`}
-              title={blockerLabel(candidate)}
-              className="rounded-full bg-[var(--error-tint)] px-2 py-0.5 text-xs text-[var(--error-text)]"
+            <ReasonBadge
+              testId={`consent-row-unwritable-${candidate.mediaId}`}
+              reason={blockerLabel(candidate)}
+              className="bg-[var(--error-tint)] text-[var(--error-text)]"
             >
               資料夾無法寫入
-            </span>
+            </ReasonBadge>
           )}
           {unpriced && (
-            <span
-              data-testid={`consent-row-unpriced-${candidate.mediaId}`}
-              title="後端沒有給這一部的估價，所以不能選。"
-              className="rounded-full bg-[var(--error-tint)] px-2 py-0.5 text-xs text-[var(--error-text)]"
+            <ReasonBadge
+              testId={`consent-row-unpriced-${candidate.mediaId}`}
+              reason="後端沒有給這一部的估價，所以不能選。"
+              className="bg-[var(--error-tint)] text-[var(--error-text)]"
             >
               無法估價
-            </span>
+            </ReasonBadge>
           )}
           {/* Neutral: 抽取／語音辨識 is which road this row takes — a property,
               like H.265 on a TechBadge — not something that happened. */}
