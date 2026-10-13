@@ -18,6 +18,7 @@ import { useRef } from 'react';
 import { useIsPhone } from '../../hooks/useIsPhone';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import { cn } from '../../lib/utils';
+import { Tooltip } from '../ui/Tooltip';
 
 const statusConfig: Record<
   BackupStatus,
@@ -107,50 +108,54 @@ function BackupActions({
           running one is not a backup yet. It can still be deleted. */}
       {backup.status === 'completed' && (
         <>
-          <button
-            type="button"
-            onClick={() => onRestore(backup.id)}
-            disabled={isRestoring}
-            className={btn}
-            data-testid={`restore-btn-${backup.id}`}
-            aria-label={`還原 ${backup.filename}`}
-            title="還原"
-          >
-            <RotateCcw className="size-3.5" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onVerify(backup.id)}
-            disabled={isVerifying}
-            className={btn}
-            data-testid={`verify-btn-${backup.id}`}
-            aria-label={`驗證完整性 ${backup.filename}`}
-            title="驗證完整性"
-          >
-            <ShieldCheck className="size-3.5" aria-hidden="true" />
-          </button>
-          <a
-            href={backupService.getDownloadUrl(backup.id)}
-            className={btn}
-            data-testid={`download-btn-${backup.id}`}
-            aria-label={`下載 ${backup.filename}`}
-            title="下載"
-          >
-            <Download className="size-3.5" aria-hidden="true" />
-          </a>
+          <Tooltip content="還原" side="top">
+            <button
+              type="button"
+              onClick={() => onRestore(backup.id)}
+              disabled={isRestoring}
+              className={btn}
+              data-testid={`restore-btn-${backup.id}`}
+              aria-label={`還原 ${backup.filename}`}
+            >
+              <RotateCcw className="size-3.5" aria-hidden="true" />
+            </button>
+          </Tooltip>
+          <Tooltip content="驗證完整性" side="top">
+            <button
+              type="button"
+              onClick={() => onVerify(backup.id)}
+              disabled={isVerifying}
+              className={btn}
+              data-testid={`verify-btn-${backup.id}`}
+              aria-label={`驗證完整性 ${backup.filename}`}
+            >
+              <ShieldCheck className="size-3.5" aria-hidden="true" />
+            </button>
+          </Tooltip>
+          <Tooltip content="下載" side="top">
+            <a
+              href={backupService.getDownloadUrl(backup.id)}
+              className={btn}
+              data-testid={`download-btn-${backup.id}`}
+              aria-label={`下載 ${backup.filename}`}
+            >
+              <Download className="size-3.5" aria-hidden="true" />
+            </a>
+          </Tooltip>
         </>
       )}
-      <button
-        type="button"
-        onClick={() => onDelete(backup.id)}
-        disabled={isDeleting}
-        className={cn(btn, 'text-[var(--error-text)] hover:text-[var(--error-text)]')}
-        data-testid={`delete-btn-${backup.id}`}
-        aria-label={`刪除 ${backup.filename}`}
-        title="刪除"
-      >
-        <Trash2 className="size-3.5" aria-hidden="true" />
-      </button>
+      <Tooltip content="刪除" side="top">
+        <button
+          type="button"
+          onClick={() => onDelete(backup.id)}
+          disabled={isDeleting}
+          className={cn(btn, 'text-[var(--error-text)] hover:text-[var(--error-text)]')}
+          data-testid={`delete-btn-${backup.id}`}
+          aria-label={`刪除 ${backup.filename}`}
+        >
+          <Trash2 className="size-3.5" aria-hidden="true" />
+        </button>
+      </Tooltip>
     </div>
   );
 }

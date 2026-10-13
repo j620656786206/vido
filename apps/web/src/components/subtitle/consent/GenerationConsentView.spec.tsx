@@ -1148,7 +1148,7 @@ describe('GenerationConsentView — a quote with a hole in it (dsr-6e-1 AC #2)',
     expect(shell.className.split(/\s+/)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
     // dsr-6f-3: 44px phone title row ⇒ the ✕ sits at top-4 (16 + 22 − 22).
     const tokens = (el: Element) => el.className.split(/\s+/);
-    expect(tokens(screen.getByText('Close').closest('button')!)).toEqual(
+    expect(tokens(screen.getByRole('button', { name: '關閉視窗' }))).toEqual(
       expect.arrayContaining(['max-sm:h-11', 'max-sm:top-4'])
     );
     expect(tokens(screen.getByTestId('consent-title-bar'))).toEqual(

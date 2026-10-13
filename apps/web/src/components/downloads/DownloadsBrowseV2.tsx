@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Tooltip } from '../ui/Tooltip';
 import { useDownloads, useDownloadCounts, usePageVisibility } from '../../hooks/useDownloads';
 import { useDownloadActions } from '../../hooks/useDownloadActions';
 import { useDownloadProgress } from '../../hooks/useDownloadProgress';
@@ -573,22 +574,23 @@ export function DownloadsBrowseV2() {
               {VIEWS.map((v) => {
                 const isActive = view === v.value;
                 return (
-                  <button
-                    key={v.value}
-                    type="button"
-                    aria-label={v.label}
-                    title={v.label}
-                    aria-pressed={isActive}
-                    onClick={() => handleViewChange(v.value)}
-                    className={cn(
-                      'flex h-[38px] w-10 items-center justify-center rounded-[var(--radius-md)] transition-colors',
-                      isActive
-                        ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)]'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                    )}
-                  >
-                    <v.icon className="size-4" aria-hidden="true" />
-                  </button>
+                  // Icon-only: the name shows on hover / focus (J11-D rule 6).
+                  <Tooltip key={v.value} content={v.label} side="bottom">
+                    <button
+                      type="button"
+                      aria-label={v.label}
+                      aria-pressed={isActive}
+                      onClick={() => handleViewChange(v.value)}
+                      className={cn(
+                        'flex h-[38px] w-10 items-center justify-center rounded-[var(--radius-md)] transition-colors',
+                        isActive
+                          ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)]'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                      )}
+                    >
+                      <v.icon className="size-4" aria-hidden="true" />
+                    </button>
+                  </Tooltip>
                 );
               })}
             </div>

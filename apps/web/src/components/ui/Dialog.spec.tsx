@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Dialog, DialogContent, DialogTitle } from './Dialog';
 
 const CLOSE_TODAY =
@@ -15,7 +15,7 @@ function open(props: Partial<React.ComponentProps<typeof DialogContent>> = {}) {
   );
   return {
     content: screen.getByTestId('content'),
-    close: screen.getByText('Close').closest('button') as HTMLElement,
+    close: screen.getByRole('button', { name: '關閉視窗' }),
   };
 }
 
@@ -35,5 +35,25 @@ describe('ui/Dialog — closeClassName (dsr-6f-1)', () => {
     const { content } = open({ closeClassName: 'max-sm:h-11' });
     expect(content.getAttribute('closeclassname')).toBeNull();
     expect(content.getAttribute('closeClassName')).toBeNull();
+  });
+});
+
+// disc-2026-10-icon-only-native-title-audit — the ✕ is icon-only, so its name
+// shows in the shared tooltip (J11-D rule 6), never only in a browser title.
+describe('ui/Dialog — the ✕ names itself', () => {
+  it('is called 關閉視窗, in Chinese, with no title attribute', () => {
+    const { close } = open();
+    expect(screen.getByRole('button', { name: '關閉視窗' })).toBe(close);
+    expect(close.hasAttribute('title')).toBe(false);
+  });
+
+  it('keyboard focus shows the same sentence in the tooltip', async () => {
+    const { close } = open();
+    await act(async () => {
+      fireEvent.focus(close);
+    });
+    const tips = await screen.findAllByText('關閉視窗');
+    // the sr-only name plus the tooltip popup
+    expect(tips.length).toBeGreaterThan(1);
   });
 });

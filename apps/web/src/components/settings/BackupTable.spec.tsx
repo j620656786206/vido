@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { BackupTable, BACKUP_GRID } from './BackupTable';
@@ -303,6 +303,38 @@ describe('BackupTable', () => {
       })
     );
     expect(screen.getByTestId('restore-btn-b1')).toBeInTheDocument();
+  });
+
+  // disc-2026-10-icon-only-native-title-audit — icon-only actions name
+  // themselves in the shared tooltip on keyboard focus, not in a browser title.
+  it('[P1] each icon action shows its name on focus and has no title attribute', async () => {
+    render(
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete: vi.fn(),
+        onVerify: vi.fn(),
+        onRestore: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+        isRestoring: false,
+      })
+    );
+    for (const [id, label] of [
+      ['restore-btn-b1', '還原'],
+      ['verify-btn-b1', '驗證完整性'],
+      ['download-btn-b1', '下載'],
+      ['delete-btn-b1', '刪除'],
+    ] as const) {
+      const el = screen.getByTestId(id);
+      expect(el.hasAttribute('title')).toBe(false);
+      await act(async () => {
+        fireEvent.focus(el);
+      });
+      expect(await screen.findByText(label)).toBeInTheDocument();
+      await act(async () => {
+        fireEvent.blur(el);
+      });
+    }
   });
 
   it('[P1] calls onRestore when restore button is clicked', async () => {

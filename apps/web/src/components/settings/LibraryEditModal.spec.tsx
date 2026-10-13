@@ -469,7 +469,7 @@ describe('LibraryEditModal — dialog behaviour', () => {
     render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
     const dialog = screen.getByRole('dialog');
     const closes = Array.from(dialog.querySelectorAll('button')).filter(
-      (b) => b.getAttribute('aria-label') === '關閉' || b.textContent === 'Close'
+      (b) => b.getAttribute('aria-label') === '關閉' || b.textContent === '關閉視窗'
     );
     expect(
       closes.filter((b) => b.offsetParent !== null || !b.className.includes('hidden'))
