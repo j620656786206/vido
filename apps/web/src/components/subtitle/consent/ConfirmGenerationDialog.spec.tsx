@@ -78,7 +78,7 @@ describe('ConfirmGenerationDialog (F16/F19)', () => {
     const shell = screen.getByTestId('consent-confirm-dialog');
     const t = (el: Element) => el.className.split(/\s+/);
     expect(t(shell)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
-    const close = screen.getByText('Close').closest('button')!;
+    const close = screen.getByRole('button', { name: '關閉視窗' });
     // dsr-6f-3: the phone title row is 44 high (F8-M/F15-M/F16-M sheet-header), so
     // grabber 16 + half of 44 (22) − half of the 44px ✕ (22) = 16 = top-4. It
     // moves with the header: change the row's height and this token changes too.

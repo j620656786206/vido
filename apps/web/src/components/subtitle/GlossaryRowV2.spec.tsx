@@ -419,7 +419,7 @@ describe('GlossaryRowV2 — two-line row on a phone (dsr-6f-2, F6-M-v2 buepS)', 
     expect(t).not.toContain('rounded-[var(--radius-lg)]');
 
     expect(tokens(screen.getByTestId('glossary-delete-sheet-grabber'))).toContain('sm:hidden');
-    const close = screen.getByText('Close').closest('button')!;
+    const close = screen.getByRole('button', { name: '關閉視窗' });
     expect(tokens(close)).toEqual(
       expect.arrayContaining(['max-sm:h-11', 'max-sm:w-11', 'max-sm:top-4'])
     );
@@ -450,6 +450,27 @@ describe('GlossaryRowV2 — season drawers (disc-2026-10-glossary-season-scope-b
       />
     );
     expect(screen.getByTestId('glossary-season-j1')).toHaveTextContent('S1');
+  });
+
+  // disc-2026-10-icon-only-native-title-audit — 「S1」 does not say what it
+  // means, so the sentence is in the shared tooltip, not a browser title.
+  it('the S1 badge explains itself on a tap and by name, with no title attribute', async () => {
+    render(
+      <GlossaryRowV2
+        term={drawer}
+        onConfirm={() => {}}
+        onEdit={async () => {}}
+        onDelete={() => {}}
+      />
+    );
+    const badge = screen.getByRole('button', { name: '第 1 季官方字幕的寫法' });
+    expect(badge).toBe(screen.getByTestId('glossary-season-j1'));
+    expect(badge.hasAttribute('title')).toBe(false);
+    await act(async () => {
+      fireEvent.pointerDown(badge, { pointerType: 'touch' });
+      fireEvent.click(badge, { detail: 1 });
+    });
+    expect(await screen.findByText('第 1 季官方字幕的寫法')).toBeInTheDocument();
   });
 
   it('explains what deleting a season spelling does, naming the show-wide fallback', async () => {

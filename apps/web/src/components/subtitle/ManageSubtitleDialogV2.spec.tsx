@@ -1445,7 +1445,7 @@ describe('ManageSubtitleDialogV2 — phone sheet (dsr-6f-1)', () => {
     expect(tokens(shell)).toContain('max-sm:data-[state=open]:animate-sheet-enter');
     expect(tokens(shell)).toContain('max-sm:data-[state=closed]:animate-sheet-exit');
     expect(screen.getByTestId('manage-sheet-grabber')).toBeInTheDocument();
-    const close = screen.getByText('Close').closest('button')!;
+    const close = screen.getByRole('button', { name: '關閉視窗' });
     expect(tokens(close)).toEqual(
       expect.arrayContaining(['max-sm:h-11', 'max-sm:w-11', 'max-sm:top-4'])
     );

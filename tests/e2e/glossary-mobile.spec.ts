@@ -172,7 +172,7 @@ test.describe('名詞對照表 — phone bottom sheet @e2e @glossary-mobile', ()
 
     await expect(page.getByTestId('glossary-sheet-grabber')).toBeVisible();
 
-    const close = panel.getByRole('button', { name: 'Close' });
+    const close = panel.getByRole('button', { name: '關閉視窗' });
     const closeBox = (await close.boundingBox())!;
     expect(closeBox.width).toBeGreaterThanOrEqual(44);
     expect(closeBox.height).toBeGreaterThanOrEqual(44);
@@ -229,7 +229,7 @@ test.describe('名詞對照表 — phone bottom sheet @e2e @glossary-mobile', ()
 
     // AC #5 asked for this to be measured, not eyeballed: the ✕ must clear the
     // title, since this dialog has no title ROW to centre against.
-    const close = confirm.getByRole('button', { name: 'Close' });
+    const close = confirm.getByRole('button', { name: '關閉視窗' });
     const closeBox = (await close.boundingBox())!;
     expect(closeBox.width).toBeGreaterThanOrEqual(44);
     expect(closeBox.height).toBeGreaterThanOrEqual(44);

@@ -125,7 +125,7 @@ test.describe('管理字幕 — phone bottom sheet @e2e @manage-subtitle-mobile'
 
     // No footer on the idle phone sheet: 關閉 is the ✕, and it must be a real target.
     await expect(page.getByTestId('dialog-close')).toBeHidden();
-    const close = (await sheet.getByRole('button', { name: 'Close' }).boundingBox())!;
+    const close = (await sheet.getByRole('button', { name: '關閉視窗' }).boundingBox())!;
     expect(close.width).toBeGreaterThanOrEqual(44);
     expect(close.height).toBeGreaterThanOrEqual(44);
 

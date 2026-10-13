@@ -61,7 +61,7 @@ async function expectFlushSheet(sheet: Locator) {
 async function expectTitleBar(sheet: Locator, bar: Locator) {
   const barBox = (await bar.boundingBox())!;
   expect(Math.round(barBox.height)).toBe(44);
-  const closeBox = (await sheet.getByRole('button', { name: 'Close' }).boundingBox())!;
+  const closeBox = (await sheet.getByRole('button', { name: '關閉視窗' }).boundingBox())!;
   expect(closeBox.width).toBeGreaterThanOrEqual(44);
   expect(closeBox.height).toBeGreaterThanOrEqual(44);
   expect(Math.abs(centreY(closeBox) - centreY(barBox))).toBeLessThan(2);
@@ -207,7 +207,7 @@ test.describe('產生字幕 — phone sheets @e2e @batch-consent-mobile', () => 
     const batchBar = (await page.getByTestId('gen-batch-title-bar').boundingBox())!;
     expect(Math.round(batchBar.height)).toBe(56);
     await expect(page.getByTestId('gen-batch-drag-handle')).toBeHidden();
-    const batchClose = (await batch.getByRole('button', { name: 'Close' }).boundingBox())!;
+    const batchClose = (await batch.getByRole('button', { name: '關閉視窗' }).boundingBox())!;
     expect(batchClose.width).toBeLessThan(44);
 
     await expect(page.getByTestId('gen-batch-cost-line')).toBeVisible();

@@ -3,6 +3,10 @@ import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip } from './Tooltip';
+
+/** The ✕'s name and its tooltip — one sentence for both. */
+const CLOSE_LABEL = '關閉視窗';
 
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
@@ -72,15 +76,22 @@ function DialogContent({
         {...props}
       >
         {children}
-        <DialogPrimitive.Close
-          className={cn(
-            'absolute right-4 top-4 rounded-[var(--radius-sm)] text-[var(--text-muted)] opacity-70 transition-opacity hover:opacity-100 focus:outline-none',
-            closeClassName
-          )}
-        >
-          <X className="size-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
+        {/* An icon-only control, so its name shows on hover and on keyboard
+            focus (J11-D rule 6, disc-2026-10-icon-only-native-title-audit).
+            「關閉視窗」, not 「關閉」: many dialogs also have a footer button
+            called 關閉, and two controls with one name are two a screen
+            reader cannot tell apart. */}
+        <Tooltip content={CLOSE_LABEL} side="bottom">
+          <DialogPrimitive.Close
+            className={cn(
+              'absolute right-4 top-4 rounded-[var(--radius-sm)] text-[var(--text-muted)] opacity-70 transition-opacity hover:opacity-100 focus:outline-none',
+              closeClassName
+            )}
+          >
+            <X className="size-4" aria-hidden="true" />
+            <span className="sr-only">{CLOSE_LABEL}</span>
+          </DialogPrimitive.Close>
+        </Tooltip>
       </DialogPrimitive.Content>
     </DialogPortal>
   );

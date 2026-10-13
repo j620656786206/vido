@@ -83,7 +83,7 @@ describe('RestoreConfirmDialog', () => {
     expect(onConfirm).not.toHaveBeenCalled();
     expect(onCancel).not.toHaveBeenCalled();
     // ✕ could not close it anyway, so it is not offered.
-    expect(screen.getByRole('button', { name: 'Close' }).className).toContain('hidden');
+    expect(screen.getByRole('button', { name: '關閉視窗' }).className).toContain('hidden');
   });
 
   it('shows loading state when restoring', () => {

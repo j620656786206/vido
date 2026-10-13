@@ -250,6 +250,24 @@ describe('DownloadsBrowseV2 — toolbar + states', () => {
     expect(screen.getByText('筆任務', { exact: false })).toHaveTextContent('共 2 筆任務');
     expect(screen.queryByRole('button', { name: '選取' })).toBeNull();
   });
+
+  it('the icon-only view toggle names itself in the tooltip on focus, not a title', async () => {
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+    render(<DownloadsBrowseV2 />);
+    const table = screen.getByRole('button', { name: '表格檢視' });
+    expect(table.hasAttribute('title')).toBe(false);
+    fireEvent.focus(table);
+    expect(await screen.findByText('表格檢視', { selector: ':not(button)' })).toBeInTheDocument();
+  });
 });
 
 /** Whole class tokens — never substrings (`sm:hidden` is inside `max-sm:hidden`). */

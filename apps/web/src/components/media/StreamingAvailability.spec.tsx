@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { StreamingAvailability } from './StreamingAvailability';
 import type { WatchProviderRegion } from '../../types/library';
@@ -26,19 +26,20 @@ describe('StreamingAvailability', () => {
     expect(screen.getByText('租借')).toBeInTheDocument();
     expect(screen.getByText('購買')).toBeInTheDocument();
 
-    // Logo <img> uses providerName as alt (a11y).
-    const netflix = screen.getByAltText('Netflix') as HTMLImageElement;
-    expect(netflix).toBeInTheDocument();
-    expect(netflix.src).toContain('w92/netflix.jpg');
-    expect(screen.getByAltText('Disney Plus')).toBeInTheDocument();
-    expect(screen.getByAltText('Apple TV')).toBeInTheDocument();
+    // Each logo is a button named after its provider (the tooltip trigger);
+    // the image inside is decorative.
+    const netflix = screen.getByRole('button', { name: 'Netflix' });
+    expect(netflix.querySelector('img')!.getAttribute('src')).toContain('w92/netflix.jpg');
+    expect(netflix.querySelector('img')!.getAttribute('alt')).toBe('');
+    expect(screen.getByRole('button', { name: 'Disney Plus' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apple TV' })).toBeInTheDocument();
   });
 
   it('sorts each group by displayPriority (Disney before Netflix)', () => {
     render(<StreamingAvailability region={region} />);
-    const imgs = screen.getAllByRole('img').map((el) => el.getAttribute('alt'));
+    const names = screen.getAllByRole('button').map((el) => el.getAttribute('aria-label'));
     // flatrate group: Disney (priority 0) must precede Netflix (priority 1).
-    expect(imgs.indexOf('Disney Plus')).toBeLessThan(imgs.indexOf('Netflix'));
+    expect(names.indexOf('Disney Plus')).toBeLessThan(names.indexOf('Netflix'));
   });
 
   it('falls back to a name chip when a provider logo is missing', () => {
@@ -91,5 +92,19 @@ describe('StreamingAvailability', () => {
   it('shows the empty-state when region is undefined (never throws)', () => {
     render(<StreamingAvailability region={undefined} />);
     expect(screen.getByTestId('streaming-availability-empty')).toBeInTheDocument();
+  });
+
+  // disc-2026-10-icon-only-native-title-audit — a logo is icon-only, so its
+  // name shows in the shared tooltip (J11-D rule 6), never in a browser title.
+  it('a tap on a logo shows the provider name; there is no title attribute', async () => {
+    render(<StreamingAvailability region={region} />);
+    const netflix = screen.getByRole('button', { name: 'Netflix' });
+    expect(netflix.hasAttribute('title')).toBe(false);
+    expect(netflix.querySelector('[title]')).toBeNull();
+    await act(async () => {
+      fireEvent.pointerDown(netflix, { pointerType: 'touch' });
+      fireEvent.click(netflix, { detail: 1 });
+    });
+    expect(await screen.findByText('Netflix')).toBeInTheDocument();
   });
 });

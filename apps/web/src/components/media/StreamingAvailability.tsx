@@ -1,5 +1,6 @@
 // Design ref: ux-design.pen Screen B8p-D (UH0sk)
 import { getImageUrl } from '../../lib/image';
+import { Tooltip } from '../ui/Tooltip';
 import type { WatchProvider, WatchProviderRegion } from '../../types/library';
 
 export interface StreamingAvailabilityProps {
@@ -42,16 +43,28 @@ function ProviderLogo({ provider }: { provider: WatchProvider }) {
       </span>
     );
   }
+  // A logo says nothing to someone who does not know it, so its name shows in
+  // the shared tooltip — on hover, on Tab, and on a tap (J11-D rules 4 and 6;
+  // disc-2026-10-icon-only-native-title-audit). The trigger is a real button so
+  // a keyboard reaches it; it does nothing else. Its name is the provider.
   return (
-    <img
-      src={url}
-      alt={provider.providerName}
-      title={provider.providerName}
-      width={40}
-      height={40}
-      loading="lazy"
-      className="h-10 w-10 rounded-md object-cover"
-    />
+    <Tooltip content={provider.providerName} side="top" delay={0} openOnPress>
+      <button
+        type="button"
+        aria-label={provider.providerName}
+        data-testid={`provider-logo-${provider.providerId}`}
+        className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+      >
+        <img
+          src={url}
+          alt=""
+          width={40}
+          height={40}
+          loading="lazy"
+          className="h-10 w-10 rounded-md object-cover"
+        />
+      </button>
+    </Tooltip>
   );
 }
 

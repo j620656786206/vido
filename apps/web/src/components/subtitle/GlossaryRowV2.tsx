@@ -14,6 +14,7 @@ import { ArrowRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from '../ui/Dialog';
 import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
 import { cn } from '../../lib/utils';
+import { Tooltip } from '../ui/Tooltip';
 import type { GlossaryTerm, GlossarySource } from '../../services/glossaryService';
 import { isImeComposing } from '../../utils/keyboard';
 
@@ -162,13 +163,19 @@ export function GlossaryRowV2({
           {sourceLabel}
         </span>
         {term.season !== undefined && (
-          <span
-            data-testid={`glossary-season-${term.id}`}
-            title={`第 ${term.season} 季官方字幕的寫法`}
-            className={`${BADGE_SHAPE} bg-[var(--bg-tertiary)] text-[var(--text-secondary)]`}
-          >
-            S{term.season}
-          </span>
+          // 「S2」 alone does not say what it means, so the sentence shows in the
+          // shared tooltip on hover, Tab and tap (J11-D rule 6). A real button
+          // so a keyboard reaches it; it does nothing else.
+          <Tooltip content={`第 ${term.season} 季官方字幕的寫法`} side="top" delay={0} openOnPress>
+            <button
+              type="button"
+              data-testid={`glossary-season-${term.id}`}
+              aria-label={`第 ${term.season} 季官方字幕的寫法`}
+              className={`${BADGE_SHAPE} bg-[var(--bg-tertiary)] text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]`}
+            >
+              S{term.season}
+            </button>
+          </Tooltip>
         )}
 
         {!term.confirmed && (

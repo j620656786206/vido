@@ -130,7 +130,7 @@ export function MetadataEditorDialog({
             opener.focus();
           }
         }}
-        // ui/Dialog's own ✕ says "Close" and is 16px; the header draws a 44px 關閉.
+        // ui/Dialog's own ✕ says 關閉視窗 and is 16px; the header draws a 44px 關閉.
         closeClassName="hidden"
         className={cn(
           'flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0',
