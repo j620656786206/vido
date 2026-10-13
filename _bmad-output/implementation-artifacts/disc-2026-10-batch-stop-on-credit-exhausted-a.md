@@ -1,6 +1,6 @@
 # Disc：AI 帳號沒錢時，批次整批停下來（a：後端）
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-09-asr-quota-429-treated-as-transient` 的 Discovery Triage／CR L1。2026-10-13 Alexyu 拍板：「沒錢就整批停」。
 
