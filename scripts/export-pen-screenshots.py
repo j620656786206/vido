@@ -384,6 +384,8 @@ SCREENS = {
     "gWFcx": ("flow-f-subtitle-v2", "f8c-d-v2"),
     "LAeqW": ("flow-f-subtitle-v2", "f8c-m-v2"),
     "JMqPg": ("flow-f-subtitle-v2", "f9-d-v2"),
+    # disc-2026-10-batch-stop-on-credit-exhausted-b — batch stopped: AI account has no credit
+    "YHnnC": ("flow-f-subtitle-v2", "f9b-d-v2"),
     "olDlj": ("flow-f-subtitle-v2", "f10-d-v2"),
     "l8FsB": ("flow-f-subtitle-v2", "f11-d-v2"),
     # ux3-ai-1 — generation workspace (F11 validated spec: running / mobile / budget-ceiling / states)
