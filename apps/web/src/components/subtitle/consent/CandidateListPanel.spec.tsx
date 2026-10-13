@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { act, render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { CandidateListPanel, type CandidateListPanelProps } from './CandidateListPanel';
 import { applyRouteFilter, applySearch, computeTotals } from './consentSelection';
 import type { GenerationCandidate } from '../../../services/subtitleService';
@@ -463,7 +463,9 @@ describe('sub-6-1 unwritable rows', () => {
     expect(box).toBeDisabled();
     const badge = screen.getByTestId(`consent-row-unwritable-${RO}`);
     expect(badge).toHaveTextContent('資料夾無法寫入');
-    expect(badge).toHaveAttribute('title', '資料夾無法寫入：ro-folder');
+    // The reason is in the badge's name and tooltip, not a browser title.
+    expect(badge).toHaveAccessibleName('資料夾無法寫入：ro-folder');
+    expect(badge.hasAttribute('title')).toBe(false);
     expect(screen.getByTestId('consent-unwritable-count')).toHaveTextContent('1 部資料夾無法寫入');
   });
 
@@ -628,7 +630,7 @@ describe('CandidateListPanel — row identity (sub-6-10b)', () => {
     expect(screen.getByTestId(`consent-row-usd-${M}`).textContent).toBe('$0.05');
   });
 
-  it('AC #3 — an unmatched row is marked, titled by display_title, and keeps the filename on hover', () => {
+  it('AC #3 — an unmatched row is marked, titled by display_title, and keeps the filename in its tooltip', async () => {
     renderOne({
       title: '[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL',
       displayTitle: 'Predator Badlands (2025)',
@@ -640,13 +642,20 @@ describe('CandidateListPanel — row identity (sub-6-10b)', () => {
 
     const badge = screen.getByTestId(`consent-row-unmatched-${M}`);
     expect(badge.textContent).toBe('未匹配');
-    expect(badge).toHaveAttribute('title', 'TMDb 沒有比對到，片名由檔名解析');
-
-    // The raw filename is what the user will look for on disk — keep it reachable.
-    expect(screen.getByText('Predator Badlands (2025)')).toHaveAttribute(
-      'title',
-      '[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL'
+    // The raw filename is what the user will look for on disk — keep it
+    // reachable: in the badge's tooltip (tap / hover / Tab) and its name.
+    expect(badge).toHaveAccessibleName(
+      '未匹配：TMDb 沒有比對到，片名由檔名解析，檔名：[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL'
     );
+    expect(badge.hasAttribute('title')).toBe(false);
+    expect(screen.getByText('Predator Badlands (2025)').hasAttribute('title')).toBe(false);
+    await act(async () => {
+      fireEvent.pointerDown(badge, { pointerType: 'touch' });
+      fireEvent.click(badge, { detail: 1 });
+    });
+    expect(
+      await screen.findByText('檔名：[bitsearch.to] Predator.Badlands.2025.2160p.WEB-DL')
+    ).toBeInTheDocument();
   });
 
   it('Sally 裁定 2 — 未匹配 sits beside the title it doubts, and survives a long title', () => {
@@ -1367,7 +1376,8 @@ describe('dsr-6e-1 AC #2 — a row without a quote (P1)', () => {
     const unpricedBadge = screen.getByTestId(`consent-row-unpriced-${NP}`);
     expect(unpricedBadge).toHaveTextContent('無法估價');
     expect(unpricedBadge.className).toContain('bg-[var(--error-tint)]');
-    expect(unpricedBadge).toHaveAttribute('title', '後端沒有給這一部的估價，所以不能選。');
+    expect(unpricedBadge).toHaveAccessibleName('無法估價：後端沒有給這一部的估價，所以不能選。');
+    expect(unpricedBadge.hasAttribute('title')).toBe(false);
     expect(row.querySelector('input[type="checkbox"]')).toBeDisabled();
     expect(screen.queryByTestId(`consent-row-usd-${NP}`)).toBeNull();
     expect(screen.getByTestId('consent-unpriced-count')).toHaveTextContent('1 部無法估價');
