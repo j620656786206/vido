@@ -692,3 +692,5 @@ Linux baselines incrementally bootstrapped 2026-10-13 via runner ubuntu-24.04 (I
 Linux baselines incrementally bootstrapped 2026-10-13 via runner ubuntu-24.04 (ImageVersion: 20261004.327.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/resumed/default-visual-linux.png
 
 Linux baselines incrementally bootstrapped 2026-10-13 via runner ubuntu-24.04 (ImageVersion: 20261004.327.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/settings-media-library-manager/focus-visual-linux.png
+
+Linux baselines incrementally bootstrapped 2026-10-13 via runner ubuntu-24.04 (ImageVersion: 20261004.327.1) — 3 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/f15-collapsed/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/f15-search-hit/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/resumed/default-visual-linux.png

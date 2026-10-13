@@ -320,17 +320,32 @@ interface VirtualRowAttrs {
   index?: number;
 }
 
+/**
+ * One indent step per header above a row (disc-2026-10-consent-tree-indent,
+ * F15-SPEC-TREE ywpxh): 24px a level on a desktop-width list, 12px below 36rem
+ * where every pixel of the row is already spoken for. Measured on the LIST
+ * (@container), like the rest of the row's layout.
+ */
+const INDENT: Record<0 | 1 | 2, string> = {
+  0: '',
+  1: 'ml-3 @xl:ml-6',
+  2: 'ml-6 @xl:ml-12',
+};
+
 function CandidateRow({
   candidate,
   checked,
   onToggle,
   prices,
   paused,
+  depth = 0,
   rowRef,
   index,
 }: {
   candidate: GenerationCandidate;
   checked: boolean;
+  /** Headers above this row (ConsentCandidateRow.depth) — one indent step each. */
+  depth?: 0 | 1 | 2;
   onToggle: (mediaId: string) => void;
   prices?: ModelPrices;
   /**
@@ -366,6 +381,7 @@ function CandidateRow({
       data-paused={paused ? 'true' : undefined}
       className={cn(
         'flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2.5',
+        INDENT[depth],
         (!writable || unpriced) && 'opacity-70',
         paused && 'opacity-60'
       )}
@@ -605,7 +621,7 @@ function GroupHeaderRow({
       className={cn(
         'flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2',
         season
-          ? 'ml-6 min-h-[40px] bg-[var(--bg-tertiary)]/60'
+          ? cn(INDENT[1], 'min-h-[40px] bg-[var(--bg-tertiary)]/60')
           : 'min-h-[44px] bg-[var(--bg-tertiary)]'
       )}
     >
@@ -1159,6 +1175,7 @@ export function CandidateListPanel({
                   onToggle={onToggle}
                   prices={prices}
                   paused={showCut && totals.pausedIds.has(row.candidate.mediaId)}
+                  depth={row.depth}
                   rowRef={virtualized ? virtualizer.measureElement : undefined}
                   index={virtualized ? index : undefined}
                 />
