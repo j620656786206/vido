@@ -29,7 +29,13 @@ type Options struct {
 	Judge      ai.TextCompleter // nil = rules only (every unfailed cue scores 1)
 	JudgeModel string
 
-	ModelID         string
+	ModelID string
+	// SampleVersion stamps the report: SampleVersion when the translator was
+	// handed the sample's name glossary, SampleVersionNoGlossary when it was
+	// not. "" = SampleVersion (the sub-7-8a default); every caller that sends
+	// no glossary — cmd/grade --no-glossary, the app's 20-cue preview — must
+	// say so explicitly.
+	SampleVersion   string
 	PromptVersion   string
 	LexiconVersion  string
 	GlossaryVersion string
@@ -150,7 +156,7 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 	}
 	started := now()
 	rep := Report{
-		ModelID: opts.ModelID, SampleVersion: SampleVersion,
+		ModelID: opts.ModelID, SampleVersion: sampleVersion(opts.SampleVersion),
 		PromptVersion: opts.PromptVersion, LexiconVersion: opts.LexiconVersion, GlossaryVersion: opts.GlossaryVersion,
 		JudgeModel: opts.JudgeModel, JudgeVersion: JudgeVersion, JudgeNote: JudgeNote,
 		Cues: len(opts.Cues), RuleFailsByReason: map[string]int{},
@@ -402,4 +408,11 @@ func RejudgeSecondary(ctx context.Context, judge ai.TextCompleter, rep *Report, 
 		}
 	}
 	return scored, lastErr
+}
+
+func sampleVersion(v string) string {
+	if v == "" {
+		return SampleVersion
+	}
+	return v
 }

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample_version": "golden-v1",
+  "sample_version": "golden-v2",
   "ratings": [
     {
       "model_id": "claude-haiku-4-5",

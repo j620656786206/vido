@@ -322,6 +322,9 @@ func (s *Service) realRun(ctx context.Context, model string, cues []eval.Cue) (e
 		Cues: cues, Translate: translate, Finalize: finalize,
 		Judge: judge, JudgeModel: s.judgeModel,
 		ModelID: model, PromptVersion: prompts.PromptVersionFor(level), LexiconVersion: prompts.LexiconVersion(),
-		Spent: budget.SpentUSD, Now: s.now,
+		// The 20-cue preview sends no name glossary, so it is the v1 exam —
+		// not comparable to a golden-v2 rating (golden-v2-exam-with-name-glossary).
+		SampleVersion: eval.SampleVersionNoGlossary,
+		Spent:         budget.SpentUSD, Now: s.now,
 	})
 }

@@ -1,6 +1,6 @@
 # Story golden-v2-exam-with-name-glossary: 200 句考卷附上角色名對照表，考法跟正式版一樣
 
-Status: ready-for-dev
+Status: done
 
 <!-- SM Bob create-story 2026-10-14。來源：spike-local-translation-golden-eval 的發現（disc-2026-10-golden-name-rule-calibration）。
      Alexyu 2026-10-14 在兩個做法中選 A：「考試時附上角色名對照表，跟正式版一樣」，不選 B「放寬人名規則」。
@@ -47,11 +47,11 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 從 `names` 建對照表並送進翻譯（AC: #1, #2）**
-- [ ] **Task 2 — 考卷版本 v2、`--no-glossary`、README（AC: #3, #4）**
-- [ ] **Task 3 — native `hymt` 術語模板（AC: #5）**
-- [ ] **Task 4 — 測試（AC: #7）**
-- [ ] **Task 5 — 重考 Sonnet 與 Haiku，記錄結果（AC: #6）**
+- [x] **Task 1 — 從 `names` 建對照表並送進翻譯（AC: #1, #2）**
+- [x] **Task 2 — 考卷版本 v2、`--no-glossary`、README（AC: #3, #4）**
+- [x] **Task 3 — native `hymt` 術語模板（AC: #5）**
+- [x] **Task 4 — 測試（AC: #7）**
+- [x] **Task 5 — 重考 Sonnet 與 Haiku，記錄結果（AC: #6）**
 
 （後端 4、維運 1、前端 0 —— 不觸發拆分。）
 
@@ -98,14 +98,61 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（claude-opus-5-5）；code review 由 Fable 5.1（跨模型）負責。
+
 ### Debug Log References
+
+- 重考報告：`eval/golden-v2-2026-10/claude-sonnet-5.json`、`claude-haiku-4-5.json`（`--also-judge simplified_leak,name_mismatch --trace --budget-usd 0.80`）。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- **重考結果（AC #6）**：
+
+| 模型 | 考卷 | 等級 | 翻壞 | 翻得自然 | 人名對不上 | 評審費 |
+|---|---|---|---|---|---|---|
+| claude-sonnet-5 | golden-v1（沒有對照表，10/13） | B | 19.5% | 76.0% | 38 句 | US$0.59 |
+| **claude-sonnet-5** | **golden-v2（附對照表）** | **A** | **1.5%** | **90.0%** | 1 句 | US$0.53 |
+| **claude-haiku-4-5** | **golden-v2（附對照表）** | **A** | **1.0%** | **87.5%** | 1 句 | US$0.34 |
+
+  - 附上對照表之後，人名失敗從 38 句降到 1 句。Sonnet 從 B 變成 A，跟 eval-1 盲測的結論（Sonnet A）一致了。
+  - **Haiku 在這份考卷上跟 Sonnet 差不多**（翻得自然的比例 87.5% 對 90.0%）。但 eval-1 在 9 部片、10,304 句的盲測裡，兩者差很多（71.8% 對 89.6%）。200 句考卷可能太簡單，分不出兩個模型的差別；也可能是對照表幫 Haiku 補掉了很多錯。**只憑這一次，不能說 Haiku 跟 Sonnet 一樣好**，也不改預設模型。
+  - 照 AC #6，這兩份都沒有合併進 `model_ratings.json`（等 #775）。表頭的 `sample_version` 改成 `golden-v2`。
+- **AC #1**：對照表從**整份考卷**建出來（`--limit` 之前），就像一部片的詞彙表涵蓋所有集數。每一批只送它所屬來源的人名（`eval.GlossaryFor`）。
+- **AC #5**：Hy-MT2 用官方術語模板，只列這一句和它的上下文裡真的出現的人名（`eval.TermsIn`，用整個英文單字比對，`Ram` 不會比對到 `Rama`）。官方沒有「術語＋背景」的合併模板，所以有人名時就用術語模板，不再帶背景。TranslateGemma 的格式放不進對照表，所以一律標成 `golden-v1`，`glossary_version` 留空。
+
+### Code Review（2026-10-14，Fable 5.1 跨模型）
+
+2 MEDIUM、4 LOW，全部修掉：
+
+- **MEDIUM：App 裡的「試跑 20 句」沒有送對照表，報告卻會被預設標成 `golden-v2`。** 現在 `internal/preview/service.go` 會明確標成 `eval.SampleVersionNoGlossary`。`Options.SampleVersion` 的預設值保留，沒有改成必填，因為改成必填的話，sub-7-8a 原本的測試都要跟著改。
+- **MEDIUM：Hy-MT2 用自己的格式時，只要上下文提到人名，就會改用術語模板、丟掉背景，還列出這一句根本沒有的名字。** 現在只看**這一句自己**有沒有人名：有就用術語模板，沒有就照原本的背景模板。
+  - 測試補上第 3 句（tos-03，沒有人名）的斷言。
+  - 這跟 AC #5 寫的「這一句和它的上下文」不一樣。原因是模型卡沒有「術語＋背景」的合併模板，這樣才不會讓大部分句子失去上下文。這個改動只影響本機模型的評分，Sonnet 和 Haiku 的重考不受影響。
+- **LOW**：
+  - TranslateGemma 用自己的格式時，報告的 `judge_note` 會註明「格式沒有放對照表的位置，一律以 golden-v1 計」。
+  - 自訂 `--sample` 如果沒有任何人名，對照表是空的、什麼都沒送，所以標成 `golden-v1`。
+  - `TermsIn` 改成看得懂非英文字母、不分大小寫，例如「José,」「THOM!」都比對得到，「Thomas」裡的 Thom 不會被比對到。
+  - Model Grade workflow 的 PR 說明原本寫死 `golden-v1`，改成從報告讀 `sample_version`。
 
 ### Discovery Triage
 
-- （dev 填）
+| 發現 | Lane | 條目 |
+|---|---|---|
+| 200 句考卷上 Haiku 跟 Sonnet 幾乎一樣，跟 eval-1 盲測的差距不符；考卷可能分不出模型之間的差別 | ③ | `disc-2026-10-golden-v2-discrimination` |
 
 ### File List
+
+- `apps/api/internal/eval/glossary.go`（新）
+- `apps/api/internal/eval/golden.go`（改：`SampleVersion` = `golden-v2`、新增 `SampleVersionNoGlossary`）
+- `apps/api/internal/eval/golden_test.go`（改，只新增案例）
+- `apps/api/internal/eval/run.go`（改：`Options.SampleVersion`）
+- `apps/api/internal/eval/golden/README.md`（改：新增「v2 的考法」一節）
+- `apps/api/cmd/grade/main.go`（改：對照表、`--no-glossary`、`--rejudge` 兩個版本都收）
+- `apps/api/cmd/grade/native.go`（改：Hy-MT2 術語模板）
+- `apps/api/cmd/grade/main_test.go`（改：新增案例；`TestRun_LocalNativeStyle…` 加上 `--no-glossary`，讓它繼續驗證 v1 的模板）
+- `apps/api/internal/ai/model_ratings.json`（改：表頭 `sample_version`）
+- `apps/api/internal/preview/service.go`（改：試跑 20 句明確標 `golden-v1`）
+- `.github/workflows/model-grade.yml`（改：PR 說明讀報告的 `sample_version`）
+- `eval/golden-v2-2026-10/*.json`（新）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`（改）

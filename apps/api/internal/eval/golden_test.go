@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -87,5 +88,60 @@ func TestParseJSONL_ReportsLine(t *testing.T) {
 	_, err := ParseJSONL([]byte("{\"id\":\"a\"}\n\nnot json\n"))
 	if err == nil || !strings.Contains(err.Error(), "line 3") {
 		t.Fatalf("want line-3 error, got %v", err)
+	}
+}
+
+func TestNameGlossaries(t *testing.T) {
+	cues, err := Golden()
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := NameGlossaries(cues)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(g) != 3 {
+		t.Fatalf("one glossary per source, got %d", len(g))
+	}
+	want := []NameTerm{{"Barley", "貝里"}, {"Celia", "希莉亞"}, {"Thom", "湯姆"}}
+	if fmt.Sprint(g["tos"]) != fmt.Sprint(want) {
+		t.Fatalf("tos glossary: %v", g["tos"])
+	}
+	if got := GlossaryFor(g, cues[:2]); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("a tos batch carries the tos glossary only: %v", got)
+	}
+	mixed := []Cue{cues[0], cues[len(cues)-1]}
+	if got := GlossaryFor(g, mixed); len(got) != len(g["tos"])+len(g[cues[len(cues)-1].Source]) {
+		t.Fatalf("a batch straddling two sources gets both glossaries: %v", got)
+	}
+	if n := len(AllTerms(g)); n != len(g["tos"])+len(g["sita"])+len(g["trap"]) {
+		t.Fatalf("AllTerms: %d", n)
+	}
+}
+
+func TestNameGlossaries_FirstRenderingWinsAndConflictsFail(t *testing.T) {
+	ok := []Cue{{ID: "a", Source: "s", Names: map[string][]string{"Thom": {"湯姆", "湯瑪斯"}}}}
+	g, err := NameGlossaries(ok)
+	if err != nil || g["s"][0].Target != "湯姆" {
+		t.Fatalf("first rendering is the fixed one: %v %v", g, err)
+	}
+	bad := append(ok, Cue{ID: "b", Source: "s", Names: map[string][]string{"Thom": {"托姆"}}})
+	if _, err := NameGlossaries(bad); err == nil {
+		t.Fatal("two cues of one source disagreeing on a name is a sample bug")
+	}
+}
+
+func TestTermsIn_WholeWordsOnly(t *testing.T) {
+	terms := []NameTerm{{"Ram", "羅摩"}, {"Rama", "羅摩"}, {"Sita", "西妲"}}
+	got := TermsIn(terms, "Rama is here.", "Nothing")
+	if len(got) != 1 || got[0].Source != "Rama" {
+		t.Fatalf("Ram must not match inside Rama: %v", got)
+	}
+	accented := []NameTerm{{"José", "荷西"}, {"Thom", "湯姆"}}
+	if got := TermsIn(accented, "Hello José, hi", "THOM!"); len(got) != 2 {
+		t.Fatalf("non-ASCII names and shouted names still match: %v", got)
+	}
+	if got := TermsIn(accented, "Thomas came", "Josélito"); len(got) != 0 {
+		t.Fatalf("a name inside a longer word must not match: %v", got)
 	}
 }

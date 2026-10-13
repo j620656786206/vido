@@ -65,6 +65,7 @@ type config struct {
 	batchSize      int
 	nativeTemplate string
 	alsoJudge      string
+	noGlossary     bool
 	// rejudge mode: repair a traced report's failed second-pass judge batches.
 	rejudgePath string
 	// merge mode: fold a report into model_ratings.json instead of grading.
@@ -144,7 +145,8 @@ func parseFlags(args []string) (config, error) {
 	var cfg config
 	fs := flag.NewFlagSet("grade", flag.ContinueOnError)
 	fs.StringVar(&cfg.model, "model", "", "model id to grade (one of ai.Catalog(), e.g. claude-haiku-4-5)")
-	fs.StringVar(&cfg.samplePath, "sample", "", "golden sample JSONL (default: the embedded golden-v1)")
+	fs.StringVar(&cfg.samplePath, "sample", "", "golden sample JSONL (default: the embedded sample)")
+	fs.BoolVar(&cfg.noGlossary, "no-glossary", false, "do not hand the translator the sample's name glossary (the golden-v1 exam; never mergeable)")
 	fs.IntVar(&cfg.limit, "limit", 0, "grade only the first N cues (0 = all)")
 	fs.Float64Var(&cfg.budgetUSD, "budget-usd", 0.50, "hard USD ceiling for translation + judge together")
 	fs.StringVar(&cfg.judgeModel, "judge-model", eval.DefaultJudgeModel, "fixed judge model")
@@ -233,7 +235,7 @@ func parseLocalFlags(cfg config) (config, error) {
 		if cfg.nativeTemplate == "" {
 			cfg.nativeTemplate = guessNativeTemplate(cfg.openaiModel)
 		}
-		if _, err := nativePrompt(cfg.nativeTemplate, "", nil); err != nil {
+		if _, err := nativePrompt(cfg.nativeTemplate, "", nil, nil); err != nil {
 			return cfg, fmt.Errorf("--native-template: %w", err)
 		}
 	}
@@ -251,10 +253,24 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 	if err != nil {
 		return eval.Report{}, err
 	}
+	// The glossary is built from the WHOLE sample, like a show's glossary
+	// covers every episode, before --limit trims what gets translated.
+	var glossaries map[string][]eval.NameTerm
+	if !cfg.noGlossary {
+		if glossaries, err = eval.NameGlossaries(cues); err != nil {
+			return eval.Report{}, err
+		}
+	}
 	if cfg.limit > 0 && cfg.limit < len(cues) {
 		cues = cues[:cfg.limit]
 	}
 	level, _ := prompts.ParseLocalizationLevel(cfg.level)
+	// TranslateGemma's published template has no slot for a glossary, so a
+	// native run of it is the no-glossary exam whatever the flag says.
+	// A custom --sample with no `names` builds an empty glossary: nothing is
+	// sent, so it is the no-glossary exam too.
+	noSlot := cfg.promptStyle == promptStyleNative && cfg.nativeTemplate == nativeTranslateGemma
+	sendsGlossary := len(eval.AllTerms(glossaries)) > 0 && !noSlot
 
 	budget := ai.NewBudget(cfg.budgetUSD)
 	ctx = ai.WithBudget(ctx, budget)
@@ -286,7 +302,11 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 			for i, c := range chunk {
 				blocks[i] = services.TranslationBlock{Index: i + 1, Start: c.Start, End: c.End, Text: c.Text}
 			}
-			out, _, err := translator.TranslateWithGlossary(ctx, blocks, nil, nil, services.WithLocalizationLevel(level), batchOpt)
+			var pairs []services.GlossaryPair
+			if sendsGlossary {
+				pairs = glossaryPairs(eval.GlossaryFor(glossaries, chunk))
+			}
+			out, _, err := translator.TranslateWithGlossary(ctx, blocks, pairs, nil, services.WithLocalizationLevel(level), batchOpt)
 			if err != nil {
 				fmt.Fprintln(d.stderr)
 				return got, err
@@ -304,7 +324,11 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 		return got, nil
 	}
 	if cfg.promptStyle == promptStyleNative {
-		translate = nativeTranslator(underTest, cfg.nativeTemplate, d.stderr)
+		var native map[string][]eval.NameTerm
+		if sendsGlossary {
+			native = glossaries
+		}
+		translate = nativeTranslator(underTest, cfg.nativeTemplate, native, d.stderr)
 	}
 
 	var judge ai.TextCompleter
@@ -315,9 +339,13 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 		Cues: cues, Translate: translate, Finalize: d.newFinalizer(cfg.noOpenCC),
 		Judge: judge, JudgeModel: cfg.judgeModel,
 		ModelID: cfg.model, PromptVersion: prompts.PromptVersionFor(level), LexiconVersion: prompts.LexiconVersion(),
-		GlossaryVersion: "", // the sample carries no show glossary
-		Spent:           budget.SpentUSD, Now: d.now,
+		SampleVersion: eval.SampleVersionNoGlossary,
+		Spent:         budget.SpentUSD, Now: d.now,
 		AlsoJudge: splitList(cfg.alsoJudge),
+	}
+	if sendsGlossary {
+		opts.SampleVersion = eval.SampleVersion
+		opts.GlossaryVersion = subtitle.GlossaryVersionHash(promptGlossary(eval.AllTerms(glossaries)))
 	}
 	if cfg.noJudge {
 		opts.JudgeModel = ""
@@ -342,6 +370,9 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 		rep.EpisodeMinutesEst = eval.EpisodeMinutes(rep.TranslateMinutes, rep.Cues)
 		if rep.JudgeModel != "" {
 			rep.JudgeNote += "受考模型是本機模型、不是 Claude，沒有自評偏誤，但分數仍是 AI 評分。"
+		}
+		if noSlot && glossaries != nil {
+			rep.JudgeNote += "TranslateGemma 的官方格式沒有放對照表的位置，所以這份一律以 golden-v1（不帶對照表）計。"
 		}
 	}
 	if !cfg.withTrace {
@@ -370,7 +401,7 @@ func rejudge(ctx context.Context, cfg config, d deps) (int, error) {
 	if err := json.Unmarshal(data, &rep); err != nil {
 		return 0, fmt.Errorf("%s: %w", cfg.rejudgePath, err)
 	}
-	if cfg.samplePath == "" && rep.SampleVersion != eval.SampleVersion {
+	if cfg.samplePath == "" && rep.SampleVersion != eval.SampleVersion && rep.SampleVersion != eval.SampleVersionNoGlossary {
 		return 0, fmt.Errorf("report measured on %q but this build embeds %q — pass the same --sample", rep.SampleVersion, eval.SampleVersion)
 	}
 	cues, err := loadSample(cfg.samplePath)
@@ -472,4 +503,22 @@ var secondaryReasons = map[string]bool{
 	eval.ReasonNameMismatch:           true,
 	eval.ReasonForbiddenTerm:          true,
 	eval.ReasonTimeShift:              true,
+}
+
+// glossaryPairs converts exam terms to the translation service's shape.
+func glossaryPairs(terms []eval.NameTerm) []services.GlossaryPair {
+	out := make([]services.GlossaryPair, len(terms))
+	for i, t := range terms {
+		out[i] = services.GlossaryPair{Source: t.Source, Target: t.Target}
+	}
+	return out
+}
+
+// promptGlossary converts exam terms to the shape the version hash takes.
+func promptGlossary(terms []eval.NameTerm) []prompts.GlossaryEntry {
+	out := make([]prompts.GlossaryEntry, len(terms))
+	for i, t := range terms {
+		out[i] = prompts.GlossaryEntry{Source: t.Source, Target: t.Target}
+	}
+	return out
 }
