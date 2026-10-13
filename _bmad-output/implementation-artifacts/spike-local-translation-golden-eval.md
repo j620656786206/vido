@@ -144,7 +144,7 @@ Claude Opus 5.5（claude-opus-5-5）；code review 由 Fable（跨模型）負�
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
-- **結果**：照事先登記的門檻，兩個本機模型都不過關（第一組）→ 判定「2027-04 再考」。第二組（`--also-judge simplified_leak,name_mismatch`）：Hy-MT2 7B 翻壞 6.5%、翻得自然 80%，Sonnet 是 3%／92%；一集約 43 分。全文：`eval-local-translation-golden-2026-10.md`。
+- **結果**：照事先登記的門檻，兩個本機模型都不過關（第一組）→ Alexyu 2026-10-14 看完結果選 A：現在不做，2027-04 再考（門檻與「半年後再考」原本是 party mode 測試角色的建議，2027-04 是 Bob 寫 story 時算出來的日期，回報時被寫成像已定案的「判定」，10/14 更正）。第二組（`--also-judge simplified_leak,name_mismatch`）：Hy-MT2 7B 翻壞 6.5%、翻得自然 80%，Sonnet 是 3%／92%；一集約 43 分。全文：`eval-local-translation-golden-2026-10.md`。
 - **跟計畫不同的地方**（結果文件有完整表格）：
   - 改考 Hy-MT2 7B，因為 1.5 沒有官方 GGUF。
   - 原本要用 Ollama，但 NAS 的 docker.img 40GB 放不下映像。Alexyu 把它放大到 80GB 之後才改回 Ollama。
@@ -181,7 +181,7 @@ Claude Opus 5.5（claude-opus-5-5）；code review 由 Fable（跨模型）負�
 |---|---|---|
 | golden-v1 人名規則偏嚴，加上不帶詞彙表時 Sonnet 會留英文人名，連 Sonnet 都只拿 B | ③ | `disc-2026-10-golden-name-rule-calibration` |
 | `cmd/grade` 預算預設 0.50 不夠 Sonnet 考完（CI 的 Model Grade 會「未完成」）；評審偶爾回壞掉的 JSON | ③ | `disc-2026-10-model-grade-budget-and-judge-reliability` |
-| 照判定 2027-04 重考；如果要提早做，產品端要補「詞彙表進本機提示詞」「先轉繁體再過閘門」 | ③ | `backlog-local-translation-retest-2027-04` |
+| Alexyu 選 A，2027-04 重考；如果要提早做，產品端要補「詞彙表進本機提示詞」「先轉繁體再過閘門」 | ③ | `backlog-local-translation-retest-2027-04` |
 | 第二輪評審回壞掉的 JSON，會默默略過那一批 | ① | AC #5 範圍內補上 `secondary_unjudged`＋`--rejudge`（本單程式） |
 | NAS docker.img 只剩 7.7GB，裝不下 Ollama | — | Alexyu 10/13 自己放大到 80GB，已解決，不用立案 |
 
