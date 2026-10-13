@@ -154,6 +154,14 @@ export interface ConsentCandidateRow {
   kind: 'candidate';
   key: string;
   candidate: GenerationCandidate;
+  /**
+   * How many headers this row sits under (disc-2026-10-consent-tree-indent,
+   * F15-SPEC-TREE ywpxh): 0 = none (unsplit movies, a flat cost sort), 1 =
+   * under a movie section or a show header, 2 = under a season header. The
+   * row is indented one step per level, so a child never reads wider than
+   * the header it belongs to.
+   */
+  depth: 0 | 1 | 2;
 }
 
 /**
@@ -290,17 +298,17 @@ export function buildConsentRows(input: BuildConsentRowsInput): ConsentRow[] {
     const flat: ConsentRow[] = [];
     for (const candidate of sortForDisplay(visible, sort, stateOrder, prices)) {
       if (candidate.mediaId === cutMediaId) flat.push(CUT_ROW);
-      flat.push({ kind: 'candidate', key: candidate.mediaId, candidate });
+      flat.push({ kind: 'candidate', key: candidate.mediaId, candidate, depth: 0 });
     }
     return flat;
   }
 
   const rows: ConsentRow[] = [];
-  const pushRows = (items: GenerationCandidate[]) => {
+  const pushRows = (items: GenerationCandidate[], depth: ConsentCandidateRow['depth']) => {
     for (const c of items) {
       if (visibleIds.has(c.mediaId)) {
         if (c.mediaId === cutMediaId) rows.push(CUT_ROW);
-        rows.push({ kind: 'candidate', key: c.mediaId, candidate: c });
+        rows.push({ kind: 'candidate', key: c.mediaId, candidate: c, depth });
       }
     }
   };
@@ -312,7 +320,7 @@ export function buildConsentRows(input: BuildConsentRowsInput): ConsentRow[] {
     if (group.kind === 'movies') {
       // Unsplit movies keep the flat, header-less rendering that shipped.
       if (!group.movieSection) {
-        pushRows(group.items);
+        pushRows(group.items, 0);
         continue;
       }
       const sectionId = sectionIds.movies(group.movieSection);
@@ -331,7 +339,7 @@ export function buildConsentRows(input: BuildConsentRowsInput): ConsentRow[] {
         season: false,
         expanded,
       });
-      if (expanded) pushRows(group.items);
+      if (expanded) pushRows(group.items, 1);
       continue;
     }
 
@@ -345,7 +353,7 @@ function pushSeriesRows(
   rows: ConsentRow[],
   group: CandidateGroup,
   input: BuildConsentRowsInput,
-  pushRows: (items: GenerationCandidate[]) => void,
+  pushRows: (items: GenerationCandidate[], depth: ConsentCandidateRow['depth']) => void,
   anyVisible: (items: GenerationCandidate[]) => boolean
 ): void {
   const seriesId = group.seriesId ?? '';
@@ -373,7 +381,7 @@ function pushSeriesRows(
   if (!expanded) return;
 
   if (!group.showSeasonHeaders || !group.seasons) {
-    pushRows(group.items);
+    pushRows(group.items, 1);
     return;
   }
   for (const season of group.seasons) {
@@ -392,7 +400,7 @@ function pushSeriesRows(
       season: true,
       expanded: seasonExpanded,
     });
-    if (seasonExpanded) pushRows(season.items);
+    if (seasonExpanded) pushRows(season.items, 2);
   }
 }
 

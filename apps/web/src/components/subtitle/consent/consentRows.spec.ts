@@ -388,3 +388,41 @@ describe('the budget cut row (sub-6-12 AC #3)', () => {
     expect(keys(rowsOf(films, { cutMediaId: null }))).toEqual(['m1', 'm2', 'm3']);
   });
 });
+
+// ─── disc-2026-10-consent-tree-indent ──────────────────────────────────────
+//
+// A row is indented one step per header above it (F15-SPEC-TREE ywpxh), so an
+// episode under 「第 1 季」 never reads wider than 「第 1 季」 itself.
+
+describe('buildConsentRows — depth', () => {
+  const depthOf = (rows: ConsentRow[]) =>
+    Object.fromEntries(
+      rows.flatMap((r) => (r.kind === 'candidate' ? [[r.key, r.depth]] : []))
+    ) as Record<string, number>;
+  const open = { [sectionIds.series(SRS)]: true };
+
+  it('episodes under a season header are two levels deep', () => {
+    const cs = [episode('sp', 0, 1), episode('e1', 1, 1), episode('e2', 1, 2)];
+    expect(depthOf(rowsOf(cs, { expandedOverride: open }))).toEqual({ sp: 2, e1: 2, e2: 2 });
+  });
+
+  it('a single-season show has no season header, so its episodes are one level deep', () => {
+    const cs = [episode('e1', 1, 1), episode('e2', 1, 2)];
+    expect(depthOf(rowsOf(cs, { expandedOverride: open }))).toEqual({ e1: 1, e2: 1 });
+  });
+
+  it('movies are one level deep under a matched/unmatched header, flush without one', () => {
+    const split = [
+      movie('m1', 'A', { tmdbMatched: true }),
+      movie('m2', 'B', { tmdbMatched: false }),
+    ];
+    expect(depthOf(rowsOf(split))).toEqual({ m1: 1, m2: 1 });
+    const plain = [movie('m1', 'A'), movie('m2', 'B')];
+    expect(depthOf(rowsOf(plain))).toEqual({ m1: 0, m2: 0 });
+  });
+
+  it('a flat cost sort has no headers at all, so nothing is indented', () => {
+    const cs = [movie('m1', 'A'), episode('sp', 0, 1), episode('e1', 1, 1)];
+    expect(depthOf(rowsOf(cs, { sort: 'cost-desc' }))).toEqual({ m1: 0, sp: 0, e1: 0 });
+  });
+});

@@ -1760,3 +1760,36 @@ describe('CandidateListPanel — header checkbox states (series × season)', () 
     expect(state('consent-movies-unmatched')).toBe('none');
   });
 });
+
+// ─── disc-2026-10-consent-tree-indent ──────────────────────────────────────
+
+describe('CandidateListPanel — rows indent under their header', () => {
+  it('season header one step, its episodes two; 12px a step below 36rem, 24px above', () => {
+    renderPanel({
+      candidates: [seriesEp(S1E1, 1, 1), seriesEp(S1E2, 1, 2), seriesEp(S2E1, 2, 1)],
+      selectedIds: new Set(),
+    });
+    expandSeries();
+    const seriesHeader = screen.getByTestId(`consent-group-${SRS}`);
+    const seasonHeader = screen.getByTestId(`consent-season-${SRS}-1`);
+    const episode = screen.getByTestId(`consent-row-${S1E1}`);
+    expect(seriesHeader.className).not.toMatch(/\bml-/);
+    expect(seasonHeader).toHaveClass('ml-3', '@xl:ml-6');
+    expect(episode).toHaveClass('ml-6', '@xl:ml-12');
+  });
+
+  it('a single-season show indents its episodes one step', () => {
+    renderPanel({
+      candidates: [seriesEp(S1E1, 1, 1), seriesEp(S1E2, 1, 2)],
+      selectedIds: new Set(),
+    });
+    expandSeries();
+    expect(screen.getByTestId(`consent-row-${S1E1}`)).toHaveClass('ml-3', '@xl:ml-6');
+  });
+
+  it('a plain movie list is not indented', () => {
+    renderPanel();
+    const row = screen.getByTestId(`consent-row-${CANDIDATES[0].mediaId}`);
+    expect(row.className).not.toMatch(/\bml-/);
+  });
+});

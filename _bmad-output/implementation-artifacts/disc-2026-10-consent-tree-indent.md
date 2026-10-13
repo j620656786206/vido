@@ -1,6 +1,6 @@
 # Disc：選片清單的集數看起來在「第 1 季」外面
 
-Status: blocked — 等設計稿
+Status: done
 
 **Source:** 2026-10-13 Alexyu 在本機看 `generation-consent/resumed` 樣本時發現：「第一季有消失的威爾 S01E01 跟瘋狂麥克絲 S01E02，但兩個卡片的長度都比第一季的長度還要長，看起來會不知道那兩集是在第一季裡面」。founder-pm、John、Sally 三方討論後，Alexyu 選 A（照層級縮排）。
 
@@ -37,13 +37,45 @@ founder-pm：值得修，因為這是選「哪幾集要付錢」的畫面，看�
 
 ## Tasks / Subtasks
 
-- [ ] T0 設計稿（Alexyu 跑 `disc-2026-10-consent-tree-indent-pen-prompt.md` → Sally review）
-- [ ] T1 `consentRows.ts`：每個候選列帶上它在第幾層
-- [ ] T2 `CandidateListPanel.tsx`：照層級縮排
-- [ ] T3 測試、visual
+- [x] T0 設計稿（Alexyu 跑 `disc-2026-10-consent-tree-indent-pen-prompt.md` → Sally review）
+- [x] T1 `consentRows.ts`：每個候選列帶上它在第幾層
+- [x] T2 `CandidateListPanel.tsx`：照層級縮排
+- [x] T3 測試、visual
 
 ### Time-dependent visual coverage
 
 N/A。
 
 ## Dev Agent Record
+
+### Agent Model Used
+
+Claude Opus 5.5（claude-opus-5-5），Amelia dev-story，2026-10-13。
+
+### Completion Notes List
+
+- **Sally review**：
+  - 兩段提示詞的文字、層級、縮排都對：F15-D 的電影列與單季集數縮 24、F15-M 縮 12、F15-SPEC-TREE（`ywpxh`）示範兩季加規則表。
+  - Inline Agent 沒存檔（磁碟檔跟 HEAD 一樣），Sally 用選單存檔。
+  - 「怪奇物語 S4E7」那一列在稿上本來就是收合（隱藏）的，包它的縮排框也跟著隱藏，這是對的。
+  - Inline Agent 為季標題新增了一個變數 `bg-tertiary-60`（＝ `bg-tertiary` 加 60% 不透明度，跟程式碼 `bg-[var(--bg-tertiary)]/60` 同一件事）。`check-design-tokens` 通過，追認。
+  - 新畫面加進 `SCREENS`（`f15-spec-tree`）；只留 `f15-d-v2.png` 和新的 `f15-spec-tree.png`。
+- `consentRows.ts`：每個候選列多帶 `depth`（0／1／2）。沒分組的電影、金額排序是 0；電影分組、單季影集是 1；季底下的集數是 2。
+- `CandidateListPanel.tsx`：新增 `INDENT` 表（1：`ml-3 @xl:ml-6`，2：`ml-6 @xl:ml-12`），候選列照 `depth` 縮；季標題從固定 `ml-6` 改成 `ml-3 @xl:ml-6`。
+- 測試：`consentRows.spec` 加 4 條層級測試，`CandidateListPanel.spec` 加 3 條 class 測試。
+- visual：`generation-consent/f15-collapsed`、`f15-search-hit`、`resumed` 三張故意變了（列縮排）。刪掉 `-darwin` 重出、`git rm` 舊的 `-linux`，交給 CI 補。
+- 檢查：vitest 全部 4,499 個測試、`tsc`、`pnpm run lint:all`（0 errors）、`format:check`、本機 visual 全綠。`tests/e2e/batch-subtitle.spec.ts` 只用 testid 找列，沒有量位置。
+
+### Senior Developer Review (AI) — 2026-10-13
+
+結論：0 High／0 Medium／1 Low，接受。
+
+- **L1（接受）**：手機版的 visual 樣本裡，影集群組都是收合的，所以沒有一張樣本拍到手機上縮排後的集數列。縮排在手機只有 12／24px，比桌機少一半；列的排版本來就跟著清單寬度走。
+
+### File List
+
+- `ux-design.pen`、`scripts/export-pen-screenshots.py`、`_bmad-output/screenshots/flow-f-subtitle-v2/f15-d-v2.png`、`f15-spec-tree.png`（新）、`_bmad-output/pen-node-ids.json`、`_bmad-output/pen-tokens.json`
+- `apps/web/src/components/subtitle/consent/consentRows.ts`、`.spec.ts`
+- `apps/web/src/components/subtitle/consent/CandidateListPanel.tsx`、`.spec.tsx`
+- `tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/{f15-collapsed,f15-search-hit,resumed}/`
+- `_bmad-output/implementation-artifacts/disc-2026-10-consent-tree-indent.md`、`sprint-status.yaml`
