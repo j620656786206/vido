@@ -11,7 +11,7 @@
  *
  * §8 lazy-SSE rules: NO connect on mount — `startTracking()` opens the stream
  * (also the 409/recover-attach path). Terminal statuses
- * `complete | cancelled | error | budget_ceiling` close the stream (no polling
+ * `complete | cancelled | error | budget_ceiling | credit_exhausted` close the stream (no polling
  * fallback); 10s reconnect backoff; `mountedRef` guard; cleanup on unmount.
  *
  * Rule 23: zero wall-clock reads — progress/cost are all SSE-supplied.
@@ -77,6 +77,9 @@ export interface GenerationBatchProgressState {
   modelId?: string;
   /** Live receipt sum for the F8c completion line; reset with every batch. */
   runTotals?: GenerationBatchRunTotals;
+  /** `credit_exhausted` only: whose account ran dry and where to top it up ('' otherwise). */
+  creditProvider?: string;
+  billingUrl?: string;
 }
 
 const initialState: GenerationBatchProgressState = {
@@ -94,6 +97,8 @@ const initialState: GenerationBatchProgressState = {
   items: null,
   modelId: '',
   runTotals: EMPTY_RUN_TOTALS,
+  creditProvider: '',
+  billingUrl: '',
 };
 
 /**
@@ -174,6 +179,8 @@ function reducer(
         budgetUsd: p.budgetUsd ?? 0,
         items: p.items ?? null,
         modelId: p.modelId ?? '',
+        creditProvider: p.creditProvider ?? '',
+        billingUrl: p.billingUrl ?? '',
         // A snapshot carries no receipts; the ledger (`by_batch`) fills this
         // line in for an attached batch.
         runTotals: EMPTY_RUN_TOTALS,
@@ -196,6 +203,8 @@ function reducer(
         budgetUsd: p.budgetUsd ?? state.budgetUsd,
         items: mergeItems(state.items, p),
         modelId: p.modelId ?? state.modelId,
+        creditProvider: p.creditProvider ?? state.creditProvider,
+        billingUrl: p.billingUrl ?? state.billingUrl,
       };
     }
     case 'RUN_RECEIPT': {
@@ -229,7 +238,8 @@ function isTerminal(status: GenerationBatchHookStatus): boolean {
     status === 'complete' ||
     status === 'cancelled' ||
     status === 'error' ||
-    status === 'budget_ceiling'
+    status === 'budget_ceiling' ||
+    status === 'credit_exhausted'
   );
 }
 

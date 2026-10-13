@@ -139,6 +139,42 @@ describe('GenerationWorkspaceV2 (ux3-ai-2 — state matrix)', () => {
     expect(onResume).toHaveBeenCalled();
   });
 
+  it('credit_exhausted: F9b-verbatim banner + billing link + 沒有額度 pill + 下次繼續', async () => {
+    const onResume = vi.fn();
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          mode: 'credit_exhausted',
+          progress: progress({
+            status: 'credit_exhausted',
+            successCount: 3,
+            pausedCount: 2,
+            totalItems: 5,
+            creditProvider: 'anthropic',
+            billingUrl: 'https://console.anthropic.com/settings/billing',
+            items: [item('m0', '沙丘：第二部', 'done'), item('m12', '奧本海默', 'paused')],
+          }),
+          onResume,
+        })}
+      />
+    );
+    const banner = screen.getByTestId('workspace-credit-banner');
+    expect(banner).toHaveTextContent(
+      'Anthropic 帳號沒有額度了 — 已完成3部，剩餘2部已暫停，儲值後按「下次繼續」'
+    );
+    expect(banner.className).toContain('warning-tint');
+    expect(screen.queryByTestId('workspace-budget-banner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('credit-stop-billing-link')).toHaveAttribute(
+      'href',
+      'https://console.anthropic.com/settings/billing'
+    );
+    expect(screen.getByTestId('workspace-status-pill')).toHaveTextContent('沒有額度');
+    expect(screen.getByTestId('workspace-queue-row-m12')).toHaveAttribute('data-state', 'paused');
+    expect(screen.getByText('已停止（AI 帳號沒有額度）')).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('workspace-resume'));
+    expect(onResume).toHaveBeenCalled();
+  });
+
   it('attach: degraded — in-flight card + honest note, no fake full queue', () => {
     render(
       <GenerationWorkspaceV2 {...props({ mode: 'attach', progress: progress({ items: null }) })} />

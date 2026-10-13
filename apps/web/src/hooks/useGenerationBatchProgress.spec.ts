@@ -125,10 +125,13 @@ describe('useGenerationBatchProgress (lazy SSE, double-nested envelope)', () => 
       // sub-7-6a/c: no model_id on this frame, no receipts yet.
       modelId: '',
       runTotals: EMPTY_RUN_TOTALS,
+      // Only a credit_exhausted frame fills these.
+      creditProvider: '',
+      billingUrl: '',
     });
   });
 
-  it.each(['complete', 'cancelled', 'error', 'budget_ceiling'] as const)(
+  it.each(['complete', 'cancelled', 'error', 'budget_ceiling', 'credit_exhausted'] as const)(
     '[P0] terminal status %s closes the stream',
     (status) => {
       const { result } = renderHook(() => useGenerationBatchProgress());
@@ -171,6 +174,32 @@ describe('useGenerationBatchProgress (lazy SSE, double-nested envelope)', () => 
     expect(result.current.progress.spentUsd).toBe(5);
     expect(result.current.progress.budgetUsd).toBe(5);
     expect(result.current.progress.successCount).toBe(12);
+  });
+
+  it('[P1] credit_exhausted carries whose account and where to top it up (F9b)', () => {
+    const { result } = renderHook(() => useGenerationBatchProgress());
+    act(() => result.current.startTracking());
+    const es = MockEventSource.instances[0];
+
+    act(() =>
+      es.emit(
+        'generation_batch_progress',
+        wireEvent({
+          status: 'credit_exhausted',
+          success_count: 3,
+          paused_count: 2,
+          credit_provider: 'openai',
+          billing_url: 'https://platform.openai.com/settings/organization/billing',
+        })
+      )
+    );
+
+    expect(result.current.status).toBe('credit_exhausted');
+    expect(result.current.progress.creditProvider).toBe('openai');
+    expect(result.current.progress.billingUrl).toBe(
+      'https://platform.openai.com/settings/organization/billing'
+    );
+    expect(result.current.progress.pausedCount).toBe(2);
   });
 
   it('[P1] ignores malformed frames', () => {

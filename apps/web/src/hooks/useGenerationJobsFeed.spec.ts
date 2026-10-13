@@ -520,6 +520,28 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     });
   });
 
+  it('an empty AI account ends the batch: its row names the provider, the in-flight step stops', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m2', 'B', 'running')));
+      es.emit('transcription_extracting', { media_id: 'm2', phase: 'extracting', title: '' });
+      es.emit(
+        'generation_batch_progress',
+        terminal('credit_exhausted', {
+          credit_provider: 'openai',
+          billing_url: 'https://platform.openai.com/settings/organization/billing',
+        })
+      );
+    });
+    expect(result.current.feed.some((r) => r.kind === 'failed')).toBe(false);
+    expect(rowsFor(result.current.feed, 'm2')[0]).toMatchObject({ state: 'stopped' });
+    expect(result.current.feed.at(-1)).toMatchObject({
+      kind: 'batch',
+      status: 'credit_exhausted',
+      creditProvider: 'openai',
+    });
+  });
+
   it('🔴 #4: cancelling the batch does not record the in-flight item as failed', () => {
     const { result, es } = connected();
     act(() => {

@@ -31,20 +31,21 @@ describe('failureCopy', () => {
     ['transcribe: whisper: API error: status 401 — {"error":"invalid key"}', 'API 金鑰無效', false],
     ['transcribe: whisper: OpenAI API key not configured', '語音辨識未設定', false],
     // disc-2026-09-asr-quota-429-treated-as-transient: the solo runner's sentence, and the legacy raw error.
+    // No credit is a stop, not a failure (F11-SPEC-LOG ⑤b).
     [
       'OpenAI 帳號沒有額度了，請到 https://platform.openai.com/settings/organization/billing 儲值後再按一次生成',
       'AI 帳號沒有額度',
-      false,
+      true,
     ],
     [
       'transcribe: transcribe chunk 1/6: whisper: API error: AI_CREDIT_EXHAUSTED: openai account has no credit left (insufficient_quota)',
       'AI 帳號沒有額度',
-      false,
+      true,
     ],
     ['transcribe: whisper: request timed out', '處理逾時', false],
     ['extract audio: context deadline exceeded', '處理逾時', false],
-  ])('%s → %s', (error, text, budget) => {
-    expect(failureCopy(error)).toEqual({ text, budget });
+  ])('%s → %s', (error, text, stopped) => {
+    expect(failureCopy(error)).toEqual({ text, stopped });
   });
 
   it('falls back to 生成失敗 for anything it does not recognise, including nothing at all', () => {
@@ -52,15 +53,15 @@ describe('failureCopy', () => {
       failureCopy('save SRT: open /mnt/media/Movies/Dune (2024)/Dune.en.srt: permission denied')
     ).toEqual({
       text: '生成失敗',
-      budget: false,
+      stopped: false,
     });
-    expect(failureCopy('')).toEqual({ text: '生成失敗', budget: false });
-    expect(failureCopy(null)).toEqual({ text: '生成失敗', budget: false });
-    expect(failureCopy(undefined)).toEqual({ text: '生成失敗', budget: false });
+    expect(failureCopy('')).toEqual({ text: '生成失敗', stopped: false });
+    expect(failureCopy(null)).toEqual({ text: '生成失敗', stopped: false });
+    expect(failureCopy(undefined)).toEqual({ text: '生成失敗', stopped: false });
   });
 
   it('the first match wins — a budget stop inside a timeout-shaped message is still a budget stop', () => {
-    expect(failureCopy('transcribe: timed out after AI_BUDGET_EXCEEDED: ceiling').budget).toBe(
+    expect(failureCopy('transcribe: timed out after AI_BUDGET_EXCEEDED: ceiling').stopped).toBe(
       true
     );
   });
@@ -185,6 +186,23 @@ describe('feedRowView', () => {
     expect(v.stageClass).toContain('--warning-text');
   });
 
+  it('⑤b a single job stopped by an empty AI account is 已停止 in ochre, not 失敗', () => {
+    const v = feedRowView({
+      seq: 1,
+      kind: 'failed',
+      ...film,
+      reason: null,
+      error:
+        'OpenAI 帳號沒有額度了，請到 https://platform.openai.com/settings/organization/billing 儲值後再按一次生成',
+    });
+    expect(v).toMatchObject({
+      glyph: 'circle-alert',
+      stage: '已停止',
+      parts: ['奧本海默', 'AI 帳號沒有額度'],
+    });
+    expect(v.stageClass).toContain('--warning-text');
+  });
+
   it('an episode is prefixed with its show; no title at all says 處理中的項目', () => {
     expect(
       feedRowView({
@@ -200,7 +218,11 @@ describe('feedRowView', () => {
     ).toEqual(['處理中的項目']);
   });
 
-  const batch = (status: 'complete' | 'cancelled' | 'error' | 'budget_ceiling', failCount = 0) =>
+  const batch = (
+    status: 'complete' | 'cancelled' | 'error' | 'budget_ceiling' | 'credit_exhausted',
+    failCount = 0,
+    creditProvider = ''
+  ) =>
     feedRowView({
       seq: 1,
       kind: 'batch',
@@ -209,6 +231,7 @@ describe('feedRowView', () => {
       successCount: 3,
       failCount,
       budgetUsd: 5,
+      creditProvider,
     });
 
   it('⑥–⑩ batch rows are about 本批次', () => {
@@ -236,6 +259,21 @@ describe('feedRowView', () => {
     expect(budget.trailClass).toContain('--text-primary');
   });
 
+  it('⑪ a batch stopped by an empty AI account names whose account, neutral', () => {
+    const v = batch('credit_exhausted', 0, 'openai');
+    expect(v).toMatchObject({
+      glyph: 'circle-alert',
+      stage: 'AI 帳號沒有額度',
+      parts: ['本批次'],
+      trail: 'OpenAI',
+    });
+    expect(v.stageClass).toContain('--warning-text');
+    expect(v.trailClass).toContain('--text-primary');
+    expect(batch('credit_exhausted', 0, 'anthropic').trail).toBe('Anthropic');
+    // An older server sends no provider — say AI, never an empty trail.
+    expect(batch('credit_exhausted').trail).toBe('AI');
+  });
+
   it('no row ever uses a base semantic colour as text', () => {
     const all = [
       feedRowView({
@@ -252,6 +290,7 @@ describe('feedRowView', () => {
       batch('complete'),
       batch('error'),
       batch('budget_ceiling'),
+      batch('credit_exhausted', 0, 'openai'),
     ];
     for (const v of all) {
       for (const cls of [v.glyphClass, v.stageClass, v.trailClass]) {

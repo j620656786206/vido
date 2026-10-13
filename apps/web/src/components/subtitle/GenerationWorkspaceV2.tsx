@@ -1,5 +1,5 @@
 // Implements: Component/GenQueueRow-v2 (aw4Qr)
-// Design ref: ux-design.pen Screen F11-D-v2 (l8FsB) · F12-D-v2 (iH98f) · F13-D-v2 (F7ohe) · F11-M-v2 (PXB0z)
+// Design ref: ux-design.pen Screen F11-D-v2 (l8FsB) · F12-D-v2 (iH98f) · F13-D-v2 (F7ohe) · F11-M-v2 (PXB0z) · F9b-D-v2 (YHnnC)
 // Source: ux-design.pen (Pencil app)
 /**
  * The AI generation WORKSPACE (Story ux3-ai-2, PH3-G1) — an immersive, 活動-hosted
@@ -89,7 +89,13 @@ import { libraryKeys } from '../../hooks/useLibrary';
 import { detailKeys } from '../../hooks/useMediaDetails';
 import { activityKeys } from '../../hooks/useActivity';
 import { transcriptionEstimateKeys } from '../../hooks/useTranscriptionEstimate';
-import { deriveWorkspaceMode, modeShowsFeed, type WorkspaceMode } from './generationWorkspace';
+import {
+  deriveWorkspaceMode,
+  isPausedStop,
+  modeShowsFeed,
+  type WorkspaceMode,
+} from './generationWorkspace';
+import { CreditStopMessage } from './CreditStopMessage';
 import { usd } from '../../lib/currency';
 
 // --- Presentational pieces ---------------------------------------------------
@@ -213,6 +219,21 @@ function StatusPill({ mode }: { mode: WorkspaceMode }) {
           className="h-2 w-2 rounded-full bg-[var(--warning-text)] max-sm:h-1.5 max-sm:w-1.5"
         />
         已達上限
+      </span>
+    );
+  }
+  if (mode === 'credit_exhausted') {
+    // F9b note: the workspace pill says 沒有額度.
+    return (
+      <span
+        data-testid="workspace-status-pill"
+        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--warning-tint)] px-2.5 py-1 text-xs font-medium text-[var(--warning-text)]"
+      >
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 rounded-full bg-[var(--warning-text)] max-sm:h-1.5 max-sm:w-1.5"
+        />
+        沒有額度
       </span>
     );
   }
@@ -408,12 +429,13 @@ function FeedRowItem({ row }: { row: FeedRow }) {
 function EventLogPane({
   feed,
   connected,
-  budgetStopped,
+  stoppedLabel,
 }: {
   feed: FeedRow[];
   /** The jobs stream is open — NOT "the batch is running" (it outlives the batch). */
   connected: boolean;
-  budgetStopped: boolean;
+  /** The ochre 已停止 note under the header (a paused stop), or null. */
+  stoppedLabel: string | null;
 }) {
   const listRef = useRef<ComponentRef<'ol'> | null>(null);
   /** The reader was at the bottom before the last change — keep following. */
@@ -549,15 +571,13 @@ function EventLogPane({
             僅狀態事件，不含逐字內容
           </span>
         </div>
-        {budgetStopped && (
+        {stoppedLabel && (
           <div className="flex items-center justify-end gap-1.5 max-sm:justify-start">
             <CirclePause
               className="h-[13px] w-[13px] shrink-0 text-[var(--warning-text)]"
               aria-hidden="true"
             />
-            <span className="text-xs font-medium text-[var(--warning-text)]">
-              已停止（達預算上限）
-            </span>
+            <span className="text-xs font-medium text-[var(--warning-text)]">{stoppedLabel}</span>
           </div>
         )}
       </div>
@@ -595,6 +615,29 @@ function BudgetBanner({ progress }: { progress: GenerationBatchProgressState }) 
         </span>{' '}
         部下次繼續
       </p>
+    </div>
+  );
+}
+
+/** F9b-verbatim no-credit banner — same ochre box as the budget one. */
+function CreditBanner({ progress }: { progress: GenerationBatchProgressState }) {
+  const { successCount, failCount, pausedCount, creditProvider, billingUrl } = progress;
+  return (
+    <div
+      data-testid="workspace-credit-banner"
+      role="status"
+      className="flex items-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--warning-tint)] px-4 py-3"
+    >
+      <CircleAlert
+        className="h-[18px] w-[18px] shrink-0 text-[var(--warning-text)]"
+        aria-hidden="true"
+      />
+      <CreditStopMessage
+        provider={creditProvider}
+        done={successCount + failCount}
+        paused={pausedCount}
+        billingUrl={billingUrl}
+      />
     </div>
   );
 }
@@ -749,6 +792,7 @@ export function GenerationWorkspaceV2({
           <StatusPill mode={mode} />
         </div>
         {mode === 'budget_ceiling' && <BudgetBanner progress={progress} />}
+        {mode === 'credit_exhausted' && <CreditBanner progress={progress} />}
         {/* `single` has no BATCH — a 0 / 0 strip with $0.00 would be inventing one. */}
         {!['idle', 'loading', 'single'].includes(mode) && (
           <OverallStrip progress={progress} live={mode === 'running' || mode === 'attach'} />
@@ -854,7 +898,7 @@ export function GenerationWorkspaceV2({
           {/* The heading row is driven by MODE, never by whether we happen to know
               the queue — a cold attach at the ceiling used to get no verdict, and a
               running batch with no snapshot yet got no way to cancel. */}
-          {(mode === 'running' || mode === 'budget_ceiling' || isTerminal) && (
+          {(mode === 'running' || isPausedStop(mode) || isTerminal) && (
             <div className="flex items-center justify-between gap-3 max-sm:flex-wrap">
               <h2 className="text-base font-semibold text-[var(--text-primary)]">生成佇列</h2>
               {mode === 'running' && <CancelAll onConfirm={onConfirmCancelAll} />}
@@ -869,7 +913,7 @@ export function GenerationWorkspaceV2({
             </div>
           )}
 
-          {(mode === 'running' || mode === 'budget_ceiling' || isTerminal) && rows.length > 0 && (
+          {(mode === 'running' || isPausedStop(mode) || isTerminal) && rows.length > 0 && (
             <div className="flex flex-col gap-3">
               <ul className="space-y-2.5">
                 {rows.map((it) => (
@@ -930,13 +974,19 @@ export function GenerationWorkspaceV2({
           <EventLogPane
             feed={feed}
             connected={feedConnected}
-            budgetStopped={mode === 'budget_ceiling'}
+            stoppedLabel={
+              mode === 'budget_ceiling'
+                ? '已停止（達預算上限）'
+                : mode === 'credit_exhausted'
+                  ? '已停止（AI 帳號沒有額度）'
+                  : null
+            }
           />
         )}
       </div>
 
       {/* Footer bar (F12 `v9WuzZ`) — the way OUT of a finished batch. */}
-      {(mode === 'budget_ceiling' || isTerminal) && (
+      {(isPausedStop(mode) || isTerminal) && (
         <div
           data-testid="workspace-footer"
           className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-6 py-3.5 max-sm:px-4 sm:px-8"
@@ -960,7 +1010,7 @@ export function GenerationWorkspaceV2({
               關閉
             </button>
           )}
-          {mode === 'budget_ceiling' && (
+          {isPausedStop(mode) && (
             <button
               type="button"
               data-testid="workspace-resume"

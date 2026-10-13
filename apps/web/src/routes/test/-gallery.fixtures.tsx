@@ -6503,6 +6503,46 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
   {
+    // disc-2026-10-batch-stop-on-credit-exhausted-b: the F9b stop — same paused
+    // rows and footer as the ceiling, the banner names the account and links
+    // to its billing page.
+    id: 'generation-batch-dialog-v2/credit_exhausted',
+    label: 'subtitle/GenerationBatchPanelV2 (credit_exhausted — F9b banner + 儲值連結 + 下次繼續)',
+    component: GenerationBatchPanelV2,
+    props: {
+      open: true,
+      status: 'credit_exhausted',
+      progress: {
+        batchId: 'gb-fx-1',
+        totalItems: 5,
+        currentIndex: 4,
+        currentMediaId: BATCH_FX_IDS[3],
+        currentItem: '怪奇物語 S04E07 第七章',
+        successCount: 3,
+        failCount: 0,
+        pausedCount: 2,
+        status: 'credit_exhausted',
+        spentUsd: 1.2,
+        budgetUsd: 5,
+        creditProvider: 'openai',
+        billingUrl: 'https://platform.openai.com/settings/organization/billing',
+        items: [
+          batchFxItem(0, 'done'),
+          batchFxItem(1, 'done'),
+          batchFxItem(2, 'done'),
+          batchFxItem(3, 'paused'),
+          batchFxItem(4, 'paused'),
+        ],
+      },
+      items: BATCH_FX_ITEMS,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F9b-D-v2 (YHnnC)
+    statesOnly: ['default'],
+  },
+  {
     // dsr-6f-3: the two-button footer (關閉 + 下次繼續) has no phone design — the
     // ruling is cost row on top, the pair splitting the row evenly.
     id: 'generation-batch-dialog-v2/budget_ceiling-mobile',
@@ -6834,6 +6874,61 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onDismiss: asyncNoop,
     },
     penNode: 'screen-section', // Screen F12-D-v2 (iH98f)
+    statesOnly: ['default'],
+  },
+  {
+    // disc-2026-10-batch-stop-on-credit-exhausted-b: F9b banner verbatim, the
+    // 沒有額度 pill and the ⑪ log row.
+    id: 'generation-workspace-v2/credit_exhausted',
+    label: 'subtitle/GenerationWorkspaceV2 (credit_exhausted — F9b banner + 關閉/下次繼續)',
+    component: GenerationWorkspaceV2,
+    width: 1200,
+    props: {
+      mode: 'credit_exhausted',
+      progress: {
+        batchId: 'b1',
+        totalItems: 3,
+        currentIndex: 2,
+        currentMediaId: WS_FX_IDS[1],
+        currentItem: '奧本海默',
+        successCount: 1,
+        failCount: 0,
+        pausedCount: 2,
+        status: 'credit_exhausted',
+        spentUsd: 1.2,
+        budgetUsd: 5,
+        creditProvider: 'openai',
+        billingUrl: 'https://platform.openai.com/settings/organization/billing',
+        items: [wsFxItem(0, 'done'), wsFxItem(1, 'paused'), wsFxItem(2, 'paused')],
+      },
+      feed: [
+        wsFxFeed(1, 0, { kind: 'done' }),
+        wsFxFeed(2, 1, {
+          kind: 'stage',
+          stage: 'transcribing',
+          state: 'stopped',
+          pipeline: false,
+          percentage: null,
+        }),
+        {
+          seq: 3,
+          kind: 'batch',
+          batchId: 'b1',
+          status: 'credit_exhausted',
+          successCount: 1,
+          failCount: 0,
+          budgetUsd: 5,
+          creditProvider: 'openai',
+        },
+      ],
+      feedConnected: true,
+      onLaunch: noop,
+      onConfirmCancelAll: asyncNoop,
+      onResume: noop,
+      onRetryData: noop,
+      onDismiss: asyncNoop,
+    },
+    penNode: 'screen-section', // Screen F9b-D-v2 (YHnnC)
     statesOnly: ['default'],
   },
   {

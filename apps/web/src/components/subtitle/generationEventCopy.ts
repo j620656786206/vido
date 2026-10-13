@@ -23,41 +23,44 @@ import type { FeedRow, FeedStage } from '../../hooks/useGenerationJobsFeed';
 import { queueRowLabel, queueRowTitle } from './generationQueueRow';
 import { GENERATION_STAGES } from './GenerationProgressV2';
 import { usd } from '../../lib/currency';
+import { creditProviderName } from './creditStop';
 
 export interface FailureCopy {
   text: string;
   /**
-   * The run stopped at the AI budget ceiling. That is "you asked and it did not
-   * happen" (ochre), not "it broke" (cinnabar) — the log renders it as 已停止.
+   * The run stopped for money — the AI budget ceiling, or an AI account with no
+   * credit left. That is "you asked and it did not happen" (ochre), not "it
+   * broke" (cinnabar) — the log renders it as 已停止 (F11-SPEC-LOG ⑤ / ⑤b).
    */
-  budget: boolean;
+  stopped: boolean;
 }
 
 /** First match wins; order matters (a budget stop can mention a timeout). */
 const TABLE: ReadonlyArray<{ match: readonly string[]; copy: FailureCopy }> = [
-  { match: ['AI_BUDGET_EXCEEDED'], copy: { text: '已達預算上限', budget: true } },
-  { match: ['no audio track found'], copy: { text: '找不到可用的音軌', budget: false } },
-  { match: ['ffmpeg not available'], copy: { text: '伺服器缺少 ffmpeg', budget: false } },
+  { match: ['AI_BUDGET_EXCEEDED'], copy: { text: '已達預算上限', stopped: true } },
+  { match: ['no audio track found'], copy: { text: '找不到可用的音軌', stopped: false } },
+  { match: ['ffmpeg not available'], copy: { text: '伺服器缺少 ffmpeg', stopped: false } },
   {
     match: ['transcription unavailable', 'API key not configured'],
-    copy: { text: '語音辨識未設定', budget: false },
+    copy: { text: '語音辨識未設定', stopped: false },
   },
   // An empty provider account (disc-2026-09-asr-quota-429-treated-as-transient):
   // the solo runner's sentence says 帳號沒有額度, the legacy path keeps the
-  // AI_CREDIT_EXHAUSTED code in its raw error.
+  // AI_CREDIT_EXHAUSTED code in its raw error. Not a failure — the film is
+  // fine, the account needs a top-up (F11-SPEC-LOG ⑤b).
   {
     match: ['AI_CREDIT_EXHAUSTED', '帳號沒有額度'],
-    copy: { text: 'AI 帳號沒有額度', budget: false },
+    copy: { text: 'AI 帳號沒有額度', stopped: true },
   },
   // The LLM side says AI_UNAUTHORIZED; the Whisper side says `status 401`.
-  { match: ['AI_UNAUTHORIZED', 'status 401'], copy: { text: 'API 金鑰無效', budget: false } },
+  { match: ['AI_UNAUTHORIZED', 'status 401'], copy: { text: 'API 金鑰無效', stopped: false } },
   {
     match: ['AI_TIMEOUT', 'timed out', 'deadline exceeded'],
-    copy: { text: '處理逾時', budget: false },
+    copy: { text: '處理逾時', stopped: false },
   },
 ];
 
-const FALLBACK: FailureCopy = { text: '生成失敗', budget: false };
+const FALLBACK: FailureCopy = { text: '生成失敗', stopped: false };
 
 export function failureCopy(error: string | null | undefined): FailureCopy {
   if (!error) return FALLBACK;
@@ -182,7 +185,7 @@ export function feedRowView(row: FeedRow): FeedRowView {
       const name = filmName(row);
       if (row.reason === null) {
         const copy = failureCopy(row.error);
-        if (copy.budget) {
+        if (copy.stopped) {
           return view({
             glyph: 'circle-alert',
             glyphClass: WARNING,
@@ -213,6 +216,21 @@ export function feedRowView(row: FeedRow): FeedRowView {
           trail: usd(row.budgetUsd),
           trailClass: PRIMARY,
           announce: '已達預算上限，批次已停止',
+        });
+      }
+      if (status === 'credit_exhausted') {
+        // F11-SPEC-LOG ⑪: the same family as ⑩ — whose account is a fact, so
+        // the trail is neutral.
+        const name = creditProviderName(row.creditProvider);
+        return view({
+          glyph: 'circle-alert',
+          glyphClass: WARNING,
+          stage: 'AI 帳號沒有額度',
+          stageClass: WARNING,
+          parts: [THIS_BATCH],
+          trail: name,
+          trailClass: PRIMARY,
+          announce: `${name} 帳號沒有額度，批次已停止`,
         });
       }
       if (status === 'error') {

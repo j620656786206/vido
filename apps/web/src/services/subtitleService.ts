@@ -460,7 +460,9 @@ export type GenerationBatchStatus =
   | 'complete'
   | 'cancelled'
   | 'error'
-  | 'budget_ceiling';
+  | 'budget_ceiling'
+  /** The AI account itself ran out of money (disc-2026-10-batch-stop-on-credit-exhausted). */
+  | 'credit_exhausted';
 
 /**
  * Progress snapshot — the shape of GET …/status `progress` and `last`, the 409
@@ -491,6 +493,14 @@ export interface GenerationBatchProgress {
    * [@contract-v1]) — the F8c receipt names it. Absent on older servers.
    */
   modelId?: string;
+  /**
+   * Whose AI account ran dry ('openai' | 'anthropic') and where to top it up —
+   * set only when status is `credit_exhausted`, '' otherwise (additive
+   * [@contract-v1], disc-2026-10-batch-stop-on-credit-exhausted-a). Absent on
+   * older servers.
+   */
+  creditProvider?: string;
+  billingUrl?: string;
 }
 
 /**
