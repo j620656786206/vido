@@ -586,8 +586,12 @@ function GroupHeaderRow({
   // which answered the question after it stopped mattering. Still the same one
   // engine (CR H1): computeTotals over the ids the checkbox owns.
   const sectionTotals = computeTotals(items, new Set(ids), null, prices);
-  const all = ids.length > 0 && groupTotals.visibleSelectedCount === ids.length;
-  const some = groupTotals.visibleSelectedCount > 0 && !all;
+  // The box speaks for exactly the rows it would toggle, so its state is
+  // counted over those same ids — never over a total that could also hold a
+  // ticked row the box cannot touch (disc-2026-10-consent-group-checkbox-state).
+  const tickedHere = ids.filter((id) => selectedIds.has(id)).length;
+  const all = ids.length > 0 && tickedHere === ids.length;
+  const some = tickedHere > 0 && !all;
   // A view filter is hiding part of this section, so the checkbox and the
   // section's own counts no longer speak for the same set — and the header has
   // to say which is which rather than let the reader assume.
@@ -616,8 +620,12 @@ function GroupHeaderRow({
         ref={(el) => {
           if (el) el.indeterminate = some;
         }}
+        // Nothing in this section can be ticked (every folder refused the
+        // write probe, or nothing is priced): a live box that does nothing
+        // would be a lie about what it controls.
+        disabled={ids.length === 0}
         onChange={() => onToggleGroup(ids, !all)}
-        className="h-4 w-4 shrink-0 accent-[var(--accent-primary)]"
+        className="h-4 w-4 shrink-0 accent-[var(--accent-primary)] disabled:cursor-not-allowed"
       />
       {/* Disclosure. A BUTTON, not a click handler on the row: the checkbox
           lives in the same row, and a row-wide handler would make "tick this

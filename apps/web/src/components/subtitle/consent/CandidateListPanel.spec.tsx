@@ -1651,3 +1651,112 @@ describe('CandidateListPanel — generation not configured', () => {
     expect(screen.getByTestId('consent-start-btn')).not.toBeDisabled();
   });
 });
+
+// ─── disc-2026-10-consent-group-checkbox-state ─────────────────────────────
+//
+// Alexyu 2026-10-13:「每個卡片的勾選狀態要是對的，不管影集或者季數」. Every header
+// checkbox — show, season, movie section — must say exactly what is ticked
+// among the rows it can tick.
+
+describe('CandidateListPanel — header checkbox states (series × season)', () => {
+  const SP = '9a0bfe08-1acd-4f9e-9fed-a7c8d9e0f110'; // 特別篇 S00E01
+  const TREE = [
+    seriesEp(SP, 0, 1),
+    seriesEp(S1E1, 1, 1),
+    seriesEp(S1E2, 1, 2),
+    seriesEp(S2E1, 2, 1),
+  ];
+
+  function boxOf(testid: string): HTMLInputElement {
+    return screen.getByTestId(testid).querySelector('input[type="checkbox"]') as HTMLInputElement;
+  }
+  function state(testid: string): 'all' | 'some' | 'none' {
+    const box = boxOf(testid);
+    if (box.checked) return 'all';
+    return box.indeterminate ? 'some' : 'none';
+  }
+  function states(selected: string[], candidates = TREE) {
+    cleanup();
+    renderPanel({ candidates, selectedIds: new Set(selected) });
+    expandSeries();
+    return {
+      show: state(`consent-group-${SRS}`),
+      sp: state(`consent-season-${SRS}-0`),
+      s1: state(`consent-season-${SRS}-1`),
+      s2: state(`consent-season-${SRS}-2`),
+    };
+  }
+
+  it('nothing ticked → every level is empty', () => {
+    expect(states([])).toEqual({ show: 'none', sp: 'none', s1: 'none', s2: 'none' });
+  });
+
+  it('one episode of season 1 → season 1 and the show are mixed, the rest empty', () => {
+    expect(states([S1E1])).toEqual({ show: 'some', sp: 'none', s1: 'some', s2: 'none' });
+  });
+
+  it('all of season 1 → season 1 full, the show mixed', () => {
+    expect(states([S1E1, S1E2])).toEqual({ show: 'some', sp: 'none', s1: 'all', s2: 'none' });
+  });
+
+  it('everything → every level full', () => {
+    expect(states([SP, S1E1, S1E2, S2E1])).toEqual({
+      show: 'all',
+      sp: 'all',
+      s1: 'all',
+      s2: 'all',
+    });
+  });
+
+  it('a season box sends only its own episodes; the show box sends all of them', () => {
+    cleanup();
+    const onToggleGroup = vi.fn();
+    renderPanel({ candidates: TREE, selectedIds: new Set(), onToggleGroup });
+    expandSeries();
+    fireEvent.click(boxOf(`consent-season-${SRS}-1`));
+    expect(onToggleGroup).toHaveBeenLastCalledWith([S1E1, S1E2], true);
+    fireEvent.click(boxOf(`consent-group-${SRS}`));
+    expect(onToggleGroup).toHaveBeenLastCalledWith([SP, S1E1, S1E2, S2E1], true);
+  });
+
+  it('a ticked row that cannot be ticked never makes a header claim 全選', () => {
+    // S1E2's folder became unwritable after it was ticked: season 1 still has
+    // one tickable episode (S1E1) that is NOT ticked, so it is not 全選.
+    const tree = [
+      seriesEp(SP, 0, 1),
+      seriesEp(S1E1, 1, 1),
+      seriesEp(S1E2, 1, 2, { writable: false, blocker: 'SUBTITLE_TARGET_NOT_WRITABLE' }),
+      seriesEp(S2E1, 2, 1),
+    ];
+    const s = states([S1E2], tree);
+    expect(s.s1).toBe('none');
+    expect(s.show).toBe('none');
+  });
+
+  it('a section with nothing tickable has a disabled box, neither full nor mixed', () => {
+    const tree = [
+      seriesEp(SP, 0, 1),
+      seriesEp(S1E1, 1, 1, { writable: false, blocker: 'SUBTITLE_TARGET_NOT_WRITABLE' }),
+      seriesEp(S1E2, 1, 2, { writable: false, blocker: 'SUBTITLE_TARGET_NOT_WRITABLE' }),
+      seriesEp(S2E1, 2, 1),
+    ];
+    states([], tree);
+    const box = boxOf(`consent-season-${SRS}-1`);
+    expect(box).toBeDisabled();
+    expect(box.checked).toBe(false);
+    expect(box.indeterminate).toBe(false);
+    expect(boxOf(`consent-group-${SRS}`)).not.toBeDisabled();
+  });
+
+  it('movie sections follow the same rule', () => {
+    cleanup();
+    const movies: GenerationCandidate[] = [
+      { ...CANDIDATES[0], tmdbMatched: true },
+      { ...CANDIDATES[1], tmdbMatched: true },
+      { ...CANDIDATES[2], tmdbMatched: false },
+    ];
+    renderPanel({ candidates: movies, selectedIds: new Set([movies[0].mediaId]) });
+    expect(state('consent-movies-matched')).toBe('some');
+    expect(state('consent-movies-unmatched')).toBe('none');
+  });
+});
