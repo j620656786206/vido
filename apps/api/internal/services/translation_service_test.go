@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -862,4 +863,54 @@ func TestTranslateWithGlossaryHarvest_MetadataComposedOncePerRun(t *testing.T) {
 	for i, call := range mock.calls {
 		assert.Equal(t, mock.calls[0].SystemPrompt, call.SystemPrompt, "batch %d", i+1)
 	}
+}
+
+// echoIndexCompleter answers every "[N] text" line under the translate header
+// with "[N] 中文N", so batching can be counted without parse noise.
+type echoIndexCompleter struct{ calls int }
+
+var echoIndexLine = regexp.MustCompile(`(?m)^\[(\d+)\] `)
+
+func (e *echoIndexCompleter) CompleteText(_ context.Context, _, user string, _ int) (string, error) {
+	e.calls++
+	body := user
+	if i := strings.Index(user, "## Translate the following blocks:"); i >= 0 {
+		body = user[i:]
+	}
+	var sb strings.Builder
+	for _, m := range echoIndexLine.FindAllStringSubmatch(body, -1) {
+		sb.WriteString("[" + m[1] + "] 中文" + m[1] + "\n")
+	}
+	return sb.String(), nil
+}
+
+// TestTranslateWithGlossary_BatchSizeOption guards spike-local-translation-golden-eval
+// AC #4: the default stays prompts.SubtitleTranslatorBatchSize (10), and only
+// an explicit positive WithBatchSize changes how many cues ride one request.
+func TestTranslateWithGlossary_BatchSizeOption(t *testing.T) {
+	blocks := make([]TranslationBlock, 25)
+	for i := range blocks {
+		blocks[i] = TranslationBlock{Index: i + 1, Text: fmt.Sprintf("Line number %d here.", i+1)}
+	}
+	for _, tc := range []struct {
+		name      string
+		opts      []TranslateOption
+		wantCalls int
+	}{
+		{"default is 10 per request", nil, 3},
+		{"zero keeps the default", []TranslateOption{WithBatchSize(0)}, 3},
+		{"five per request", []TranslateOption{WithBatchSize(5)}, 5},
+		{"one per request", []TranslateOption{WithBatchSize(1)}, 25},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := &echoIndexCompleter{}
+			svc := NewTranslationService(m, nil)
+			out, _, err := svc.TranslateWithGlossary(context.Background(), blocks, nil, nil, tc.opts...)
+			require.NoError(t, err)
+			require.Len(t, out, 25)
+			assert.Equal(t, "中文25", out[24].Text)
+			assert.Equal(t, tc.wantCalls, m.calls)
+		})
+	}
+	assert.Equal(t, 10, prompts.SubtitleTranslatorBatchSize, "the app default must not move with this option")
 }

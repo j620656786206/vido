@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"regexp"
@@ -160,4 +161,239 @@ func TestRun_NoJudgeAndCustomSample(t *testing.T) {
 
 func writeFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0o644)
+}
+
+// fakeLocal stands in for a model on an OpenAI-compatible server: it answers
+// the production "[N]" prompt and the native one-cue prompts, never touches the
+// budget (local inference is free), and records what it was sent.
+type fakeLocal struct {
+	prompts *[]string
+	failIDs map[string]bool // native: source texts to fail on
+}
+
+func (f fakeLocal) CompleteText(_ context.Context, _, usr string, _ int) (string, error) {
+	*f.prompts = append(*f.prompts, usr)
+	if strings.Contains(usr, "## Translate the following blocks:") {
+		body := usr[strings.Index(usr, "## Translate the following blocks:"):]
+		var sb strings.Builder
+		for _, m := range idxLine.FindAllStringSubmatch(body, -1) {
+			sb.WriteString("[" + m[1] + "] 本機第 " + m[1] + " 句\n")
+		}
+		return sb.String(), nil
+	}
+	for text := range f.failIDs {
+		if strings.HasSuffix(usr, text) {
+			return "", ai.ErrAIInvalidResponse
+		}
+	}
+	return "  本機譯文  ", nil
+}
+
+func localDeps(t *testing.T, local fakeLocal, judgeCalls *int) deps {
+	t.Helper()
+	d := testDeps(t, fakeModel{judgeScore: 2, usdPerCall: 0.001, calls: judgeCalls})
+	d.newLocalCompleter = func(_, _ string, _ time.Duration) ai.TextCompleter { return local }
+	return d
+}
+
+func TestParseFlags_LocalMode(t *testing.T) {
+	base := []string{"--openai-base-url", "http://nas:8080/v1", "--openai-model", "hy-mt2-7b"}
+	cfg, err := parseFlags(base)
+	if err != nil || cfg.model != "local:hy-mt2-7b" || cfg.promptStyle != promptStyleProduction || cfg.callTimeout != ai.DefaultOpenAICompatTimeout {
+		t.Fatalf("local defaults: %+v err=%v", cfg, err)
+	}
+	if cfg, err := parseFlags(append(base, "--also-judge", " simplified_leak , name_mismatch ")); err != nil || len(splitList(cfg.alsoJudge)) != 2 {
+		t.Fatalf("--also-judge list: %+v %v", cfg, err)
+	}
+	cfg, err = parseFlags(append(base, "--prompt-style", "native"))
+	if err != nil || cfg.nativeTemplate != nativeHyMT {
+		t.Fatalf("native template must be guessed from the model id: %+v err=%v", cfg, err)
+	}
+	for name, args := range map[string][]string{
+		"url without model":     {"--openai-base-url", "http://nas/v1"},
+		"model without url":     {"--openai-model", "x"},
+		"also --model":          append([]string{"--model", "claude-haiku-4-5"}, base...),
+		"native for claude":     {"--model", "claude-haiku-4-5", "--prompt-style", "native"},
+		"unknown style":         append([]string{"--prompt-style", "fancy"}, base...),
+		"unguessable template":  {"--openai-base-url", "http://nas/v1", "--openai-model", "qwen3:4b", "--prompt-style", "native"},
+		"batch size in native":  append([]string{"--prompt-style", "native", "--batch-size", "5"}, base...),
+		"negative batch size":   append([]string{"--batch-size", "-1"}, base...),
+		"batch size for claude": {"--model", "claude-haiku-4-5", "--batch-size", "5"},
+		"bad explicit template": append([]string{"--prompt-style", "native", "--native-template", "gpt"}, base...),
+		"also-judge empty cues": append([]string{"--also-judge", "simplified_leak,missing"}, base...),
+		"also-judge no judge":   append([]string{"--also-judge", "simplified_leak", "--no-judge"}, base...),
+	} {
+		if _, err := parseFlags(args); err == nil {
+			t.Errorf("%s: want an error", name)
+		}
+	}
+}
+
+func TestRun_LocalProductionStyle(t *testing.T) {
+	var sent []string
+	judgeCalls := 0
+	d := localDeps(t, fakeLocal{prompts: &sent}, &judgeCalls)
+	cfg, err := parseFlags([]string{"--openai-base-url", "http://nas:8080/v1", "--openai-model", "translategemma:12b", "--limit", "25", "--batch-size", "5"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := run(context.Background(), cfg, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.ModelID != "local:translategemma:12b" || rep.PromptStyle != promptStyleProduction || rep.BatchSize != 5 || rep.Endpoint != "http://nas:8080/v1" {
+		t.Fatalf("local stamps: %+v", rep)
+	}
+	if len(sent) != 5 { // 25 cues in chunks of 20 → batches of 5,5,5,5 and 5
+		t.Fatalf("--batch-size 5 over 25 cues should make 5 requests, got %d", len(sent))
+	}
+	if !strings.HasPrefix(rep.PromptVersion, "m1-") {
+		t.Fatalf("production style keeps the production prompt version, got %q", rep.PromptVersion)
+	}
+	if judgeCalls == 0 || rep.JudgeModel != eval.DefaultJudgeModel || !strings.Contains(rep.JudgeNote, "本機模型") {
+		t.Fatalf("Claude still judges, and the note says so: calls=%d %+v", judgeCalls, rep)
+	}
+	if rep.EpisodeMinutesEst != eval.EpisodeMinutes(rep.Minutes, rep.Cues) {
+		t.Fatalf("episode estimate: %v", rep.EpisodeMinutesEst)
+	}
+}
+
+func TestRun_LocalNativeStyleSkipsFailedCuesAndNeedsNoKeyWithoutJudge(t *testing.T) {
+	cues, err := eval.Golden()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sent []string
+	judgeCalls := 0
+	d := localDeps(t, fakeLocal{prompts: &sent, failIDs: map[string]bool{cues[2].Text: true}}, &judgeCalls)
+	d.apiKey = "" // rules only + local model: no Claude key needed
+	cfg, err := parseFlags([]string{"--openai-base-url", "http://nas:8080/v1", "--openai-model", "hy-mt2-7b",
+		"--prompt-style", "native", "--limit", "4", "--no-judge", "--trace"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := run(context.Background(), cfg, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sent) != 4 || judgeCalls != 0 {
+		t.Fatalf("one call per cue and no judge: sent=%d judge=%d", len(sent), judgeCalls)
+	}
+	if !strings.HasPrefix(sent[0], "Translate the following text into Traditional Chinese.") ||
+		!strings.Contains(sent[1], "[Background Information]\n"+cues[0].Text) {
+		t.Fatalf("HY-MT templates: first=%q second=%q", sent[0], sent[1])
+	}
+	if rep.PromptVersion != "native-hymt" || rep.Results[0].Raw != "本機譯文" {
+		t.Fatalf("native stamps / trimmed output: %q %q", rep.PromptVersion, rep.Results[0].Raw)
+	}
+	if rep.Results[2].Raw != "" || rep.Results[2].Score != 0 {
+		t.Fatalf("a failed cue is left missing and scores 0: %+v", rep.Results[2])
+	}
+	if rep.Grade == eval.GradeIncomplete {
+		t.Fatalf("one failed cue must not void the run: %s", rep.Incomplete)
+	}
+}
+
+func TestNativeTranslator_StopsAfterConsecutiveFailures(t *testing.T) {
+	cues, _ := eval.Golden()
+	fail := map[string]bool{}
+	for _, c := range cues[:nativeMaxConsecutiveFailures] {
+		fail[c.Text] = true
+	}
+	var sent []string
+	got, err := nativeTranslator(fakeLocal{prompts: &sent, failIDs: fail}, nativeTranslateGemma, io.Discard)(context.Background(), cues[:10])
+	if err == nil || len(sent) != nativeMaxConsecutiveFailures || len(got) != 0 {
+		t.Fatalf("want a stop after %d failures, got err=%v sent=%d got=%d", nativeMaxConsecutiveFailures, err, len(sent), len(got))
+	}
+}
+
+func TestNativePrompt_TranslateGemmaWording(t *testing.T) {
+	p, err := nativePrompt(nativeTranslateGemma, "Hello.", []string{"ignored"})
+	if err != nil || !strings.HasPrefix(p, "You are a professional English (en) to Traditional Chinese (zh-TW) translator.") ||
+		!strings.HasSuffix(p, "into Traditional Chinese:\n\n\nHello.") || strings.Contains(p, "ignored") {
+		t.Fatalf("translategemma prompt: %q %v", p, err)
+	}
+}
+
+func TestMerge_RefusesLocalModels(t *testing.T) {
+	_, err := ratingFromReport(eval.Report{ModelID: "local:hy-mt2-7b", Grade: eval.GradeA, SampleVersion: eval.SampleVersion})
+	if err == nil || !strings.Contains(err.Error(), "local model") {
+		t.Fatalf("local reports must not reach the ratings table: %v", err)
+	}
+}
+
+func TestRejudge_RewritesReportAndKeepsHeadline(t *testing.T) {
+	calls := 0
+	d := testDeps(t, fakeModel{judgeScore: 2, usdPerCall: 0.001, calls: &calls})
+	tmp := t.TempDir() + "/r.json"
+	cues, _ := eval.Golden()
+	rep := eval.Report{
+		ModelID: "local:x", Grade: eval.GradeC, ZeroRate: 1, JudgeModel: eval.DefaultJudgeModel, SampleVersion: eval.SampleVersion,
+		SecondaryReasons: []string{eval.ReasonNameMismatch}, SecondaryUnjudged: 1,
+		Results: []eval.CueResult{{ID: cues[0].ID, Raw: "托姆", Final: "托姆", RuleFails: []string{eval.ReasonNameMismatch}}},
+	}
+	if err := writeReport(tmp, rep); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := parseFlags([]string{"--rejudge", tmp})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := rejudge(context.Background(), cfg, d)
+	if err != nil || n != 1 {
+		t.Fatalf("n=%d err=%v", n, err)
+	}
+	data, _ := os.ReadFile(tmp)
+	var got eval.Report
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.SecondaryUnjudged != 0 || !got.Results[0].SecondaryJudged || got.ZeroRate != 1 || got.Grade != eval.GradeC || got.CostUSD <= 0 {
+		t.Fatalf("rewritten report: %+v", got)
+	}
+}
+
+func TestRejudge_RefusesAnotherSampleVersion(t *testing.T) {
+	calls := 0
+	d := testDeps(t, fakeModel{judgeScore: 2, usdPerCall: 0.001, calls: &calls})
+	tmp := t.TempDir() + "/r.json"
+	if err := writeReport(tmp, eval.Report{SampleVersion: "golden-v0", SecondaryReasons: []string{"x"}}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ := parseFlags([]string{"--rejudge", tmp})
+	if _, err := rejudge(context.Background(), cfg, d); err == nil || !strings.Contains(err.Error(), "golden-v0") {
+		t.Fatalf("want a sample-version refusal, got %v", err)
+	}
+}
+
+func TestRejudge_BudgetStopSavesAndFails(t *testing.T) {
+	calls := 0
+	d := testDeps(t, fakeModel{judgeScore: 2, usdPerCall: 0.30, calls: &calls})
+	tmp := t.TempDir() + "/r.json"
+	cues, _ := eval.Golden()
+	rep := eval.Report{ModelID: "local:x", Grade: eval.GradeC, JudgeModel: eval.DefaultJudgeModel, SampleVersion: eval.SampleVersion,
+		SecondaryReasons: []string{eval.ReasonNameMismatch}}
+	for _, c := range cues[:12] {
+		rep.Results = append(rep.Results, eval.CueResult{ID: c.ID, Raw: "托姆", Final: "托姆", RuleFails: []string{eval.ReasonNameMismatch}})
+	}
+	if err := writeReport(tmp, rep); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ := parseFlags([]string{"--rejudge", tmp, "--budget-usd", "0.50"})
+	n, err := rejudge(context.Background(), cfg, d)
+	if err == nil || !errors.Is(err, ai.ErrBudgetExceeded) {
+		t.Fatalf("a budget stop must fail the command, got n=%d err=%v", n, err)
+	}
+	data, _ := os.ReadFile(tmp)
+	var got eval.Report
+	_ = json.Unmarshal(data, &got)
+	judged := 0
+	for _, r := range got.Results {
+		if r.SecondaryJudged {
+			judged++
+		}
+	}
+	if judged != n || got.SecondaryUnjudged != 12-n || got.ZeroRateSecondary == nil {
+		t.Fatalf("saved report must be consistent: judged=%d n=%d unjudged=%d", judged, n, got.SecondaryUnjudged)
+	}
 }

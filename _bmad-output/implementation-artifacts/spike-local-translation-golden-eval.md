@@ -1,6 +1,6 @@
 # Story spike-local-translation-golden-eval: 用 200 句考卷量「NAS 本機翻譯模型」的繁中品質與速度
 
-Status: ready-for-dev
+Status: done
 
 <!-- SM Bob create-story 2026-10-13。來源：2026-10-13 party mode（founder-pm／Winston／Murat／John），Alexyu 選 A：
      「先改評分程式、用 NAS 跑一晚考兩個本機模型，過關才開單做『本機翻譯』選項」。
@@ -57,21 +57,21 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — OpenAI 相容 completer（AC: #2, #6）**
-  - [ ] 1.1 `internal/ai/openai_compat.go`：`NewOpenAICompatProvider(baseURL, model, opts...)`，實作 `TextCompleter`；逾時、重試、錯誤分類
-  - [ ] 1.2 httptest 單元測試（逾時／重試／4xx／空內容）
-  - [ ] 1.3 NAS 上 Ollama 起來後，錄真實回應 fixture（成功＋404），補 real-shape 測試
-- [ ] **Task 2 — 評分器旗標與兩種提示方式（AC: #1, #3, #4, #5）**
-  - [ ] 2.1 `--openai-base-url`／`--openai-model`／`--call-timeout`／`--prompt-style`／`--batch-size`／`--native-template` 解析與驗證；`model_id` = `local:<model>`；`--merge` 拒收 `local:`
-  - [ ] 2.2 `native` 模式的 `eval.Translator`（TranslateGemma 與 HY-MT 兩種官方模板，一句一呼叫＋前文）
-  - [ ] 2.3 報告加 `episode_minutes_est`、`simplified_leak`／`forbidden_term` 比例、`prompt_style`、`batch_size`、`base_url`
-  - [ ] 2.4 `main_test.go` 新增案例；既有案例不改、全綠
-- [ ] **Task 3 — NAS 實跑（AC: #7, #9）** ⚠️ 先取得 Alexyu 同意
-  - [ ] 3.1 Unraid 起 Ollama 容器（CPU），`ollama pull` 兩個模型；`ollama show <model> --template` 記下內建模板
-  - [ ] 3.2 跑 5 份報告（`--trace`），記錄當時 NAS 負載
-- [ ] **Task 4 — 結果文件與立案（AC: #7, #8）**
-  - [ ] 4.1 寫 `eval-local-translation-golden-2026-10.md`，套用事先登記的表
-  - [ ] 4.2 依結論在 `sprint-status.yaml` 開條目，雙向引用
+- [x] **Task 1 — OpenAI 相容 completer（AC: #2, #6）**
+  - [x] 1.1 `internal/ai/openai_compat.go`：`NewOpenAICompatProvider(baseURL, model, opts...)`，實作 `TextCompleter`；逾時、重試、錯誤分類
+  - [x] 1.2 httptest 單元測試（逾時／重試／4xx／空內容）
+  - [x] 1.3 NAS 上 Ollama 起來後，錄真實回應 fixture（成功＋404），補 real-shape 測試
+- [x] **Task 2 — 評分器旗標與兩種提示方式（AC: #1, #3, #4, #5）**
+  - [x] 2.1 `--openai-base-url`／`--openai-model`／`--call-timeout`／`--prompt-style`／`--batch-size`／`--native-template` 解析與驗證；`model_id` = `local:<model>`；`--merge` 拒收 `local:`
+  - [x] 2.2 `native` 模式的 `eval.Translator`（TranslateGemma 與 HY-MT 兩種官方模板，一句一呼叫＋前文）
+  - [x] 2.3 報告加 `episode_minutes_est`、`simplified_leak`／`forbidden_term` 比例、`prompt_style`、`batch_size`、`base_url`
+  - [x] 2.4 `main_test.go` 新增案例；既有案例不改、全綠
+- [x] **Task 3 — NAS 實跑（AC: #7, #9）** ⚠️ 先取得 Alexyu 同意
+  - [x] 3.1 Unraid 起 Ollama 容器（CPU），`ollama pull` 兩個模型；`ollama show <model> --template` 記下內建模板
+  - [x] 3.2 跑 5 份報告（`--trace`），記錄當時 NAS 負載
+- [x] **Task 4 — 結果文件與立案（AC: #7, #8）**
+  - [x] 4.1 寫 `eval-local-translation-golden-2026-10.md`，套用事先登記的表
+  - [x] 4.2 依結論在 `sprint-status.yaml` 開條目，雙向引用
 
 （後端 2、腳本／維運 2、前端 0 —— 不觸發拆分。）
 
@@ -134,14 +134,71 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（claude-opus-5-5）；code review 由 Fable（跨模型）負責。
+
 ### Debug Log References
+
+- 考試紀錄：scratchpad `run-all.log`（5 份依序跑，20:58～22:09）。
+- NAS：`/mnt/cache/appdata/ollama`（模型 12G）、`/mnt/cache/appdata/llamacpp`（先前為 llama.cpp 下載的 GGUF，12G，現在沒用到）。Ollama 容器跑完後已停止（`docker stop ollama`），沒有刪除。
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- **結果**：照事先登記的門檻，兩個本機模型都不過關（第一組）→ 判定「2027-04 再考」。第二組（`--also-judge simplified_leak,name_mismatch`）：Hy-MT2 7B 翻壞 6.5%、翻得自然 80%，Sonnet 是 3%／92%；一集約 43 分。全文：`eval-local-translation-golden-2026-10.md`。
+- **跟計畫不同的地方**（結果文件有完整表格）：
+  - 改考 Hy-MT2 7B，因為 1.5 沒有官方 GGUF。
+  - 原本要用 Ollama，但 NAS 的 docker.img 40GB 放不下映像。Alexyu 把它放大到 80GB 之後才改回 Ollama。
+  - 評審花費 US$3.40，超過預估的 US$2.50：Sonnet 基準第一次跑到 US$0.50 就停了，評審只評到一半。
+  - 加了第二組分數，因為第一組被人名規則主導，連 Sonnet 都過不了。
+- **AC #4** 選了 (a)：`services.WithBatchSize(n)`，預設不變，`TestTranslateWithGlossary_BatchSizeOption` 證明預設仍是 10。
+- **AC #3 的範圍多了兩件事**：
+  - `eval.Options.AlsoJudge`（第二組分數，不改第一組的等級）。
+  - `eval.RejudgeSecondary`／`grade --rejudge`（評審回壞掉的 JSON 時補評）。
+  - 兩件都有單元測試。
+- **TranslateGemma 的目標語言**：只寫「Chinese」會吐簡體，改成「Traditional Chinese」（`native.go` 註解有寫）。
+- **AC #6**：real-shape fixture 來自 NAS 上 Ollama 0.40.3 的真實回應，`internal/ai/testdata/openai_compat_ollama_{ok,404}.json`。
+
+### Code Review（2026-10-13，Fable 5.1 跨模型）
+
+1 HIGH、2 MEDIUM、4 LOW，全部修掉：
+
+- **HIGH**：第二輪評分如果撞到預算，以前會把整份報告標成「未完成」，連第一組的等級也一起沒了，而且 `--rejudge` 救不回來。
+  - 現在第二輪停下來時，只把剩下的句子記進 `secondary_unjudged`，原因寫在 `secondary_incomplete`，第一組照常算分。
+  - 測試：`TestRun_AlsoJudge_BudgetStopKeepsHeadline`。
+- **MEDIUM**：`--rejudge` 撞到預算時，存下來的報告前後數字對不上，而且結束碼是 0（看起來像成功）。
+  - 現在不管從哪裡結束，都會先把計數和分數重算好再存檔；撞到預算時改成非零結束碼。
+  - 測試：`TestRejudge_BudgetStopSavesAndFails`。
+- **MEDIUM**：考 Claude 時也能加 `--batch-size`，這樣考出來的分數條件跟正式版不同，卻能合併進內建等級表。現在拒收。
+- **LOW**：
+  - `--rejudge` 現在會比對考卷版本。
+  - 第二輪評分也會存評審的理由（`why`）。
+  - 讀回應內容時如果被呼叫端取消，現在回 `context.Canceled`。
+  - 「換算一集」原本把評審的時間也算進去了，現在改用新欄位 `translate_minutes`，只算翻譯本身。另外用 `--no-judge` 重量了 4 份本機模型的翻譯時間（`eval/local-translation-2026-10/timing/`），結果文件的「換算一集」照這 4 份更新。
 
 ### Discovery Triage
 
-- （dev 填）
+| 發現 | Lane | 條目 |
+|---|---|---|
+| golden-v1 人名規則偏嚴，加上不帶詞彙表時 Sonnet 會留英文人名，連 Sonnet 都只拿 B | ③ | `disc-2026-10-golden-name-rule-calibration` |
+| `cmd/grade` 預算預設 0.50 不夠 Sonnet 考完（CI 的 Model Grade 會「未完成」）；評審偶爾回壞掉的 JSON | ③ | `disc-2026-10-model-grade-budget-and-judge-reliability` |
+| 照判定 2027-04 重考；如果要提早做，產品端要補「詞彙表進本機提示詞」「先轉繁體再過閘門」 | ③ | `backlog-local-translation-retest-2027-04` |
+| 第二輪評審回壞掉的 JSON，會默默略過那一批 | ① | AC #5 範圍內補上 `secondary_unjudged`＋`--rejudge`（本單程式） |
+| NAS docker.img 只剩 7.7GB，裝不下 Ollama | — | Alexyu 10/13 自己放大到 80GB，已解決，不用立案 |
 
 ### File List
+
+- `apps/api/internal/ai/openai_compat.go`（新）
+- `apps/api/internal/ai/openai_compat_test.go`（新）
+- `apps/api/internal/ai/testdata/openai_compat_ollama_ok.json`（新）
+- `apps/api/internal/ai/testdata/openai_compat_ollama_404.json`（新）
+- `apps/api/cmd/grade/main.go`（改）
+- `apps/api/cmd/grade/native.go`（新）
+- `apps/api/cmd/grade/merge.go`（改）
+- `apps/api/cmd/grade/main_test.go`（改，只新增案例）
+- `apps/api/internal/eval/run.go`（改）
+- `apps/api/internal/eval/run_test.go`（改，只新增案例）
+- `apps/api/internal/services/translation_service.go`（改，只加 `WithBatchSize`）
+- `apps/api/internal/services/translation_service_test.go`（改，只新增案例）
+- `eval/local-translation-2026-10/*.json`（新，5 份逐句報告）
+- `_bmad-output/implementation-artifacts/eval-local-translation-golden-2026-10.md`（新）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`（改）

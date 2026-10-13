@@ -1,0 +1,20 @@
+{
+  "id": "chatcmpl-287",
+  "object": "chat.completion",
+  "created": 1791896016,
+  "model": "hy-mt2-7b",
+  "system_fingerprint": "fp_ollama",
+  "choices": [
+    {
+      "index": 0,
+      "message": { "role": "assistant", "content": "你真是一個混蛋，湯姆。" },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 31,
+    "prompt_tokens_details": { "cached_tokens": 0 },
+    "completion_tokens": 11,
+    "total_tokens": 42
+  }
+}
