@@ -14,6 +14,7 @@ import type { Download } from '../../services/downloadService';
 import { cn } from '../../lib/utils';
 import { useIsPhone } from '../../hooks/useIsPhone';
 import { DeleteWithFilesDialog } from './DeleteWithFilesDialog';
+import { Tooltip } from '../ui/Tooltip';
 
 interface DownloadRowActionsProps {
   download: Download;
@@ -100,18 +101,20 @@ export function DownloadRowActions({
   return (
     <div className="flex shrink-0 items-center gap-1">
       {stateAction && (
-        <button
-          type="button"
-          onClick={stateAction.run}
-          aria-label={`${stateAction.label} ${download.name}`}
-          className={cn(
-            square,
-            stateAction.tone === 'error' &&
-              'text-[var(--error-text)] hover:text-[var(--error-text)]'
-          )}
-        >
-          <stateAction.icon className="size-[18px]" aria-hidden="true" />
-        </button>
+        <Tooltip content={stateAction.label} side="top">
+          <button
+            type="button"
+            onClick={stateAction.run}
+            aria-label={`${stateAction.label} ${download.name}`}
+            className={cn(
+              square,
+              stateAction.tone === 'error' &&
+                'text-[var(--error-text)] hover:text-[var(--error-text)]'
+            )}
+          >
+            <stateAction.icon className="size-[18px]" aria-hidden="true" />
+          </button>
+        </Tooltip>
       )}
 
       {(stateAction || onRemove) && useSheet && (
@@ -131,16 +134,18 @@ export function DownloadRowActions({
         // modal={false}: a modal menu leaves `pointer-events: none` on <body> for a frame while
         // the confirm dialog mounts, which can swallow the first click inside that dialog.
         <DropdownMenu.Root modal={false}>
-          <DropdownMenu.Trigger asChild>
-            <button
-              type="button"
-              ref={moreRef}
-              aria-label={`更多動作：${download.name}`}
-              className={square}
-            >
-              <Ellipsis className="size-[18px]" aria-hidden="true" />
-            </button>
-          </DropdownMenu.Trigger>
+          <Tooltip content="更多動作" side="top">
+            <DropdownMenu.Trigger asChild>
+              <button
+                type="button"
+                ref={moreRef}
+                aria-label={`更多動作：${download.name}`}
+                className={square}
+              >
+                <Ellipsis className="size-[18px]" aria-hidden="true" />
+              </button>
+            </DropdownMenu.Trigger>
+          </Tooltip>
           <DropdownMenu.Portal>
             <DropdownMenu.Content
               align="end"

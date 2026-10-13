@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ScanProgressCard } from './ScanProgressCard';
 import type { ScanProgressState } from '../../hooks/useScanProgress';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const mockNavigate = vi.fn();
 vi.mock('@tanstack/react-router', () => ({
@@ -393,5 +394,22 @@ describe('ScanProgressCard', () => {
     fireEvent.click(screen.getByTestId('scan-cancel-btn'));
     expect(screen.getByTestId('cancel-confirm-btn')).toHaveTextContent('取消中...');
     expect(screen.getByTestId('cancel-confirm-btn')).toBeDisabled();
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-b — icon-only controls name themselves in the shared tooltip.
+describe('ScanProgressCard — header controls', () => {
+  it('最小化／取消 show their names on keyboard focus', async () => {
+    vi.useRealTimers();
+    render(
+      <ScanProgressCard
+        state={baseScanningState}
+        onCancel={vi.fn()}
+        onToggleMinimize={vi.fn()}
+        onDismiss={vi.fn()}
+      />
+    );
+    await expectTooltipOnFocus(screen.getByTestId('scan-minimize-btn'), '最小化');
+    await expectTooltipOnFocus(screen.getByTestId('scan-close-btn'), '取消掃描');
   });
 });

@@ -96,6 +96,7 @@ import { usd } from '../../lib/currency';
 import { GenerationProgressV2 } from './GenerationProgressV2';
 import { GlossaryPanelV2 } from './GlossaryPanelV2';
 import { deriveGenerateCostView, type RetryNote } from './generateCostView';
+import { Tooltip } from '../ui/Tooltip';
 
 interface TrackRow {
   key: string;
@@ -1043,26 +1044,28 @@ export function ManageSubtitleDialogV2({
                       {onlineSearch.downloadErrorMap[result.id] && (
                         <span className="shrink-0 text-xs text-[var(--error-text)]">下載失敗</span>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => handleFetchDownload(result)}
-                        disabled={
-                          onlineSearch.downloadingIds.has(result.id) ||
-                          onlineSearch.downloadedIds.has(result.id)
-                        }
-                        aria-label={`下載 ${result.filename}`}
-                        data-testid={`fetch-download-${result.id}`}
-                        className="flex min-h-[44px] w-10 shrink-0 items-center justify-center text-[var(--accent-text)] disabled:opacity-50"
-                      >
-                        {onlineSearch.downloadingIds.has(result.id) ? (
-                          <Loader2
-                            className="h-4 w-4 animate-spin motion-reduce:animate-none"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <Download className="h-4 w-4" aria-hidden="true" />
-                        )}
-                      </button>
+                      <Tooltip content="下載" side="left">
+                        <button
+                          type="button"
+                          onClick={() => handleFetchDownload(result)}
+                          disabled={
+                            onlineSearch.downloadingIds.has(result.id) ||
+                            onlineSearch.downloadedIds.has(result.id)
+                          }
+                          aria-label={`下載 ${result.filename}`}
+                          data-testid={`fetch-download-${result.id}`}
+                          className="flex min-h-[44px] w-10 shrink-0 items-center justify-center text-[var(--accent-text)] disabled:opacity-50"
+                        >
+                          {onlineSearch.downloadingIds.has(result.id) ? (
+                            <Loader2
+                              className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Download className="h-4 w-4" aria-hidden="true" />
+                          )}
+                        </button>
+                      </Tooltip>
                     </div>
                   ))}
                 </section>

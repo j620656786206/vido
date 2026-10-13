@@ -8,6 +8,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import type { StepProps } from './SetupWizard';
 import { StepNav } from './StepNav';
 import { newLocalId } from '../../utils/uid';
+import { Tooltip } from '../ui/Tooltip';
 
 const CONTENT_TYPES = [
   { value: 'movie', label: '電影' },
@@ -96,15 +97,17 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
             {libraries.length > 1 && (
               // Neutral at rest: removing an unsaved row is not「壞了」, so it
               // does not wear 硃砂 (DESIGN.md 固定詞彙). Ghost icon button.
-              <button
-                type="button"
-                onClick={() => removeLibrary(index)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] active:bg-[var(--bg-tertiary)] sm:h-8 sm:w-8"
-                data-testid={`library-remove-${index}`}
-                aria-label="移除此媒體庫"
-              >
-                <Trash2 className="h-4 w-4" aria-hidden="true" />
-              </button>
+              <Tooltip content="移除此媒體庫" side="top">
+                <button
+                  type="button"
+                  onClick={() => removeLibrary(index)}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] active:bg-[var(--bg-tertiary)] sm:h-8 sm:w-8"
+                  data-testid={`library-remove-${index}`}
+                  aria-label="移除此媒體庫"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </Tooltip>
             )}
           </div>
 

@@ -12,6 +12,7 @@ import { formatPosterMeta, formatRuntime, formatSeriesCount } from '../../lib/fo
 import { HighlightText } from '../ui/HighlightText';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { RequestButton } from '../requests/RequestButton';
+import { Tooltip } from '../ui/Tooltip';
 
 export interface PosterCardProps {
   id: string;
@@ -252,22 +253,24 @@ export function PosterCard({
 
         {/* Kebab menu — MQbvp: top-RIGHT slot (was top-LEFT in pre-bugfix-10-4), hover-only via group-hover */}
         {onMenuClick && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onMenuClick(e);
-            }}
-            // Kebab floats on POSTER ART, so its backing is the scrim token — dark in
-            // both themes. The icon stays literal white: it is the only value that
-            // clears the scrim in BOTH themes (see the report on --text-on-scrim).
-            // The 90% hover keeps its own alpha; no token carries it.
-            className="absolute right-2 top-2 z-20 rounded-full bg-[var(--overlay-scrim)] p-1.5 text-[var(--text-on-scrim)] opacity-0 transition-opacity duration-[var(--motion-state)] hover:bg-[var(--overlay-scrim)] lg:group-hover:opacity-100"
-            aria-label="更多選項"
-            data-testid="poster-menu-button"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
+          <Tooltip content="更多選項" side="left">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onMenuClick(e);
+              }}
+              // Kebab floats on POSTER ART, so its backing is the scrim token — dark in
+              // both themes. The icon stays literal white: it is the only value that
+              // clears the scrim in BOTH themes (see the report on --text-on-scrim).
+              // The 90% hover keeps its own alpha; no token carries it.
+              className="absolute right-2 top-2 z-20 rounded-full bg-[var(--overlay-scrim)] p-1.5 text-[var(--text-on-scrim)] opacity-0 transition-opacity duration-[var(--motion-state)] hover:bg-[var(--overlay-scrim)] lg:group-hover:opacity-100"
+              aria-label="更多選項"
+              data-testid="poster-menu-button"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </Tooltip>
         )}
 
         {/* The MQbvp hover ▶ overlay was REMOVED (critique R2 P1): a big play

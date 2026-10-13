@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ScanProgressState } from '../../hooks/useScanProgress';
+import { Tooltip } from '../ui/Tooltip';
 
 const AUTO_DISMISS_MS = 10000;
 
@@ -295,24 +296,28 @@ export function ScanProgressCard({
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-[var(--text-primary)]">媒體庫掃描中</span>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onToggleMinimize}
-            className="rounded-[var(--radius-sm)] p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
-            aria-label="最小化"
-            data-testid="scan-minimize-btn"
-          >
-            <Minus className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={handleCancelClick}
-            className="rounded-[var(--radius-sm)] p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
-            aria-label="取消"
-            data-testid="scan-close-btn"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <Tooltip content="最小化" side="top">
+            <button
+              type="button"
+              onClick={onToggleMinimize}
+              className="rounded-[var(--radius-sm)] p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+              aria-label="最小化"
+              data-testid="scan-minimize-btn"
+            >
+              <Minus className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
+          <Tooltip content="取消掃描" side="top">
+            <button
+              type="button"
+              onClick={handleCancelClick}
+              className="rounded-[var(--radius-sm)] p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+              aria-label="取消"
+              data-testid="scan-close-btn"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
       </div>
 

@@ -23,6 +23,7 @@ vi.mock('../../services/authService', async () => {
 
 import { AuthError } from '../../services/authService';
 import { LoginForm } from './LoginForm';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 function renderForm(props: { justLoggedOut?: boolean } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -268,5 +269,13 @@ describe('LoginForm', () => {
     const wordmark = screen.getByText('vido');
     expect(wordmark.className).toContain('text-xl');
     expect(wordmark.className).toContain('sm:text-2xl');
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-b — icon-only controls name themselves in the shared tooltip.
+describe('LoginForm — reveal control', () => {
+  it('顯示密碼 shows its name on keyboard focus', async () => {
+    renderForm();
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '顯示密碼' }), '顯示密碼');
   });
 });

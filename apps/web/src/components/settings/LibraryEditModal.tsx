@@ -13,6 +13,7 @@ import {
   useAddLibraryPath,
   useRemoveLibraryPath,
 } from '../../hooks/useMediaLibrary';
+import { Tooltip } from '../ui/Tooltip';
 
 interface LibraryEditModalProps {
   libraryId?: string; // undefined = create mode
@@ -255,14 +256,16 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                     </span>
                     {/* Neutral, not 硃砂: taking a folder out of a library is an
                         edit, not something broken (固定詞彙). */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePath(p.id)}
-                      aria-label={`移除路徑 ${p.path}`}
-                      className="ml-2 flex size-11 shrink-0 items-center justify-center sm:size-8 rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                    <Tooltip content="移除路徑" side="top">
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePath(p.id)}
+                        aria-label={`移除路徑 ${p.path}`}
+                        className="ml-2 flex size-11 shrink-0 items-center justify-center sm:size-8 rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </Tooltip>
                   </div>
                 ))}
               </div>
@@ -279,15 +282,17 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                 data-testid="library-path-input"
               />
               {isEditMode && (
-                <button
-                  type="button"
-                  onClick={handleAddPath}
-                  disabled={!newPath.trim() || addPath.isPending}
-                  aria-label="新增路徑"
-                  className="flex size-11 shrink-0 items-center justify-center sm:size-10 rounded-[var(--radius-md)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
+                <Tooltip content="新增路徑" side="top">
+                  <button
+                    type="button"
+                    onClick={handleAddPath}
+                    disabled={!newPath.trim() || addPath.isPending}
+                    aria-label="新增路徑"
+                    className="flex size-11 shrink-0 items-center justify-center sm:size-10 rounded-[var(--radius-md)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-50"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>

@@ -130,6 +130,7 @@ vi.mock('../subtitle/ManageSubtitleDialogV2', () => ({
 import { LocalDetailV2 } from './LocalDetailV2';
 import { detailKeys } from '../../hooks/useMediaDetails';
 import { libraryKeys } from '../../hooks/useLibrary';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 function movie(over: Record<string, unknown> = {}) {
   return {
@@ -453,6 +454,8 @@ describe('LocalDetailV2', () => {
     expect(screen.getByTestId('action-edit-metadata')).toHaveTextContent('修改資訊');
     expect(screen.getByTestId('action-copy-path')).toBeInTheDocument();
     expect(screen.queryByText('播放')).not.toBeInTheDocument();
+    // disc-2026-10-icon-only-controls-tooltip-b — icon-only on a desktop.
+    await expectTooltipOnFocus(screen.getByTestId('action-copy-path'), '複製檔案路徑');
   });
 
   it('hands the stored poster to 修改資訊 (poster-upload-a AC #2)', async () => {

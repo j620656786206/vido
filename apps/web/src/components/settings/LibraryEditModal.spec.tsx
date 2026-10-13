@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LibraryEditModal } from './LibraryEditModal';
 import { useMediaLibraries } from '../../hooks/useMediaLibrary';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 const mutation = { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false };
 
@@ -502,5 +503,17 @@ describe('LibraryEditModal — dialog behaviour', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     // Radix hands focus back on the tick after unmount.
     await waitFor(() => expect(screen.getByTestId(openerTestId)).toHaveFocus());
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-b — icon-only controls name themselves in the shared tooltip.
+describe('LibraryEditModal — icon-only path controls', () => {
+  it('移除路徑／新增路徑 show their names on keyboard focus', async () => {
+    render(<LibraryEditModal libraryId="lib-1" onClose={vi.fn()} />);
+    await expectTooltipOnFocus(
+      screen.getByRole('button', { name: '移除路徑 /media/movies' }),
+      '移除路徑'
+    );
+    await expectTooltipOnFocus(screen.getByRole('button', { name: '新增路徑' }), '新增路徑');
   });
 });

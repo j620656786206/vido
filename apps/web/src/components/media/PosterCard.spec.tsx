@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor, act, within } from '@testing-librar
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PosterCard } from './PosterCard';
 import { useMovieDetails, useTVShowDetails } from '../../hooks/useMediaDetails';
+import { expectTooltipOnFocus } from '../../test-utils/tooltip';
 
 // Mock TanStack Router
 vi.mock('@tanstack/react-router', () => ({
@@ -668,5 +669,21 @@ describe('PosterCard', () => {
       clearSpy.mockRestore();
       vi.useRealTimers();
     });
+  });
+});
+
+// disc-2026-10-icon-only-controls-tooltip-b — icon-only controls name themselves in the shared tooltip.
+describe('PosterCard — kebab', () => {
+  it('更多選項 shows its name on keyboard focus', async () => {
+    render(
+      <PosterCard
+        id="movie-123"
+        type="movie"
+        title="鬼滅之刃"
+        posterPath={null}
+        onMenuClick={vi.fn()}
+      />
+    );
+    await expectTooltipOnFocus(screen.getByTestId('poster-menu-button'), '更多選項');
   });
 });
