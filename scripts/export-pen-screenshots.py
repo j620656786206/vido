@@ -396,6 +396,8 @@ SCREENS = {
     # desktop+mobile / F16 cost confirm / F17 scan-complete toast with subtitle entry)
     "nBT3M": ("flow-f-subtitle-v2", "f14-d-v2"),
     "pwMzT": ("flow-f-subtitle-v2", "f15-d-v2"),
+    # disc-2026-10-consent-tree-indent — multi-season indent rule (series > season > episode)
+    "ywpxh": ("flow-f-subtitle-v2", "f15-spec-tree"),
     "fdu4y": ("flow-f-subtitle-v2", "f15-m-v2"),
     "gmOt6": ("flow-f-subtitle-v2", "f16-d-v2"),
     # sub-6-8b — 確認框加「選擇翻譯模型」；手機版是 bottom sheet（沿用 F15-M 語彙），

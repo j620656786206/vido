@@ -3,10 +3,10 @@
   "counts": {
     "artworkTextFlips": 0,
     "clippingWarnings": 162,
-    "exportedScreens": 219,
+    "exportedScreens": 220,
     "masters": 75
   },
-  "penSha256": "64ea7d5aedd1c4fb9b8d3aa65ddd2a6369ac459a290b0ea2882bc71c2dba4c1c",
+  "penSha256": "a96bb7bd9505e823f7470459041bd579c0fb672ded33bc2a6ecf9e26e22486ed",
   "raw": {
     "fontSize": 0,
     "gap": 0,
@@ -402,6 +402,23 @@
             "mode": "light"
           },
           "value": "#e5d9c3"
+        }
+      ]
+    },
+    "bg-tertiary-60": {
+      "type": "color",
+      "value": [
+        {
+          "theme": {
+            "mode": "dark"
+          },
+          "value": "#1b302b99"
+        },
+        {
+          "theme": {
+            "mode": "light"
+          },
+          "value": "#e5d9c399"
         }
       ]
     },
