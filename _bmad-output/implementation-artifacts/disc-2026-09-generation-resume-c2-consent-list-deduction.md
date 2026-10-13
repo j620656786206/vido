@@ -1,6 +1,6 @@
 # Disc：批次選片清單的價錢，扣掉已經聽寫過的部分（c2：後端）
 
-Status: review
+Status: done
 
 **Source:** 2026-10-12 從 `disc-2026-09-generation-resume-c-estimate-deduction` 拆出。2026-10-13 Alexyu 從 backlog 選 1。
 
