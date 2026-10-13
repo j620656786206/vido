@@ -1,0 +1,27 @@
+{
+  "model_id": "local:translategemma:12b",
+  "sample_version": "golden-v1",
+  "prompt_version": "native-translategemma",
+  "lexicon_version": "zh-tw-lex-1",
+  "glossary_version": "",
+  "judge_model": "",
+  "judge_version": "judge-v1",
+  "cues": 200,
+  "zero_rate": 0.535,
+  "natural_rate": 0,
+  "rule_fail_rate": 0.535,
+  "rule_fails_by_reason": {
+    "forbidden_term": 3,
+    "name_mismatch": 43,
+    "simplified_leak": 88
+  },
+  "cost_usd": 0,
+  "minutes": 17.97086275765,
+  "grade": "C",
+  "judge_note": "裁判為 Claude（claude-sonnet-5），評 Claude 模型時有自評偏誤；人評校準落地前，分數宜打折看。",
+  "graded_at": "2026-10-13T22:58:11.594108+08:00",
+  "prompt_style": "native",
+  "endpoint": "http://192.168.50.52:11434/v1",
+  "episode_minutes_est": 74.52113781557291,
+  "translate_minutes": 17.849374327083332
+}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/vido/api/internal/ai"
@@ -20,6 +21,9 @@ const defaultRatingsPath = "internal/ai/model_ratings.json"
 func ratingFromReport(rep eval.Report) (ai.ModelRating, error) {
 	if rep.Grade == eval.GradeIncomplete || rep.Grade == "" {
 		return ai.ModelRating{}, fmt.Errorf("report for %s is %q (%s) — not mergeable", rep.ModelID, rep.Grade, rep.Incomplete)
+	}
+	if strings.HasPrefix(rep.ModelID, localModelPrefix) {
+		return ai.ModelRating{}, fmt.Errorf("report for %s is a local model — local models are not published in the built-in ratings table", rep.ModelID)
 	}
 	if rep.SampleVersion != eval.SampleVersion {
 		return ai.ModelRating{}, fmt.Errorf("report measured on %q but this build embeds %q — re-run cmd/grade", rep.SampleVersion, eval.SampleVersion)

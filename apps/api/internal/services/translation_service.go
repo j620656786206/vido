@@ -71,6 +71,10 @@ type translateConfig struct {
 	// pre-story behaviour, byte for byte.
 	store   SegmentStore
 	version models.RunVersion
+	// batchSize overrides prompts.SubtitleTranslatorBatchSize; 0 = the
+	// default. Only cmd/grade sets it (spike-local-translation-golden-eval:
+	// small local models may need 1 or 5); the app never does.
+	batchSize int
 }
 
 // WithLocalizationLevel selects the sub-7-4 style section for this run. The
@@ -93,6 +97,16 @@ func WithMediaMetadata(md prompts.MediaMetadata) TranslateOption {
 // of a show its own segment-cache key. The zero value renders nothing.
 func WithEpisodeLabel(label string) TranslateOption {
 	return func(cfg *translateConfig) { cfg.episode = label }
+}
+
+// WithBatchSize sends n cues per model request instead of
+// prompts.SubtitleTranslatorBatchSize. n <= 0 keeps the default.
+func WithBatchSize(n int) TranslateOption {
+	return func(cfg *translateConfig) {
+		if n > 0 {
+			cfg.batchSize = n
+		}
+	}
 }
 
 // WithSegmentCache makes this translation resumable: every cue already
@@ -410,6 +424,9 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 	systemPrompt := composeSystemPrompt(cfg.metadata, cfg.level, cfg.episode)
 
 	batchSize := prompts.SubtitleTranslatorBatchSize
+	if cfg.batchSize > 0 {
+		batchSize = cfg.batchSize
+	}
 	contextWindow := prompts.SubtitleTranslatorContextWindow
 
 	// Copy blocks to result (will be modified in place)
