@@ -395,6 +395,55 @@ describe('GenerationBatchPanelV2', () => {
     expect(banner.className).not.toContain('error-tint');
   });
 
+  it('credit_exhausted renders the F9b banner with the billing link, paused rows, 關閉 + 下次繼續', () => {
+    const props = renderPanel({
+      status: 'credit_exhausted',
+      progress: progressOf({
+        status: 'credit_exhausted',
+        successCount: 2,
+        pausedCount: 3,
+        spentUsd: 1.2,
+        creditProvider: 'openai',
+        billingUrl: 'https://platform.openai.com/settings/organization/billing',
+      }),
+      items: ITEMS,
+    });
+
+    const banner = screen.getByTestId('gen-batch-credit-banner');
+    expect(banner).toHaveTextContent(
+      'OpenAI 帳號沒有額度了 — 已完成2部，剩餘3部已暫停，儲值後按「下次繼續」'
+    );
+    expect(banner.className).toContain('warning-tint');
+    expect(screen.queryByTestId('gen-batch-budget-banner')).not.toBeInTheDocument();
+    const link = screen.getByTestId('credit-stop-billing-link');
+    expect(link).toHaveAttribute(
+      'href',
+      'https://platform.openai.com/settings/organization/billing'
+    );
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link).toHaveTextContent('去 OpenAI 儲值');
+    expect(screen.getByTestId(`gen-batch-row-${M4}`)).toHaveTextContent('已暫停 — 下次繼續');
+    // Like the ceiling: no narrower 重試失敗項目 next to 下次繼續.
+    expect(screen.queryByTestId('gen-batch-retry-failed-btn')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('gen-batch-resume-btn'));
+    expect(props.onResume).toHaveBeenCalledOnce();
+  });
+
+  it('credit_exhausted from an older server or a non-https url: no link, provider says AI', () => {
+    renderPanel({
+      status: 'credit_exhausted',
+      progress: progressOf({
+        status: 'credit_exhausted',
+        pausedCount: 3,
+        billingUrl: 'javascript:alert(1)',
+      }),
+      items: ITEMS,
+    });
+    expect(screen.getByTestId('gen-batch-credit-banner')).toHaveTextContent('AI 帳號沒有額度了');
+    expect(screen.queryByTestId('credit-stop-billing-link')).not.toBeInTheDocument();
+  });
+
   it('recover-attach fallback card honors terminal semantics — budget_ceiling renders 已暫停, not 已取消', () => {
     renderPanel({
       status: 'budget_ceiling',

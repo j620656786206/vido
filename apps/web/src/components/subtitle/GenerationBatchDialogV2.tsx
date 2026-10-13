@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F8-D-v2 (i9Nun1) + Screen F8-M-v2 (H717g)
+// Design ref: ux-design.pen Screen F8-D-v2 (i9Nun1) + Screen F8-M-v2 (H717g) · F9b-D-v2 (YHnnC)
 /**
  * 產生字幕 dialog (Story ux3-subtitle-v2-batch F8 execution shell; idle branch
  * REPLACED by the sub-4-3 consent flow). Screens: F8-D-v2 i9Nun1 / F8-M-v2
@@ -21,6 +21,9 @@
  *   paused rows 已暫停 — 下次繼續, actions 關閉 + 下次繼續 (= back to the
  *   consent list to re-select/confirm — the paused items are still candidates,
  *   and a resume is a NEW consent, not an un-consented restart).
+ * - credit_exhausted (F9b-D-v2 YHnnC) is the same stop for another reason —
+ *   the AI account has no money left: same paused rows and actions, the
+ *   banner names the provider and links to its billing page.
  * - 409 TRANSCRIPTION_BATCH_RUNNING on open/start → recover-and-attach
  *   (on-open GET .../status probe). A recovered batch has no `items[]` — the
  *   dialog falls back to the active-item card + counts.
@@ -34,6 +37,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, CircleAlert, CirclePause, Radio, CircleCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
+import { CreditStopMessage } from './CreditStopMessage';
+import { creditStopSentence } from './creditStop';
 import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
 import { cn } from '../../lib/utils';
 import {
@@ -101,7 +106,7 @@ export function deriveRowStates(
   return items.map((it, i) => {
     const resolved: RowState = failedIds.has(it.mediaId) ? 'failed' : 'done';
     if (status === 'complete') return resolved;
-    if (status === 'budget_ceiling') {
+    if (status === 'budget_ceiling' || status === 'credit_exhausted') {
       // paused_count is authoritative: the last `pausedCount` rows (incl. the
       // interrupted in-flight item) are 已暫停, NEVER 失敗 — even if the
       // per-item pipeline reported its own abort as transcription_failed.
@@ -465,6 +470,9 @@ export function GenerationBatchPanelV2({
 
   const isRunning = status === 'running';
   const isBudgetCeiling = status === 'budget_ceiling';
+  const isCreditStop = status === 'credit_exhausted';
+  /** Both stops pause the rest of the queue for 下次繼續 (F9 / F9b). */
+  const isPausedStop = isBudgetCeiling || isCreditStop;
   const isTerminal = status === 'complete' || status === 'cancelled' || status === 'error';
 
   useEffect(() => {
@@ -565,9 +573,11 @@ export function GenerationBatchPanelV2({
    */
   const statusAnnouncement = isBudgetCeiling
     ? `已達本次預算上限（${usd(progress.budgetUsd)}）— 已完成${processed}部，剩餘${progress.pausedCount}部下次繼續`
-    : status === 'error'
-      ? '批次發生錯誤'
-      : (summary?.text ?? '');
+    : isCreditStop
+      ? creditStopSentence(progress.creditProvider, processed, progress.pausedCount)
+      : status === 'error'
+        ? '批次發生錯誤'
+        : (summary?.text ?? '');
 
   /**
    * The bar is not text (downloads precedent): 泥金 means RUNNING, so a
@@ -665,6 +675,25 @@ export function GenerationBatchPanelV2({
             </div>
           )}
 
+          {/* ---------- F9b credit banner ---------- */}
+          {isCreditStop && (
+            <div
+              data-testid="gen-batch-credit-banner"
+              className="flex items-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--warning-tint)] p-3"
+            >
+              <CircleAlert
+                className="h-4 w-4 shrink-0 text-[var(--warning-text)]"
+                aria-hidden="true"
+              />
+              <CreditStopMessage
+                provider={progress.creditProvider}
+                done={processed}
+                paused={progress.pausedCount}
+                billingUrl={progress.billingUrl}
+              />
+            </div>
+          )}
+
           {status === 'error' && (
             <div
               data-testid="gen-batch-error-banner"
@@ -746,11 +775,12 @@ export function GenerationBatchPanelV2({
                     mediaType: 'movie',
                     seriesTitle: '',
                     // Terminal semantics must hold here too (AC 2): the batch
-                    // status is authoritative — budget_ceiling pauses the
-                    // in-flight item (已暫停, never 已取消/失敗).
+                    // status is authoritative — budget_ceiling and
+                    // credit_exhausted pause the in-flight item (已暫停,
+                    // never 已取消/失敗).
                     status: isRunning
                       ? 'running'
-                      : isBudgetCeiling
+                      : isPausedStop
                         ? 'paused'
                         : status === 'complete'
                           ? progress.currentMediaId != null &&
@@ -843,7 +873,7 @@ export function GenerationBatchPanelV2({
               </div>
             ))}
 
-          {(isTerminal || isBudgetCeiling) && (
+          {(isTerminal || isPausedStop) && (
             // sm:contents: on a desktop this wrapper has no box, so the buttons are
             // direct flex children of the footer exactly as before. On a phone it
             // is the row the pair splits evenly.
@@ -891,7 +921,7 @@ export function GenerationBatchPanelV2({
                 </button>
               )}
 
-              {isBudgetCeiling && (
+              {isPausedStop && (
                 <button
                   type="button"
                   onClick={onResume}
@@ -1201,7 +1231,7 @@ export function GenerationBatchDialogV2({
     [queryClient, startBatchTracking]
   );
 
-  // 下次繼續 (budget_ceiling) — back to the consent list: the paused items are
+  // 下次繼續 (budget_ceiling / credit_exhausted) — back to the consent list: the paused items are
   // still candidates, and a resume is a NEW consent (re-select, re-price,
   // re-confirm), never an un-consented auto-restart. sub-5-3 AC #4: the
   // unfinished rows are PRESELECTED — the user's consented picks must not

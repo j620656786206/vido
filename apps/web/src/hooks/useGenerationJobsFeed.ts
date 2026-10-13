@@ -58,7 +58,12 @@ export const FEED_CAP = 200;
  */
 export type FeedStage = 'extracting' | 'transcribing' | 'translating' | 'track';
 
-export type BatchTerminalStatus = 'complete' | 'cancelled' | 'error' | 'budget_ceiling';
+export type BatchTerminalStatus =
+  | 'complete'
+  | 'cancelled'
+  | 'error'
+  | 'budget_ceiling'
+  | 'credit_exhausted';
 
 export type FeedStageState = 'live' | 'passed' | 'stopped';
 
@@ -104,6 +109,8 @@ export type FeedRow =
       successCount: number;
       failCount: number;
       budgetUsd: number;
+      /** `credit_exhausted` only: 'openai' | 'anthropic' ('' otherwise). */
+      creditProvider: string;
     };
 
 export interface SingleJobState {
@@ -195,6 +202,7 @@ interface BatchPayload {
   successCount?: number;
   failCount?: number;
   budgetUsd?: number;
+  creditProvider?: string;
   changedItem?: ChangedItem | null;
 }
 
@@ -216,7 +224,13 @@ const D6_STAGE: Readonly<Record<string, FeedStage>> = {
   translating: 'translating',
 };
 
-const BATCH_TERMINALS = new Set<string>(['complete', 'cancelled', 'error', 'budget_ceiling']);
+const BATCH_TERMINALS = new Set<string>([
+  'complete',
+  'cancelled',
+  'error',
+  'budget_ceiling',
+  'credit_exhausted',
+]);
 
 type Action =
   | { type: 'OPEN' }
@@ -533,6 +547,7 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
           successCount: payload.successCount ?? 0,
           failCount: payload.failCount ?? 0,
           budgetUsd: payload.budgetUsd ?? 0,
+          creditProvider: payload.creditProvider ?? '',
         });
         feed = next.feed;
         seq = next.seq;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveWorkspaceMode, modeShowsFeed } from './generationWorkspace';
+import { deriveWorkspaceMode, isPausedStop, modeShowsFeed } from './generationWorkspace';
 
 const base = { probing: false, batchStatus: 'idle' as const, hasItems: false, singleJobCount: 0 };
 
@@ -28,7 +28,7 @@ describe('deriveWorkspaceMode (ux3-ai-2 AC 2/3 state matrix)', () => {
     );
   });
 
-  it.each(['budget_ceiling', 'complete', 'cancelled', 'error'] as const)(
+  it.each(['budget_ceiling', 'credit_exhausted', 'complete', 'cancelled', 'error'] as const)(
     'terminal batch status %s maps straight through',
     (status) => {
       expect(deriveWorkspaceMode({ ...base, batchStatus: status })).toBe(status);
@@ -51,11 +51,22 @@ describe('modeShowsFeed', () => {
       'attach',
       'single',
       'budget_ceiling',
+      'credit_exhausted',
       'complete',
       'cancelled',
       'error',
     ] as const) {
       expect(modeShowsFeed(m)).toBe(true);
+    }
+  });
+});
+
+describe('isPausedStop', () => {
+  it('only the budget ceiling and an empty AI account leave the queue paused for 下次繼續', () => {
+    expect(isPausedStop('budget_ceiling')).toBe(true);
+    expect(isPausedStop('credit_exhausted')).toBe(true);
+    for (const m of ['running', 'attach', 'single', 'complete', 'cancelled', 'error'] as const) {
+      expect(isPausedStop(m)).toBe(false);
     }
   });
 });

@@ -18,7 +18,8 @@ import type { GenerationBatchHookStatus } from '../../hooks/useGenerationBatchPr
  *                  in-flight card only, honest note.
  *  - `single`    — no batch, but detail-triggered single jobs are in flight → queue
  *                  of single-job rows (opportunistic; AC 5).
- *  - terminals   — `budget_ceiling` (F9-verbatim) / `complete` / `cancelled` / `error`.
+ *  - terminals   — `budget_ceiling` (F9-verbatim) / `credit_exhausted` (F9b-verbatim) /
+ *                  `complete` / `cancelled` / `error`.
  */
 export type WorkspaceMode =
   | 'loading'
@@ -27,11 +28,23 @@ export type WorkspaceMode =
   | 'attach'
   | 'single'
   | 'budget_ceiling'
+  | 'credit_exhausted'
   | 'complete'
   | 'cancelled'
   | 'error';
 
-const BATCH_TERMINALS = new Set(['budget_ceiling', 'complete', 'cancelled', 'error']);
+const BATCH_TERMINALS = new Set([
+  'budget_ceiling',
+  'credit_exhausted',
+  'complete',
+  'cancelled',
+  'error',
+]);
+
+/** A stop that leaves the rest of the queue 已暫停 for 下次繼續 (F9 / F9b). */
+export function isPausedStop(mode: WorkspaceMode): boolean {
+  return mode === 'budget_ceiling' || mode === 'credit_exhausted';
+}
 
 export function deriveWorkspaceMode(input: {
   /** True while the on-mount getGenerationBatchStatus() probe has not resolved. */
