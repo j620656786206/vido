@@ -686,3 +686,5 @@ Linux baselines incrementally bootstrapped 2026-10-06 via runner ubuntu-24.04 (I
 Linux baselines incrementally bootstrapped 2026-10-06 via runner ubuntu-24.04 (ImageVersion: 20260927.320.1) — 2 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/generation-progress-v2/抽字幕-翻譯略過/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/generation-progress-v2/抽字幕-翻譯中/default-visual-linux.png
 
 Linux baselines incrementally bootstrapped 2026-10-07 via runner ubuntu-24.04 (ImageVersion: 20260927.320.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/media-episode-list-subtitle-entry/focus-visual-linux.png
+
+Linux baselines incrementally bootstrapped 2026-10-13 via runner ubuntu-24.04 (ImageVersion: 20261004.327.1) — 2 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/credit_exhausted/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/credit_exhausted/default-visual-linux.png
