@@ -24,8 +24,8 @@ services:
       # (your own quota; on the free tier Vido paces itself).
       CLAUDE_API_KEY: ''
       GEMINI_API_KEY: ''
-      # Seconds between Gemini translation calls (free tier allows 5/min). 0 on a paid tier.
-      VIDO_GEMINI_MIN_INTERVAL: '13'
+      # Seconds between Gemini translation calls (free tier allows 15/min). 0 on a paid tier.
+      VIDO_GEMINI_MIN_INTERVAL: '5'
       # --- Speech recognition, only for videos with no subtitle track at all.
       # ELEVENLABS_API_KEY = Scribe v2 (recommended, ~US$0.26/h incl. the name vocabulary);
       # OPENAI_API_KEY = Whisper (~US$0.36/h); both set → VIDO_ASR_PROVIDER decides.

@@ -36,7 +36,7 @@ func TestDispatcher_ClaudeIDsGoToClaudeGeminiIDsGoToGemini(t *testing.T) {
 	compat, isCompat := g.(*ai.OpenAICompatProvider)
 	require.True(t, isCompat, "Gemini runs on the OpenAI-compatible client")
 	assert.Equal(t, "gemini-3.5-flash-lite", compat.Model())
-	assert.Equal(t, 13*time.Second, compat.MinInterval(), "the free-tier pacing travels with the client")
+	assert.Equal(t, 13*time.Second, compat.MinInterval(), "the pacing the holder was built with travels with the client")
 	assert.Equal(t, 13*time.Second, d.MinIntervalFor("gemini-3.5-flash-lite"))
 	assert.Zero(t, d.MinIntervalFor("claude-sonnet-5"))
 }

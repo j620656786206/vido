@@ -220,7 +220,7 @@ func Load() (*Config, error) {
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.ElevenLabsAPIKey = cfg.loadString("ELEVENLABS_API_KEY", "")
 	cfg.ASRProvider = cfg.loadString("VIDO_ASR_PROVIDER", "auto")
-	cfg.GeminiMinInterval = time.Duration(cfg.loadInt("VIDO_GEMINI_MIN_INTERVAL", 13)) * time.Second
+	cfg.GeminiMinInterval = time.Duration(cfg.loadInt("VIDO_GEMINI_MIN_INTERVAL", 5)) * time.Second
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 	// Auth password gate (V0.1.1). Empty = auth disabled (LAN-only posture).
 	cfg.AuthPassword = cfg.loadString("VIDO_AUTH_PASSWORD", "")
