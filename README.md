@@ -5,6 +5,18 @@
 
 > **English**: Vido is a self-hosted media manager for your NAS, built around one problem: getting Traditional Chinese (Taiwan) subtitles for videos that don't have them. If a video carries an English subtitle track, Vido extracts and translates it; if it has no subtitles at all, Vido transcribes the English dialogue first and then translates. Translations use Taiwanese vocabulary and keep character names consistent.
 
+**給誰用**：家裡有 NAS、片庫裡一堆只有英文字幕或沒字幕的影片、想看繁中的人。
+
+**跟 Bazarr／Lingarr 差在哪**
+
+- 翻出來是台灣的說法，不會出現「視頻」「質量」；陸劇只轉成繁體字、保留原本的講法
+- 角色名每一集都一樣：從 TMDb 演員表和你片庫裡已有的官方繁中字幕學人名
+- 沒字幕的片也能做：先聽英文對白、再翻（Lingarr 只翻現成的字幕）
+- 花錢之前先報價：按下去前看得到金額、有上限，AI 帳號沒錢會整批停下來告訴你
+- 用你自己的金鑰：Claude 或 Gemini 擇一（Gemini 可以用你的免費額度）；Vido 本身不收錢
+
+**目前只做英文對白**，日文、韓文還不支援。
+
 ---
 
 ## 為什麼做這個
