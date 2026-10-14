@@ -1,6 +1,6 @@
 # Disc：「產生字幕」的選片清單把已經有繁中的片當成缺中文，報價要你付錢
 
-Status: review
+Status: done
 
 **Source:** 2026-10-14 正式機 0.2.0 smoke test。泰德拉索 S01E02 季清單徽章說「zh_hant」（內嵌繁體 subrip 軌），選片清單卻報價 US$0.24；跑的那集神祕關卡 S01E10 旁邊本來就有 `.zh-TW.srt`，白花 US$0.055。Alexyu 選 **A：現在修**（「是 bug 不是新功能，影響測試者的第一個畫面」）。
 
@@ -28,7 +28,7 @@ Status: review
 - [x] T2 兩個 repository 的 Find／Count（AC 1–3）
 - [x] T3 測試（AC 4）
 - [x] T4 全套檢查（AC 5）
-- [ ] T5 正式機驗證（AC 6，合併後）
+- [x] T5 正式機驗證（AC 6）：2026-10-14 image b4fe9f7b 重新 analyze：候選 2,398 → 1,659、總報價 US$1,551 → 1,247；泰德拉索整部與神祕關卡 S01E10 都不在清單。
 
 ## Dev Notes
 
