@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -80,11 +81,11 @@ func TestScribe_SendsElevenLabsFormAndRendersCues(t *testing.T) {
 		assert.NotContains(t, fields, never, "%s must not be sent (surcharge / rejected on the exam)", never)
 	}
 
-	// "Hey." ends a sentence; "Face me." is the next cue. One-word cues are
-	// held on screen for scribeMinCueSeconds but never into the next cue.
+	// "Hey." ends a sentence; "Face me." is the next cue. Each is held for
+	// its reading time (1 s floor) but stops a lead before the next cue.
 	assert.Equal(t,
-		"1\n00:00:01,000 --> 00:00:01,600\nHey.\n\n"+
-			"2\n00:00:02,000 --> 00:00:02,900\nFace me.\n\n",
+		"1\n00:00:01,000 --> 00:00:01,920\nHey.\n\n"+
+			"2\n00:00:02,000 --> 00:00:03,000\nFace me.\n\n",
 		srt)
 }
 
@@ -345,9 +346,10 @@ func TestScribeCues_SplitsOnSentenceEndPauseAndEvent(t *testing.T) {
 		texts[i] = s.Text
 	}
 	assert.Equal(t, []string{"Who's there?", "Answer me, who's there?", "Hey face me", "Come to me"}, texts)
-	// 'Hey face me' (5.0–5.8) and 'Come to me' (7.0–7.6): a 1.2 s pause split them.
+	// 'Hey face me' (5.0–5.8) and 'Come to me' (7.0–7.6): a 1.2 s pause split them;
+	// the first is then held for its reading time (width 11 → 1.32 s).
 	assert.InDelta(t, 5.0, segs[2].Start, 1e-9)
-	assert.InDelta(t, 5.8, segs[2].End, 1e-9)
+	assert.InDelta(t, 6.32, segs[2].End, 1e-9)
 	assert.InDelta(t, 7.0, segs[3].Start, 1e-9)
 	for _, s := range segs {
 		assert.NotContains(t, s.Text, "[", "sound tags never reach a cue")
@@ -378,14 +380,46 @@ func TestScribeCues_CapsCueLengthAndWidth(t *testing.T) {
 
 func TestScribeCues_ShortCueIsHeldButNeverIntoTheNext(t *testing.T) {
 	segs := scribeCues([]scribeWord{
-		word("No!", 1.0, 1.1),
-		word("Hey!", 1.3, 1.5), // only 0.2 s later: the held "No!" must stop at 1.3
-		word("Yes.", 9.0, 9.1), // last cue: free to extend to 9.6
+		word("No!", 1.0, 1.6),  // 0.6 s: not a fragment, held to 1 s but stopped before "Hey!"
+		word("Hey!", 2.3, 2.5), // 0.2 s fragment, but the next cue is 6.5 s away: stays, held to 3.3
+		word("Yes.", 9.0, 9.1), // last cue: free to extend to 10.0
 	})
 	require.Len(t, segs, 3)
-	assert.InDelta(t, 1.3, segs[0].End, 1e-9)
-	assert.InDelta(t, 1.9, segs[1].End, 1e-9) // 1.3 + 0.6; the next cue is far away
-	assert.InDelta(t, 9.6, segs[2].End, 1e-9)
+	assert.InDelta(t, 2.0, segs[0].End, 1e-9, "1.0 + 1.0 reading floor; 2.3 − 0.08 lead is further")
+	assert.InDelta(t, 3.3, segs[1].End, 1e-9, "2.3 + 1.0; the next cue is far away")
+	assert.InDelta(t, 10.0, segs[2].End, 1e-9)
+}
+
+// disc-2026-10-asr-cues-too-short-to-read: a cue is held for its reading
+// time, capped by the next cue (minus a lead) and by the 7 s ceiling.
+func TestScribeCues_HeldForReadingTimeByWidth(t *testing.T) {
+	segs := scribeCues([]scribeWord{
+		word("I", 1.0, 1.1), spacing(1.1), word("was", 1.2, 1.4), spacing(1.4), word("so", 1.5, 1.6), spacing(1.6), word("crispy.", 1.7, 2.1), // width 16 → 1.92 s
+		word("Then", 2.5, 2.7), spacing(2.7), word("nothing.", 2.8, 3.3), // starts 2.5: previous stops at 2.42
+		word("Later.", 20.0, 20.3),
+	})
+	require.Len(t, segs, 3)
+	assert.InDelta(t, 2.42, segs[0].End, 1e-9, "wanted 1.0+1.92=2.92 but the next cue starts at 2.5")
+	assert.InDelta(t, 2.5+math.Max(1.0, 13*0.12), segs[1].End, 1e-9, "width 13 → 1.56 s, free to extend")
+	assert.InDelta(t, 21.0, segs[2].End, 1e-9, "floor of 1 s")
+}
+
+func TestScribeCues_FragmentFoldsIntoTheNextCue(t *testing.T) {
+	segs := scribeCues([]scribeWord{
+		word("Hey.", 4.0, 4.18),                                     // 0.18 s fragment
+		word("Face", 4.4, 4.6), spacing(4.6), word("me.", 4.6, 4.9), // starts 0.4 s after the fragment began
+		word("Shh.", 10.0, 10.0), // a 0 s token
+		word("Who's", 10.2, 10.4), spacing(10.4), word("there?", 10.4, 10.8),
+		word("Alone.", 30.0, 30.05), // fragment with nothing near it: kept, held to 31.0
+	})
+	require.Len(t, segs, 3)
+	assert.Equal(t, "Hey. Face me.", segs[0].Text)
+	assert.InDelta(t, 4.0, segs[0].Start, 1e-9)
+	assert.Equal(t, "Shh. Who's there?", segs[1].Text)
+	assert.InDelta(t, 10.0, segs[1].Start, 1e-9)
+	assert.Greater(t, segs[1].End-segs[1].Start, 0.99, "no zero-length cue survives")
+	assert.Equal(t, "Alone.", segs[2].Text)
+	assert.InDelta(t, 31.0, segs[2].End, 1e-9)
 }
 
 func TestScribeCues_CJKWordsJoinWithoutSpaces(t *testing.T) {
@@ -497,7 +531,10 @@ func TestScribe_RealResponseShape(t *testing.T) {
 		// starts right behind it — holding it longer would overlap.
 		if c.end-c.start < scribeMinCueSeconds-1e-6 {
 			require.Less(t, i+1, len(cues), "last cue %q was not held on screen", c.text)
-			assert.InDelta(t, cues[i+1].start, c.end, 1e-6, "cue %q flashes by with free time after it", c.text)
+			// … and it is held right up to the lead before that cue (or ends
+			// naturally inside the lead — a cue is never cut).
+			assert.GreaterOrEqual(t, c.end, cues[i+1].start-scribeCueLeadSeconds-1e-6, "cue %q flashes by with free time after it", c.text)
+			assert.LessOrEqual(t, c.end, cues[i+1].start+1e-6, "cue %q overlaps the next", c.text)
 		}
 	}
 	assert.GreaterOrEqual(t, fight, 8, "the bear fight is where whisper-1 failed the exam")

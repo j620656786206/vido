@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -74,8 +75,26 @@ const (
 	scribeCueMaxChars = 84
 	// scribeMinCueSeconds is the shortest cue rendered — a one-word "No!" still
 	// has to stay on screen long enough to read. Extended only into free time,
-	// never into the next cue. Same number as minTightenedCueSeconds.
-	scribeMinCueSeconds = 0.6
+	// never into the next cue. Was 0.6 (disc-2026-10-asr-cues-too-short-to-read:
+	// 41 of 79 cues on See S01E02 showed for under a second, the viewer called
+	// it "一閃就過"); 1.0 is the floor subtitle style guides agree on.
+	scribeMinCueSeconds = 1.0
+	// scribeReadSecondsPerWidth is the reading time a cue is held for, per
+	// unit of displayWidth: English reads at ~15 letters a second, the
+	// Chinese it becomes has about half as many characters at ~4 a second,
+	// so 0.12 s per English letter (a CJK character counts double) lands on
+	// the same number the viewer approved on the 2026-10-14 trial file
+	// (0.25 s per Chinese character).
+	scribeReadSecondsPerWidth = 0.12
+	// scribeCueLeadSeconds is the gap left before the next cue when one is
+	// extended toward it — two cues must not touch, or players merge them.
+	scribeCueLeadSeconds = 0.08
+	// scribeFragmentSeconds: a cue shorter than this (a lone "Hey." the word
+	// timing clocked at 0.18 s, or a 0 s token) is folded into the next cue
+	// when that one starts within scribeFragmentGapSeconds — it cannot be
+	// held long enough on its own without running into it.
+	scribeFragmentSeconds    = 0.3
+	scribeFragmentGapSeconds = 0.6
 )
 
 // Scribe API errors. Separate sentinels from Whisper's so a log line or an
@@ -473,9 +492,14 @@ func parseScribeResponse(body []byte) (*scribeResponse, error) {
 // A cue ends when the word ends a sentence (. ? ! and their CJK forms), when
 // the next word starts more than scribeCueGapSeconds after this one ended,
 // when a non-speech event sits between them, or when adding the next word
-// would push the cue past scribeCueMaxSeconds or scribeCueMaxChars. Cues
-// shorter than scribeMinCueSeconds are extended toward the next cue's start
-// but never into it.
+// would push the cue past scribeCueMaxSeconds or scribeCueMaxChars.
+//
+// Then, so the cues can be READ and not just match the mouth
+// (disc-2026-10-asr-cues-too-short-to-read): a fragment shorter than
+// scribeFragmentSeconds is folded into the cue that starts right after it;
+// every cue is held for max(scribeMinCueSeconds, width × scribeReadSecondsPerWidth),
+// capped at scribeCueMaxSeconds and stopping scribeCueLeadSeconds before the
+// next cue — only ever extended, never cut.
 func scribeCues(words []scribeWord) []whisperSegment {
 	type cue struct {
 		start, end float64
@@ -539,6 +563,24 @@ func scribeCues(words []scribeWord) []whisperSegment {
 	}
 	flush()
 
+	// Fold fragments forward: "Hey." (0.18 s) followed 0.2 s later by "Face
+	// me." becomes one cue "Hey. Face me." from the fragment's start.
+	folded := make([]*cue, 0, len(cues))
+	for i := 0; i < len(cues); i++ {
+		c := cues[i]
+		if c.end-c.start < scribeFragmentSeconds && i+1 < len(cues) && cues[i+1].start-c.start < scribeFragmentGapSeconds {
+			next := cues[i+1]
+			merged := &cue{start: c.start, end: next.end, width: c.width + 1 + next.width}
+			merged.text.WriteString(c.text.String())
+			merged.text.WriteByte(' ')
+			merged.text.WriteString(next.text.String())
+			cues[i+1] = merged
+			continue
+		}
+		folded = append(folded, c)
+	}
+	cues = folded
+
 	segs := make([]whisperSegment, 0, len(cues))
 	for i, c := range cues {
 		start, end := c.start, c.end
@@ -548,14 +590,17 @@ func scribeCues(words []scribeWord) []whisperSegment {
 		if end-start > scribeCueMaxSeconds {
 			end = start + scribeCueMaxSeconds
 		}
-		if end-start < scribeMinCueSeconds {
-			held := start + scribeMinCueSeconds
-			if i+1 < len(cues) && held > cues[i+1].start {
-				held = cues[i+1].start
-			}
-			if held > end {
-				end = held
-			}
+		// Reading time: hold the cue, but never into the next one.
+		want := math.Max(scribeMinCueSeconds, float64(c.width)*scribeReadSecondsPerWidth)
+		if want > scribeCueMaxSeconds {
+			want = scribeCueMaxSeconds
+		}
+		held := start + want
+		if i+1 < len(cues) && held > cues[i+1].start-scribeCueLeadSeconds {
+			held = cues[i+1].start - scribeCueLeadSeconds
+		}
+		if held > end {
+			end = held
 		}
 		segs = append(segs, whisperSegment{ID: i, Start: start, End: end, Text: c.text.String()})
 	}
