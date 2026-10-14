@@ -58,4 +58,17 @@ describe('Tooltip openOnPress', () => {
     });
     expect(screen.queryByText('側欄標籤')).not.toBeInTheDocument();
   });
+
+  it('puts the stacking z-index on the positioner, not the popup (disc-2026-10-tooltip-hidden-in-dialog)', async () => {
+    const trigger = renderTip();
+    await act(async () => {
+      fireEvent.click(trigger, { detail: 0 });
+    });
+    const popup = (await screen.findByText('有繁中字幕')).closest('[data-side]') as HTMLElement;
+    // The positioner is a fixed, transformed stacking context: a z on the popup
+    // ranks only inside it, so dialogs (z-50) covered the tooltip. jsdom cannot
+    // see stacking — tests/e2e/tooltip-in-dialog checks the real layering.
+    expect(popup.className).not.toMatch(/\bz-/);
+    expect(popup.parentElement?.className).toContain('z-[90]');
+  });
 });
