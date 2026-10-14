@@ -1,6 +1,6 @@
 # Release 0.2：tag `v0.2.0`、release notes、GitHub About
 
-Status: in-progress
+Status: done
 
 **Source:** 2026-10-14 party mode，v0.2 發版單 ⑤。Alexyu 選 A：release notes 與 About 文案直接用 founder-growth 的草稿。
 
@@ -27,6 +27,9 @@ Status: in-progress
 Claude Fable 5.1（claude-fable-5-1），2026-10-14。
 
 ### Completion Notes List
+
+- 2026-10-14：#796 合併後 `git tag -a v0.2.0` 推上去 → Docker workflow（run 38537264244）建好 image → `gh release create v0.2.0 --latest`（文案＝核可草稿）→ `gh repo edit --description`。
+- Release：https://github.com/j620656786206/vido/releases/tag/v0.2.0
 
 ### File List
 
