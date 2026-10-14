@@ -55,14 +55,21 @@ func (s *ModelCatalogService) defaultModelID() string {
 // When translation learns to dispatch per provider, this grows a Gemini branch
 // — tracked as backlog-gemini-translation-dispatch.
 func (s *ModelCatalogService) Available(ctx context.Context) []ai.ModelInfo {
-	if s.resolver == nil || !s.resolver.Has(ctx, KeyClaude) {
+	if s.resolver == nil {
 		return nil
+	}
+	// gemini-translation-dispatch: a provider's models are offered exactly
+	// when ITS key resolves — the TranslationDispatcher routes each model to
+	// its own holder, so nothing listed here can be a paid 404 any more.
+	keyed := map[string]bool{
+		ai.ProviderNameClaude: s.resolver.Has(ctx, KeyClaude),
+		ai.ProviderNameGemini: s.resolver.Has(ctx, KeyGemini),
 	}
 
 	defaultID := s.defaultModelID()
-	out := make([]ai.ModelInfo, 0, 4)
+	out := make([]ai.ModelInfo, 0, 6)
 	for _, m := range ai.Catalog() {
-		if m.Provider != ai.ProviderNameClaude {
+		if !keyed[m.Provider] {
 			continue
 		}
 		m.IsDefault = m.ID == defaultID

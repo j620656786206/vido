@@ -85,7 +85,7 @@ func NewKeySettingsService(resolver KeyResolver, secretsService secrets.SecretsS
 		resolver: resolver,
 		secrets:  secretsService,
 		// Stable order so the page does not reshuffle between loads.
-		orderedIDs: []KeyName{KeyClaude, KeyTMDb, KeyElevenLabs, KeyOpenAI},
+		orderedIDs: []KeyName{KeyClaude, KeyGemini, KeyTMDb, KeyElevenLabs, KeyOpenAI},
 		writable:   writable && secretsService != nil,
 	}
 }

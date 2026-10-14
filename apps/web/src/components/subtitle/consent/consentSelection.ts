@@ -490,6 +490,13 @@ export { usdWithEstimate };
  */
 export function spendSourceLabel(input: {
   claudeSource?: KeySource;
+  /** gemini-translation-dispatch: where the Gemini key resolved from. */
+  geminiSource?: KeySource;
+  /**
+   * gemini-translation-dispatch: the provider of the model this list is
+   * priced on — 'gemini' names Gemini and its key; anything else keeps Claude.
+   */
+  translationProvider?: string;
   openaiSource?: KeySource;
   /** asr-scribe-b: where the ElevenLabs key resolved from. */
   elevenlabsSource?: KeySource;
@@ -505,7 +512,11 @@ export function spendSourceLabel(input: {
 }): string {
   const word = (source?: KeySource) =>
     source === 'secret' ? '你的金鑰' : source === 'env' ? '環境變數金鑰' : '尚未設定金鑰';
-  const parts = [`使用：Claude（${word(input.claudeSource)}）`];
+  const parts = [
+    input.translationProvider === 'gemini'
+      ? `使用：Gemini（${word(input.geminiSource)}）`
+      : `使用：Claude（${word(input.claudeSource)}）`,
+  ];
   if (input.hasAsrCandidates) {
     if (input.selfHostedAsr || input.asrProvider === 'self_hosted') {
       parts.push('語音辨識：自架（不另計費）');
@@ -678,6 +689,8 @@ export function groupOrder(candidates: GenerationCandidate[]): GenerationCandida
 export interface ModelChoice {
   id: string;
   displayName: string;
+  /** 'claude' | 'gemini' — the company whose key this row spends (gemini-translation-dispatch). */
+  provider?: string;
   isDefault: boolean;
   /** MEASURED grade; absent = 尚未評測 (never "equivalent"). */
   qualityGrade?: string;
@@ -841,6 +854,7 @@ export function modelChoices(
     return {
       id: m.id,
       displayName: m.displayName,
+      provider: m.provider,
       // The row the deployment pre-selects — driven by the server's effective
       // model, so a CLAUDE_MODEL override marks ITS model as the default here.
       isDefault: m.id === defaultModelId || m.isDefault,

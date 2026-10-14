@@ -84,14 +84,15 @@ func TestMergeRating_ReplacesSortsAndRefusesIncomplete(t *testing.T) {
 	for _, r := range file.Ratings {
 		ids = append(ids, r.ModelID+"/"+r.Source)
 	}
-	assert.Equal(t, []string{"claude-haiku-4-5/eval-1", "claude-opus-4-8/golden", "claude-sonnet-5/eval-1"}, ids)
+	// gemini-translation-dispatch merged the Gemini golden row into the shipped table.
+	assert.Equal(t, []string{"claude-haiku-4-5/eval-1", "claude-opus-4-8/golden", "claude-sonnet-5/eval-1", "gemini-3.5-flash-lite/golden"}, ids)
 	assert.True(t, strings.HasSuffix(string(out), "}\n"), "pretty JSON with a trailing newline, like a hand-edited file")
 
 	// Second golden run for the same model replaces, never duplicates.
 	again, err := MergeRating(out, goldenRow("claude-opus-4-8", "C"))
 	require.NoError(t, err)
 	file, _ = ParseRatings(again)
-	assert.Len(t, file.Ratings, 3)
+	assert.Len(t, file.Ratings, 4)
 	for _, r := range file.Ratings {
 		if r.ModelID == "claude-opus-4-8" {
 			assert.Equal(t, "C", r.Grade)
@@ -102,7 +103,7 @@ func TestMergeRating_ReplacesSortsAndRefusesIncomplete(t *testing.T) {
 	both, err := MergeRating(out, goldenRow("claude-sonnet-5", "B"))
 	require.NoError(t, err)
 	file, _ = ParseRatings(both)
-	assert.Len(t, file.Ratings, 4)
+	assert.Len(t, file.Ratings, 5)
 	assert.Equal(t, "B", indexRatings(file)["claude-sonnet-5"].Grade)
 
 	bad := goldenRow("claude-opus-4-8", "incomplete")

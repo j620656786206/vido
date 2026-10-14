@@ -44,6 +44,23 @@ function renderPicker(selectedModelId = SONNET.id, choices = [SONNET, HAIKU, UNG
 }
 
 describe('ModelPicker (F16/F19 翻譯模型)', () => {
+  it('[gemini-translation-dispatch] a Gemini row says whose quota it spends and that the clock includes the pacing', () => {
+    const gemini: ModelChoice = {
+      ...HAIKU,
+      id: 'gemini-3.5-flash-lite',
+      displayName: 'Gemini 3.5 Flash Lite',
+      provider: 'gemini',
+    };
+    render(
+      <ModelPicker choices={[SONNET, gemini]} selectedModelId={SONNET.id} onSelect={vi.fn()} />
+    );
+    expect(screen.getByTestId('consent-model-quota-gemini-3.5-flash-lite')).toHaveTextContent(
+      '用你自己的 Gemini 額度'
+    );
+    expect(screen.queryByTestId(`consent-model-quota-${SONNET.id}`)).toBeNull();
+    expect(screen.getByTestId('consent-model-picker')).not.toHaveTextContent('免費翻譯');
+  });
+
   it('[P0 AC #1] every row states this batch price, the measured grade and the rough time', () => {
     renderPicker();
 

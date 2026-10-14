@@ -60,6 +60,7 @@ type EnvKeys struct {
 	TMDb       string
 	OpenAI     string
 	ElevenLabs string
+	Gemini     string
 }
 
 // BundledKeys carries the build-time values (config.BundledTMDbKey). Kept apart
@@ -135,6 +136,8 @@ func secretNameFor(name KeyName) (string, bool) {
 		return SecretNameOpenAI, true
 	case KeyElevenLabs:
 		return SecretNameElevenLabs, true
+	case KeyGemini:
+		return SecretNameGemini, true
 	default:
 		return "", false
 	}
@@ -150,6 +153,8 @@ func (r *keyResolver) envValueFor(name KeyName) string {
 		return r.env.OpenAI
 	case KeyElevenLabs:
 		return r.env.ElevenLabs
+	case KeyGemini:
+		return r.env.Gemini
 	default:
 		return ""
 	}

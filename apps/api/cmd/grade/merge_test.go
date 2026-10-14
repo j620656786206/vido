@@ -97,3 +97,27 @@ func writeJSON(t *testing.T, path string, v any) {
 		t.Fatal(err)
 	}
 }
+
+// gemini-translation-dispatch: a hosted model graded through its
+// OpenAI-compatible endpoint is published under its real id; an Ollama model
+// (no catalog provider) is still refused.
+func TestMergeReport_LocalPrefixedCatalogModelIsPublishedUnderItsRealID(t *testing.T) {
+	rep := sampleReport("A")
+	rep.ModelID = "local:gemini-3.5-flash-lite"
+	row, err := ratingFromReport(rep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.ModelID != "gemini-3.5-flash-lite" {
+		t.Fatalf("model id: %q", row.ModelID)
+	}
+
+	rep.ModelID = "local:hy-mt2-7b"
+	if _, err := ratingFromReport(rep); err == nil || !strings.Contains(err.Error(), "local model") {
+		t.Fatalf("an uncatalogued local model must stay unpublishable, got %v", err)
+	}
+	rep.ModelID = "local:claude-sonnet-5"
+	if _, err := ratingFromReport(rep); err == nil {
+		t.Fatal("a Claude id behind a local endpoint is not the Claude the app dispatches to")
+	}
+}

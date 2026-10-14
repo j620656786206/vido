@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ConfigSource indicates where a configuration value came from
@@ -138,6 +139,10 @@ type Config struct {
 	// read the list back as subtitles, and even the 12-name list leaked one
 	// list cue in 1 of 2 runs. The code stays for engines where it helps.
 	ASRNamePrompt bool
+	// GeminiMinInterval spaces Gemini translation calls for the free tier's
+	// requests-per-minute limit (gemini-translation-dispatch). 0 = no pacing
+	// (paid tier).
+	GeminiMinInterval time.Duration
 	// ASRProvider is the operator's speech-recognition preference
 	// (asr-scribe-b): "auto" (ElevenLabs when its key resolves, else OpenAI),
 	// "elevenlabs" or "openai". The settings page can override it at runtime.
@@ -207,6 +212,7 @@ func Load() (*Config, error) {
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.ElevenLabsAPIKey = cfg.loadString("ELEVENLABS_API_KEY", "")
 	cfg.ASRProvider = cfg.loadString("VIDO_ASR_PROVIDER", "auto")
+	cfg.GeminiMinInterval = time.Duration(cfg.loadInt("VIDO_GEMINI_MIN_INTERVAL", 13)) * time.Second
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 	// Auth password gate (V0.1.1). Empty = auth disabled (LAN-only posture).
 	cfg.AuthPassword = cfg.loadString("VIDO_AUTH_PASSWORD", "")

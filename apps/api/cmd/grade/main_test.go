@@ -192,7 +192,7 @@ func (f fakeLocal) CompleteText(_ context.Context, _, usr string, _ int) (string
 func localDeps(t *testing.T, local fakeLocal, judgeCalls *int) deps {
 	t.Helper()
 	d := testDeps(t, fakeModel{judgeScore: 2, usdPerCall: 0.001, calls: judgeCalls})
-	d.newLocalCompleter = func(_, _ string, _ time.Duration) ai.TextCompleter { return local }
+	d.newLocalCompleter = func(_, _ string, _, _ time.Duration) ai.TextCompleter { return local }
 	return d
 }
 

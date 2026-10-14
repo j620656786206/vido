@@ -76,6 +76,7 @@ type SaveKeysRequest struct {
 	TMDb       *string `json:"tmdb"`
 	OpenAI     *string `json:"openai"`
 	ElevenLabs *string `json:"elevenlabs"`
+	Gemini     *string `json:"gemini"`
 	// ASRProvider is the engine choice (asr-scribe-b): "auto" | "elevenlabs" |
 	// "openai". Absent = unchanged.
 	ASRProvider *string `json:"asr_provider"`
@@ -113,7 +114,7 @@ func (h *KeySettingsHandler) GetKeys(c *gin.Context) {
 func (h *KeySettingsHandler) SaveKeys(c *gin.Context) {
 	var req SaveKeysRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "請求格式錯誤：請提供 claude、tmdb、elevenlabs、openai 或 asr_provider 其中至少一項")
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "請求格式錯誤：請提供 claude、gemini、tmdb、elevenlabs、openai 或 asr_provider 其中至少一項")
 		return
 	}
 
@@ -123,6 +124,7 @@ func (h *KeySettingsHandler) SaveKeys(c *gin.Context) {
 		services.KeyTMDb:       req.TMDb,
 		services.KeyOpenAI:     req.OpenAI,
 		services.KeyElevenLabs: req.ElevenLabs,
+		services.KeyGemini:     req.Gemini,
 	} {
 		if value != nil {
 			updates[name] = *value

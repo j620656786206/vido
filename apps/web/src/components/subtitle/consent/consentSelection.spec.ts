@@ -862,6 +862,18 @@ describe('spendSourceLabel (sub-6-12 AC #6)', () => {
     );
   });
 
+  it('names Gemini and whose key when the list is priced on a Gemini model (gemini-translation-dispatch)', () => {
+    expect(
+      spendSourceLabel({
+        claudeSource: 'none',
+        geminiSource: 'secret',
+        translationProvider: 'gemini',
+        selfHostedAsr: false,
+        hasAsrCandidates: false,
+      })
+    ).toBe('使用：Gemini（你的金鑰）');
+  });
+
   it('names ElevenLabs Scribe and whose key when the sweep priced it (asr-scribe-b)', () => {
     expect(
       spendSourceLabel({
