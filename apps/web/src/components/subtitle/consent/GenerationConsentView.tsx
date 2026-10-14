@@ -172,6 +172,8 @@ export function GenerationConsentView({
    * the result summary) rather than anything the FE infers from key state.
    */
   const [selfHostedAsr, setSelfHostedAsr] = useState(false);
+  /** asr-scribe-b: the engine the sweep priced, from its own summary. */
+  const [asrProvider, setAsrProvider] = useState<string | undefined>(undefined);
   /**
    * The model the user picked, '' until the catalog answers. It is NOT reset
    * when the sweep re-runs: a deliberate choice of Haiku must survive a
@@ -205,6 +207,7 @@ export function GenerationConsentView({
       setEstimatesByModel(result.estimatesByModel);
       setEstimatedMinutesByModel(result.estimatedMinutesByModel);
       setSelfHostedAsr(result.summary.selfHostedAsr);
+      setAsrProvider(result.summary.asrProvider);
       if (listable.length === 0) {
         // The ONLY case that earns「所有影片都有繁中字幕了」: the analysis
         // returned records and every one was filtered out as already covered.
@@ -350,7 +353,7 @@ export function GenerationConsentView({
   // and the same query the 金鑰設定 page reads — so the two screens can never
   // disagree about whether a key is set.
   const { data: keySettings } = useKeySettings({ enabled: open });
-  const keySourceOf = (name: 'claude' | 'openai') =>
+  const keySourceOf = (name: 'claude' | 'openai' | 'elevenlabs') =>
     keySettings?.keys.find((k) => k.name === name)?.source;
 
   // Pre-select the deployment's default the first time the catalog answers,
@@ -614,7 +617,9 @@ export function GenerationConsentView({
               onSortChange={setSort}
               claudeKeySource={keySourceOf('claude')}
               openaiKeySource={keySourceOf('openai')}
+              elevenlabsKeySource={keySourceOf('elevenlabs')}
               selfHostedAsr={selfHostedAsr}
+              asrProvider={asrProvider}
             />
           )}
 

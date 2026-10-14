@@ -166,6 +166,22 @@ func EstimatedASRPerMinute(selfHosted bool) decimal.Decimal {
 	return whisperPerMinuteUSD
 }
 
+// ASRPerMinute is the per-audio-minute rate of a named ASR provider
+// (asr-scribe-b): "openai" bills the Whisper rate, "elevenlabs" the Scribe
+// rate, "self_hosted" nothing. An unknown or empty provider — nothing
+// configured — quotes the Whisper rate, the historical default, so an estimate
+// never shows $0 for speech recognition that would in fact be paid.
+func ASRPerMinute(provider string) decimal.Decimal {
+	switch provider {
+	case "self_hosted":
+		return decimal.Zero
+	case "elevenlabs":
+		return scribePerMinuteUSD
+	default:
+		return whisperPerMinuteUSD
+	}
+}
+
 // Budget meters token usage and cost for one batch run and enforces an optional
 // USD ceiling (Story 9R-11 AC #2). It is created per run (per transcription /
 // translation job) and carried through the call chain via context, so a batch

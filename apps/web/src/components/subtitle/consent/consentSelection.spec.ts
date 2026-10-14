@@ -842,7 +842,7 @@ describe('spendSourceLabel (sub-6-12 AC #6)', () => {
         selfHostedAsr: false,
         hasAsrCandidates: true,
       })
-    ).toBe('使用：Claude（你的金鑰） · 語音辨識：OpenAI（你的金鑰）');
+    ).toBe('使用：Claude（你的金鑰） · 語音辨識：OpenAI Whisper（你的金鑰）');
   });
 
   it('self-hosted ASR spends no key at all', () => {
@@ -860,6 +860,30 @@ describe('spendSourceLabel (sub-6-12 AC #6)', () => {
     expect(spendSourceLabel({ selfHostedAsr: false, hasAsrCandidates: false })).toBe(
       '使用：Claude（尚未設定金鑰）'
     );
+  });
+
+  it('names ElevenLabs Scribe and whose key when the sweep priced it (asr-scribe-b)', () => {
+    expect(
+      spendSourceLabel({
+        claudeSource: 'secret',
+        openaiSource: 'none',
+        elevenlabsSource: 'secret',
+        selfHostedAsr: false,
+        asrProvider: 'elevenlabs',
+        hasAsrCandidates: true,
+      })
+    ).toBe('使用：Claude（你的金鑰） · 語音辨識：ElevenLabs Scribe（你的金鑰）');
+  });
+
+  it('an old server without asr_provider keeps the Whisper wording', () => {
+    expect(
+      spendSourceLabel({
+        claudeSource: 'secret',
+        openaiSource: 'env',
+        selfHostedAsr: false,
+        hasAsrCandidates: true,
+      })
+    ).toBe('使用：Claude（你的金鑰） · 語音辨識：OpenAI Whisper（環境變數金鑰）');
   });
 
   it('drops the ASR half when the sweep found no ASR rows to pay for', () => {

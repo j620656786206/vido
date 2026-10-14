@@ -1310,7 +1310,7 @@ describe('CandidateListPanel — 扣誰的錢 (sub-6-12 AC #6)', () => {
       openaiKeySource: 'secret',
     });
     expect(screen.getByTestId('consent-spend-source')).toHaveTextContent(
-      '使用：Claude（你的金鑰） · 語音辨識：OpenAI（你的金鑰）'
+      '使用：Claude（你的金鑰） · 語音辨識：OpenAI Whisper（你的金鑰）'
     );
   });
 
@@ -1329,7 +1329,7 @@ describe('CandidateListPanel — 扣誰的錢 (sub-6-12 AC #6)', () => {
   it('an env-provided key says so, and an absent one is not dressed up as set', () => {
     renderPanel({ candidates: asrMix, claudeKeySource: 'env' });
     expect(screen.getByTestId('consent-spend-source')).toHaveTextContent(
-      '使用：Claude（環境變數金鑰） · 語音辨識：OpenAI（尚未設定金鑰）'
+      '使用：Claude（環境變數金鑰） · 語音辨識：OpenAI Whisper（尚未設定金鑰）'
     );
   });
 

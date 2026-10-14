@@ -150,7 +150,11 @@ export interface CandidateListPanelProps {
    */
   claudeKeySource?: KeySource;
   openaiKeySource?: KeySource;
+  /** asr-scribe-b: where the ElevenLabs key resolved from. */
+  elevenlabsKeySource?: KeySource;
   selfHostedAsr?: boolean;
+  /** asr-scribe-b: the engine the sweep priced (`asr_provider`). */
+  asrProvider?: string;
   /**
    * The server cannot start a batch (the keys the pipeline needs are not
    * saved — GET …/generation-batch/status `available: false`). The list still
@@ -751,6 +755,8 @@ export function CandidateListPanel({
   claudeKeySource,
   openaiKeySource,
   selfHostedAsr = false,
+  elevenlabsKeySource,
+  asrProvider,
   notConfigured = false,
   notConfiguredKey,
   onGoToKeySettings,
@@ -974,7 +980,9 @@ export function CandidateListPanel({
               {spendSourceLabel({
                 claudeSource: claudeKeySource,
                 openaiSource: openaiKeySource,
+                elevenlabsSource: elevenlabsKeySource,
                 selfHostedAsr,
+                asrProvider,
                 hasAsrCandidates: asrTotal > 0,
               })}
             </p>
