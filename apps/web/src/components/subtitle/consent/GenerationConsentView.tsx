@@ -52,6 +52,7 @@ import {
   listableCandidates,
   modelChoices,
   parseBudgetInput,
+  preselectionFor,
   selectableIds,
   visibleSelectableIds,
   type ConsentRouteFilter,
@@ -214,12 +215,7 @@ export function GenerationConsentView({
         setPhase('empty');
         return;
       }
-      const preselected = new Set(
-        (preselectedIds ?? []).filter((id) =>
-          listable.some((c) => c.mediaId === id && isSelectable(c))
-        )
-      );
-      setSelectedIds(preselected.size > 0 ? preselected : defaultSelection(listable));
+      setSelectedIds(preselectionFor(listable, preselectedIds) ?? defaultSelection(listable));
       setPhase('list');
     },
     [preselectedIds]

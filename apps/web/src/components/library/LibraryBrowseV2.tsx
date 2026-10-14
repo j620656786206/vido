@@ -511,8 +511,9 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
 
   // Generation consent flow: ALL selected ids pass through (mixed movie/episode
   // UUIDs are valid since sub-4-2 D1 — the old series filter + excluded note is
-  // history). Series ROW ids match no candidate and simply don't preselect —
-  // their episodes still appear in the F15 list for manual selection.
+  // history). A series ROW id preselects that series' episodes, matched on
+  // their seriesId (consentSelection.preselectionFor,
+  // disc-2026-10-series-selection-preselects-episodes).
   const handleOpenGenerationBatch = useCallback(() => {
     setGenerationBatchSelection([...selectedIds]);
     setGenerationForceAnalyze(false);

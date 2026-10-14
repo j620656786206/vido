@@ -89,6 +89,35 @@ export function isSelectable(c: GenerationCandidate): boolean {
 }
 
 /**
+ * What a selection brought in from the library preselects
+ * (disc-2026-10-series-selection-preselects-episodes).
+ *
+ * A library id is a movie, an episode or a SERIES. A series id is no
+ * candidate's `mediaId`, but it is the `seriesId` of every one of its
+ * episodes — so choosing a series picks all of its selectable episodes.
+ *
+ * `null` = the caller brought nothing (the scan-complete deep link): use
+ * defaultSelection. A selection that matches nothing selectable gives an EMPTY
+ * set, never the library-wide default — someone who picked one series must not
+ * open onto 658 films and US$239.
+ */
+export function preselectionFor(
+  candidates: GenerationCandidate[],
+  ids: readonly string[] | undefined
+): Set<string> | null {
+  if (!ids || ids.length === 0) return null;
+  const wanted = new Set(ids);
+  return new Set(
+    candidates
+      .filter(
+        (c) =>
+          isSelectable(c) && (wanted.has(c.mediaId) || (!!c.seriesId && wanted.has(c.seriesId)))
+      )
+      .map((c) => c.mediaId)
+  );
+}
+
+/**
  * Is this row's runtime a GUESS? (sub-6-10b AC #2, moved here by sub-6-12)
  *
  * Prefer `runtimeSource` — it distinguishes "measured from the file" from
