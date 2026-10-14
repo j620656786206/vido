@@ -102,6 +102,18 @@ var whisperPerMinuteUSD = decimal.RequireFromString("0.006")
 // rather than a rounded 0.0037 so a 10-hour film bills $2.20, not $2.22.
 var scribePerMinuteUSD = decimal.RequireFromString("0.22").Div(decimal.NewFromInt(60))
 
+// ScribeKeytermsSurcharge is what ElevenLabs adds when a request carries
+// `keyterms` (API reference 2026-10-14: "a 20% surcharge on the base
+// transcription cost"). disc-2026-10-scribe-keyterms sends the show's names on
+// every run that has any, so the QUOTED Scribe rate includes it — an estimate
+// may come out a little high for a title with no names, never low.
+var ScribeKeytermsSurcharge = decimal.RequireFromString("1.2")
+
+// ScribePerMinuteWithKeyterms is the Scribe rate once names are sent.
+func ScribePerMinuteWithKeyterms() decimal.Decimal {
+	return scribePerMinuteUSD.Mul(ScribeKeytermsSurcharge)
+}
+
 // ScribePerMinute is the exact-decimal Scribe rate, for the metering path.
 func ScribePerMinute() decimal.Decimal { return scribePerMinuteUSD }
 
@@ -176,7 +188,8 @@ func ASRPerMinute(provider string) decimal.Decimal {
 	case "self_hosted":
 		return decimal.Zero
 	case "elevenlabs":
-		return scribePerMinuteUSD
+		// Quoted WITH the keyterms surcharge: names go out by default.
+		return ScribePerMinuteWithKeyterms()
 	default:
 		return whisperPerMinuteUSD
 	}

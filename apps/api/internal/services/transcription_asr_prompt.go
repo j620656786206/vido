@@ -119,6 +119,13 @@ func promptCharacterName(character string) string {
 // pre-story behaviour, never a failed run — but never silently (the
 // mediaMetadataFor CR M1 posture): a miss is logged with what it cost.
 func (s *TranscriptionService) asrPromptFor(ctx context.Context, mediaType, mediaID, glossaryKey string) string {
+	credits, terms := s.asrPromptSources(ctx, mediaType, mediaID, glossaryKey)
+	return ai.BuildASRPrompt(asrPromptNames(credits, terms))
+}
+
+// asrPromptSources reads the two name sources: the title's TMDb credits and
+// the show's glossary rows (filtered to trusted sources by asrPromptNames).
+func (s *TranscriptionService) asrPromptSources(ctx context.Context, mediaType, mediaID, glossaryKey string) (*models.Credits, []models.GlossaryTerm) {
 	var credits *models.Credits
 	switch mediaType {
 	case models.SubtitleRunMediaMovie:
@@ -159,5 +166,13 @@ func (s *TranscriptionService) asrPromptFor(ctx context.Context, mediaType, medi
 		}
 	}
 
-	return ai.BuildASRPrompt(asrPromptNames(credits, terms))
+	return credits, terms
+}
+
+// asrNamesFor is asrPromptFor before the Whisper rendering: the ordered,
+// un-capped name list (characters, then trusted glossary terms). Scribe takes
+// it as a vocabulary (disc-2026-10-scribe-keyterms), Whisper as text.
+func (s *TranscriptionService) asrNamesFor(ctx context.Context, mediaType, mediaID, glossaryKey string) []string {
+	credits, terms := s.asrPromptSources(ctx, mediaType, mediaID, glossaryKey)
+	return asrPromptNames(credits, terms)
 }

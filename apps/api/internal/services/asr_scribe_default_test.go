@@ -37,7 +37,7 @@ func TestASRHolder_ElevenLabsKeyMakesScribeTheDefault(t *testing.T) {
 
 	rate, provider := h.ASRRate(ctx)
 	assert.Equal(t, ASRProviderElevenLabs, provider)
-	assert.True(t, rate.Equal(ai.ScribePerMinute()), "quoted at the Scribe rate, got %s", rate)
+	assert.True(t, rate.Equal(ai.ScribePerMinuteWithKeyterms()), "quoted at the Scribe rate WITH the keyterms surcharge (names go out by default), got %s", rate)
 }
 
 func TestASRHolder_OpenAIKeyAloneStillMeansWhisper(t *testing.T) {

@@ -32,6 +32,65 @@ func ASRPromptFromContext(ctx context.Context) string {
 	return p
 }
 
+// asrKeytermsKey carries the name list for engines that take a VOCABULARY
+// rather than conditioning text (disc-2026-10-scribe-keyterms: ElevenLabs
+// Scribe's `keyterms`). Whisper ignores it; Scribe ignores the prompt.
+type asrKeytermsKey struct{}
+
+// ScribeMaxKeyterms caps the list sent per request. ElevenLabs allows 1000,
+// but past 100 every request is billed for at least 20 seconds — a chunk is
+// always longer than that, yet the cap keeps the bill predictable and a
+// show's cast list is far shorter anyway.
+const ScribeMaxKeyterms = 100
+
+// WithASRKeyterms pins the names speech recognition should spell correctly,
+// already normalised by NormalizeScribeKeyterms. An empty list leaves the
+// ctx unchanged.
+func WithASRKeyterms(ctx context.Context, names []string) context.Context {
+	if len(names) == 0 {
+		return ctx
+	}
+	return context.WithValue(ctx, asrKeytermsKey{}, names)
+}
+
+// ASRKeytermsFromContext returns the pinned names, or nil.
+func ASRKeytermsFromContext(ctx context.Context) []string {
+	n, _ := ctx.Value(asrKeytermsKey{}).([]string)
+	return n
+}
+
+// NormalizeScribeKeyterms applies ElevenLabs' rules (API reference 2026-10-14):
+// under 50 characters, at most 5 words, none of < > { } [ ] \ — and Vido's
+// own: trimmed, de-duplicated case-insensitively with the first spelling
+// kept, order preserved (characters first, see services.asrPromptNames),
+// capped at ScribeMaxKeyterms. nil when nothing is left.
+func NormalizeScribeKeyterms(names []string) []string {
+	seen := make(map[string]struct{}, len(names))
+	var kept []string
+	for _, raw := range names {
+		n := strings.TrimSpace(strings.Map(func(r rune) rune {
+			switch r {
+			case '<', '>', '{', '}', '[', ']', '\\':
+				return -1
+			}
+			return r
+		}, raw))
+		if n == "" || len(n) >= 50 || len(strings.Fields(n)) > 5 {
+			continue
+		}
+		key := strings.ToLower(n)
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		kept = append(kept, n)
+		if len(kept) == ScribeMaxKeyterms {
+			break
+		}
+	}
+	return kept
+}
+
 // ASR prompt limits. Whisper reads only the LAST ~224 tokens of the prompt;
 // a long list is silently truncated from the FRONT, so the cap keeps the
 // whole list inside the window and the caller must put the important names

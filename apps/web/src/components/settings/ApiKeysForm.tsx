@@ -94,7 +94,7 @@ const KEY_ROWS: KeyRowSpec[] = [
     // asr-scribe-b: on the 2026-10 exam Scribe v2 passed 3/3 and Whisper 0/3
     // (eval/asr-exam-2026-10), so a saved ElevenLabs key becomes the default
     // speech-recognition engine. Never 「免費」— the free tier is non-commercial.
-    hint: '填了就用 Scribe 聽寫沒有字幕軌的片：比 Whisper 準、每小時約 US$0.22。留空則用 OpenAI Whisper。儲存後立即生效。',
+    hint: '填了就用 Scribe 聽寫沒有字幕軌的片：比 Whisper 準、每小時約 US$0.26（含人名提示）。留空則用 OpenAI Whisper。儲存後立即生效。',
     testable: false,
   },
   {
