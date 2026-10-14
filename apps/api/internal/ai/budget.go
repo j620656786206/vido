@@ -97,6 +97,14 @@ var fallbackLLMPricing = price("1.00", "5.00")
 // whisperPerMinuteUSD is the OpenAI Whisper API price per audio minute.
 var whisperPerMinuteUSD = decimal.RequireFromString("0.006")
 
+// scribePerMinuteUSD is the ElevenLabs Scribe v2 price per audio minute:
+// $0.22 per hour (API pricing page, 2026-10-14), kept as the exact 0.22/60
+// rather than a rounded 0.0037 so a 10-hour film bills $2.20, not $2.22.
+var scribePerMinuteUSD = decimal.RequireFromString("0.22").Div(decimal.NewFromInt(60))
+
+// ScribePerMinute is the exact-decimal Scribe rate, for the metering path.
+func ScribePerMinute() decimal.Decimal { return scribePerMinuteUSD }
+
 func llmPricing(model string) ModelPricing {
 	if p, ok := defaultLLMPricing[model]; ok {
 		return p
