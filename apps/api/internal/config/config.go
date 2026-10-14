@@ -76,9 +76,10 @@ type Config struct {
 	GeminiModel string
 
 	// SubtitlePipelineMode selects the subtitle backend behind the D5 flag
-	// (sub-1-6 AC #1): "legacy" (default, the Epic-8 search engine) or
-	// "pipeline" (the M1 extract-and-translate generation pipeline). Read it
-	// through SubtitlePipelineEnabled(), never by comparing the string.
+	// (sub-1-6 AC #1): "pipeline" (default since release-0-2 — the M1
+	// extract-and-translate generation pipeline) or "legacy" (the Epic-8
+	// search engine only). Read it through SubtitlePipelineEnabled(), never by
+	// comparing the string.
 	SubtitlePipelineMode string
 	// SubtitleLocalizationLevel is the sub-7-4 taste dial's ENV default
 	// (literal | standard | ott). A value saved in the settings table beats
@@ -261,9 +262,12 @@ func Load() (*Config, error) {
 	}
 
 	// Subtitle generation pipeline flag (D5, sub-1-6). Validated here so an
-	// unknown value fails the process at startup rather than silently keeping
-	// legacy behaviour on an install whose operator believes it is enabled.
-	cfg.SubtitlePipelineMode = cfg.loadString("VIDO_SUBTITLE_PIPELINE_MODE", SubtitlePipelineModeLegacy)
+	// unknown value fails the process at startup rather than silently falling
+	// back to a mode the operator did not choose. release-0-2-pipeline-default:
+	// the default is pipeline — a fresh install that follows any install guide
+	// never sets this variable, and on legacy the headline feature ("an
+	// English track gets translated") never ran.
+	cfg.SubtitlePipelineMode = cfg.loadString("VIDO_SUBTITLE_PIPELINE_MODE", SubtitlePipelineModePipeline)
 	if err := validateSubtitlePipelineMode(cfg.SubtitlePipelineMode); err != nil {
 		return nil, err
 	}

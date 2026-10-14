@@ -11,20 +11,22 @@ import "fmt"
 // drifts per-install, and cannot be read before the DB is open.
 const (
 	// SubtitlePipelineModeLegacy keeps the Epic-8 search engine as the batch
-	// seam's processor. This is the default: an install that never sets the
-	// variable behaves exactly as it did before M1 shipped.
+	// seam's processor — the pre-M1 behaviour. It was the default until
+	// release-0-2-pipeline-default (2026-10-14); it stays a valid opt-out.
 	SubtitlePipelineModeLegacy = "legacy"
 
 	// SubtitlePipelineModePipeline routes the batch seam to the generation
 	// pipeline (extract → route → translate → place) and turns on the scanner
-	// auto-enqueue and the manual run endpoint.
+	// auto-enqueue and the manual run endpoint. This is the default: an
+	// install that never sets the variable reads embedded English tracks
+	// before it pays for speech recognition.
 	SubtitlePipelineModePipeline = "pipeline"
 )
 
 // validSubtitlePipelineModes is the closed set. An unknown value is a startup
-// error rather than a silent fallback to legacy: a typo'd `VIDO_SUBTITLE_PIPELINE_MODE=pipelien`
-// that quietly kept the old behaviour would look exactly like "the pipeline is
-// broken" to an operator who believes they enabled it.
+// error rather than a silent fallback: a typo'd `VIDO_SUBTITLE_PIPELINE_MODE=legcay`
+// that quietly stayed on pipeline would look exactly like "the opt-out does
+// nothing" to an operator who believes they switched it off.
 var validSubtitlePipelineModes = map[string]struct{}{
 	SubtitlePipelineModeLegacy:   {},
 	SubtitlePipelineModePipeline: {},
