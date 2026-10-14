@@ -23,7 +23,8 @@ const (
 // pipeline's "a provider quota stops the run, it does not degrade to English"
 // rule (pipeline.go isTransientExhausted) covers it unchanged.
 type CreditExhaustedError struct {
-	// Provider is the lower-case provider name: "openai", "anthropic".
+	// Provider is the lower-case provider name: "openai", "anthropic",
+	// "elevenlabs".
 	Provider string
 	// Code is the provider's own error code ("insufficient_quota"), for logs.
 	Code string
@@ -45,6 +46,8 @@ func (e *CreditExhaustedError) DisplayName() string {
 		return "OpenAI"
 	case "anthropic":
 		return "Anthropic"
+	case "elevenlabs":
+		return "ElevenLabs"
 	default:
 		return e.Provider
 	}
