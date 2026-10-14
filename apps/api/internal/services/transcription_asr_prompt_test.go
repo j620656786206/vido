@@ -167,14 +167,23 @@ func TestLoadGlossary_SeasonDrawerOverlays(t *testing.T) {
 	}})
 	svc.SetGlossaryScopeResolver(seasonScopes{scope: "tmdb:tv:80752", episodeID: "ep-s1", season: 1})
 
+	// The run feeds from the SHOW key (the parent series id) and resolves
+	// the season from the EPISODE id — the real wiring of translationInputsFor.
 	pairs := map[string]string{}
-	for _, p := range svc.loadGlossary(context.Background(), "ep-s1") {
+	for _, p := range svc.loadGlossary(context.Background(), "series-see", "ep-s1") {
 		pairs[p.Source] = p.Target
 	}
 	assert.Equal(t, map[string]string{"Jerlamarel": "謝拉馬威", "Haniwa": "哈妮娃"}, pairs)
 
 	pairs = map[string]string{}
-	for _, p := range svc.loadGlossary(context.Background(), "ep-s3") {
+	for _, p := range svc.loadGlossary(context.Background(), "series-see", "ep-s3") {
+		pairs[p.Source] = p.Target
+	}
+	assert.Equal(t, map[string]string{"Jerlamarel": "傑拉馬瑞", "Haniwa": "哈妮娃"}, pairs)
+
+	// A movie run has no episode: show-wide terms only, no season lookup.
+	pairs = map[string]string{}
+	for _, p := range svc.loadGlossary(context.Background(), "movie-1", "") {
 		pairs[p.Source] = p.Target
 	}
 	assert.Equal(t, map[string]string{"Jerlamarel": "傑拉馬瑞", "Haniwa": "哈妮娃"}, pairs)
@@ -182,4 +191,27 @@ func TestLoadGlossary_SeasonDrawerOverlays(t *testing.T) {
 	// CR 1: a confirmed show-wide term is the user's word — no drawer override.
 	assert.Equal(t, map[string]string{"Jerlamarel": "傑拉瑪瑞爾", "Haniwa": "哈妮娃"},
 		overlaySeasonDrawer(map[string]string{"Jerlamarel": "傑拉瑪瑞爾", "Haniwa": "哈妮娃"}, map[string]string{"Jerlamarel": "謝拉馬威"}, map[string]string{"JERLAMAREL": "傑拉瑪瑞爾"}))
+}
+
+// disc-2026-10-asr-route-season-drawer-skipped: translationInputsFor must hand
+// loadGlossary the EPISODE id for the season lookup, not the show key it feeds
+// from. Before the fix it passed the series id to ResolveSeason, which is not
+// an episode, so no season drawer was ever applied on the speech-recognition
+// route (See S01E02 came out with season 2's spellings on the NAS, 2026-10-14).
+func TestTranslationInputsFor_EpisodeRunReadsItsSeasonDrawer(t *testing.T) {
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetGlossaryRepository(&seasonLayeredRepo{byScope: map[string]map[string]string{
+		"tmdb:tv:80752":    {"Baba Voss": "巴霸沃斯"},
+		"tmdb:tv:80752:s1": {"Baba Voss": "巴巴禾斯"},
+	}})
+	svc.SetGlossaryScopeResolver(seasonScopes{scope: "tmdb:tv:80752", episodeID: "ep-s1e2", season: 1})
+	svc.SetEpisodeSubtitleStateReader(&metadataEpisodeReader{episode: &models.Episode{ID: "ep-s1e2", SeriesID: "series-see", SeasonNumber: 1, EpisodeNumber: 2}})
+
+	in := svc.translationInputsFor(context.Background(), models.SubtitleRunMediaEpisode, "ep-s1e2")
+	assert.Equal(t, "series-see", in.glossaryKey, "the run feeds from and harvests into the show key")
+	got := map[string]string{}
+	for _, p := range in.glossary {
+		got[p.Source] = p.Target
+	}
+	assert.Equal(t, map[string]string{"Baba Voss": "巴巴禾斯"}, got, "season 1's spelling, not the show-wide one")
 }

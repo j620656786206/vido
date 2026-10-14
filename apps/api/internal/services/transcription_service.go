@@ -432,25 +432,34 @@ func (s *TranscriptionService) SetSeriesMetadataReader(r SeriesMetadataReader) {
 // no repo is wired or the lookup fails (fail-soft — a glossary miss must never
 // block generation). Uses ALL terms (confirmed + auto-mined) for maximum
 // intra-run consistency; the F6 review UI lets users correct mistakes.
-func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID string) []GlossaryPair {
+//
+// glossaryKey is the SHOW-level key (the parent series for an episode, see
+// glossaryKeyFor); episodeID is the episode the run is for, or "" for a movie
+// or series run. The season drawer is resolved from episodeID, never from the
+// show key — disc-2026-10-asr-route-season-drawer-skipped: this function used
+// to ask ResolveSeason about the series id, which is not an episode, so the
+// speech-recognition route silently translated every episode with the
+// show-wide spellings (See S01E02 got season 2's 巴霸沃斯／傑拉馬瑞 while the
+// extract route next door rendered season 1's 巴巴禾斯／謝拉馬威).
+func (s *TranscriptionService) loadGlossary(ctx context.Context, glossaryKey, episodeID string) []GlossaryPair {
 	if s.glossaryRepo == nil {
 		return nil
 	}
-	scope := s.glossaryScopeFor(ctx, mediaID)
+	scope := s.glossaryScopeFor(ctx, glossaryKey)
 	m, err := s.glossaryRepo.LookupByScope(ctx, scope, false)
 	if err != nil {
 		s.logger.Warn("glossary lookup failed — translating without glossary",
-			"media_id", mediaID, "scope", scope, "error", err)
+			"glossary_key", glossaryKey, "scope", scope, "error", err)
 		return nil
 	}
 	// disc-2026-10-glossary-season-scope-a: an episode reads its season's
 	// drawer on top of the show's — the official subtitles of THIS season
 	// spelled the names this way, and the episode must match its neighbours.
-	if sr, ok := s.glossaryScopes.(GlossarySeasonResolver); ok {
-		if seasonScope, season, isEp, serr := sr.ResolveSeason(ctx, mediaID); serr == nil && isEp && seasonScope == scope {
+	if sr, ok := s.glossaryScopes.(GlossarySeasonResolver); ok && episodeID != "" {
+		if seasonScope, season, isEp, serr := sr.ResolveSeason(ctx, episodeID); serr == nil && isEp && seasonScope == scope {
 			over, oerr := s.glossaryRepo.LookupByScope(ctx, models.GlossarySeasonScope(scope, season), false)
 			if oerr != nil {
-				s.logger.Warn("glossary season drawer lookup failed — show-wide terms only", "media_id", mediaID, "season", season, "error", oerr)
+				s.logger.Warn("glossary season drawer lookup failed — show-wide terms only", "media_id", episodeID, "season", season, "error", oerr)
 			} else if len(over) > 0 {
 				// A term the user confirmed or edited in the panel is their
 				// word: the drawer never overrides it (CR 1).
@@ -459,7 +468,7 @@ func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID string)
 					confirmed = nil
 				}
 				m = overlaySeasonDrawer(m, over, confirmed)
-				s.logger.Debug("glossary: season drawer applied", "media_id", mediaID, "season", season, "overrides", len(over))
+				s.logger.Debug("glossary: season drawer applied", "media_id", episodeID, "season", season, "overrides", len(over))
 			}
 		}
 	}
@@ -1835,7 +1844,12 @@ type translationInputs struct {
 func (s *TranscriptionService) translationInputsFor(ctx context.Context, mediaType, mediaID string) translationInputs {
 	episodeRow := s.episodeRowFor(ctx, mediaType, mediaID) // one read serves the key AND the sub-7-2a episode line
 	glossaryKey := glossaryKeyFor(mediaID, episodeRow)
-	glossary := s.loadGlossary(ctx, glossaryKey)
+	// The season drawer belongs to the EPISODE, not to the show key.
+	episodeID := ""
+	if episodeRow != nil {
+		episodeID = mediaID
+	}
+	glossary := s.loadGlossary(ctx, glossaryKey, episodeID)
 	// 9R-8: the FR26 show context the extract leg has always had. Reuses the
 	// glossaryKey resolved just above, so an episode costs no extra row read.
 	metadata := s.mediaMetadataFor(ctx, mediaType, mediaID, glossaryKey)
