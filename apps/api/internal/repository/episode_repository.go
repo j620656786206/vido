@@ -173,7 +173,22 @@ func (r *EpisodeRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]mo
 	}
 	defer rows.Close()
 
-	return scanEpisodeRows(rows)
+	episodes, err := scanEpisodeRows(rows)
+	if err != nil {
+		return nil, err
+	}
+	// disc-2026-10-candidates-ignore-existing-chinese: the column only knows
+	// what Vido itself placed. An embedded Traditional track or a .zh-TW
+	// sidecar the sweep stored in subtitle_tracks is a subtitle too — the
+	// same verdict the season-list badge renders.
+	kept := episodes[:0]
+	for _, e := range episodes {
+		if models.HasTraditionalChineseSubtitle(string(e.SubtitleStatus), e.SubtitleLanguage.String, e.SubtitleTracks.String) {
+			continue
+		}
+		kept = append(kept, e)
+	}
+	return kept, nil
 }
 
 // CountMissingZhHantSubtitle returns the number of episodes
@@ -181,11 +196,34 @@ func (r *EpisodeRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]mo
 // generation-batch preview count (sub-5-1 AC #7), mirroring
 // MovieRepository.CountMissingZhHantSubtitle over the same shared predicate.
 func (r *EpisodeRepository) CountMissingZhHantSubtitle(ctx context.Context) (int, error) {
-	query := `SELECT COUNT(*) FROM episodes WHERE ` + missingZhHantSubtitleEpisodeWhere
-
-	var count int
-	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+	// The three columns the verdict reads, nothing else: the count must drop
+	// exactly the rows FindMissingZhHantSubtitle drops.
+	query := `SELECT subtitle_status, subtitle_language, subtitle_tracks FROM episodes WHERE ` + missingZhHantSubtitleEpisodeWhere
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
 		return 0, fmt.Errorf("failed to count episodes missing zh-Hant subtitle: %w", err)
+	}
+	defer rows.Close()
+	return countMissingZhHantRows(rows)
+}
+
+// countMissingZhHantRows counts the (status, language, tracks) rows that are
+// not already Traditional Chinese — shared by the movie and episode counts.
+func countMissingZhHantRows(rows *sql.Rows) (int, error) {
+	count := 0
+	for rows.Next() {
+		var status sql.NullString
+		var language, tracks sql.NullString
+		if err := rows.Scan(&status, &language, &tracks); err != nil {
+			return 0, fmt.Errorf("failed to scan subtitle columns: %w", err)
+		}
+		if models.HasTraditionalChineseSubtitle(status.String, language.String, tracks.String) {
+			continue
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("error iterating subtitle columns: %w", err)
 	}
 	return count, nil
 }
