@@ -1,20 +1,25 @@
 # Unraid 安裝指南
 
-> **最後更新：** 2026-03-26
+> **最後更新：** 2026-10-14
 
 ## 前置需求
 
 - Unraid 6.x 或更新版本，已啟用 Docker
-- 已安裝 Community Applications 外掛（建議，可一鍵安裝）
-- TMDb API 金鑰，從 <https://www.themoviedb.org/settings/api> 取得（選用但建議）
+- 一個媒體資料夾（例如 `/mnt/user/media`）。**要能寫入**：Vido 產生的字幕會存在影片旁邊
+- 要用 AI 字幕的話，一把翻譯金鑰：**Claude 或 Gemini 擇一**（Gemini 用你自己的額度，免費方案 Vido 會自動放慢）。完全沒有字幕的片要先聽聲音，另外需要 ElevenLabs（建議）或 OpenAI 的金鑰
+- TMDb 金鑰**不用準備**，image 裡已經內建；想用自己的再填 `TMDB_API_KEY`
 
-## 方法 A：Community Applications（建議）
+Vido **還沒上架 Community Applications**。請用這個 repo 的模板安裝（方法 A），或手動設定（方法 B）。
 
-1. 開啟 Unraid 網頁介面，前往 **Apps**
-2. 搜尋 **Vido**
-3. 點擊 **Install**
-4. 設定必要的路徑（請參閱下方[設定](#設定)）
-5. 點擊 **Apply**
+## 方法 A：用這個 repo 的模板（建議）
+
+1. 在 Unraid 網頁介面前往 **Docker**，捲到最底下打開 **Template repositories**
+2. 加入 `https://github.com/j620656786206/vido`，按 **Save**
+3. 按 **Add Container**，在 **Template** 下拉選 **Vido**
+4. 依照下方[設定](#設定)填路徑和金鑰
+5. 按 **Apply**
+
+模板沒出現的話改用方法 B——模板檔是 [`unraid-template/vido.xml`](../unraid-template/vido.xml)，下面每個欄位都跟它一致。
 
 ## 方法 B：手動 Docker 設定
 
@@ -24,13 +29,13 @@
 | 欄位             | 值                                            |
 | ---------------- | --------------------------------------------- |
 | Name             | `Vido`                                        |
-| Repository       | `ghcr.io/j620656786206/vido:main`             |
+| Repository       | `ghcr.io/j620656786206/vido:latest`           |
 | Network Type     | `Bridge`                                      |
 | WebUI            | `http://[IP]:[PORT:8088]`                     |
 | Extra Parameters | `--read-only --tmpfs /tmp:size=64M,mode=1777` |
 
 3. 依照下方[設定](#設定)章節新增 port、path 和變數對應
-4. 點擊 **Apply**
+4. 按 **Apply**
 
 ## 設定
 
@@ -44,36 +49,45 @@ Vido 在單一連接埠上同時提供網頁介面和 API。
 
 ### 路徑（磁碟區）
 
-| 名稱          | 容器路徑        | 主機路徑                             | 模式     | 說明                              |
-| ------------- | --------------- | ------------------------------------ | -------- | --------------------------------- |
-| App Data      | `/vido-data`    | `/mnt/user/appdata/vido`             | 讀寫     | SQLite 資料庫、快取和應用程式資料 |
-| Backups       | `/vido-backups` | `/mnt/user/appdata/vido/backups`     | 讀寫     | 資料庫備份和中繼資料匯出          |
-| Media Library | `/media`        | 你的媒體路徑（如 `/mnt/user/media`） | **唯讀** | 你的電影和影集資料庫              |
+| 名稱          | 容器路徑        | 主機路徑                             | 模式     | 說明                                                       |
+| ------------- | --------------- | ------------------------------------ | -------- | ---------------------------------------------------------- |
+| App Data      | `/vido-data`    | `/mnt/user/appdata/vido`             | 讀寫     | SQLite 資料庫、快取和應用程式資料                          |
+| Backups       | `/vido-backups` | `/mnt/user/appdata/vido/backups`     | 讀寫     | 資料庫備份和中繼資料匯出                                   |
+| Media Library | `/media`        | 你的媒體路徑（如 `/mnt/user/media`） | **讀寫** | 你的電影和影集。產生的字幕會寫在影片旁邊，所以不能設成唯讀 |
 
 ### 環境變數
 
-**一般顯示：**
+**金鑰（都是選填，一把都沒填 Vido 也能啟動）：**
 
-| 變數                    | 預設值   | 說明                                        |
-| ----------------------- | -------- | ------------------------------------------- |
-| `TMDB_API_KEY`          | （空白） | TMDb API 金鑰，用於取得中繼資料、海報和圖片 |
-| `TMDB_DEFAULT_LANGUAGE` | `zh-TW`  | 預設中繼資料語言（ISO 639-1 格式）          |
+| 變數                 | 預設值   | 說明                                                                                     |
+| -------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| `CLAUDE_API_KEY`     | （空白） | 字幕翻譯（預設用它）。要用 AI 字幕，Claude／Gemini 擇一                                  |
+| `GEMINI_API_KEY`     | （空白） | 用你自己的 Gemini 額度翻字幕，也用於 AI 檔名解析                                         |
+| `ELEVENLABS_API_KEY` | （空白） | 沒字幕的片聽聲音用（ElevenLabs Scribe，每小時約 US$0.22）。比 Whisper 準，建議用這把     |
+| `OPENAI_API_KEY`     | （空白） | 用 OpenAI Whisper 聽聲音（每小時約 US$0.36）；沒填 ElevenLabs 時用它                     |
+| `TMDB_API_KEY`       | （空白） | 你自己的 TMDb 金鑰。留空就用 image 內建的                                                |
+| `ENCRYPTION_KEY`     | （空白） | **剛好 32 個字。** 想在網頁上（設定 → 金鑰設定）存金鑰就要設；沒設的話那一頁只能看不能存 |
+| `VIDO_AUTH_PASSWORD` | （空白） | 整個 Vido 的共用登入密碼。要分享給別人或從外面連回來之前先設                             |
 
-**進階（點擊「Show more settings」）：**
+**行為：**
 
-| 變數             | 預設值    | 說明                                           |
-| ---------------- | --------- | ---------------------------------------------- |
-| `GIN_MODE`       | `release` | 設為 `debug` 可用於疑難排解                    |
-| `AI_PROVIDER`    | `gemini`  | AI 檔名解析提供者：`gemini` 或 `claude`        |
-| `GEMINI_API_KEY` | （空白）  | Google Gemini API 金鑰，用於 AI 解析           |
-| `CLAUDE_API_KEY` | （空白）  | Anthropic Claude API 金鑰（Gemini 的替代方案） |
+| 變數                          | 預設值      | 說明                                                                             |
+| ----------------------------- | ----------- | -------------------------------------------------------------------------------- |
+| `PUID`／`PGID`                | `99`／`100` | 容器用哪個使用者執行（Unraid 的 `nobody:users`）。要能寫入媒體資料夾             |
+| `TMDB_DEFAULT_LANGUAGE`       | `zh-TW`     | 預設中繼資料語言（ISO 639-1 格式）                                               |
+| `VIDO_SUBTITLE_PIPELINE_MODE` | `pipeline`  | `pipeline` 先讀片內英文字幕、沒有才聽聲音；`legacy` 回到只搜尋線上字幕的舊引擎   |
+| `VIDO_ASR_PROVIDER`           | `auto`      | 兩把聽寫金鑰都填時用哪家：`auto`（有 ElevenLabs 就用它）、`elevenlabs`、`openai` |
+| `ASR_BASE_URL`／`ASR_MODEL`   | （空白）    | 改用自架的語音辨識服務（例如 Speaches），不用雲端金鑰                            |
+| `AI_RUN_BUDGET_USD`           | `5`         | 每次執行最多花幾美元。超過會暫停，做好的部分保留，下次只做剩下的                 |
+| `AI_PROVIDER`                 | `gemini`    | AI 檔名解析用哪家：`gemini` 或 `claude`                                          |
+| `VIDO_LOG_LEVEL`              | `info`      | 設為 `debug` 可用於疑難排解                                                      |
 
 ## 安裝後驗證
 
 1. 從 Docker 分頁啟動 Vido 容器
 2. 等待健康檢查通過（綠色圖示，通常在 30 秒內）
 3. 開啟 WebUI：`http://[你的 Unraid IP]:8088`
-4. 前往**設定**頁面設定 TMDb API 金鑰
+4. 第一次會進六步設定精靈（歡迎・qBittorrent・媒體庫・API 金鑰・匿名回報・完成），每一步都可以先跳過、之後在**設定**裡補
 5. 前往媒體庫並觸發第一次掃描
 
 ### 健康檢查
@@ -91,14 +105,20 @@ Vido 在單一連接埠上同時提供網頁介面和 API。
 ### 找不到媒體檔案
 
 - 確認 Media Library 路徑指向 Unraid 伺服器上的正確目錄
-- 媒體路徑以唯讀方式掛載 — Vido 只讀取，不會修改你的媒體檔案
 - 支援的影片格式：`.mkv`、`.mp4`、`.avi`、`.m4v`、`.ts`、`.wmv`、`.flv`、`.webm`、`.mov`
+
+### 字幕產生失敗、訊息說「資料夾無法寫入」
+
+- 媒體路徑掛成了唯讀，或 `PUID`／`PGID` 那個使用者沒有寫入權限。字幕會存在影片旁邊，所以媒體資料夾一定要能寫
+
+### 設定頁存不了金鑰
+
+- 沒設 `ENCRYPTION_KEY`，或長度不是剛好 32 個字
 
 ### 權限錯誤
 
-- 容器以使用者 `vido`（UID 1000、GID 1000）身分執行
-- 確保 App Data 和 Backups 目錄可被 UID 1000 存取
-- 如有需要，從 Unraid 終端機執行 `chown -R 1000:1000 /mnt/user/appdata/vido`
+- 容器以 root 啟動、先把 `/vido-data` 和 `/vido-backups` 的擁有者改成 `PUID`／`PGID`，再切換成那個使用者執行（模板預設 `99:100`，也就是 Unraid 的 `nobody:users`）
+- 如果你改了 `PUID`／`PGID`，請確認那個使用者對 App Data、Backups **和媒體路徑**都能讀寫
 
 ### 資料庫錯誤
 
@@ -108,7 +128,8 @@ Vido 在單一連接埠上同時提供網頁介面和 API。
 
 ## 安全注意事項
 
-- 容器以**非 root 使用者**身分執行（UID 1000）
-- 根檔案系統為**唯讀**（`--read-only` 旗標）
-- 媒體檔案以**唯讀**方式掛載 — Vido 不會修改你的媒體
+- 啟動完成後程序以 `PUID`／`PGID` 執行，不是 root
+- 根檔案系統為**唯讀**（`--read-only` 旗標）；只有 `/tmp`、資料、備份和媒體路徑可寫
+- Vido 只會把**字幕檔**寫進媒體資料夾（放在影片旁邊），不會修改或刪除影片
 - API 金鑰在 Unraid UI 中已遮蔽（不以明文顯示）
+- 要把連接埠開到家用網路以外之前，先設 `VIDO_AUTH_PASSWORD`

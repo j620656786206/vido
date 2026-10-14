@@ -1,10 +1,12 @@
 # ==============================================================================
 # Vido - Docker Compose Configuration
 # ==============================================================================
-# Single-container deployment for NAS (Unraid, Synology, etc.)
+# Builds the image from source — for development and for people who want to
+# build it themselves. NAS users should use the published image instead:
+# docs/docker-compose.nas.yml (a local build has no bundled TMDb key).
 #
 # Quick Start:
-#   docker-compose up -d
+#   docker compose up -d
 #
 # Access:
 #   - Web UI: http://localhost:8080
@@ -14,7 +16,8 @@
 # Volumes:
 #   - vido-data: Database and cache files
 #   - vido-backups: Backup files
-#   - Media folder: Your media library (read-only)
+#   - Media folder: Your media library (writable — generated subtitles are
+#     saved next to the video file)
 #
 # Environment Variables:
 #   - MEDIA_PATH: Path to your media library (default: ./media)
@@ -36,8 +39,9 @@ services:
       - vido-data:/vido-data
       # Backup storage
       - vido-backups:/vido-backups
-      # Media library (read-only for security)
-      - ${MEDIA_PATH:-./media}:/media:ro
+      # Media library. Must be writable: generated subtitles are saved next to
+      # the video. Do NOT add ':ro'.
+      - ${MEDIA_PATH:-./media}:/media
     environment:
       # Server configuration
       - PORT=8080
@@ -73,7 +77,9 @@ services:
       - AI_MAX_CONCURRENT=${AI_MAX_CONCURRENT:-3}
       - AI_RATE_PER_SEC=${AI_RATE_PER_SEC:-2}
       - AI_RUN_BUDGET_USD=${AI_RUN_BUDGET_USD:-5}
-      # Encryption key for stored credentials (qBittorrent, DVR). Auto-derived if empty.
+      # EXACTLY 32 characters. Required to save API keys from the web UI
+      # (Settings → 金鑰設定); without it that page is read-only. Only the
+      # qBittorrent password falls back to a machine-derived key when empty.
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       # Login password gating the whole API + UI (V0.1.1). STRONGLY recommended
       # before sharing this instance or exposing it beyond a trusted LAN. Empty =

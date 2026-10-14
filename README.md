@@ -1,9 +1,9 @@
 # Vido
 
 **自架在 NAS 上的影音管理工具，專門幫沒有中文字幕的影片做出繁體中文字幕。**
-影片裡有英文字幕，就抽出來翻成繁中；完全沒有字幕，就先聽聲音、再翻。翻出來用的是台灣用語。
+影片裡有英文字幕，就抽出來翻成繁中；完全沒有字幕，就先聽英文對白、再翻。翻出來用的是台灣用語。
 
-> **English**: Vido is a self-hosted media manager for your NAS, built around one problem: getting Traditional Chinese (Taiwan) subtitles for videos that don't have them. If a video carries an English subtitle track, Vido extracts and translates it; if it has no subtitles at all, Vido transcribes the audio first and then translates. Translations use Taiwanese vocabulary and keep character names consistent.
+> **English**: Vido is a self-hosted media manager for your NAS, built around one problem: getting Traditional Chinese (Taiwan) subtitles for videos that don't have them. If a video carries an English subtitle track, Vido extracts and translates it; if it has no subtitles at all, Vido transcribes the English dialogue first and then translates. Translations use Taiwanese vocabulary and keep character names consistent.
 
 ---
 
@@ -18,7 +18,7 @@
 ```
 影片裡已經有中文字幕  →  直接用，不花錢
 影片裡有英文字幕      →  抽出來，翻成繁中
-完全沒有字幕          →  先聽聲音轉成英文，再翻成繁中
+完全沒有字幕          →  先聽英文對白轉成文字，再翻成繁中
 ```
 
 字幕之外，Vido 也幫你把媒體庫整理好：繁中的片名與介紹、海報、季集清單，讓這個家庭劇院真的好用。
@@ -59,7 +59,7 @@
 
 > ⚠️ **專案狀態**：積極開發中，設計為**單人使用**，目前主要在作者自己的 NAS 上運行。歡迎試用與[回報問題](#回報問題)，但還不建議用於關鍵用途。
 >
-> 🔒 **存取控制**：設定環境變數 `VIDO_AUTH_PASSWORD` 即可為整個 App（UI + API）加上一道共用密碼登入（`latest` 映像才有，v0.1.1 還沒有）。**要把這個實例分享給別人、或讓它超出信任的家用網路前，強烈建議先設定。** 留空則維持舊的無登入行為——此時**請只在家用網路內使用**，遠端存取請走 VPN、Tailscale 或反向代理加驗證，不要把服務直接暴露到公開網路。未設定密碼時，任何能連到伺服器的人都能完全控制它（讀取／修改設定與 API 金鑰、下載資料庫備份、加入下載任務）。
+> 🔒 **存取控制**：設定環境變數 `VIDO_AUTH_PASSWORD` 即可為整個 App（UI + API）加上一道共用密碼登入。**要把這個實例分享給別人、或讓它超出信任的家用網路前，強烈建議先設定。** 留空則維持舊的無登入行為——此時**請只在家用網路內使用**，遠端存取請走 VPN、Tailscale 或反向代理加驗證，不要把服務直接暴露到公開網路。未設定密碼時，任何能連到伺服器的人都能完全控制它（讀取／修改設定與 API 金鑰、下載資料庫備份、加入下載任務）。
 
 ## 安裝
 
@@ -80,7 +80,7 @@ Vido 用 Docker 安裝，跑在你自己的 NAS 上。請照你的 NAS 平台看
 
 ### 會花多少錢
 
-Vido 本身免費。AI 字幕的費用是付給你自己的 Claude（聽聲音的話再加 ElevenLabs 或 OpenAI）帳號，按下去之前 Vido 會先顯示預估金額。以預設的翻譯模型為例，作者自己 NAS 上的實測：
+Vido 本身免費。AI 字幕的費用是付給你自己的 Claude 或 Gemini（聽聲音的話再加 ElevenLabs 或 OpenAI）帳號，按下去之前 Vido 會先顯示預估金額。以預設的翻譯模型為例，作者自己 NAS 上的實測：
 
 | 影片                                 | 大約花費                    |
 | ------------------------------------ | --------------------------- |
@@ -103,7 +103,7 @@ Vido 本身免費。AI 字幕的費用是付給你自己的 Claude（聽聲音�
 | `OPENAI_API_KEY`                    | 選填                            | OpenAI Whisper 語音辨識，每小時約 US$0.36；沒填 ElevenLabs 時用它                            |
 | `VIDO_ASR_PROVIDER`                 | 選填，預設 `auto`               | 兩把都填時要用哪家：`auto`（有 ElevenLabs 就用它）、`elevenlabs`、`openai`；網頁設定可以蓋過 |
 | `ASR_BASE_URL`、`ASR_MODEL`         | 選填                            | 改用自架的語音辨識服務（例如 Speaches、WhisperLive），不用 OpenAI key，也不花雲端費用        |
-| `ENCRYPTION_KEY`                    | 想在網頁上填金鑰就要填          | 32 個字以上的隨機字串，用來加密存放你的金鑰                                                  |
+| `ENCRYPTION_KEY`                    | 想在網頁上填金鑰就要填          | 剛好 32 個字的隨機字串，用來加密存放你的金鑰                                                 |
 | `AI_RUN_BUDGET_USD`                 | 選填，預設 `5`                  | 每次執行最多花幾美元。超過會暫停，已經做好的部分會保留，下次只做剩下的                       |
 | `VIDO_AUTH_PASSWORD`                | 建議填                          | 整個 Vido 的登入密碼，見上面的「存取控制」                                                   |
 | `PUID`、`PGID`                      | 依你的 NAS                      | 容器用哪個使用者身分執行，要能寫入媒體資料夾                                                 |
@@ -124,7 +124,7 @@ Vido 有一個預設關閉的「匿名使用回報」（開關在「設定 → �
 回報時請盡量附上（issue 表單會引導你填）：
 
 1. **執行環境** — NAS 平台（Unraid／Synology／QNAP／其他）與安裝方式
-2. **版本** — image tag（例如 `latest`、`v0.1.1`），或執行 `docker inspect vido --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'` 取得確切 commit
+2. **版本** — image tag（例如 `latest`、`0.1.1`），或執行 `docker inspect vido --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'` 取得確切 commit
 3. **重現步驟** — 做了什麼、預期看到什麼、實際看到什麼
 4. **Logs** — `docker logs vido --tail 100` 的輸出（貼上前請檢查裡面沒有 API key）
 
