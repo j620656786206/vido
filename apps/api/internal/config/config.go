@@ -140,6 +140,12 @@ type Config struct {
 	// read the list back as subtitles, and even the 12-name list leaked one
 	// list cue in 1 of 2 runs. The code stays for engines where it helps.
 	ASRNamePrompt bool
+	// ASRKeyterms hands ElevenLabs Scribe the show's character names as a
+	// vocabulary (`keyterms`, disc-2026-10-scribe-keyterms). ON by default:
+	// unlike the Whisper prompt it is not read back as subtitles, and on See
+	// S01E02 Jerlamarel came out as "Chilam Balam" without it. Costs 20% more
+	// per audio minute (quoted in the estimate). VIDO_ASR_KEYTERMS=false turns it off.
+	ASRKeyterms bool
 	// GeminiMinInterval spaces Gemini translation calls for the free tier's
 	// requests-per-minute limit (gemini-translation-dispatch). 0 = no pacing
 	// (paid tier).
@@ -210,6 +216,7 @@ func Load() (*Config, error) {
 	cfg.ASRModel = cfg.loadString("ASR_MODEL", "")
 	cfg.ASRWordTimestamps = cfg.loadBool("VIDO_ASR_WORD_TIMESTAMPS", true)
 	cfg.ASRNamePrompt = cfg.loadBool("VIDO_ASR_NAME_PROMPT", false)
+	cfg.ASRKeyterms = cfg.loadBool("VIDO_ASR_KEYTERMS", true)
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.ElevenLabsAPIKey = cfg.loadString("ELEVENLABS_API_KEY", "")
 	cfg.ASRProvider = cfg.loadString("VIDO_ASR_PROVIDER", "auto")

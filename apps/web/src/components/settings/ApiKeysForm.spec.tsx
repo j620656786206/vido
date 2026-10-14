@@ -103,7 +103,7 @@ describe('ApiKeysForm — the three source states (AC #1)', () => {
     renderForm();
     const row = screen.getByTestId('key-row-elevenlabs');
     expect(row).toHaveTextContent('比 Whisper 準');
-    expect(row).toHaveTextContent('US$0.22');
+    expect(row).toHaveTextContent('US$0.26');
     expect(row).not.toHaveTextContent('免費');
   });
 

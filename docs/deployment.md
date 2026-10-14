@@ -166,7 +166,9 @@ Notes:
   before.
 - **Which cloud engine transcribes (asr-scribe-b).** With an ElevenLabs key
   the ASR leg runs on Scribe v2 (on the 2026-10 exam, `eval/asr-exam-2026-10`,
-  it passed 3/3 where whisper-1 passed 0/3; $0.22/h against $0.36/h). An OpenAI
+  it passed 3/3 where whisper-1 passed 0/3; $0.22/h base, $0.26/h with the
+  character-name vocabulary Vido sends by default — see `VIDO_ASR_KEYTERMS`
+  in docs/development.md — against Whisper's $0.36/h). An OpenAI
   key alone still means Whisper. Both set: `VIDO_ASR_PROVIDER` (`auto` /
   `elevenlabs` / `openai`), overridable from Settings → API Keys. A pinned
   engine without its key is _unconfigured_, never a silent fallback to the

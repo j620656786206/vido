@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -561,4 +562,52 @@ func fmtSscanf(ts string, h, m, s, ms *int) (int, error) {
 		*p = v
 	}
 	return 4, nil
+}
+
+// disc-2026-10-scribe-keyterms: names on the ctx go out as repeated
+// `keyterms` fields and the request is billed with the 20% surcharge; a ctx
+// without names sends none and bills the base rate.
+func TestScribe_SendsKeytermsFromContextAndBillsTheSurcharge(t *testing.T) {
+	var fields map[string][]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, r.ParseMultipartForm(1<<20))
+		fields = r.MultipartForm.Value
+		_, _ = io.WriteString(w, scribeOK)
+	}))
+	defer srv.Close()
+	c := NewScribeClient("el-key", WithScribeBaseURL(srv.URL))
+	wav := scribeTestWAV(t)
+
+	b := NewBudget(10)
+	ctx := WithBudget(WithASRKeyterms(context.Background(), []string{"Jerlamarel", "Baba Voss"}), b)
+	_, err := c.TranscribeDetailed(ctx, wav, "en")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"Jerlamarel", "Baba Voss"}, fields["keyterms"], "one repeated field per name")
+	assert.InDelta(t, 120*ScribePerMinuteWithKeyterms().InexactFloat64()/60, b.SpentUSD(), 1e-9, "120 s of audio at the surcharged rate")
+
+	b2 := NewBudget(10)
+	_, err = c.TranscribeDetailed(WithBudget(context.Background(), b2), wav, "en")
+	require.NoError(t, err)
+	assert.NotContains(t, fields, "keyterms")
+	assert.InDelta(t, 120*ScribePerMinuteUSD()/60, b2.SpentUSD(), 1e-9, "no names, base rate")
+}
+
+func TestNormalizeScribeKeyterms_AppliesElevenLabsRulesAndTheCap(t *testing.T) {
+	got := NormalizeScribeKeyterms([]string{
+		" Jerlamarel ", "jerlamarel", "Baba <Voss>", "",
+		"a name with six whole words here", strings.Repeat("x", 50), "Tamacti Jun",
+	})
+	assert.Equal(t, []string{"Jerlamarel", "Baba Voss", "Tamacti Jun"}, got)
+
+	many := make([]string, 0, ScribeMaxKeyterms+20)
+	for i := 0; i < ScribeMaxKeyterms+20; i++ {
+		many = append(many, fmt.Sprintf("Name%d", i))
+	}
+	assert.Len(t, NormalizeScribeKeyterms(many), ScribeMaxKeyterms, "past 100 every request bills 20 s minimum")
+	assert.Nil(t, NormalizeScribeKeyterms([]string{"", "  "}))
+}
+
+func TestScribeRates_SurchargeIsTwentyPercent(t *testing.T) {
+	assert.Equal(t, "0.264", ScribePerMinuteWithKeyterms().Mul(decimal.NewFromInt(60)).Round(8).String())
+	assert.True(t, ASRPerMinute("elevenlabs").Equal(ScribePerMinuteWithKeyterms()), "the quote includes the surcharge")
 }

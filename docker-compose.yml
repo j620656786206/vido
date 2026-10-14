@@ -65,7 +65,7 @@ services:
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-}
       # ASR / speech recognition (optional). ELEVENLABS_API_KEY = Scribe v2
-      # (recommended, $0.22/h); OPENAI_API_KEY = Whisper ($0.36/h); both set →
+      # (recommended, ~$0.26/h incl. the name vocabulary); OPENAI_API_KEY = Whisper ($0.36/h); both set →
       # VIDO_ASR_PROVIDER decides (auto = ElevenLabs). ASR_BASE_URL points at a
       # self-hosted OpenAI-compatible engine instead, with no cloud cost.
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}

@@ -142,6 +142,10 @@ type TranscriptionService struct {
 	// namePrompt turns the character-name conditioning text on
 	// (disc-2026-10-asr-name-prompt-default-off; off unless SetASRNamePrompt).
 	namePrompt bool
+	// keyterms hands the same names to engines that take a vocabulary
+	// (ElevenLabs Scribe, disc-2026-10-scribe-keyterms). ON by default — the
+	// 20% surcharge is in the quoted rate; VIDO_ASR_KEYTERMS=false turns it off.
+	keyterms bool
 	// segmentStore keeps each paid-for TRANSLATED cue, so a run stopped by the
 	// money ceiling resumes at the first untranslated cue instead of paying for
 	// the finished ones again (disc-2026-09-generation-resume-a). nil = off.
@@ -230,6 +234,12 @@ func NewTranscriptionService(
 // off (VIDO_ASR_NAME_PROMPT; default off, see config.ASRNamePrompt).
 func (s *TranscriptionService) SetASRNamePrompt(on bool) {
 	s.namePrompt = on
+}
+
+// SetASRKeyterms switches the Scribe vocabulary on or off
+// (VIDO_ASR_KEYTERMS; default on, see config.ASRKeyterms).
+func (s *TranscriptionService) SetASRKeyterms(on bool) {
+	s.keyterms = on
 }
 
 func (s *TranscriptionService) SetASRChunkStore(store ASRChunkStore) {
@@ -1035,11 +1045,22 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		// names are spelled (TMDb credits + the trusted glossary) so one
 		// character is not heard seven ways. Rides the ctx to the client.
 		asrCtx := phaseCtx
-		if s.namePrompt {
-			if prompt := s.asrPromptFor(ctx, mediaType, mediaID, glossaryKeyFor(mediaID, s.episodeRowFor(ctx, mediaType, mediaID))); prompt != "" {
-				asrCtx = ai.WithASRPrompt(phaseCtx, prompt)
-				s.logger.Info("asr prompt built", "media_id", mediaID, "media_type", mediaType,
-					"names", len(strings.Split(prompt, ", ")), "runes", len([]rune(prompt)))
+		if s.namePrompt || s.keyterms {
+			names := s.asrNamesFor(ctx, mediaType, mediaID, glossaryKeyFor(mediaID, s.episodeRowFor(ctx, mediaType, mediaID)))
+			// disc-2026-10-scribe-keyterms: Scribe takes the names as a
+			// vocabulary (Jerlamarel was heard as "Chilam Balam" without it).
+			if s.keyterms {
+				if kt := ai.NormalizeScribeKeyterms(names); len(kt) > 0 {
+					asrCtx = ai.WithASRKeyterms(asrCtx, kt)
+					s.logger.Info("asr keyterms built", "media_id", mediaID, "media_type", mediaType, "names", len(kt))
+				}
+			}
+			if s.namePrompt {
+				if prompt := ai.BuildASRPrompt(names); prompt != "" {
+					asrCtx = ai.WithASRPrompt(asrCtx, prompt)
+					s.logger.Info("asr prompt built", "media_id", mediaID, "media_type", mediaType,
+						"names", len(strings.Split(prompt, ", ")), "runes", len([]rune(prompt)))
+				}
 			}
 		}
 		srtContent, err = s.transcribeAudioWithProgress(asrCtx, audioPath, lang, scope, func(done, total int) {

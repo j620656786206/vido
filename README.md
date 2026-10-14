@@ -88,7 +88,7 @@ Vido 用 Docker 安裝，跑在你自己的 NAS 上。請照你的 NAS 平台看
 > 1. **填入 `CLAUDE_API_KEY` 或 `GEMINI_API_KEY`（擇一）**。如果想在網頁上（設定精靈或「設定 → 金鑰設定」）填金鑰，要先設 `ENCRYPTION_KEY`，不然網頁會存不了。
 > 2. **媒體資料夾要能寫入**。產生的字幕會存在影片旁邊，所以掛載媒體資料夾時不要加 `:ro`，`PUID`／`PGID` 也要對那個資料夾有寫入權限。
 >
-> 完全沒有字幕的片要先聽聲音，還需要一把聽寫服務的金鑰：建議填 `ELEVENLABS_API_KEY`（Scribe v2，作者 2026-10 的考卷上三次都過、Whisper 三次都沒過，而且每小時 US$0.22 比 Whisper 的 0.36 便宜），或填 `OPENAI_API_KEY` 用 Whisper，或把 `ASR_BASE_URL` 指到自架的語音辨識服務。兩把雲端金鑰都填的話預設用 ElevenLabs，可以在「設定 → 金鑰設定」改。
+> 完全沒有字幕的片要先聽聲音，還需要一把聽寫服務的金鑰：建議填 `ELEVENLABS_API_KEY`（Scribe v2，作者 2026-10 的考卷上三次都過、Whisper 三次都沒過，而且每小時約 US$0.26（含人名提示）比 Whisper 的 0.36 便宜），或填 `OPENAI_API_KEY` 用 Whisper，或把 `ASR_BASE_URL` 指到自架的語音辨識服務。兩把雲端金鑰都填的話預設用 ElevenLabs，可以在「設定 → 金鑰設定」改。
 
 ### 會花多少錢
 
@@ -111,7 +111,7 @@ Vido 本身免費。AI 字幕的費用是付給你自己的 Claude 或 Gemini（
 | `CLAUDE_API_KEY`                    | 要用 AI 字幕就填（或填 Gemini） | 把字幕翻成繁中；預設用 Claude                                                                |
 | `GEMINI_API_KEY`                    | 選填                            | 填了可以改選 Gemini 翻譯，用你自己的 Gemini 額度（免費方案 Vido 會自動放慢）                 |
 | `VIDO_SUBTITLE_PIPELINE_MODE`       | 選填，預設 `pipeline`           | 預設先讀片內字幕、有英文字幕就直接翻、沒有才聽聲音；設 `legacy` 回到只搜尋字幕的舊引擎       |
-| `ELEVENLABS_API_KEY`                | 沒字幕的片要聽聲音時建議填      | ElevenLabs Scribe 語音辨識，每小時約 US$0.22；填了就預設用它                                 |
+| `ELEVENLABS_API_KEY`                | 沒字幕的片要聽聲音時建議填      | ElevenLabs Scribe 語音辨識，每小時約 US$0.26（含人名提示）；填了就預設用它                   |
 | `OPENAI_API_KEY`                    | 選填                            | OpenAI Whisper 語音辨識，每小時約 US$0.36；沒填 ElevenLabs 時用它                            |
 | `VIDO_ASR_PROVIDER`                 | 選填，預設 `auto`               | 兩把都填時要用哪家：`auto`（有 ElevenLabs 就用它）、`elevenlabs`、`openai`；網頁設定可以蓋過 |
 | `ASR_BASE_URL`、`ASR_MODEL`         | 選填                            | 改用自架的語音辨識服務（例如 Speaches、WhisperLive），不用 OpenAI key，也不花雲端費用        |

@@ -26,25 +26,33 @@ import (
 // heard as "Joe! How are you?"). It is also cheaper: $0.22/h against $0.36/h.
 //
 // What is different from Whisper, and what this file does about it:
+//
 //   - Scribe returns a flat WORD list, never segments. Cues are built here
 //     (scribeCues): a cue ends at terminal punctuation, at a pause of
 //     scribeCueGapSeconds, at a non-speech event, or when it would run past
 //     scribeCueMaxSeconds / scribeCueMaxChars. Scribe's own `additional_formats`
 //     SRT was tried and rejected: it stretches sound tags over 20 s and breaks
 //     mid-phrase ("Hey, face / me!").
+//
 //   - Scribe has no no_speech_prob / avg_logprob / compression_ratio. Those
 //     three Whisper rules in filterHallucinationsWith simply never fire (the
 //     fields are zero); the text rules — music_only, symbol_only, credit_line,
 //     prompt_echo, repeat runs — still do. Scribe's own `audio_event` tokens
 //     ([bear roaring], [dramatic music]) are the replacement signal: they are
 //     dropped from the text and used as cue boundaries.
+//
 //   - Billing is per audio second at scribePerMinuteUSD, through the same
 //     RecordASRWithRate seam Whisper uses, so the estimate (asr-scribe-b) and
 //     the invoice are one number.
 //
-// NOT sent on purpose: `keyterms` (the name prompt — a 20% surcharge, and the
-// Whisper name prompt never fixed a name in six NAS trials), `diarize`,
-// `additional_formats`.
+//   - `keyterms` (disc-2026-10-scribe-keyterms) carries the show's character
+//     names from the ctx (ai.WithASRKeyterms) so Jerlamarel is not heard as
+//     "Chilam Balam" (See S01E02, 2026-10-14). It is a VOCABULARY, not the
+//     Whisper conditioning text that read the list back as subtitles. It
+//     adds 20% to the bill, so a request that sends it is metered at
+//     ScribePerMinuteWithKeyterms.
+//
+// NOT sent on purpose: `diarize`, `additional_formats`.
 const (
 	// ScribeAPIURL is the ElevenLabs speech-to-text endpoint.
 	ScribeAPIURL = "https://api.elevenlabs.io/v1/speech-to-text"
@@ -195,7 +203,8 @@ func (c *ScribeClient) TranscribeDetailed(ctx context.Context, audioPath, lang s
 	}
 	filename := filepath.Base(audioPath)
 
-	body, err := c.post(ctx, audio, filename, lang)
+	keyterms := ASRKeytermsFromContext(ctx)
+	body, err := c.post(ctx, audio, filename, lang, keyterms)
 	if err != nil {
 		return TranscriptionDetail{}, err
 	}
@@ -215,7 +224,11 @@ func (c *ScribeClient) TranscribeDetailed(ctx context.Context, audioPath, lang s
 			}
 		}
 		if seconds > 0 {
-			b.RecordASRWithRate(seconds, ScribePerMinuteUSD())
+			rate := ScribePerMinuteUSD()
+			if len(keyterms) > 0 {
+				rate = ScribePerMinuteWithKeyterms().InexactFloat64()
+			}
+			b.RecordASRWithRate(seconds, rate)
 		}
 	}
 
@@ -243,6 +256,7 @@ func (c *ScribeClient) TranscribeDetailed(ctx context.Context, audioPath, lang s
 		"file", filename,
 		"language", resp.LanguageCode,
 		"words", len(resp.Words),
+		"keyterms", len(keyterms),
 		"segments_in", detail.SegmentsIn,
 		"segments_kept", detail.SegmentsKept,
 		"dropped_by_reason", dropReasonCounts(dropped),
@@ -273,7 +287,7 @@ func readScribeAudio(audioPath string) ([]byte, error) {
 
 // ─── HTTP ───────────────────────────────────────────────────────────────────
 
-func (c *ScribeClient) buildBody(audio []byte, filename, lang string) ([]byte, string, error) {
+func (c *ScribeClient) buildBody(audio []byte, filename, lang string, keyterms []string) ([]byte, string, error) {
 	var body bytes.Buffer
 	w := multipart.NewWriter(&body)
 	part, err := w.CreateFormFile("file", filename)
@@ -291,6 +305,10 @@ func (c *ScribeClient) buildBody(audio []byte, filename, lang string) ([]byte, s
 	if lang != "" {
 		fields = append(fields, [2]string{"language_code", lang})
 	}
+	// One repeated field per name — the multipart form of a list parameter.
+	for _, k := range keyterms {
+		fields = append(fields, [2]string{"keyterms", k})
+	}
 	for _, f := range fields {
 		if err := w.WriteField(f[0], f[1]); err != nil {
 			return nil, "", fmt.Errorf("scribe: write %s field: %w", f[0], err)
@@ -306,8 +324,8 @@ func (c *ScribeClient) buildBody(audio []byte, filename, lang string) ([]byte, s
 // bounded transient retry. 401/403/4xx fail fast quoting the server; an
 // exhausted account stops the run as CreditExhaustedError; 429/5xx and
 // per-attempt timeouts retry.
-func (c *ScribeClient) post(ctx context.Context, audio []byte, filename, lang string) ([]byte, error) {
-	bodyBytes, contentType, err := c.buildBody(audio, filename, lang)
+func (c *ScribeClient) post(ctx context.Context, audio []byte, filename, lang string, keyterms []string) ([]byte, error) {
+	bodyBytes, contentType, err := c.buildBody(audio, filename, lang, keyterms)
 	if err != nil {
 		return nil, err
 	}

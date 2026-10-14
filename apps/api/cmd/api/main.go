@@ -698,6 +698,7 @@ func main() {
 	transcriptionService := services.NewTranscriptionService(audioExtractorService, asrHolder, sseHub, slog.Default())
 	transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
 	transcriptionService.SetASRNamePrompt(cfg.ASRNamePrompt)
+	transcriptionService.SetASRKeyterms(cfg.ASRKeyterms)
 	// disc-2026-09-generation-resume-b: paid-for ASR chunk transcripts survive
 	// an interrupted run (money ceiling, deadline, restart) in cache_entries,
 	// so the next run pays only for the chunks it never got to.

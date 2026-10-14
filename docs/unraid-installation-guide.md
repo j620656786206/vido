@@ -59,15 +59,15 @@ Vido serves both the web UI and API on a single port.
 
 **Keys (all optional — Vido starts without any of them):**
 
-| Variable             | Default | Description                                                                                                               |
-| -------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `CLAUDE_API_KEY`     | (empty) | Subtitle translation (default provider). One of Claude / Gemini is needed for AI subtitles                                |
-| `GEMINI_API_KEY`     | (empty) | Subtitle translation on your own Gemini quota, and AI filename parsing                                                    |
-| `ELEVENLABS_API_KEY` | (empty) | Speech recognition (ElevenLabs Scribe, ~US$0.22/h) for videos with no subtitle track. Recommended over Whisper            |
-| `OPENAI_API_KEY`     | (empty) | Speech recognition with OpenAI Whisper (~US$0.36/h); used when no ElevenLabs key is set                                   |
-| `TMDB_API_KEY`       | (empty) | Your own TMDb key. Leave empty to use the one bundled in the image                                                        |
-| `ENCRYPTION_KEY`     | (empty) | **Exactly 32 characters.** Required to save keys from the web UI (Settings → 金鑰設定); without it that page is read-only |
-| `VIDO_AUTH_PASSWORD` | (empty) | Shared login password for the whole app. Set it before sharing the instance or exposing it beyond your LAN                |
+| Variable             | Default | Description                                                                                                                              |
+| -------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE_API_KEY`     | (empty) | Subtitle translation (default provider). One of Claude / Gemini is needed for AI subtitles                                               |
+| `GEMINI_API_KEY`     | (empty) | Subtitle translation on your own Gemini quota, and AI filename parsing                                                                   |
+| `ELEVENLABS_API_KEY` | (empty) | Speech recognition (ElevenLabs Scribe, ~US$0.26/h incl. the name vocabulary) for videos with no subtitle track. Recommended over Whisper |
+| `OPENAI_API_KEY`     | (empty) | Speech recognition with OpenAI Whisper (~US$0.36/h); used when no ElevenLabs key is set                                                  |
+| `TMDB_API_KEY`       | (empty) | Your own TMDb key. Leave empty to use the one bundled in the image                                                                       |
+| `ENCRYPTION_KEY`     | (empty) | **Exactly 32 characters.** Required to save keys from the web UI (Settings → 金鑰設定); without it that page is read-only                |
+| `VIDO_AUTH_PASSWORD` | (empty) | Shared login password for the whole app. Set it before sharing the instance or exposing it beyond your LAN                               |
 
 **Behaviour:**
 

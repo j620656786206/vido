@@ -3,10 +3,13 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/models"
 )
@@ -214,4 +217,19 @@ func TestTranslationInputsFor_EpisodeRunReadsItsSeasonDrawer(t *testing.T) {
 		got[p.Source] = p.Target
 	}
 	assert.Equal(t, map[string]string{"Baba Voss": "巴巴禾斯"}, got, "season 1's spelling, not the show-wide one")
+}
+
+// disc-2026-10-scribe-keyterms: the Scribe vocabulary is the same ordered
+// name list the Whisper prompt renders, before the prompt's window cap.
+func TestASRNamesFor_IsTheUncappedOrderedList(t *testing.T) {
+	cast := make([]models.CastMember, 0, 20)
+	for i := 0; i < 20; i++ {
+		cast = append(cast, models.CastMember{Name: fmt.Sprintf("Actor %d", i), Character: fmt.Sprintf("Character %d", i)})
+	}
+	svc := NewTranscriptionService(nil, nil, nil, nil)
+	svc.SetSeriesMetadataReader(&metadataSeriesReader{series: &models.Series{Credits: &models.Credits{Cast: cast}}})
+	names := svc.asrNamesFor(context.Background(), models.SubtitleRunMediaEpisode, "ep-1", "series-1")
+	require.Len(t, names, 20, "every character, not just the %d the Whisper window takes", ai.ASRPromptMaxNames)
+	assert.Equal(t, "Character 0", names[0])
+	assert.LessOrEqual(t, len(strings.Split(svc.asrPromptFor(context.Background(), models.SubtitleRunMediaEpisode, "ep-1", "series-1"), ", ")), ai.ASRPromptMaxNames)
 }
