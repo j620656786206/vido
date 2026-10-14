@@ -43,7 +43,7 @@ Status: review
 - `README.md:62`「`latest` 映像才有，v0.1.1 還沒有」、`:127` 例子 `v0.1.1` → 實際 tag `0.1.1`。
 
 ### README 其他（✅）
-- `README.md:4`、`:6`、`:21` 寫「有英文字幕就翻；沒有字幕就先聽聲音再翻」，沒說聽聲音**只做英文對白**（只有 `:55` 提）。留言兩位的片庫是日文特攝片，裝了第一天就失望。第一段的定位改寫在 `release-0-2-readme-positioning`，本單只在這三處補「英文對白」。
+- `README.md:4`、`:6`、`:21` 寫「有英文字幕就翻；沒有字幕就先聽聲音再翻」，沒說聽聲音**只做英文對白**（只有 `:55` 提）。FB 留言的「日文特攝片」Alexyu 判斷是在開玩笑（指 A 片），不是真的需求；但「只做英文對白」還是要講清楚。第一段的定位改寫在 `release-0-2-readme-positioning`，本單只在這三處補「英文對白」。
 - `README.md:84` 費用付給「你自己的 Claude」→ 也可能是 Gemini。
 - `README.md:106` 跟 `docker-compose.yml:76`「`ENCRYPTION_KEY` Auto-derived if empty」衝突（⚠️ agent：只有 qBittorrent 密碼會自動推導，`crypto/key_derivation.go:57`；存 API 金鑰一定要設）。
 
