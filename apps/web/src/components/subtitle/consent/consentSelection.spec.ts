@@ -10,6 +10,7 @@ import {
   listableCandidates,
   modelChoices,
   parseBudgetInput,
+  preselectionFor,
   groupCandidates,
   groupOrder,
   isPriced,
@@ -57,6 +58,45 @@ describe('defaultSelection (準則④ as amended: lowest-cost, never ASR)', () =
   it('selects every extract candidate and no asr candidate', () => {
     const sel = defaultSelection([c(A, 'extract', 0.05), c(B, 'asr', 0.26), c(C, 'extract', 0.04)]);
     expect(sel).toEqual(new Set([A, C]));
+  });
+});
+
+describe('preselectionFor (disc-2026-10-series-selection-preselects-episodes)', () => {
+  const SERIES = '4e98edc6-7eab-4d7c-9dcb-e5a6b7c8d905';
+  const OTHER_SERIES = '5fa9fed7-8fbc-4e8d-8edc-f6b7c8d9e006';
+  const ep = (id: string, seriesId: string, extra?: Partial<GenerationCandidate>) =>
+    c(id, 'asr', 0.3, { mediaType: 'episode', seriesId, ...extra });
+  const list = [
+    c(A, 'extract', 0.05),
+    ep(B, SERIES),
+    ep(C, SERIES, { route: 'extract', estimatedUsd: 0.02 }),
+    ep(D, OTHER_SERIES),
+  ];
+
+  it('a series id picks every selectable episode of that series — extract and asr alike', () => {
+    expect(preselectionFor(list, [SERIES])).toEqual(new Set([B, C]));
+  });
+
+  it('a movie plus a series picks the movie and that series’ episodes', () => {
+    expect(preselectionFor(list, [A, SERIES])).toEqual(new Set([A, B, C]));
+  });
+
+  it('plain movie and episode ids still match on mediaId', () => {
+    expect(preselectionFor(list, [A, D])).toEqual(new Set([A, D]));
+  });
+
+  it('an episode that cannot be selected (folder not writable) is not picked', () => {
+    const locked = [ep(B, SERIES, { writable: false }), ep(C, SERIES)];
+    expect(preselectionFor(locked, [SERIES])).toEqual(new Set([C]));
+  });
+
+  it('a selection that matches nothing is EMPTY — never the library-wide default', () => {
+    expect(preselectionFor(list, ['9ff0c000-dead-4bee-8f00-000000000999'])).toEqual(new Set());
+  });
+
+  it('no selection at all returns null, so the caller falls back to defaultSelection', () => {
+    expect(preselectionFor(list, undefined)).toBeNull();
+    expect(preselectionFor(list, [])).toBeNull();
   });
 });
 

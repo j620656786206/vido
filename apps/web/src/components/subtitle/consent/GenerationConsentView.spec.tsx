@@ -254,6 +254,35 @@ describe('GenerationConsentView (sub-4-3 container)', () => {
     expect(screen.getByTestId('consent-summary-usd')).toHaveTextContent('$0.31');
   });
 
+  it('a library selection that matches nothing preselects nothing — not the extract default (disc-2026-10-series-selection-preselects-episodes)', async () => {
+    mocked.getGenerationCandidates.mockResolvedValue(READY);
+
+    // A series row id with no episode on the list (all already subtitled).
+    renderView({ preselectedIds: ['9ff0c000-dead-4bee-8f00-000000000999'] });
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    expect(screen.getByTestId('consent-summary-usd')).toHaveTextContent('$0.00');
+  });
+
+  it('a series id from the library preselects its episodes (disc-2026-10-series-selection-preselects-episodes)', async () => {
+    const SERIES = '4e98edc6-7eab-4d7c-9dcb-e5a6b7c8d905';
+    mocked.getGenerationCandidates.mockResolvedValue({
+      ...READY,
+      result: {
+        ...READY.result!,
+        candidates: READY.result!.candidates.map((x) =>
+          x.mediaId === EP ? { ...x, seriesId: SERIES, seriesTitle: '怪奇物語' } : x
+        ),
+      },
+    });
+
+    renderView({ preselectedIds: [SERIES] });
+
+    await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
+    // Only the episode — not the extract movie the default would have picked.
+    expect(screen.getByTestId('consent-summary-usd')).toHaveTextContent('$0.31');
+  });
+
   it('[P0 AC #4] confirm flow hands over (list-order ids, WYSIWYG budget)', async () => {
     mocked.getGenerationCandidates.mockResolvedValue(READY);
     const props = renderView();
