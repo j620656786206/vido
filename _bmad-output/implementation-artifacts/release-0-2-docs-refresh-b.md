@@ -1,6 +1,6 @@
 # Release 0.2 文件翻新 (b)：真相檔——deployment.md、PRODUCT.md、ROADMAP 說的要是現在的 Vido
 
-Status: ready-for-dev
+Status: review
 
 **Source:** 同 `release-0-2-docs-refresh-a`（2026-10-14 party mode，Alexyu 裁定 A）。負責：Paige。這三份是「Vido 是什麼、做到哪」的真相檔，之前的 story 和 ai-context 都引用它們；現在它們說的是 8 月的 Vido。
 
@@ -43,10 +43,10 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] T1 `deployment.md`（AC 1）
-- [ ] T2 `PRODUCT.md`（AC 2）
-- [ ] T3 `ROADMAP.zh-TW.md`（AC 3）
-- [ ] T4 交叉核對＋format（AC 4、5）
+- [x] T1 `deployment.md`（AC 1）
+- [x] T2 `PRODUCT.md`（AC 2）
+- [x] T3 `ROADMAP.zh-TW.md`（AC 3）
+- [x] T4 交叉核對＋format（AC 4、5）
 
 ## Dev Notes
 
@@ -66,8 +66,21 @@ N/A — no wall-clock-reading components touched（純文件）。
 
 ### Agent Model Used
 
+Claude Fable 5.1（claude-fable-5-1），2026-10-14，以 Paige 身分。
+
 ### Completion Notes List
+
+- `docs/deployment.md`：GHCR only；表格補 `GEMINI_API_KEY`／`VIDO_GEMINI_MIN_INTERVAL`；熱載清單加 Gemini；媒體改可寫（連到 File Permissions 段）；Scenario 1 改成「從原始碼 build（開發者）、沒內建 TMDb 金鑰」；Volume／Backup／Restore 重寫成 host path 為主、named volume 為輔；Health 只剩 `/health`（`main.go:1431`，`HealthCheckHandler` 回 status＋database，503 代表 DB 不健康）；Troubleshooting 改單一容器 `docker logs vido`、拿掉 network 段、加「設定頁存不了金鑰」；Updating 改 `compose pull`＋tag 格式（`0.1.1`，沒有 v）；Rollback 改換 tag；Production Checklist 重寫（可寫媒體、一把翻譯金鑰、ENCRYPTION_KEY、AUTH_PASSWORD、預算、備份）。
+- `PRODUCT.md`：登入（預設無、可設密碼）、路徑圖（內嵌英文字幕 → ASR，線上來源只在 legacy）、部署改可寫、已可用／開發中／限制三段全部改 2026-10 現況、陸港澳規則改 2026-10-05 裁定、「未決三件事」改「已決＋仍未決的收費模式」、證據段改「只有內測版、1 star、26 則留言 0 安裝」。
+- `ROADMAP.zh-TW.md`：進行中＝v0.2 發版＋字幕品質；規劃中＝內建下載路徑、詞彙英雄牆、多媒體庫手動類型、線上搜尋設定入口；新增「不做」。
+- 交叉核對：`:ro`／登入／金鑰／tag 四件事三份檔案跟 README 各只有一種說法。prettier 全綠。
+- ⚠️ `/health` 的 JSON 欄位沒逐一列（只寫 status＋database），避免再寫錯。
 
 ### Discovery Triage
 
+- ③ PRODUCT.md「仍未決：收費模式」→ founder-pm 的題目（`project_byok_moat_direction` memory），不開 story。
+- N/A 其餘沒有範圍外發現。
+
 ### File List
+
+- `docs/deployment.md`、`PRODUCT.md`、`ROADMAP.zh-TW.md`

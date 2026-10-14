@@ -61,7 +61,7 @@ cp .env.example .env
 
 ##### The bundled TMDb key
 
-Official release images (`ghcr.io/…/vido`, Docker Hub) are built with a TMDb
+Official release images (`ghcr.io/j620656786206/vido`, GHCR only — there is no Docker Hub image) are built with a TMDb
 API key compiled into the binary, so metadata, posters and zh-TW titles work
 on a fresh install without applying for a TMDb developer account. Keys are
 resolved in this order: **a key saved in Settings → API Keys → `TMDB_API_KEY`
@@ -100,6 +100,8 @@ it. This is **on by default** since 0.2 (`VIDO_SUBTITLE_PIPELINE_MODE=legacy` tu
 | `VIDO_SUBTITLE_PIPELINE_MODE`            | `pipeline`        | `pipeline` (default since 0.2) = read the embedded English track first, translate it, and only fall back to speech recognition when there is no text source. `legacy` = online subtitle search only (the pre-0.2 behaviour); the per-title 生成字幕 button then only ever listens to the audio. The 0.1 default was `legacy`, and a fresh install that followed any guide never read its embedded tracks. |
 | `CLAUDE_API_KEY`                         | (none)            | Translation provider key. One of `CLAUDE_API_KEY` / `GEMINI_API_KEY` is needed for generation.                                                                                                                                                                                                                                                                                                            |
 | `CLAUDE_MODEL`                           | `claude-sonnet-5` | Deployment-wide default translation model. Users can pick a different one per run; this sets what they start from.                                                                                                                                                                                                                                                                                        |
+| `GEMINI_API_KEY`                         | (none)            | Lets the user pick a Gemini model for translation (gemini-translation-dispatch). On an install with only a Gemini key the default becomes `gemini-3.5-flash-lite`; with a Claude key the default stays Claude.                                                                                                                                                                                            |
+| `VIDO_GEMINI_MIN_INTERVAL`               | `13`              | Seconds between Gemini translation calls. The free tier allows 5 requests a minute; 13 keeps headroom and the estimate shown before a run includes it. Set `0` on a paid tier.                                                                                                                                                                                                                            |
 | `SUBTITLE_EXTRACT_TIMEOUT_SECONDS`       | `600`             | Floor of one subtitle extraction (ffmpeg) in seconds. Small files use this.                                                                                                                                                                                                                                                                                                                               |
 | `SUBTITLE_EXTRACT_PER_GB_SECONDS`        | `30`              | Seconds allowed per GB of media. Past ~20 GB this is the one in force — raise it for large remuxes on slow disks.                                                                                                                                                                                                                                                                                         |
 | `TRANSCRIPTION_RUN_TIMEOUT_SECONDS`      | `600`             | Floor of the part of a speech-recognition run that follows audio extraction (chunk split, recognition, translation, writeback).                                                                                                                                                                                                                                                                           |
@@ -145,7 +147,8 @@ Notes:
   (tracked as `backlog-parse-path-ai-metering` should observability counters
   ever be wanted).
 - **API keys hot-reload (sub-5-2, TMDb since sub-7-7a, ElevenLabs since
-  asr-scribe-b).** `CLAUDE_API_KEY`, `ELEVENLABS_API_KEY`, `OPENAI_API_KEY` and
+  asr-scribe-b, Gemini since gemini-translation-dispatch).** `CLAUDE_API_KEY`,
+  `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `OPENAI_API_KEY` and
   `TMDB_API_KEY` can be set — or replaced — from
   Settings → API Keys while the server is running: they are resolved per call
   (an encrypted stored key wins over the environment variable, which wins over
@@ -237,17 +240,21 @@ MEDIA_PATH=/volume1/media
 MEDIA_PATH=/Users/yourname/Movies
 ```
 
-The media folder is mounted **read-only** for security.
+The media folder must be **writable**: generated subtitles are saved next to
+the video file (see [File Permissions](#file-permissions-subtitle-generation-writes-next-to-your-media)).
+Vido never modifies or deletes video files.
 
 ## Deployment Scenarios
 
-### Scenario 1: Quick Test (Default)
+### Scenario 1: Build from source (developers)
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-Access at `http://localhost:8080`
+Builds the image from the checkout and serves it at `http://localhost:8080`.
+A local build has **no bundled TMDb key** — the setup wizard asks for one.
+NAS users should use the published image (Scenario 2 / 4) instead.
 
 ### Scenario 2: Custom Ports
 
@@ -264,7 +271,7 @@ Access at `http://localhost:9000`
 
 ```bash
 # Use production overrides for resource limits and security
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 ### Scenario 4: NAS Deployment (Synology/QNAP)
@@ -274,70 +281,64 @@ Use the platform-specific guides:
 - [Synology DSM／Container Manager 安裝指南](synology-installation-guide.zh-TW.md)
 - [QNAP QTS／Container Station 安裝指南](qnap-installation-guide.zh-TW.md)
 
-Both guides use the same public image and the same three mounts: application
-data, backups, and a read-only media library.
+Both guides (and the [Unraid guide](unraid-installation-guide.zh-TW.md)) use
+the same public image and the same three mounts: application data, backups,
+and a **writable** media library.
 
 ## Volume Management
 
 ### Data Persistence
 
-Vido uses Docker volumes for persistent storage:
+Three paths hold everything Vido owns:
 
-| Volume         | Purpose         | Container Path  |
-| -------------- | --------------- | --------------- |
-| `vido-data`    | Database, cache | `/vido-data`    |
-| `vido-backups` | Backup files    | `/vido-backups` |
+| Container path  | Purpose                                                           |
+| --------------- | ----------------------------------------------------------------- |
+| `/vido-data`    | SQLite database, cache, encrypted keys                            |
+| `/vido-backups` | Database backups and metadata exports                             |
+| `/media`        | Your library. Vido only **adds** subtitle files beside the videos |
 
-### Backup Data
+The NAS Compose file and the Unraid template map the first two to host
+folders you choose; the source-build `docker-compose.yml` uses named volumes
+(`vido-data`, `vido-backups`).
+
+### Backup
+
+Stop the container, then copy the data and backups folders somewhere else —
+do not back up only the container.
 
 ```bash
-# Create a backup of the database
+docker compose -f docker-compose.nas.yml stop
+cp -a /path/to/vido/data /path/to/vido/backups /somewhere/safe/
+docker compose -f docker-compose.nas.yml start
+```
+
+For the named volumes of a source build:
+
+```bash
 docker run --rm -v vido-data:/data -v $(pwd):/backup alpine \
   tar czf /backup/vido-backup-$(date +%Y%m%d).tar.gz -C /data .
 ```
 
-### Restore Data
+### Restore
 
-```bash
-# Restore from backup
-docker-compose down
-docker run --rm -v vido-data:/data -v $(pwd):/backup alpine \
-  tar xzf /backup/vido-backup-20240115.tar.gz -C /data
-docker-compose up -d
-```
+Stop the container, put the folder (or the tar contents) back in place, start
+again. The database is a single file, `vido.db`, plus its `-wal`/`-shm`
+companions — restore all of them together.
 
 ## Health Checks
 
-### Check Service Status
-
 ```bash
-# View container status
-docker-compose ps
+# Container status
+docker compose -f docker-compose.nas.yml ps
 
-# Check API health
-curl http://localhost:8080/api-health
-
-# Check nginx health
-curl http://localhost:8080/nginx-health
+# The one health endpoint (the Docker health check calls the same URL)
+curl http://localhost:8088/health
 ```
 
-### Expected Health Response
-
-```json
-{
-  "status": "healthy",
-  "service": "vido-api",
-  "database": {
-    "status": "healthy",
-    "latency": 1,
-    "walEnabled": true,
-    "walMode": "wal",
-    "syncMode": "1",
-    "openConnections": 1,
-    "idleConnections": 0
-  }
-}
-```
+`/health` answers `200` with `"status": "healthy"` and a `database` block
+(WAL mode, connection counts); it answers `503` when the database is
+unhealthy. There is no separate web container, no nginx and no
+`/api-health` — Vido serves the UI and the API from one process on one port.
 
 ## File Permissions (subtitle generation writes next to your media)
 
@@ -356,86 +357,87 @@ Troubleshooting a `SUBTITLE_TARGET_NOT_WRITABLE`:
 
 ## Troubleshooting
 
-### Container Won't Start
+### Container won't start
 
 ```bash
-# Check logs
-docker-compose logs vido-api
-docker-compose logs vido-web
+# Logs (the container is named `vido`; `Vido` on Unraid)
+docker logs vido --tail 100
 
-# Check if ports are in use
-lsof -i :8080
+# Is the host port already taken?
+lsof -i :8088
 ```
 
-### Database Issues
+A typo in `VIDO_SUBTITLE_PIPELINE_MODE` or `VIDO_ASR_PROVIDER` stops the
+server on purpose — the first log lines name the variable.
+
+### Database issues
 
 ```bash
-# Check database health
-curl http://localhost:8080/api-health | jq '.database'
-
-# If database is corrupted, restore from backup
-docker-compose down
-docker volume rm vido_vido-data
-# Restore from backup as shown above
+curl http://localhost:8088/health | jq '.database'
 ```
 
-### Permission Issues
+If the database is corrupted, stop the container, restore `vido.db` (and its
+`-wal`/`-shm` files) from `/vido-backups` or your own copy, and start again.
+
+### Permission issues
 
 ```bash
-# On Linux, ensure the media path is readable
-chmod -R a+rX /path/to/media
+# What user does the container run as?
+docker exec vido id
 
-# Check volume permissions
-docker run --rm -v vido-data:/data alpine ls -la /data
+# Can it write where subtitles go?
+docker exec vido touch "/media/<a show folder>/.probe" && docker exec vido rm "/media/<a show folder>/.probe"
 ```
 
-### Network Issues
+`PUID`/`PGID` must be able to read and write `/vido-data`, `/vido-backups`
+**and** the media folder. See
+[File Permissions](#file-permissions-subtitle-generation-writes-next-to-your-media).
 
-```bash
-# Verify internal network
-docker network inspect vido_vido-network
+### The settings page cannot save keys
 
-# Test API from web container
-docker-compose exec vido-web wget -q -O - http://vido-api:8080/health
-```
+`ENCRYPTION_KEY` is missing or is not exactly 32 characters. The page shows
+`writable: false` in that case and keys from the environment still work.
 
 ## Updating
 
-### Update to Latest Version
+### Published image (NAS)
 
 ```bash
-# Pull latest changes
-git pull
-
-# Rebuild and restart
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+docker compose -f docker-compose.nas.yml pull
+docker compose -f docker-compose.nas.yml up -d
 ```
+
+`latest` follows the main branch. To stay on a release, put its tag in the
+Compose file instead: the published tags are `0.1.1` (exact), `0.1` (follows
+patch releases), `0` and `latest` — there is **no `v` prefix** on image tags
+(the git tags are `v0.1.1`).
 
 ### Rollback
 
-```bash
-# Checkout previous version
-git checkout v1.0.0
+Change the `image:` tag to the previous release (for example
+`ghcr.io/j620656786206/vido:0.1.1`) and run `docker compose … up -d` again.
+Keep a copy of `/vido-data` from before the upgrade in case a newer version
+migrated the database.
 
-# Rebuild
-docker-compose down
-docker-compose build
-docker-compose up -d
+### Source build
+
+```bash
+git pull
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ## Production Checklist
 
-Before deploying to production:
+Before leaving an install running unattended:
 
-- [ ] Set `ENV=production` in `.env`
-- [ ] Configure `TMDB_API_KEY` for metadata fetching
-- [ ] Set appropriate `MEDIA_PATH` pointing to your media library
-- [ ] Use production compose file: `-f docker-compose.prod.yml`
-- [ ] Set up regular backups of `vido-data` volume
-- [ ] Configure reverse proxy (nginx/traefik) for HTTPS
-- [ ] Review and adjust resource limits in `docker-compose.prod.yml`
+- [ ] Media folder mounted **writable**, and `PUID`/`PGID` can write to it
+- [ ] One translation key set (`CLAUDE_API_KEY` or `GEMINI_API_KEY`), either in the environment or saved from Settings
+- [ ] `ENCRYPTION_KEY` set (exactly 32 characters) if you want to manage keys from the web UI
+- [ ] `VIDO_AUTH_PASSWORD` set before the port is reachable from outside your LAN; reverse proxy with HTTPS for remote access
+- [ ] `AI_RUN_BUDGET_USD` at a ceiling you are comfortable with
+- [ ] A scheduled copy of `/vido-data` and `/vido-backups`
+- [ ] `ENV=production` (the published image already sets it)
 
 ## Resource Requirements
 
