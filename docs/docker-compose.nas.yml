@@ -9,22 +9,41 @@ services:
       # Change these host paths for your NAS.
       - /path/to/vido/data:/vido-data
       - /path/to/vido/backups:/vido-backups
-      - /path/to/media:/media:ro
+      # Media must be writable: generated subtitles are saved next to the video.
+      # Do NOT add ':ro' here.
+      - /path/to/media:/media
     environment:
       ENV: production
       TMDB_DEFAULT_LANGUAGE: zh-TW
+      # The image bundles a TMDb key; fill this only to use your own.
       TMDB_API_KEY: ''
+      # The user the container runs as. It must be able to write the media folder.
       PUID: '1000'
       PGID: '1000'
-      # Subtitle generation is on by default; VIDO_SUBTITLE_PIPELINE_MODE: legacy turns it off.
-      AI_PROVIDER: gemini
-      GEMINI_API_KEY: ''
+      # --- AI subtitles. Fill ONE translation key: Claude (default) or Gemini
+      # (your own quota; on the free tier Vido paces itself).
       CLAUDE_API_KEY: ''
+      GEMINI_API_KEY: ''
+      # Seconds between Gemini translation calls (free tier allows 5/min). 0 on a paid tier.
+      VIDO_GEMINI_MIN_INTERVAL: '13'
+      # --- Speech recognition, only for videos with no subtitle track at all.
+      # ELEVENLABS_API_KEY = Scribe v2 (recommended, ~US$0.22/h);
+      # OPENAI_API_KEY = Whisper (~US$0.36/h); both set → VIDO_ASR_PROVIDER decides.
+      ELEVENLABS_API_KEY: ''
       OPENAI_API_KEY: ''
+      VIDO_ASR_PROVIDER: auto
+      # Self-hosted OpenAI-compatible recogniser instead of a cloud key (optional).
       ASR_BASE_URL: ''
       ASR_MODEL: ''
+      # Subtitle generation is on by default; VIDO_SUBTITLE_PIPELINE_MODE: legacy turns it off.
+      # Provider for AI filename parsing: gemini or claude.
+      AI_PROVIDER: gemini
+      # Spend ceiling per run (USD). Work done before the ceiling is kept.
       AI_RUN_BUDGET_USD: '5'
-      # Login password gating the whole app (V0.1.1). Set this before sharing the
+      # EXACTLY 32 characters. Required to save keys from the web UI
+      # (Settings → 金鑰設定); without it that page is read-only.
+      ENCRYPTION_KEY: ''
+      # Login password gating the whole app. Set this before sharing the
       # instance or exposing it beyond a trusted LAN. Empty = no login.
       VIDO_AUTH_PASSWORD: ''
     healthcheck:
