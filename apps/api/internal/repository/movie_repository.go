@@ -1021,6 +1021,12 @@ func (r *MovieRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]mode
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan movie: %w", err)
 		}
+		// disc-2026-10-candidates-ignore-existing-chinese: a stored
+		// Traditional track or .zh-TW sidecar is a subtitle too — the same
+		// verdict the poster badge renders (CountZhHantSubtitle below).
+		if models.HasTraditionalChineseSubtitle(string(movie.SubtitleStatus), movie.SubtitleLanguage.String, movie.SubtitleTracks.String) {
+			continue
+		}
 		movies = append(movies, movie)
 	}
 
@@ -1034,13 +1040,13 @@ func (r *MovieRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]mode
 // CountMissingZhHantSubtitle returns the number of movies FindMissingZhHantSubtitle
 // would enumerate — the generation-batch preview count (Story 9R-16 AC 3).
 func (r *MovieRepository) CountMissingZhHantSubtitle(ctx context.Context) (int, error) {
-	query := fmt.Sprintf(`SELECT COUNT(*) FROM movies WHERE %s`, missingZhHantSubtitleWhere)
-
-	var count int
-	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+	query := fmt.Sprintf(`SELECT subtitle_status, subtitle_language, subtitle_tracks FROM movies WHERE %s`, missingZhHantSubtitleWhere)
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
 		return 0, fmt.Errorf("failed to count movies missing zh-Hant subtitle: %w", err)
 	}
-	return count, nil
+	defer rows.Close()
+	return countMissingZhHantRows(rows)
 }
 
 // CountZhHantSubtitle counts on-disk, not-removed movies whose "has Chinese

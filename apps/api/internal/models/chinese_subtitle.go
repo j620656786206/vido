@@ -406,3 +406,14 @@ func WorstChineseSubtitle(verdicts []ChineseSubtitle) (ChineseSubtitle, bool) {
 	}
 	return worst, true
 }
+
+// HasTraditionalChineseSubtitle is the "already has 繁中" answer the generation
+// queue must agree with the season-list badge on
+// (disc-2026-10-candidates-ignore-existing-chinese): the SQL predicate alone
+// (`subtitle_language != 'zh-Hant'`) quoted paid work for 558 episodes on the
+// 2026-10-14 production library whose stored tracks already carried a
+// Traditional track or a .zh-TW sidecar — Ted Lasso S01E02 showed zh_hant in
+// the season list and US$0.24 in the consent list on the same screen.
+func HasTraditionalChineseSubtitle(status, language, tracks string) bool {
+	return ChineseSubtitleVerdict(status, language, tracks) == ChineseSubtitleZhHant
+}

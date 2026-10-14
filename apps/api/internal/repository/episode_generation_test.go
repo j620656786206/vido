@@ -184,3 +184,39 @@ func TestEpisodeRepository_CountMissingZhHantSubtitle_EmptyLibrary(t *testing.T)
 	require.NoError(t, err)
 	assert.Zero(t, count)
 }
+
+// disc-2026-10-candidates-ignore-existing-chinese: an episode whose stored
+// tracks already carry a Traditional track (embedded `chi` titled 繁體中文, or
+// a .zh-TW sidecar) is NOT missing a subtitle, even though subtitle_language
+// is still empty — the season-list badge says zh_hant, the queue must agree.
+// A Simplified-only track still needs work (conversion), so it stays.
+func TestEpisodeRepository_FindMissingZhHantSubtitle_HonoursStoredTracks(t *testing.T) {
+	db := newMigratedEpisodeDB(t)
+	repo := NewEpisodeRepository(db)
+	seedGenerationSeries(t, db, "s1")
+	seedGenerationEpisode(t, db, "embedded-traditional", "s1", 1, "/media/s1e1.mkv", "")
+	seedGenerationEpisode(t, db, "zh-tw-sidecar", "s1", 2, "/media/s1e2.mkv", "")
+	seedGenerationEpisode(t, db, "simplified-only", "s1", 3, "/media/s1e3.mkv", "")
+	seedGenerationEpisode(t, db, "english-only", "s1", 4, "/media/s1e4.mkv", "")
+	for id, tracks := range map[string]string{
+		"embedded-traditional": `[{"language":"chi","format":"subrip","external":false,"title":"Traditional Chinese (繁體中文)","stream_index":7}]`,
+		"zh-tw-sidecar":        `[{"language":"eng","format":"subrip","external":false,"stream_index":3},{"language":"zh-TW","format":"subrip","external":true,"stream_index":0}]`,
+		"simplified-only":      `[{"language":"chi","format":"ass","external":false,"title":"Simplified Chinese (简体中文)","stream_index":2}]`,
+		"english-only":         `[{"language":"eng","format":"subrip","external":false,"stream_index":2}]`,
+	} {
+		_, err := db.Exec(`UPDATE episodes SET subtitle_tracks = ? WHERE id = ?`, tracks, id)
+		require.NoError(t, err)
+	}
+
+	got, err := repo.FindMissingZhHantSubtitle(context.Background())
+	require.NoError(t, err)
+	ids := make([]string, 0, len(got))
+	for _, e := range got {
+		ids = append(ids, e.ID)
+	}
+	assert.ElementsMatch(t, []string{"simplified-only", "english-only"}, ids)
+
+	count, err := repo.CountMissingZhHantSubtitle(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 2, count, "the preview count drops exactly the rows the enumeration drops")
+}

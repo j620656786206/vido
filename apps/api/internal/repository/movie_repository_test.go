@@ -2521,3 +2521,46 @@ func TestMovieFullTextSearchAppliesFilters(t *testing.T) {
 		}
 	})
 }
+
+// disc-2026-10-candidates-ignore-existing-chinese (movie half): a stored
+// Traditional track or .zh-TW sidecar excludes the movie; Simplified-only stays.
+func TestFindMissingZhHantSubtitle_HonoursStoredTracks(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	seedGenerationCandidate(t, db, "m-trad", "Alpha", nil, strPtr("/media/alpha.mkv"), false)
+	seedGenerationCandidate(t, db, "m-sidecar", "Bravo", strPtr("en"), strPtr("/media/bravo.mkv"), false)
+	seedGenerationCandidate(t, db, "m-simp", "Charlie", nil, strPtr("/media/charlie.mkv"), false)
+	seedGenerationCandidate(t, db, "m-en", "Delta", nil, strPtr("/media/delta.mkv"), false)
+	for id, tracks := range map[string]string{
+		"m-trad":    `[{"language":"chi","format":"subrip","external":false,"title":"繁體中文","stream_index":2}]`,
+		"m-sidecar": `[{"language":"zh-TW","format":"subrip","external":true,"stream_index":0}]`,
+		"m-simp":    `[{"language":"chi","format":"subrip","external":false,"title":"简体中文","stream_index":2}]`,
+		"m-en":      `[{"language":"eng","format":"subrip","external":false,"stream_index":2}]`,
+	} {
+		if _, err := db.Exec(`UPDATE movies SET subtitle_tracks = ? WHERE id = ?`, tracks, id); err != nil {
+			t.Fatalf("seed tracks %s: %v", id, err)
+		}
+	}
+
+	movies, err := repo.FindMissingZhHantSubtitle(ctx)
+	if err != nil {
+		t.Fatalf("FindMissingZhHantSubtitle failed: %v", err)
+	}
+	var ids []string
+	for _, m := range movies {
+		ids = append(ids, m.ID)
+	}
+	if len(ids) != 2 || ids[0] != "m-simp" || ids[1] != "m-en" {
+		t.Fatalf("expected [m-simp m-en], got %v", ids)
+	}
+	count, err := repo.CountMissingZhHantSubtitle(ctx)
+	if err != nil {
+		t.Fatalf("CountMissingZhHantSubtitle failed: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("expected count 2, got %d", count)
+	}
+}
