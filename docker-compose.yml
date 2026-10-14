@@ -51,6 +51,8 @@ services:
       # Metadata fallback providers (opt-in, see .env.example)
       - ENABLE_DOUBAN=${ENABLE_DOUBAN:-false}
       - ENABLE_WIKIPEDIA=${ENABLE_WIKIPEDIA:-false}
+      # Subtitle generation is on by default (reads embedded English tracks
+      # first); set VIDO_SUBTITLE_PIPELINE_MODE=legacy to go back to search-only.
       # AI providers (optional) — without these the AI subtitle features stay disabled
       - AI_PROVIDER=${AI_PROVIDER:-gemini}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}

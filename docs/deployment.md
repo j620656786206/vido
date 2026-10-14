@@ -93,17 +93,17 @@ build` on your machine and CI test binaries all contain an empty key and
 
 Vido can generate a Traditional-Chinese (`zh-Hant`) subtitle for media that has
 no matching subtitle online, by extracting the embedded track and translating
-it. This is **off by default**:
+it. This is **on by default** since 0.2 (`VIDO_SUBTITLE_PIPELINE_MODE=legacy` turns it off):
 
-| Variable                                 | Default           | Description                                                                                                                                                                                                                                                                                                |
-| ---------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VIDO_SUBTITLE_PIPELINE_MODE`            | `legacy`          | `legacy` = subtitle search only (unchanged behaviour); the per-title 生成字幕 button then only ever listens to the audio. `pipeline` = also generate subtitles, and that button uses an embedded subtitle track first (Chinese → used as-is, English → translated), listening only when the file has none. |
-| `CLAUDE_API_KEY`                         | (none)            | Translation provider key. Required when the mode is `pipeline`.                                                                                                                                                                                                                                            |
-| `CLAUDE_MODEL`                           | `claude-sonnet-5` | Deployment-wide default translation model. Users can pick a different one per run; this sets what they start from.                                                                                                                                                                                         |
-| `SUBTITLE_EXTRACT_TIMEOUT_SECONDS`       | `600`             | Floor of one subtitle extraction (ffmpeg) in seconds. Small files use this.                                                                                                                                                                                                                                |
-| `SUBTITLE_EXTRACT_PER_GB_SECONDS`        | `30`              | Seconds allowed per GB of media. Past ~20 GB this is the one in force — raise it for large remuxes on slow disks.                                                                                                                                                                                          |
-| `TRANSCRIPTION_RUN_TIMEOUT_SECONDS`      | `600`             | Floor of the part of a speech-recognition run that follows audio extraction (chunk split, recognition, translation, writeback).                                                                                                                                                                            |
-| `TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE` | `30`              | Seconds allowed per minute of media for that same part. Past 20 minutes of media this is the one in force — a 157-minute film gets ~78 minutes.                                                                                                                                                            |
+| Variable                                 | Default           | Description                                                                                                                                                                                                                                                                                                                                                                                               |
+| ---------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VIDO_SUBTITLE_PIPELINE_MODE`            | `pipeline`        | `pipeline` (default since 0.2) = read the embedded English track first, translate it, and only fall back to speech recognition when there is no text source. `legacy` = online subtitle search only (the pre-0.2 behaviour); the per-title 生成字幕 button then only ever listens to the audio. The 0.1 default was `legacy`, and a fresh install that followed any guide never read its embedded tracks. |
+| `CLAUDE_API_KEY`                         | (none)            | Translation provider key. One of `CLAUDE_API_KEY` / `GEMINI_API_KEY` is needed for generation.                                                                                                                                                                                                                                                                                                            |
+| `CLAUDE_MODEL`                           | `claude-sonnet-5` | Deployment-wide default translation model. Users can pick a different one per run; this sets what they start from.                                                                                                                                                                                                                                                                                        |
+| `SUBTITLE_EXTRACT_TIMEOUT_SECONDS`       | `600`             | Floor of one subtitle extraction (ffmpeg) in seconds. Small files use this.                                                                                                                                                                                                                                                                                                                               |
+| `SUBTITLE_EXTRACT_PER_GB_SECONDS`        | `30`              | Seconds allowed per GB of media. Past ~20 GB this is the one in force — raise it for large remuxes on slow disks.                                                                                                                                                                                                                                                                                         |
+| `TRANSCRIPTION_RUN_TIMEOUT_SECONDS`      | `600`             | Floor of the part of a speech-recognition run that follows audio extraction (chunk split, recognition, translation, writeback).                                                                                                                                                                                                                                                                           |
+| `TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE` | `30`              | Seconds allowed per minute of media for that same part. Past 20 minutes of media this is the one in force — a 157-minute film gets ~78 minutes.                                                                                                                                                                                                                                                           |
 
 Notes:
 
@@ -114,12 +114,12 @@ Notes:
   queued ~1000 items, most of them onto paid speech recognition, with no cost
   shown. Generation is now chosen explicitly, from a screen that shows the
   estimate first. Per-item manual generation is unaffected.
-- **Unknown values fail startup on purpose.** A typo such as `pipelien` stops
-  the server rather than quietly staying on `legacy` — otherwise "I enabled it
-  and nothing happens" is indistinguishable from a broken pipeline.
-- **Both are needed together.** `pipeline` without `CLAUDE_API_KEY` logs one
-  line at startup and keeps the search-only behaviour; the manual trigger
-  endpoint answers `409 AI_NOT_CONFIGURED`.
+- **Unknown values fail startup on purpose.** A typo such as `legcay` stops
+  the server rather than quietly staying on `pipeline` — otherwise "I switched
+  it off and nothing changed" is indistinguishable from a broken opt-out.
+- **A translation key is still needed.** `pipeline` without a Claude or Gemini
+  key logs one line at startup and keeps the search-only behaviour; the manual
+  trigger endpoint answers `409 AI_NOT_CONFIGURED`.
 - **The generation batch follows the cheap route first (sub-4-2).** In
   `pipeline` mode, a batch started from the generation screen runs each item
   through extract→translate first and only falls back to paid speech

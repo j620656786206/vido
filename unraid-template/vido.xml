@@ -152,14 +152,14 @@
   <Config
     Name="Subtitle Pipeline Mode"
     Target="VIDO_SUBTITLE_PIPELINE_MODE"
-    Default="legacy"
+    Default="pipeline"
     Mode=""
-    Description="Subtitle backend: 'legacy' = search only (default). 'pipeline' = automatic generation — extract embedded subtitles, fall back to ASR speech recognition, translate to Traditional Chinese."
+    Description="Subtitle backend: 'pipeline' (default) = read the embedded English track first, fall back to speech recognition, translate to Traditional Chinese. 'legacy' = online subtitle search only (the pre-0.2 behaviour)."
     Type="Variable"
     Display="always"
     Required="false"
     Mask="false"
-  >legacy</Config>
+  >pipeline</Config>
   <Config
     Name="ASR API Key (OpenAI-compatible)"
     Target="OPENAI_API_KEY"

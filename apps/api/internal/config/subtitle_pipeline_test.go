@@ -20,9 +20,11 @@ func TestLoad_SubtitlePipelineMode(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "unset defaults to legacy",
+			// release-0-2-pipeline-default: a fresh install that sets nothing
+			// reads embedded English tracks before it pays for speech recognition.
+			name: "unset defaults to pipeline",
 			env:  "",
-			want: SubtitlePipelineModeLegacy,
+			want: SubtitlePipelineModePipeline,
 		},
 		{
 			name: "legacy is accepted explicitly",
@@ -73,4 +75,18 @@ func TestConfig_SubtitlePipelineEnabled(t *testing.T) {
 	assert.True(t, (&Config{SubtitlePipelineMode: SubtitlePipelineModePipeline}).SubtitlePipelineEnabled())
 	assert.False(t, (&Config{}).SubtitlePipelineEnabled(),
 		"a zero-value Config must not silently enable the pipeline")
+}
+
+// TestSubtitlePipelineEnabled_DefaultOn pins the release-0-2 promise: with no
+// variable set the wiring sees the pipeline as enabled; `legacy` is the only
+// way to turn it off.
+func TestSubtitlePipelineEnabled_DefaultOn(t *testing.T) {
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.True(t, cfg.SubtitlePipelineEnabled(), "a fresh install reads embedded English tracks without setting anything")
+
+	t.Setenv("VIDO_SUBTITLE_PIPELINE_MODE", "legacy")
+	cfg, err = Load()
+	require.NoError(t, err)
+	assert.False(t, cfg.SubtitlePipelineEnabled())
 }
