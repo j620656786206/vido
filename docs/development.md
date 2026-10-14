@@ -50,7 +50,7 @@ vido/
 │       │   ├── repository/     # DB access
 │       │   ├── database/       # Schema + migrations
 │       │   ├── models/
-│       │   ├── ai/             # LLM + Whisper clients, throttle, budget
+│       │   ├── ai/             # LLM + Whisper/Scribe clients, throttle, budget
 │       │   ├── subtitle/       # Providers (ASSRT/OpenSubtitles), scorer, converter
 │       │   ├── tmdb/ douban/ wikipedia/   # Metadata sources
 │       │   ├── qbittorrent/    # Download client integration
@@ -182,7 +182,9 @@ All environment variables are documented in [`.env.example`](../.env.example) at
 | `VIDO_DATA_DIR`                                     | `/vido-data` | Database and cache location                                                                                                                                                          |
 | `TMDB_API_KEY`                                      | —            | Metadata lookups                                                                                                                                                                     |
 | `AI_PROVIDER` + `GEMINI_API_KEY` / `CLAUDE_API_KEY` | `gemini`     | Filename parsing (either provider); subtitle translation is Claude-only                                                                                                              |
+| `ELEVENLABS_API_KEY`                                | —            | Scribe v2 transcription (asr-scribe-b; the default engine when set; hot-reloadable from Settings → API Keys)                                                                         |
 | `OPENAI_API_KEY`                                    | —            | Whisper transcription (hosted API only; hot-reloadable from Settings → API Keys)                                                                                                     |
+| `VIDO_ASR_PROVIDER`                                 | `auto`       | Cloud engine when both keys are set: `auto` (ElevenLabs when its key resolves) / `elevenlabs` / `openai`; Settings → API Keys stores an override                                     |
 | `ASR_BASE_URL` / `ASR_MODEL`                        | —            | Point at a self-hosted OpenAI-compatible ASR engine — no API key needed                                                                                                              |
 | `VIDO_ASR_WORD_TIMESTAMPS`                          | `true`       | Ask for per-word times so cues open on the spoken word (uploads are cut to 2-minute pieces at silences, so the hosted engine no longer collapses to "♪♪ only"); `false` turns it off |
 | `VIDO_ASR_NAME_PROMPT`                              | `false`      | Hand the show\'s character names to the engine as a prompt; measured no gain and occasional list echo, so opt-in                                                                     |

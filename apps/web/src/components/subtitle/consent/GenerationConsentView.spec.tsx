@@ -1085,7 +1085,7 @@ describe('GenerationConsentView — 扣誰的錢 (sub-6-12 AC #6)', () => {
     renderView();
     await waitFor(() => expect(screen.getByTestId('consent-candidate-list')).toBeInTheDocument());
     expect(screen.getByTestId('consent-spend-source')).toHaveTextContent(
-      '使用：Claude（你的金鑰） · 語音辨識：OpenAI（環境變數金鑰）'
+      '使用：Claude（你的金鑰） · 語音辨識：OpenAI Whisper（環境變數金鑰）'
     );
   });
 

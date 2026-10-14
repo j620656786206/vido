@@ -5,6 +5,7 @@ describe('creditStop', () => {
   it('names the two providers and says AI for anything else', () => {
     expect(creditProviderName('openai')).toBe('OpenAI');
     expect(creditProviderName('anthropic')).toBe('Anthropic');
+    expect(creditProviderName('elevenlabs')).toBe('ElevenLabs');
     expect(creditProviderName('gemini')).toBe('AI');
     expect(creditProviderName('')).toBe('AI');
     expect(creditProviderName(undefined)).toBe('AI');

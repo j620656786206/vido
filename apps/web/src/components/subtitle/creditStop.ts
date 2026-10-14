@@ -12,6 +12,7 @@
 const PROVIDER_NAMES: Record<string, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
+  elevenlabs: 'ElevenLabs',
 };
 
 /** 'openai' → 'OpenAI'. An id this build does not know (or '') says just "AI". */

@@ -491,8 +491,15 @@ export { usdWithEstimate };
 export function spendSourceLabel(input: {
   claudeSource?: KeySource;
   openaiSource?: KeySource;
+  /** asr-scribe-b: where the ElevenLabs key resolved from. */
+  elevenlabsSource?: KeySource;
   /** The sweep's summary flag: ASR runs on the operator's own engine. */
   selfHostedAsr: boolean;
+  /**
+   * asr-scribe-b: the engine the sweep priced — 'elevenlabs' names Scribe,
+   * anything else (or absent, an old server) keeps the OpenAI wording.
+   */
+  asrProvider?: string;
   /** The list has ASR-route rows at all — otherwise the ASR half is noise. */
   hasAsrCandidates: boolean;
 }): string {
@@ -500,11 +507,13 @@ export function spendSourceLabel(input: {
     source === 'secret' ? '你的金鑰' : source === 'env' ? '環境變數金鑰' : '尚未設定金鑰';
   const parts = [`使用：Claude（${word(input.claudeSource)}）`];
   if (input.hasAsrCandidates) {
-    parts.push(
-      input.selfHostedAsr
-        ? '語音辨識：自架（不另計費）'
-        : `語音辨識：OpenAI（${word(input.openaiSource)}）`
-    );
+    if (input.selfHostedAsr || input.asrProvider === 'self_hosted') {
+      parts.push('語音辨識：自架（不另計費）');
+    } else if (input.asrProvider === 'elevenlabs') {
+      parts.push(`語音辨識：ElevenLabs Scribe（${word(input.elevenlabsSource)}）`);
+    } else {
+      parts.push(`語音辨識：OpenAI Whisper（${word(input.openaiSource)}）`);
+    }
   }
   return parts.join(' · ');
 }

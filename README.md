@@ -77,11 +77,11 @@ Vido 用 Docker 安裝，跑在你自己的 NAS 上。請照你的 NAS 平台看
 > 2. **填入 `CLAUDE_API_KEY`**。如果想在網頁上（設定精靈或「設定 → 金鑰設定」）填金鑰，要先設 `ENCRYPTION_KEY`，不然網頁會存不了。
 > 3. **媒體資料夾要能寫入**。產生的字幕會存在影片旁邊，所以掛載媒體資料夾時不要加 `:ro`，`PUID`／`PGID` 也要對那個資料夾有寫入權限。
 >
-> 完全沒有字幕的片要先聽聲音，還需要 `OPENAI_API_KEY`，或把 `ASR_BASE_URL` 指到自架的語音辨識服務。
+> 完全沒有字幕的片要先聽聲音，還需要一把聽寫服務的金鑰：建議填 `ELEVENLABS_API_KEY`（Scribe v2，作者 2026-10 的考卷上三次都過、Whisper 三次都沒過，而且每小時 US$0.22 比 Whisper 的 0.36 便宜），或填 `OPENAI_API_KEY` 用 Whisper，或把 `ASR_BASE_URL` 指到自架的語音辨識服務。兩把雲端金鑰都填的話預設用 ElevenLabs，可以在「設定 → 金鑰設定」改。
 
 ### 會花多少錢
 
-Vido 本身免費。AI 字幕的費用是付給你自己的 Claude（或 OpenAI）帳號，按下去之前 Vido 會先顯示預估金額。以預設的翻譯模型為例，作者自己 NAS 上的實測：
+Vido 本身免費。AI 字幕的費用是付給你自己的 Claude（聽聲音的話再加 ElevenLabs 或 OpenAI）帳號，按下去之前 Vido 會先顯示預估金額。以預設的翻譯模型為例，作者自己 NAS 上的實測：
 
 | 影片                                 | 大約花費                    |
 | ------------------------------------ | --------------------------- |
@@ -95,19 +95,21 @@ Vido 本身免費。AI 字幕的費用是付給你自己的 Claude（或 OpenAI�
 
 這些都是 Docker 的環境變數，在安裝指南的 compose 設定裡填。
 
-| 設定                                | 要填嗎                          | 用途                                                                                  |
-| ----------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
-| `VIDO_SUBTITLE_PIPELINE_MODE`       | 要用 AI 字幕就填 `pipeline`     | 先讀片內字幕，有英文字幕就直接翻；不填只會聽聲音                                      |
-| `CLAUDE_API_KEY`                    | 要用 AI 字幕就要填              | 把字幕翻成繁中（目前只支援 Claude）                                                   |
-| `OPENAI_API_KEY`                    | 選填                            | 沒字幕的片要聽聲音時使用（OpenAI 語音辨識，會計費）                                   |
-| `ASR_BASE_URL`、`ASR_MODEL`         | 選填                            | 改用自架的語音辨識服務（例如 Speaches、WhisperLive），不用 OpenAI key，也不花雲端費用 |
-| `ENCRYPTION_KEY`                    | 想在網頁上填金鑰就要填          | 32 個字以上的隨機字串，用來加密存放你的金鑰                                           |
-| `AI_RUN_BUDGET_USD`                 | 選填，預設 `5`                  | 每次執行最多花幾美元。超過會暫停，已經做好的部分會保留，下次只做剩下的                |
-| `VIDO_AUTH_PASSWORD`                | 建議填                          | 整個 Vido 的登入密碼，見上面的「存取控制」                                            |
-| `PUID`、`PGID`                      | 依你的 NAS                      | 容器用哪個使用者身分執行，要能寫入媒體資料夾                                          |
-| `AI_PROVIDER`                       | 只有 Claude key 的話填 `claude` | 讓檔名解析也用 Claude（預設是 Gemini）                                                |
-| `TMDB_API_KEY`                      | 不用                            | 映像已經內建一把；想用自己的額度再填                                                  |
-| `ENABLE_WIKIPEDIA`、`ENABLE_DOUBAN` | 選填                            | 開啟片名、介紹的補充來源                                                              |
+| 設定                                | 要填嗎                          | 用途                                                                                         |
+| ----------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------- |
+| `VIDO_SUBTITLE_PIPELINE_MODE`       | 要用 AI 字幕就填 `pipeline`     | 先讀片內字幕，有英文字幕就直接翻；不填只會聽聲音                                             |
+| `CLAUDE_API_KEY`                    | 要用 AI 字幕就要填              | 把字幕翻成繁中（目前只支援 Claude）                                                          |
+| `ELEVENLABS_API_KEY`                | 沒字幕的片要聽聲音時建議填      | ElevenLabs Scribe 語音辨識，每小時約 US$0.22；填了就預設用它                                 |
+| `OPENAI_API_KEY`                    | 選填                            | OpenAI Whisper 語音辨識，每小時約 US$0.36；沒填 ElevenLabs 時用它                            |
+| `VIDO_ASR_PROVIDER`                 | 選填，預設 `auto`               | 兩把都填時要用哪家：`auto`（有 ElevenLabs 就用它）、`elevenlabs`、`openai`；網頁設定可以蓋過 |
+| `ASR_BASE_URL`、`ASR_MODEL`         | 選填                            | 改用自架的語音辨識服務（例如 Speaches、WhisperLive），不用 OpenAI key，也不花雲端費用        |
+| `ENCRYPTION_KEY`                    | 想在網頁上填金鑰就要填          | 32 個字以上的隨機字串，用來加密存放你的金鑰                                                  |
+| `AI_RUN_BUDGET_USD`                 | 選填，預設 `5`                  | 每次執行最多花幾美元。超過會暫停，已經做好的部分會保留，下次只做剩下的                       |
+| `VIDO_AUTH_PASSWORD`                | 建議填                          | 整個 Vido 的登入密碼，見上面的「存取控制」                                                   |
+| `PUID`、`PGID`                      | 依你的 NAS                      | 容器用哪個使用者身分執行，要能寫入媒體資料夾                                                 |
+| `AI_PROVIDER`                       | 只有 Claude key 的話填 `claude` | 讓檔名解析也用 Claude（預設是 Gemini）                                                       |
+| `TMDB_API_KEY`                      | 不用                            | 映像已經內建一把；想用自己的額度再填                                                         |
+| `ENABLE_WIKIPEDIA`、`ENABLE_DOUBAN` | 選填                            | 開啟片名、介紹的補充來源                                                                     |
 
 完整的設定清單見 [`.env.example`](.env.example)。
 

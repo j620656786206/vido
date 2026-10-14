@@ -56,6 +56,10 @@ type TranscriptionEstimate struct {
 	// before it gets that far (J9-D ⑥).
 	ASRAvailable  bool `json:"asr_available"`
 	SelfHostedASR bool `json:"self_hosted_asr"`
+	// ASRProvider names the engine the speech-recognition half is priced at
+	// (asr-scribe-b, additive): "openai", "elevenlabs", "self_hosted", or ""
+	// when none is configured.
+	ASRProvider string `json:"asr_provider,omitempty"`
 	// TranslationConfigured is the run's own translate check; false means the
 	// run stops at the English SRT and no translation is billed.
 	TranslationConfigured bool `json:"translation_configured"`
@@ -117,6 +121,9 @@ type TranscriptionEstimateService struct {
 	plan           transcriptionPlanSource
 	effectiveModel func() string
 	selfHostedASR  bool
+	// asrRate, when set, replaces selfHostedASR as the rate source
+	// (asr-scribe-b): the holder's per-call answer.
+	asrRate func(ctx context.Context) (decimal.Decimal, string)
 	// prober measures a file that has no stored duration. nil = no live probe;
 	// the ladder continues to TMDb and then the stated assumption.
 	prober           RouteDurationPredictor
@@ -141,6 +148,23 @@ func NewTranscriptionEstimateService(plan transcriptionPlanSource, effectiveMode
 		selfHostedASR:  selfHostedASR,
 		logger:         logger.With("service", "transcription_estimate"),
 	}
+}
+
+// SetASRRateSource installs the per-call speech-recognition rate reader
+// (asr-scribe-b) — ASRProviderHolder.ASRRate in production. nil keeps the
+// boot-time self-hosted bool.
+func (s *TranscriptionEstimateService) SetASRRateSource(fn func(ctx context.Context) (decimal.Decimal, string)) {
+	s.asrRate = fn
+}
+
+func (s *TranscriptionEstimateService) asrRateFor(ctx context.Context) (decimal.Decimal, string) {
+	if s.asrRate != nil {
+		return s.asrRate(ctx)
+	}
+	if s.selfHostedASR {
+		return decimal.Zero, ASRProviderSelfHosted
+	}
+	return ai.EstimatedASRPerMinute(false), ASRProviderOpenAI
 }
 
 // SetDurationProber wires the live ffprobe used when no duration is stored.
@@ -211,7 +235,8 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 		credit.translatedShare = s.plan.cachedTranslationShare(ai.WithModelID(ctx, model), target.MediaType, target.MediaID)
 	}
 
-	usd := s.priceUSD(plan, translate, minutes, model, credit)
+	asrRate, asrProvider := s.asrRateFor(ctx)
+	usd := s.priceUSD(plan, translate, minutes, model, credit, asrRate)
 
 	return TranscriptionEstimate{
 		MediaID:                target.MediaID,
@@ -219,7 +244,8 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 		Plan:                   plan,
 		Route:                  string(route),
 		ASRAvailable:           s.plan.IsAvailable(),
-		SelfHostedASR:          s.selfHostedASR,
+		SelfHostedASR:          asrProvider == ASRProviderSelfHosted,
+		ASRProvider:            asrProvider,
 		TranslationConfigured:  translate,
 		ModelID:                model,
 		RuntimeMinutes:         minutes,
@@ -245,8 +271,7 @@ type resumeCredit struct {
 // come off the speech-recognition half only (the translation of a film whose
 // transcription is unfinished has not started), and the cached share comes off
 // a translate-only resume.
-func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, minutes float64, model string, credit resumeCredit) decimal.Decimal {
-	asrRate := ai.EstimatedASRPerMinute(s.selfHostedASR)
+func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, minutes float64, model string, credit resumeCredit, asrRate decimal.Decimal) decimal.Decimal {
 	mins := decimal.NewFromFloat(minutes)
 	asrMins := decimal.NewFromFloat(max(minutes-credit.asrMinutes, 0))
 	switch {

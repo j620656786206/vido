@@ -14,7 +14,7 @@ import { snakeToCamel } from '../utils/caseTransform';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 /** Closed set — mirrors `services.KeyName`; doubles as the PUT body field names. */
-export type KeyName = 'claude' | 'tmdb' | 'openai';
+export type KeyName = 'claude' | 'tmdb' | 'elevenlabs' | 'openai';
 
 /**
  * Where a key resolved from. `secret` (runtime, user-set) beats `env`
@@ -34,8 +34,17 @@ export interface KeyState {
   masked?: string;
 }
 
+/** The operator's speech-recognition engine choice (asr-scribe-b). */
+export type AsrProviderChoice = 'auto' | 'elevenlabs' | 'openai';
+/** The engine the next transcribe would actually use ('' = nothing configured). */
+export type AsrActiveProvider = 'openai' | 'elevenlabs' | 'self_hosted' | '';
+
 export interface KeySettings {
   keys: KeyState[];
+  /** asr-scribe-b (additive): the choice stored on the server; absent on old servers. */
+  asrProvider?: AsrProviderChoice;
+  /** asr-scribe-b (additive): which engine the keys + choice resolve to right now. */
+  asrActive?: AsrActiveProvider;
   /** false ⇒ ENCRYPTION_KEY is unset, so the page must render read-only (AC #2). */
   writable: boolean;
   /** Explains a false `writable`. Empty/absent when writable. */
@@ -77,8 +86,11 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return snakeToCamel<T>(data.data as T);
 }
 
-/** Partial update: only the named keys are touched. `''` DELETES a stored secret. */
-export type KeyUpdates = Partial<Record<KeyName, string>>;
+/**
+ * Partial update: only the named keys are touched. `''` DELETES a stored secret.
+ * `asr_provider` (asr-scribe-b) is the engine choice, sent in the same PUT.
+ */
+export type KeyUpdates = Partial<Record<KeyName, string>> & { asr_provider?: AsrProviderChoice };
 
 /** POST /settings/keys/test 200 body. `model` is additive since sub-6-6. */
 export interface KeyTestResult {

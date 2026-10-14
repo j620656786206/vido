@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -17,6 +18,12 @@ import (
 type KeySettingsReader interface {
 	List(ctx context.Context) services.KeySettings
 	Save(ctx context.Context, updates map[services.KeyName]string) error
+}
+
+// ASRPreferenceSaver is the OPTIONAL companion for the speech-recognition
+// engine choice (asr-scribe-b). *services.KeySettingsService satisfies it.
+type ASRPreferenceSaver interface {
+	SaveASRPreference(ctx context.Context, choice string) error
 }
 
 // KeyTester validates a candidate key against the live provider.
@@ -65,9 +72,13 @@ func (h *KeySettingsHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // matter: absent = leave untouched, "" = delete the secret (revert to env),
 // value = store. A plain string could not tell "omitted" from "cleared".
 type SaveKeysRequest struct {
-	Claude *string `json:"claude"`
-	TMDb   *string `json:"tmdb"`
-	OpenAI *string `json:"openai"`
+	Claude     *string `json:"claude"`
+	TMDb       *string `json:"tmdb"`
+	OpenAI     *string `json:"openai"`
+	ElevenLabs *string `json:"elevenlabs"`
+	// ASRProvider is the engine choice (asr-scribe-b): "auto" | "elevenlabs" |
+	// "openai". Absent = unchanged.
+	ASRProvider *string `json:"asr_provider"`
 }
 
 // TestKeyRequest optionally carries the key to probe. Empty tests whatever
@@ -93,7 +104,7 @@ func (h *KeySettingsHandler) GetKeys(c *gin.Context) {
 // @Tags settings
 // @Accept json
 // @Produce json
-// @Param request body SaveKeysRequest true "any subset of claude/tmdb/openai"
+// @Param request body SaveKeysRequest true "any subset of claude/tmdb/elevenlabs/openai, plus asr_provider"
 // @Success 200 {object} APIResponse "updated key state (same shape as GET)"
 // @Failure 400 {object} APIResponse "VALIDATION_INVALID_FORMAT — malformed body"
 // @Failure 409 {object} APIResponse "AI_NOT_CONFIGURED — no encryption key, storage unavailable"
@@ -102,26 +113,71 @@ func (h *KeySettingsHandler) GetKeys(c *gin.Context) {
 func (h *KeySettingsHandler) SaveKeys(c *gin.Context) {
 	var req SaveKeysRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "請求格式錯誤：請提供 claude、tmdb 或 openai 其中至少一項")
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "請求格式錯誤：請提供 claude、tmdb、elevenlabs、openai 或 asr_provider 其中至少一項")
 		return
 	}
 
 	updates := map[services.KeyName]string{}
 	for name, value := range map[services.KeyName]*string{
-		services.KeyClaude: req.Claude,
-		services.KeyTMDb:   req.TMDb,
-		services.KeyOpenAI: req.OpenAI,
+		services.KeyClaude:     req.Claude,
+		services.KeyTMDb:       req.TMDb,
+		services.KeyOpenAI:     req.OpenAI,
+		services.KeyElevenLabs: req.ElevenLabs,
 	} {
 		if value != nil {
 			updates[name] = *value
 		}
 	}
-	if len(updates) == 0 {
+	if len(updates) == 0 && req.ASRProvider == nil {
 		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "請至少提供一個要更新的金鑰欄位")
 		return
 	}
 
-	if err := h.settings.Save(c.Request.Context(), updates); err != nil {
+	// The engine choice is VALIDATED before anything is written and SAVED
+	// after the keys (CR M1): a bad value rejects the whole request, and a
+	// refused key save (no ENCRYPTION_KEY, a storage error) must not leave a
+	// new preference behind that silently un-configures the install.
+	var saver ASRPreferenceSaver
+	if req.ASRProvider != nil {
+		var ok bool
+		if saver, ok = h.settings.(ASRPreferenceSaver); !ok {
+			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "此版本不支援選擇聽寫服務")
+			return
+		}
+		if !services.ValidASRPreference(strings.TrimSpace(strings.ToLower(*req.ASRProvider))) {
+			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "聽寫服務只能是 auto、elevenlabs 或 openai")
+			return
+		}
+	}
+
+	if len(updates) > 0 {
+		if err := h.settings.Save(c.Request.Context(), updates); err != nil {
+			h.saveFailed(c, err)
+			return
+		}
+	}
+	if saver != nil {
+		if err := saver.SaveASRPreference(c.Request.Context(), *req.ASRProvider); err != nil {
+			if errors.Is(err, services.ErrInvalidASRPreference) {
+				BadRequestError(c, "VALIDATION_INVALID_FORMAT", "聽寫服務只能是 auto、elevenlabs 或 openai")
+				return
+			}
+			slog.Error("Failed to save ASR preference", "error", err)
+			ErrorResponse(c, http.StatusInternalServerError, "DB_QUERY_FAILED",
+				"無法儲存聽寫服務設定", "請稍後再試；若持續發生請檢查伺服器日誌。")
+			return
+		}
+	}
+
+	// Return the fresh state so the page reflects the new `source` without a
+	// second round trip — the flip from env to secret is the visible proof the
+	// save took effect.
+	SuccessResponse(c, h.settings.List(c.Request.Context()))
+}
+
+// saveFailed maps a key-save error onto the Rule 3 envelope.
+func (h *KeySettingsHandler) saveFailed(c *gin.Context, err error) {
+	{
 		if errors.Is(err, services.ErrKeysNotWritable) {
 			// AC #4 — refuse honestly instead of accepting input that will fail
 			// opaquely at the storage layer.
@@ -133,13 +189,7 @@ func (h *KeySettingsHandler) SaveKeys(c *gin.Context) {
 		slog.Error("Failed to save provider keys", "error", err)
 		ErrorResponse(c, http.StatusInternalServerError, "DB_QUERY_FAILED",
 			"無法儲存金鑰", "請稍後再試；若持續發生請檢查伺服器日誌。")
-		return
 	}
-
-	// Return the fresh state so the page reflects the new `source` without a
-	// second round trip — the flip from env to secret is the visible proof the
-	// save took effect.
-	SuccessResponse(c, h.settings.List(c.Request.Context()))
 }
 
 // TestKey handles POST /api/v1/settings/keys/test.

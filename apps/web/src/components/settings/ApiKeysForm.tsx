@@ -32,10 +32,13 @@ import {
   Trash2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { RadioDot } from '../ui/RadioDot';
 import { TmdbAttribution } from '../ui/TmdbAttribution';
 import { useKeySettings, useSaveKeys, useTestClaudeKey } from '../../hooks/useKeySettings';
 import {
   REASON_ENCRYPTION_KEY_MISSING,
+  type AsrActiveProvider,
+  type AsrProviderChoice,
   type KeyName,
   type KeyState,
   type KeyUpdates,
@@ -75,6 +78,16 @@ const KEY_ROWS: KeyRowSpec[] = [
     testable: false,
   },
   {
+    name: 'elevenlabs',
+    label: '雲端聽寫 ElevenLabs（建議）',
+    placeholder: 'ElevenLabs API Key',
+    // asr-scribe-b: on the 2026-10 exam Scribe v2 passed 3/3 and Whisper 0/3
+    // (eval/asr-exam-2026-10), so a saved ElevenLabs key becomes the default
+    // speech-recognition engine. Never 「免費」— the free tier is non-commercial.
+    hint: '填了就用 Scribe 聽寫沒有字幕軌的片：比 Whisper 準、每小時約 US$0.22。留空則用 OpenAI Whisper。儲存後立即生效。',
+    testable: false,
+  },
+  {
     name: 'openai',
     label: '雲端 ASR（選配）',
     placeholder: 'sk-…',
@@ -89,7 +102,40 @@ const KEY_ROWS: KeyRowSpec[] = [
   },
 ];
 
-const EMPTY_VALUES: Record<KeyName, string> = { claude: '', tmdb: '', openai: '' };
+const EMPTY_VALUES: Record<KeyName, string> = { claude: '', tmdb: '', elevenlabs: '', openai: '' };
+
+/** asr-scribe-b: the three engine choices, in the order the card draws them. */
+const ASR_CHOICES: { id: AsrProviderChoice; label: string; description: string }[] = [
+  {
+    id: 'auto',
+    label: '自動',
+    description: '有 ElevenLabs 金鑰就用 Scribe，沒有就用 OpenAI Whisper。',
+  },
+  {
+    id: 'elevenlabs',
+    label: 'ElevenLabs Scribe',
+    description: '一律用 Scribe；沒填它的金鑰就不能聽寫。',
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI Whisper',
+    description: '一律用 Whisper；沒填 OpenAI 金鑰就不能聽寫。',
+  },
+];
+
+/** 「目前使用」— what the keys + choice resolve to, in the user's words. */
+function asrActiveLabel(active: AsrActiveProvider | undefined): string {
+  switch (active) {
+    case 'elevenlabs':
+      return 'ElevenLabs Scribe';
+    case 'openai':
+      return 'OpenAI Whisper';
+    case 'self_hosted':
+      return '自架的語音辨識服務（不另計費）';
+    default:
+      return '尚未設定，沒有字幕軌的片無法聽寫';
+  }
+}
 
 function stateLabel(state: KeyState | undefined): string {
   switch (state?.source) {
@@ -175,6 +221,9 @@ export function ApiKeysForm() {
   const [insecureAck, setInsecureAck] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  // asr-scribe-b: the engine choice. null = untouched (the server's value
+  // shows); a value = the user picked one and 儲存 sends it.
+  const [asrChoice, setAsrChoice] = useState<AsrProviderChoice | null>(null);
 
   // `window.isSecureContext` is true for HTTPS *and* localhost. A backend check
   // would have to trust X-Forwarded-Proto, which a misconfigured reverse proxy
@@ -192,6 +241,10 @@ export function ApiKeysForm() {
     // which 2-1a reads as "leave this key alone" (a blank string would DELETE).
     if (values[row.name].trim() !== '') pendingUpdates[row.name] = values[row.name];
   }
+  // The server's choice is the baseline; only a DIFFERENT pick travels.
+  const serverAsrChoice: AsrProviderChoice = settings?.asrProvider ?? 'auto';
+  const asrSelectorShown = settings?.asrProvider !== undefined;
+  if (asrChoice !== null && asrChoice !== serverAsrChoice) pendingUpdates.asr_provider = asrChoice;
   const hasPendingUpdates = Object.keys(pendingUpdates).length > 0;
   const insecureBlocked = !isSecureContext && !insecureAck;
   const canSave = writable && hasPendingUpdates && !insecureBlocked && !saveMutation.isPending;
@@ -209,6 +262,7 @@ export function ApiKeysForm() {
       onSuccess: () => {
         setValues(EMPTY_VALUES);
         setEditing({});
+        setAsrChoice(null);
         setSaveSuccess(true);
       },
       onError: (err) => setSaveError(err.message),
@@ -632,6 +686,74 @@ export function ApiKeysForm() {
               );
             })}
           </div>
+
+          {/* asr-scribe-b: which cloud engine transcribes films with no
+              subtitle track. Saved with the same 儲存 as the keys — one
+              form, one round trip — and absent on a server that predates
+              the choice, so an old backend draws exactly the old page. */}
+          {asrSelectorShown && (
+            <fieldset data-testid="asr-provider-choice" className="mt-6">
+              <legend
+                className={cn(
+                  'text-sm font-semibold',
+                  settings && !writable ? 'text-[var(--text-muted)]' : 'text-[var(--text-primary)]'
+                )}
+              >
+                聽寫服務
+              </legend>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                沒有字幕軌的片，先把對白聽成文字再翻譯。目前使用：
+                <span data-testid="asr-active" className="font-semibold text-[var(--text-primary)]">
+                  {asrActiveLabel(settings?.asrActive)}
+                </span>
+              </p>
+              <div className="mt-3 grid gap-2">
+                {ASR_CHOICES.map((spec) => {
+                  const current = asrChoice ?? serverAsrChoice;
+                  const checked = spec.id === current;
+                  return (
+                    <label
+                      key={spec.id}
+                      data-testid={`asr-choice-${spec.id}`}
+                      data-selected={checked ? 'true' : 'false'}
+                      className={cn(
+                        'grid cursor-pointer grid-cols-[auto_1fr] gap-x-3 rounded-[var(--radius-md)] border p-3 transition-colors',
+                        checked
+                          ? 'border-[var(--accent-primary)] bg-[var(--accent-subtle)]'
+                          : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)]',
+                        !writable && 'cursor-not-allowed opacity-60'
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="asr-provider"
+                        value={spec.id}
+                        checked={checked}
+                        disabled={!writable}
+                        onChange={() => {
+                          resetSaveFeedback();
+                          setAsrChoice(spec.id);
+                        }}
+                        className="peer sr-only"
+                      />
+                      <RadioDot className="col-start-1 row-start-1" />
+                      <span
+                        className={cn(
+                          'col-start-2 row-start-1 text-sm font-semibold',
+                          checked ? 'text-[var(--accent-text)]' : 'text-[var(--text-primary)]'
+                        )}
+                      >
+                        {spec.label}
+                      </span>
+                      <span className="col-start-2 row-start-2 mt-0.5 text-xs text-[var(--text-secondary)]">
+                        {spec.description}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          )}
 
           {/* Said once, for the whole card (C7-D pegsz). Only Claude has a probe;
               nothing checks the other keys on save, so this says no more. */}

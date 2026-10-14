@@ -80,7 +80,7 @@ func TestKeySettings_ListOrderIsStable(t *testing.T) {
 	first := svc.List(context.Background())
 	second := svc.List(context.Background())
 
-	require.Len(t, first.Keys, 3)
+	require.Len(t, first.Keys, 4)
 	assert.Equal(t, first.Keys, second.Keys, "the page must not reshuffle between loads")
 	assert.Equal(t, KeyClaude, first.Keys[0].Name)
 }

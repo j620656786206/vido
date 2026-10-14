@@ -24,6 +24,14 @@ type KeyState struct {
 // KeySettings is the full GET payload.
 type KeySettings struct {
 	Keys []KeyState `json:"keys"`
+	// ASRProvider is the operator's speech-recognition preference
+	// (asr-scribe-b, additive): "auto" | "elevenlabs" | "openai".
+	ASRProvider string `json:"asr_provider,omitempty"`
+	// ASRActive is the engine the next transcribe would actually use given
+	// the keys and the preference: "openai" | "elevenlabs" | "self_hosted" |
+	// "" (nothing configured). Lets the page show「目前使用：ElevenLabs Scribe」
+	// without re-deriving the rule.
+	ASRActive string `json:"asr_active,omitempty"`
 	// Writable is false when ENCRYPTION_KEY is absent — the secrets store
 	// cannot safely hold anything, so the page must render read-only rather
 	// than accepting input that will fail at the storage layer (AC #4).
@@ -38,6 +46,12 @@ const ReasonEncryptionKeyMissing = "encryption_key_missing"
 // ErrKeysNotWritable is returned by Save when no encryption key is configured.
 var ErrKeysNotWritable = fmt.Errorf("key storage unavailable: %s", ReasonEncryptionKeyMissing)
 
+// ErrInvalidASRPreference is returned for a choice outside ASRPreferences.
+var ErrInvalidASRPreference = fmt.Errorf("asr provider preference must be one of %s", strings.Join(ASRPreferences, "|"))
+
+// ErrASRPreferenceNotWritable is returned when no settings store is wired.
+var ErrASRPreferenceNotWritable = fmt.Errorf("asr provider preference storage unavailable")
+
 // KeySettingsService is the settings-page half of key management: read current
 // state, store/clear values. Resolution itself belongs to KeyResolver.
 type KeySettingsService struct {
@@ -45,7 +59,24 @@ type KeySettingsService struct {
 	secrets    secrets.SecretsServiceInterface
 	writable   bool
 	orderedIDs []KeyName
+	// asrPreference stores the operator's engine choice (asr-scribe-b);
+	// nil = the choice is env-only and the page gets no selector.
+	asrPreference ASRPreferenceStore
+	// asrActive reports the engine in use — ASRProviderHolder.Provider.
+	asrActive func(ctx context.Context) string
+	// asrEnvDefault is VIDO_ASR_PROVIDER, the choice when the table has none.
+	asrEnvDefault string
 }
+
+// ASRPreferenceStore is the settings-table seam the preference lives in
+// (*SettingsService satisfies it; key ASRPreferenceSettingKey).
+type ASRPreferenceStore interface {
+	GetStringWithDefault(ctx context.Context, key, defaultValue string) string
+	SetString(ctx context.Context, key, value string) error
+}
+
+// ASRPreferenceSettingKey is the settings-table key the choice is stored under.
+const ASRPreferenceSettingKey = "asr.provider"
 
 // NewKeySettingsService builds the service. `writable` comes from
 // cfg.HasEncryptionKey() — the service does not import config for one bool.
@@ -54,9 +85,44 @@ func NewKeySettingsService(resolver KeyResolver, secretsService secrets.SecretsS
 		resolver: resolver,
 		secrets:  secretsService,
 		// Stable order so the page does not reshuffle between loads.
-		orderedIDs: []KeyName{KeyClaude, KeyTMDb, KeyOpenAI},
+		orderedIDs: []KeyName{KeyClaude, KeyTMDb, KeyElevenLabs, KeyOpenAI},
 		writable:   writable && secretsService != nil,
 	}
+}
+
+// SetASRPreference wires the preference store and its env default
+// (VIDO_ASR_PROVIDER), plus the reader that says which engine is live.
+func (s *KeySettingsService) SetASRPreference(store ASRPreferenceStore, envDefault string, active func(ctx context.Context) string) {
+	s.asrPreference = store
+	s.asrEnvDefault = envDefault
+	s.asrActive = active
+}
+
+// ASRPreference returns the operator's choice: the settings table first, then
+// VIDO_ASR_PROVIDER, then auto. Always one of ASRPreferences.
+func (s *KeySettingsService) ASRPreference(ctx context.Context) string {
+	choice := s.asrEnvDefault
+	if s.asrPreference != nil {
+		choice = s.asrPreference.GetStringWithDefault(ctx, ASRPreferenceSettingKey, choice)
+	}
+	choice = strings.TrimSpace(strings.ToLower(choice))
+	if !ValidASRPreference(choice) {
+		return ASRPreferenceAuto
+	}
+	return choice
+}
+
+// SaveASRPreference stores the choice. Refused when no store is wired or the
+// value is not one of ASRPreferences.
+func (s *KeySettingsService) SaveASRPreference(ctx context.Context, choice string) error {
+	choice = strings.TrimSpace(strings.ToLower(choice))
+	if !ValidASRPreference(choice) {
+		return fmt.Errorf("%w: %q", ErrInvalidASRPreference, choice)
+	}
+	if s.asrPreference == nil {
+		return ErrASRPreferenceNotWritable
+	}
+	return s.asrPreference.SetString(ctx, ASRPreferenceSettingKey, choice)
 }
 
 // Writable reports whether Save can store keys (an ENCRYPTION_KEY is configured).
@@ -79,6 +145,10 @@ func (s *KeySettingsService) List(ctx context.Context) KeySettings {
 			state.Masked = maskKey(value)
 		}
 		out.Keys = append(out.Keys, state)
+	}
+	out.ASRProvider = s.ASRPreference(ctx)
+	if s.asrActive != nil {
+		out.ASRActive = s.asrActive(ctx)
 	}
 	return out
 }

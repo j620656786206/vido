@@ -82,6 +82,8 @@ export interface TranscriptionEstimate {
   route?: 'extract' | 'asr' | 'skip';
   asrAvailable: boolean;
   selfHostedAsr: boolean;
+  /** asr-scribe-b (additive): 'openai' | 'elevenlabs' | 'self_hosted'; absent on old servers. */
+  asrProvider?: string;
   translationConfigured: boolean;
   /** The model the translation leg bills; '' when no translation runs. */
   modelId: string;

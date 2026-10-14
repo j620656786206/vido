@@ -82,9 +82,19 @@ describe('ApiKeysForm — the three source states (AC #1)', () => {
     expect(screen.getByTestId('key-row-claude')).toBeInTheDocument();
     expect(screen.getByTestId('key-row-tmdb')).toBeInTheDocument();
     expect(screen.getByTestId('key-row-openai')).toBeInTheDocument();
+    expect(screen.getByTestId('key-row-elevenlabs')).toBeInTheDocument();
     expect(screen.getByLabelText('Claude（翻譯）')).toBeInTheDocument();
     expect(screen.getByLabelText('TMDB')).toBeInTheDocument();
     expect(screen.getByLabelText('雲端 ASR（選配）')).toBeInTheDocument();
+    expect(screen.getByLabelText('雲端聽寫 ElevenLabs（建議）')).toBeInTheDocument();
+  });
+
+  it('the ElevenLabs row says what it buys and never calls it free (asr-scribe-b)', () => {
+    renderForm();
+    const row = screen.getByTestId('key-row-elevenlabs');
+    expect(row).toHaveTextContent('比 Whisper 準');
+    expect(row).toHaveTextContent('US$0.22');
+    expect(row).not.toHaveTextContent('免費');
   });
 
   it('source=secret shows 已設定 + the mask + 編輯/清除 instead of an input', () => {
@@ -235,6 +245,37 @@ describe('ApiKeysForm — saving (AC #1)', () => {
   it('儲存 stays disabled while nothing has been typed', () => {
     renderForm();
     expect(screen.getByTestId('key-save')).toBeDisabled();
+  });
+
+  it('an old server without asr_provider draws no engine selector', () => {
+    renderForm();
+    expect(screen.queryByTestId('asr-provider-choice')).toBeNull();
+  });
+
+  it('the engine choice shows the server value, names the live engine, and PUTs only a CHANGED pick (asr-scribe-b)', async () => {
+    h.query.data = { ...ALL_NONE, asrProvider: 'auto', asrActive: 'elevenlabs' };
+    renderForm();
+
+    expect(screen.getByTestId('asr-active')).toHaveTextContent('ElevenLabs Scribe');
+    expect(screen.getByTestId('asr-choice-auto')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('key-save')).toBeDisabled();
+
+    // Re-picking the server's own value changes nothing.
+    fireEvent.click(screen.getByLabelText(/^自動/));
+    expect(screen.getByTestId('key-save')).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText(/^OpenAI Whisper/));
+    expect(screen.getByTestId('asr-choice-openai')).toHaveAttribute('data-selected', 'true');
+    fireEvent.click(screen.getByTestId('key-save'));
+
+    await waitFor(() => expect(h.saveMutate).toHaveBeenCalledTimes(1));
+    expect(h.saveMutate.mock.calls[0][0]).toEqual({ asr_provider: 'openai' });
+  });
+
+  it('with nothing configured the engine line says films without a track cannot be transcribed', () => {
+    h.query.data = { ...ALL_NONE, asrProvider: 'auto', asrActive: '' };
+    renderForm();
+    expect(screen.getByTestId('asr-active')).toHaveTextContent('尚未設定');
   });
 
   it('surfaces the backend message when the save is refused', async () => {
@@ -730,7 +771,7 @@ describe('ApiKeysForm — C7 row layout', () => {
   it('gives every key its own card on a phone', () => {
     renderForm();
     expect(screen.getByTestId('api-keys-card').className).toContain('max-sm:bg-transparent');
-    for (const name of ['claude', 'tmdb', 'openai']) {
+    for (const name of ['claude', 'tmdb', 'elevenlabs', 'openai']) {
       const row = screen.getByTestId(`key-row-${name}`);
       expect(row.className).toContain('max-sm:bg-[var(--bg-secondary)]');
       expect(row.className).toContain('max-sm:p-4');

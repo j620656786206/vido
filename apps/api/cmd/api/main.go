@@ -232,9 +232,10 @@ func main() {
 	// at boot — that boot-frozen key was why saving a TMDb key in the settings
 	// page (or the setup wizard, dsr-13) changed nothing until a restart.
 	keyResolver := services.NewKeyResolver(secretsService, services.EnvKeys{
-		Claude: cfg.GetClaudeAPIKey(),
-		TMDb:   cfg.GetTMDbAPIKey(),
-		OpenAI: cfg.GetOpenAIAPIKey(),
+		Claude:     cfg.GetClaudeAPIKey(),
+		TMDb:       cfg.GetTMDbAPIKey(),
+		OpenAI:     cfg.GetOpenAIAPIKey(),
+		ElevenLabs: cfg.ElevenLabsAPIKey,
 	}, slog.Default(), services.WithBundledKeys(services.BundledKeys{TMDb: config.BundledTMDbKey()}))
 	slog.Info("Key resolver initialized", "tmdb_bundled_key_present", config.HasBundledTMDbKey())
 
@@ -677,6 +678,16 @@ func main() {
 	asrHolder := services.NewASRProviderHolder(
 		keyResolver, cfg.ASRBaseURL, cfg.ASRModel, slog.Default(),
 		ai.WithWhisperGovernor(aiGovernor), ai.WithWhisperWordTimestamps(cfg.ASRWordTimestamps))
+	// asr-scribe-b: the same Governor for Scribe, so switching engines never
+	// means a second budget pool; the engine choice is read from the settings
+	// table per call (saved on the keys page), defaulting to VIDO_ASR_PROVIDER.
+	if !services.ValidASRPreference(cfg.ASRProvider) {
+		slog.Warn("VIDO_ASR_PROVIDER is not one of auto|elevenlabs|openai — reading it as auto", "value", cfg.ASRProvider)
+	}
+	asrHolder.SetScribeOptions(ai.WithScribeGovernor(aiGovernor))
+	asrHolder.SetPreferenceSource(func(ctx context.Context) string {
+		return settingsService.GetStringWithDefault(ctx, services.ASRPreferenceSettingKey, cfg.ASRProvider)
+	})
 	transcriptionService := services.NewTranscriptionService(audioExtractorService, asrHolder, sseHub, slog.Default())
 	transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
 	transcriptionService.SetASRNamePrompt(cfg.ASRNamePrompt)
@@ -770,6 +781,8 @@ func main() {
 	slog.Info("Transcription service initialized",
 		"ffmpeg_available", audioExtractorService.IsAvailable(),
 		"asr_configured", asrHolder.IsConfigured(ctx),
+		"asr_provider", asrHolder.Provider(ctx),
+		"asr_preference", cfg.ASRProvider,
 		"base_url_override", cfg.ASRBaseURL != "",
 		"model_override", cfg.ASRModel != "",
 		"available", transcriptionService.IsAvailable())
@@ -1184,6 +1197,7 @@ func main() {
 		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),
 		slog.Default(),
 	)
+	transcriptionEstimateService.SetASRRateSource(asrHolder.ASRRate)
 	transcriptionEstimateService.SetDurationProber(routePredictor)
 	transcriptionEstimateService.SetEpisodeDurationWriter(repos.Episodes)
 	transcriptionHandler.SetEstimator(transcriptionEstimateService)
@@ -1279,6 +1293,7 @@ func main() {
 		cfg.AIRunBudgetUSD,
 		slog.Default(),
 	)
+	generationCandidateService.SetASRRateSource(asrHolder.ASRRate)
 	generationCandidateService.SetSSEHub(sseHub)
 	// sub-6-8a AC #3: price the sweep under every model this install can run,
 	// not just the default.
@@ -1307,6 +1322,7 @@ func main() {
 	// encryption key — without it the page renders read-only rather than
 	// accepting input that would fail at the storage layer (AC #4).
 	keySettingsService := services.NewKeySettingsService(keyResolver, secretsService, cfg.HasEncryptionKey())
+	keySettingsService.SetASRPreference(settingsService, cfg.ASRProvider, asrHolder.Provider)
 	// dsr-13: the setup wizard stores its TMDb / Claude keys through the same
 	// service, so both obey one set of secret names and one ENCRYPTION_KEY gate.
 	setupService.SetKeyWriter(keySettingsService)

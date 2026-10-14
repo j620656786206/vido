@@ -20,6 +20,9 @@ const (
 	KeyTMDb KeyName = "tmdb"
 	// KeyOpenAI is the optional ASR (Whisper) key.
 	KeyOpenAI KeyName = "openai"
+	// KeyElevenLabs is the optional ASR (Scribe v2) key (asr-scribe-b). When
+	// it resolves, speech recognition prefers Scribe over Whisper.
+	KeyElevenLabs KeyName = "elevenlabs"
 )
 
 // KeySource says WHERE a resolved value came from, so the settings page can be
@@ -43,18 +46,20 @@ const (
 // Secret names follow the established convention (the qBittorrent / DVR
 // precedent): `{provider}.{field}`.
 const (
-	SecretNameClaude = "claude.api_key"
-	SecretNameTMDb   = "tmdb.api_key"
-	SecretNameOpenAI = "openai.api_key"
+	SecretNameClaude     = "claude.api_key"
+	SecretNameTMDb       = "tmdb.api_key"
+	SecretNameOpenAI     = "openai.api_key"
+	SecretNameElevenLabs = "elevenlabs.api_key"
 )
 
 // EnvKeys carries the deploy-time values. A plain struct rather than a
 // *config.Config so the resolver stays trivially testable and `services` does
 // not take a dependency on the config package for three strings.
 type EnvKeys struct {
-	Claude string
-	TMDb   string
-	OpenAI string
+	Claude     string
+	TMDb       string
+	OpenAI     string
+	ElevenLabs string
 }
 
 // BundledKeys carries the build-time values (config.BundledTMDbKey). Kept apart
@@ -128,6 +133,8 @@ func secretNameFor(name KeyName) (string, bool) {
 		return SecretNameTMDb, true
 	case KeyOpenAI:
 		return SecretNameOpenAI, true
+	case KeyElevenLabs:
+		return SecretNameElevenLabs, true
 	default:
 		return "", false
 	}
@@ -141,6 +148,8 @@ func (r *keyResolver) envValueFor(name KeyName) string {
 		return r.env.TMDb
 	case KeyOpenAI:
 		return r.env.OpenAI
+	case KeyElevenLabs:
+		return r.env.ElevenLabs
 	default:
 		return ""
 	}

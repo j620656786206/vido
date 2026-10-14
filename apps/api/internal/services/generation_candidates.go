@@ -359,6 +359,10 @@ type GenerationCandidateSummary struct {
 	// endpoint is self-hosted, so it can say so instead of showing a
 	// suspicious $0.00.
 	SelfHostedASR bool `json:"self_hosted_asr"`
+	// ASRProvider names the engine the quote's speech-recognition rate belongs
+	// to (asr-scribe-b, additive): "openai", "elevenlabs", "self_hosted", or
+	// "" when none is configured. The consent copy names the company from it.
+	ASRProvider string `json:"asr_provider,omitempty"`
 	// UnwritableCount (sub-6-1 AC #4, additive) — candidates listed with
 	// writable=false. Their estimate is NOT in EstimatedTotalUSD.
 	UnwritableCount int `json:"unwritable_count"`
@@ -470,6 +474,10 @@ type GenerationCandidateService struct {
 	// selfHostedASR mirrors "ASR_BASE_URL points somewhere other than the paid
 	// API". Wired from config; see ai.EstimatedASRPerMinuteUSD.
 	selfHostedASR bool
+	// asrRate, when set, replaces selfHostedASR as the rate source
+	// (asr-scribe-b): the holder's per-call answer, so a key added at runtime
+	// re-prices the next sweep. nil keeps the boot-time bool.
+	asrRate func(ctx context.Context) (decimal.Decimal, string)
 
 	// defaultBudgetUSD is the configured AI_RUN_BUDGET_USD, exposed on every
 	// snapshot (sub-5-1 AC #5). Pure config pass-through — never mutated.
@@ -560,6 +568,26 @@ func (s *GenerationCandidateService) SetResumeCredit(r *TranscriptionService) {
 
 // SetSSEHub wires live progress. Nil-safe: without a hub the sweep still runs
 // and the snapshot still updates, callers just have to poll for it.
+// SetASRRateSource installs the per-call speech-recognition rate reader
+// (asr-scribe-b) — ASRProviderHolder.ASRRate in production. With it the sweep
+// quotes whichever engine the next run will actually bill; without it the
+// boot-time self-hosted bool decides, as before.
+func (s *GenerationCandidateService) SetASRRateSource(fn func(ctx context.Context) (decimal.Decimal, string)) {
+	s.asrRate = fn
+}
+
+// asrRateFor is the one place the sweep asks "what does a minute of speech
+// recognition cost right now, and who bills it".
+func (s *GenerationCandidateService) asrRateFor(ctx context.Context) (decimal.Decimal, string) {
+	if s.asrRate != nil {
+		return s.asrRate(ctx)
+	}
+	if s.selfHostedASR {
+		return decimal.Zero, ASRProviderSelfHosted
+	}
+	return ai.EstimatedASRPerMinute(false), ASRProviderOpenAI
+}
+
 func (s *GenerationCandidateService) SetSSEHub(hub *sse.Hub) { s.sseHub = hub }
 
 // SetModelCatalog wires the per-model quote source (sub-6-8a). A setter rather
@@ -770,14 +798,14 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		return nil, err
 	}
 
-	asrRate := ai.EstimatedASRPerMinute(s.selfHostedASR)
+	asrRate, asrProvider := s.asrRateFor(ctx)
 	// sub-6-8a AC #3: the row-level EstimatedUSD stays the DEFAULT model's
 	// price (so a client that never learned about model choice is unchanged),
 	// and every selectable model gets its own total beside it.
 	defaultModel, quoteModels := s.quoteModels(ctx)
 	result := &GenerationCandidateResult{
 		Candidates:              make([]GenerationCandidate, 0, len(rows)),
-		Summary:                 GenerationCandidateSummary{SelfHostedASR: s.selfHostedASR},
+		Summary:                 GenerationCandidateSummary{SelfHostedASR: asrProvider == ASRProviderSelfHosted, ASRProvider: asrProvider},
 		EstimatesByModel:        make(map[string]ModelEstimate, len(quoteModels)),
 		EstimatedMinutesByModel: make(map[string]float64, len(quoteModels)),
 	}
@@ -967,7 +995,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		"estimated_total_usd", result.Summary.EstimatedTotalUSD,
 		"quote_model", defaultModel,
 		"quoted_models", len(quoteModels),
-		"self_hosted_asr", s.selfHostedASR,
+		"asr_provider", asrProvider,
 		// sub-5-4 AC #4: without these two numbers, "is the incremental path
 		// working?" can only be answered with a stopwatch — and they are the
 		// only evidence a future routeVersion or TTL change has to reason from.

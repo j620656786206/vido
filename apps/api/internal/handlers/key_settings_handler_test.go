@@ -155,6 +155,55 @@ func TestSaveKeys_ReturnsFreshStateSoTheSourceFlipIsVisible(t *testing.T) {
 	assert.Equal(t, 1, settings.listCall, "PUT re-reads state so the page sees source flip to secret")
 }
 
+// asr-scribe-b: the engine choice rides the same PUT.
+type fakeKeySettingsWithASR struct {
+	fakeKeySettings
+	choices []string
+	saveErr error
+}
+
+func (f *fakeKeySettingsWithASR) SaveASRPreference(_ context.Context, choice string) error {
+	if f.saveErr != nil {
+		return f.saveErr
+	}
+	f.choices = append(f.choices, choice)
+	return nil
+}
+
+func TestSaveKeys_ASRProviderAloneIsAValidUpdate(t *testing.T) {
+	fake := &fakeKeySettingsWithASR{fakeKeySettings: fakeKeySettings{state: configuredState()}}
+	h := NewKeySettingsHandler(fake, &fakeKeyTester{})
+
+	w := doKeyReq(t, h, http.MethodPut, "/api/v1/settings/keys", `{"asr_provider":"openai"}`)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, []string{"openai"}, fake.choices)
+	assert.Empty(t, fake.saved, "no key update was sent, none must be saved")
+}
+
+func TestSaveKeys_ASRProviderAndKeysTravelTogether(t *testing.T) {
+	fake := &fakeKeySettingsWithASR{fakeKeySettings: fakeKeySettings{state: configuredState()}}
+	h := NewKeySettingsHandler(fake, &fakeKeyTester{})
+
+	w := doKeyReq(t, h, http.MethodPut, "/api/v1/settings/keys", `{"elevenlabs":"el-key","asr_provider":"auto"}`)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, []string{"auto"}, fake.choices)
+	require.Len(t, fake.saved, 1)
+	assert.Equal(t, map[services.KeyName]string{services.KeyElevenLabs: "el-key"}, fake.saved[0])
+}
+
+func TestSaveKeys_BadASRProviderIs400AndWritesNothing(t *testing.T) {
+	fake := &fakeKeySettingsWithASR{fakeKeySettings: fakeKeySettings{state: configuredState()}, saveErr: services.ErrInvalidASRPreference}
+	h := NewKeySettingsHandler(fake, &fakeKeyTester{})
+
+	w := doKeyReq(t, h, http.MethodPut, "/api/v1/settings/keys", `{"claude":"sk-new","asr_provider":"whisperx"}`)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "auto、elevenlabs 或 openai")
+	assert.Empty(t, fake.saved, "a rejected choice must not commit the keys beside it")
+}
+
 func TestSaveKeys_EmptyBodyIsRejected(t *testing.T) {
 	settings := &fakeKeySettings{state: configuredState()}
 	h := NewKeySettingsHandler(settings, &fakeKeyTester{})

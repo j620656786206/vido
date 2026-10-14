@@ -144,8 +144,9 @@ Notes:
   boundary and no "run" to attach a ceiling to; they are unmetered by design
   (tracked as `backlog-parse-path-ai-metering` should observability counters
   ever be wanted).
-- **API keys hot-reload (sub-5-2, TMDb since sub-7-7a).** `CLAUDE_API_KEY`,
-  `OPENAI_API_KEY` and `TMDB_API_KEY` can be set — or replaced — from
+- **API keys hot-reload (sub-5-2, TMDb since sub-7-7a, ElevenLabs since
+  asr-scribe-b).** `CLAUDE_API_KEY`, `ELEVENLABS_API_KEY`, `OPENAI_API_KEY` and
+  `TMDB_API_KEY` can be set — or replaced — from
   Settings → API Keys while the server is running: they are resolved per call
   (an encrypted stored key wins over the environment variable, which wins over
   the bundled TMDb key), so saving one takes effect immediately and no restart
@@ -160,6 +161,14 @@ Notes:
   billed) with the fuller context. Nothing re-runs by itself — a finished
   sidecar next to the media still satisfies the pre-flight check, exactly as
   before.
+- **Which cloud engine transcribes (asr-scribe-b).** With an ElevenLabs key
+  the ASR leg runs on Scribe v2 (on the 2026-10 exam, `eval/asr-exam-2026-10`,
+  it passed 3/3 where whisper-1 passed 0/3; $0.22/h against $0.36/h). An OpenAI
+  key alone still means Whisper. Both set: `VIDO_ASR_PROVIDER` (`auto` /
+  `elevenlabs` / `openai`), overridable from Settings → API Keys. A pinned
+  engine without its key is _unconfigured_, never a silent fallback to the
+  other company's bill. Estimates and the recorded spend both use the chosen
+  engine's rate.
 - **Self-hosted speech recognition needs no key (sub-5-2).** With `ASR_BASE_URL`
   pointed at an OpenAI-compatible engine (Speaches, WhisperLive, Subgen), leave
   `OPENAI_API_KEY` unset — the request carries no `Authorization` header at all,

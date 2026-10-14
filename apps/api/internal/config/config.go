@@ -47,11 +47,12 @@ type Config struct {
 	MediaDirs []string
 
 	// API Keys (optional)
-	TMDbAPIKey    string
-	GeminiAPIKey  string
-	ClaudeAPIKey  string
-	OpenAIAPIKey  string
-	EncryptionKey string
+	TMDbAPIKey       string
+	GeminiAPIKey     string
+	ClaudeAPIKey     string
+	OpenAIAPIKey     string
+	ElevenLabsAPIKey string
+	EncryptionKey    string
 
 	// Auth (V0.1.1 password gate). AuthPassword, when non-empty, turns on a
 	// single-shared-password session gate in front of the whole API; empty keeps
@@ -137,6 +138,10 @@ type Config struct {
 	// read the list back as subtitles, and even the 12-name list leaked one
 	// list cue in 1 of 2 runs. The code stays for engines where it helps.
 	ASRNamePrompt bool
+	// ASRProvider is the operator's speech-recognition preference
+	// (asr-scribe-b): "auto" (ElevenLabs when its key resolves, else OpenAI),
+	// "elevenlabs" or "openai". The settings page can override it at runtime.
+	ASRProvider string
 
 	// TMDb configuration
 	TMDbDefaultLanguage   string
@@ -200,6 +205,8 @@ func Load() (*Config, error) {
 	cfg.ASRWordTimestamps = cfg.loadBool("VIDO_ASR_WORD_TIMESTAMPS", true)
 	cfg.ASRNamePrompt = cfg.loadBool("VIDO_ASR_NAME_PROMPT", false)
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
+	cfg.ElevenLabsAPIKey = cfg.loadString("ELEVENLABS_API_KEY", "")
+	cfg.ASRProvider = cfg.loadString("VIDO_ASR_PROVIDER", "auto")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 	// Auth password gate (V0.1.1). Empty = auth disabled (LAN-only posture).
 	cfg.AuthPassword = cfg.loadString("VIDO_AUTH_PASSWORD", "")
@@ -405,6 +412,9 @@ func (c *Config) LogConfigSources() {
 		"CLAUDE_API_KEY_source", c.Sources["CLAUDE_API_KEY"].String(),
 		"OPENAI_API_KEY", maskSecret(c.OpenAIAPIKey),
 		"OPENAI_API_KEY_source", c.Sources["OPENAI_API_KEY"].String(),
+		"ELEVENLABS_API_KEY", maskSecret(c.ElevenLabsAPIKey),
+		"ELEVENLABS_API_KEY_source", c.Sources["ELEVENLABS_API_KEY"].String(),
+		"VIDO_ASR_PROVIDER", c.ASRProvider,
 		"AI_PROVIDER", c.AIProvider,
 		"AI_PROVIDER_source", c.Sources["AI_PROVIDER"].String(),
 		"ENCRYPTION_KEY", maskSecret(c.EncryptionKey),

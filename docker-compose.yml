@@ -56,9 +56,13 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-}
-      # ASR / speech recognition (optional). Empty ASR_BASE_URL = OpenAI Whisper;
-      # point it at a self-hosted OpenAI-compatible engine to avoid cloud cost.
+      # ASR / speech recognition (optional). ELEVENLABS_API_KEY = Scribe v2
+      # (recommended, $0.22/h); OPENAI_API_KEY = Whisper ($0.36/h); both set →
+      # VIDO_ASR_PROVIDER decides (auto = ElevenLabs). ASR_BASE_URL points at a
+      # self-hosted OpenAI-compatible engine instead, with no cloud cost.
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - VIDO_ASR_PROVIDER=${VIDO_ASR_PROVIDER:-auto}
       - ASR_BASE_URL=${ASR_BASE_URL:-}
       - ASR_MODEL=${ASR_MODEL:-}
       # AI throttle / spend ceiling

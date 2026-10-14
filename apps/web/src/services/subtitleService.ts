@@ -380,6 +380,12 @@ export interface GenerationCandidateSummary {
   skippedCount: number;
   estimatedTotalUsd: number;
   selfHostedAsr: boolean;
+  /**
+   * asr-scribe-b (additive): the engine the speech-recognition rate belongs
+   * to — 'openai' | 'elevenlabs' | 'self_hosted'; absent on old servers and
+   * when nothing is configured.
+   */
+  asrProvider?: string;
   /** sub-6-1 (additive): rows listed with writable=false; absent on old servers. */
   unwritableCount?: number;
 }

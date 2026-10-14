@@ -306,8 +306,13 @@ const KEYS_MIXED = {
   keys: [
     { name: 'claude', configured: true, source: 'secret', masked: 'sk-ant…7f3a' },
     { name: 'tmdb', configured: true, source: 'env' },
+    { name: 'elevenlabs', configured: true, source: 'secret', masked: 'sk_el…9c2d' },
     { name: 'openai', configured: false, source: 'none' },
   ],
+  // asr-scribe-b: the engine selector, with the ElevenLabs key resolving to
+  // Scribe under 自動 — the shape a NAS that followed the README has.
+  asrProvider: 'auto',
+  asrActive: 'elevenlabs',
 };
 
 /**
@@ -3051,8 +3056,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           keys: [
             { name: 'claude', configured: true, source: 'env' },
             { name: 'tmdb', configured: true, source: 'env' },
+            { name: 'elevenlabs', configured: false, source: 'none' },
             { name: 'openai', configured: false, source: 'none' },
           ],
+          asrProvider: 'auto',
+          asrActive: '',
         },
       },
     ],
