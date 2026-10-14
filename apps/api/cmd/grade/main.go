@@ -61,6 +61,7 @@ type config struct {
 	openaiBaseURL  string
 	openaiModel    string
 	callTimeout    time.Duration
+	pace           time.Duration
 	promptStyle    string
 	batchSize      int
 	nativeTemplate string
@@ -161,6 +162,7 @@ func parseFlags(args []string) (config, error) {
 	fs.StringVar(&cfg.openaiBaseURL, "openai-base-url", "", "grade a model behind an OpenAI-compatible endpoint (Ollama, llama-server), e.g. http://nas:11434/v1")
 	fs.StringVar(&cfg.openaiModel, "openai-model", "", "model id that endpoint serves (with --openai-base-url)")
 	fs.DurationVar(&cfg.callTimeout, "call-timeout", ai.DefaultOpenAICompatTimeout, "per-request deadline for --openai-base-url (CPU inference is slow)")
+	fs.DurationVar(&cfg.pace, "pace", 0, "minimum gap between calls to the model under test (a free tier's requests-per-minute limit; e.g. 13s for 5 RPM)")
 	fs.StringVar(&cfg.promptStyle, "prompt-style", promptStyleProduction, "production (Vido's translator prompt) | native (the model's own template, one cue per call; needs --openai-base-url)")
 	fs.IntVar(&cfg.batchSize, "batch-size", 0, "cues per request in production style (0 = the app's default)")
 	fs.StringVar(&cfg.nativeTemplate, "native-template", "", "translategemma | hymt (default: guessed from --openai-model)")
@@ -277,7 +279,7 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 
 	var underTest ai.TextCompleter
 	if local {
-		underTest = d.newLocalCompleter(cfg.openaiBaseURL, cfg.openaiModel, cfg.callTimeout)
+		underTest = newPacedCompleter(d.newLocalCompleter(cfg.openaiBaseURL, cfg.openaiModel, cfg.callTimeout), cfg.pace)
 	} else {
 		ctx = ai.WithModelID(ctx, cfg.model)
 		underTest = d.newCompleter(d.apiKey, cfg.model)
