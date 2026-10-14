@@ -22,10 +22,16 @@ import (
 // Gemini key translates with — the one the exam passed.
 const DefaultGeminiTranslationModel = "gemini-3.5-flash-lite"
 
-// DefaultGeminiMinInterval spaces Gemini calls for the free tier's 5 requests
-// a minute (measured 2026-10-14; 12 s is the floor, 13 s leaves headroom).
-// A paid-tier operator sets VIDO_GEMINI_MIN_INTERVAL=0.
-const DefaultGeminiMinInterval = 13 * time.Second
+// DefaultGeminiMinInterval spaces Gemini calls for the free tier's
+// requests-per-minute limit. Was 13 s (a first measurement that hit 429 at
+// 5/min — most likely the daily quota of a different model, not the RPM);
+// re-measured 2026-10-14 evening (disc-2026-10-gemini-free-tier-rpm-recheck):
+// gemini-3.5-flash-lite took 15 requests at 4 s apart, 12 at 2 s apart and 20
+// real 2,300-token translation prompts at 4 s apart without a single 429.
+// 5 s = 12/min keeps headroom under the documented 15/min; an episode of 84
+// batches now waits ~7 minutes instead of ~18. A paid-tier operator sets
+// VIDO_GEMINI_MIN_INTERVAL=0.
+const DefaultGeminiMinInterval = 5 * time.Second
 
 // GeminiProviderHolder builds Gemini translation clients the way
 // ClaudeProviderHolder builds Claude ones: the key is resolved per call, so
