@@ -83,10 +83,20 @@ describe('ApiKeysForm — the three source states (AC #1)', () => {
     expect(screen.getByTestId('key-row-tmdb')).toBeInTheDocument();
     expect(screen.getByTestId('key-row-openai')).toBeInTheDocument();
     expect(screen.getByTestId('key-row-elevenlabs')).toBeInTheDocument();
+    expect(screen.getByTestId('key-row-gemini')).toBeInTheDocument();
+    expect(screen.getByLabelText('Gemini（選填）')).toBeInTheDocument();
     expect(screen.getByLabelText('Claude（翻譯）')).toBeInTheDocument();
     expect(screen.getByLabelText('TMDB')).toBeInTheDocument();
     expect(screen.getByLabelText('雲端 ASR（選配）')).toBeInTheDocument();
     expect(screen.getByLabelText('雲端聽寫 ElevenLabs（建議）')).toBeInTheDocument();
+  });
+
+  it('the Gemini row says whose quota it spends and never calls it free (gemini-translation-dispatch)', () => {
+    renderForm();
+    const row = screen.getByTestId('key-row-gemini');
+    expect(row).toHaveTextContent('用你自己的 Gemini 額度');
+    expect(row).toHaveTextContent('自動放慢');
+    expect(row).not.toHaveTextContent('免費翻譯');
   });
 
   it('the ElevenLabs row says what it buys and never calls it free (asr-scribe-b)', () => {
@@ -771,7 +781,7 @@ describe('ApiKeysForm — C7 row layout', () => {
   it('gives every key its own card on a phone', () => {
     renderForm();
     expect(screen.getByTestId('api-keys-card').className).toContain('max-sm:bg-transparent');
-    for (const name of ['claude', 'tmdb', 'elevenlabs', 'openai']) {
+    for (const name of ['claude', 'gemini', 'tmdb', 'elevenlabs', 'openai']) {
       const row = screen.getByTestId(`key-row-${name}`);
       expect(row.className).toContain('max-sm:bg-[var(--bg-secondary)]');
       expect(row.className).toContain('max-sm:p-4');

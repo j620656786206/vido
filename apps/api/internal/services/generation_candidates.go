@@ -495,6 +495,9 @@ type GenerationCandidateService struct {
 	// osFileIdentity in production; tests replace it so invalidation can be
 	// asserted without a real file.
 	fileIdentity fileIdentityFunc
+	// translationPacing reports a model's pacing gap (0 = none); see
+	// SetTranslationPacing.
+	translationPacing func(model string) time.Duration
 
 	mu         sync.Mutex
 	status     string
@@ -564,6 +567,30 @@ func (s *GenerationCandidateService) SetResumeCredit(r *TranscriptionService) {
 		return
 	}
 	s.resume = r
+}
+
+// SetTranslationPacing installs the per-model pacing gap reader
+// (gemini-translation-dispatch): TranslationDispatcher.MinIntervalFor in
+// production. A paced model's wall-clock quote grows by one gap per batch.
+func (s *GenerationCandidateService) SetTranslationPacing(fn func(model string) time.Duration) {
+	s.translationPacing = fn
+}
+
+// cuesPerRuntimeMinute is eval-1's calibration (10,304 cues / 740 min).
+const cuesPerRuntimeMinute = 13.92
+
+// pacingMinutes is the extra wall-clock a paced model (Gemini's free tier)
+// adds: one gap per batch of prompts.SubtitleTranslatorBatchSize cues.
+func (s *GenerationCandidateService) pacingMinutes(route RoutePrediction, minutes float64, model string) float64 {
+	if s.translationPacing == nil || (route != RouteASR && route != RouteExtract) {
+		return 0
+	}
+	gap := s.translationPacing(model)
+	if gap <= 0 {
+		return 0
+	}
+	batches := math.Ceil(minutes * cuesPerRuntimeMinute / float64(prompts.SubtitleTranslatorBatchSize))
+	return batches * gap.Minutes()
 }
 
 // SetSSEHub wires live progress. Nil-safe: without a hub the sweep still runs
@@ -969,7 +996,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 				modelTotals[m] = modelTotals[m].Add(usd)
 				est.PerCandidate[c.MediaID] = usd.InexactFloat64()
 				result.EstimatesByModel[m] = est
-				result.EstimatedMinutesByModel[m] += estimateMinutes(route, minutes, m)
+				result.EstimatedMinutesByModel[m] += estimateMinutes(route, minutes, m) + s.pacingMinutes(route, minutes, m)
 			}
 		} else {
 			result.Summary.UnwritableCount++

@@ -353,7 +353,7 @@ export function GenerationConsentView({
   // and the same query the 金鑰設定 page reads — so the two screens can never
   // disagree about whether a key is set.
   const { data: keySettings } = useKeySettings({ enabled: open });
-  const keySourceOf = (name: 'claude' | 'openai' | 'elevenlabs') =>
+  const keySourceOf = (name: 'claude' | 'gemini' | 'openai' | 'elevenlabs') =>
     keySettings?.keys.find((k) => k.name === name)?.source;
 
   // Pre-select the deployment's default the first time the catalog answers,
@@ -616,6 +616,13 @@ export function GenerationConsentView({
               onSearchChange={setSearchText}
               onSortChange={setSort}
               claudeKeySource={keySourceOf('claude')}
+              geminiKeySource={keySourceOf('gemini')}
+              translationProvider={
+                // The list is priced on the pre-selected model; name ITS
+                // company (a Gemini-only install defaults to Gemini).
+                models?.models.find((m) => m.id === modelId)?.provider ??
+                models?.models.find((m) => m.isDefault)?.provider
+              }
               openaiKeySource={keySourceOf('openai')}
               elevenlabsKeySource={keySourceOf('elevenlabs')}
               selfHostedAsr={selfHostedAsr}

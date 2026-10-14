@@ -305,6 +305,7 @@ const KEYS_MIXED = {
   writable: true,
   keys: [
     { name: 'claude', configured: true, source: 'secret', masked: 'sk-ant…7f3a' },
+    { name: 'gemini', configured: false, source: 'none' },
     { name: 'tmdb', configured: true, source: 'env' },
     { name: 'elevenlabs', configured: true, source: 'secret', masked: 'sk_el…9c2d' },
     { name: 'openai', configured: false, source: 'none' },
@@ -3055,6 +3056,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           reason: 'encryption_key_missing',
           keys: [
             { name: 'claude', configured: true, source: 'env' },
+            { name: 'gemini', configured: false, source: 'none' },
             { name: 'tmdb', configured: true, source: 'env' },
             { name: 'elevenlabs', configured: false, source: 'none' },
             { name: 'openai', configured: false, source: 'none' },

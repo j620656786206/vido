@@ -80,7 +80,7 @@ func TestKeySettings_ListOrderIsStable(t *testing.T) {
 	first := svc.List(context.Background())
 	second := svc.List(context.Background())
 
-	require.Len(t, first.Keys, 4)
+	require.Len(t, first.Keys, 5)
 	assert.Equal(t, first.Keys, second.Keys, "the page must not reshuffle between loads")
 	assert.Equal(t, KeyClaude, first.Keys[0].Name)
 }
@@ -165,7 +165,7 @@ func TestKeySettings_ClearingAnAbsentKeyIsANoOp(t *testing.T) {
 func TestKeySettings_UnknownKeyNameIsRejected(t *testing.T) {
 	svc := settingsWith(t, &fakeSecrets{}, EnvKeys{}, true)
 
-	err := svc.Save(context.Background(), map[KeyName]string{KeyName("gemini"): "x"})
+	err := svc.Save(context.Background(), map[KeyName]string{KeyName("mistral"): "x"})
 
 	require.Error(t, err)
 }
@@ -180,7 +180,7 @@ func TestKeySettings_UnknownNameRejectsBeforeAnyWrite(t *testing.T) {
 
 	err := svc.Save(context.Background(), map[KeyName]string{
 		KeyClaude:         "sk-valid",
-		KeyName("gemini"): "x",
+		KeyName("mistral"): "x",
 	})
 
 	require.Error(t, err)

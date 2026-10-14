@@ -149,6 +149,10 @@ export interface CandidateListPanelProps {
    * which is what a fresh NAS actually is.
    */
   claudeKeySource?: KeySource;
+  /** gemini-translation-dispatch: where the Gemini key resolved from. */
+  geminiKeySource?: KeySource;
+  /** gemini-translation-dispatch: the provider of the model the list is priced on. */
+  translationProvider?: string;
   openaiKeySource?: KeySource;
   /** asr-scribe-b: where the ElevenLabs key resolved from. */
   elevenlabsKeySource?: KeySource;
@@ -754,6 +758,8 @@ export function CandidateListPanel({
   onSortChange,
   claudeKeySource,
   openaiKeySource,
+  geminiKeySource,
+  translationProvider,
   selfHostedAsr = false,
   elevenlabsKeySource,
   asrProvider,
@@ -979,6 +985,8 @@ export function CandidateListPanel({
             <p data-testid="consent-spend-source" className="text-xs text-[var(--text-muted)]">
               {spendSourceLabel({
                 claudeSource: claudeKeySource,
+                geminiSource: geminiKeySource,
+                translationProvider,
                 openaiSource: openaiKeySource,
                 elevenlabsSource: elevenlabsKeySource,
                 selfHostedAsr,

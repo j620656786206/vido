@@ -67,6 +67,16 @@ const KEY_ROWS: KeyRowSpec[] = [
     testable: true,
   },
   {
+    name: 'gemini',
+    label: 'Gemini（選填）',
+    placeholder: 'AIza…',
+    // gemini-translation-dispatch: the free gemini-3.5-flash-lite scored A on
+    // the golden-v2 exam (eval-gemini-free-tier-2026-10). Its quota, its
+    // pacing; the default model stays Claude. Never 「免費」.
+    hint: '填了就能在翻譯模型裡選 Gemini，用你自己的 Gemini 額度；免費方案每分鐘 5 次，Vido 會自動放慢。也用於 AI 檔名解析。儲存後立即生效。',
+    testable: false,
+  },
+  {
     name: 'tmdb',
     label: 'TMDB',
     placeholder: 'TMDB API Key',
@@ -102,7 +112,13 @@ const KEY_ROWS: KeyRowSpec[] = [
   },
 ];
 
-const EMPTY_VALUES: Record<KeyName, string> = { claude: '', tmdb: '', elevenlabs: '', openai: '' };
+const EMPTY_VALUES: Record<KeyName, string> = {
+  claude: '',
+  gemini: '',
+  tmdb: '',
+  elevenlabs: '',
+  openai: '',
+};
 
 /** asr-scribe-b: the three engine choices, in the order the card draws them. */
 const ASR_CHOICES: { id: AsrProviderChoice; label: string; description: string }[] = [

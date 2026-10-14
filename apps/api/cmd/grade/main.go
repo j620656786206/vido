@@ -79,7 +79,7 @@ type config struct {
 type deps struct {
 	newCompleter func(apiKey, model string) ai.TextCompleter
 	// newLocalCompleter builds the model under test for --openai-base-url.
-	newLocalCompleter func(baseURL, model string, timeout time.Duration) ai.TextCompleter
+	newLocalCompleter func(baseURL, model string, timeout, pace time.Duration) ai.TextCompleter
 	newFinalizer      func(noOpenCC bool) eval.Finalizer
 	apiKey            string
 	now               func() time.Time
@@ -105,10 +105,11 @@ func main() {
 		newCompleter: func(key, model string) ai.TextCompleter {
 			return ai.NewClaudeProvider(key, ai.WithClaudeModel(model))
 		},
-		newLocalCompleter: func(baseURL, model string, timeout time.Duration) ai.TextCompleter {
+		newLocalCompleter: func(baseURL, model string, timeout, pace time.Duration) ai.TextCompleter {
 			return ai.NewOpenAICompatProvider(baseURL, model,
 				ai.WithOpenAICompatAPIKey(os.Getenv("OPENAI_COMPAT_API_KEY")),
-				ai.WithOpenAICompatTimeout(timeout))
+				ai.WithOpenAICompatTimeout(timeout),
+				ai.WithOpenAICompatMinInterval(pace))
 		},
 		newFinalizer: newFinalizer,
 		// Same variable the app reads (docs/development.md § Configuration), so
@@ -279,7 +280,7 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 
 	var underTest ai.TextCompleter
 	if local {
-		underTest = newPacedCompleter(d.newLocalCompleter(cfg.openaiBaseURL, cfg.openaiModel, cfg.callTimeout), cfg.pace)
+		underTest = d.newLocalCompleter(cfg.openaiBaseURL, cfg.openaiModel, cfg.callTimeout, cfg.pace)
 	} else {
 		ctx = ai.WithModelID(ctx, cfg.model)
 		underTest = d.newCompleter(d.apiKey, cfg.model)

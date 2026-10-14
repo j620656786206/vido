@@ -23,7 +23,16 @@ func ratingFromReport(rep eval.Report) (ai.ModelRating, error) {
 		return ai.ModelRating{}, fmt.Errorf("report for %s is %q (%s) — not mergeable", rep.ModelID, rep.Grade, rep.Incomplete)
 	}
 	if strings.HasPrefix(rep.ModelID, localModelPrefix) {
-		return ai.ModelRating{}, fmt.Errorf("report for %s is a local model — local models are not published in the built-in ratings table", rep.ModelID)
+		// gemini-translation-dispatch: a hosted model graded through its
+		// OpenAI-compatible endpoint is stamped local:<id> by the grader. When
+		// <id> is a catalog model served by another provider, it IS the model
+		// the app dispatches to — publish it under its real id. A model id
+		// nobody in the catalog serves (an Ollama model) stays unpublishable.
+		bare := strings.TrimPrefix(rep.ModelID, localModelPrefix)
+		if provider := ai.ProviderOf(bare); provider == "" || provider == ai.ProviderNameClaude || !ai.IsSelectableModel(bare) {
+			return ai.ModelRating{}, fmt.Errorf("report for %s is a local model — local models are not published in the built-in ratings table", rep.ModelID)
+		}
+		rep.ModelID = bare
 	}
 	if rep.SampleVersion != eval.SampleVersion {
 		return ai.ModelRating{}, fmt.Errorf("report measured on %q but this build embeds %q — re-run cmd/grade", rep.SampleVersion, eval.SampleVersion)

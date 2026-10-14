@@ -63,6 +63,9 @@ function gradeTint(grade?: string): string {
  * would be the same omission this screen exists to prevent. Empty string =
  * nothing worth saying (an identically-priced alternative).
  */
+/** The Gemini row's quota line (gemini-translation-dispatch). */
+export const GEMINI_QUOTA_LINE = '用你自己的 Gemini 額度；免費方案會自動放慢，時間已算進去';
+
 function selectionNote(choice: ModelChoice, defaultName?: string): string {
   if (choice.deltaUsd !== undefined && choice.deltaUsd !== 0 && defaultName) {
     const verb = choice.deltaUsd > 0 ? '省' : '多';
@@ -175,6 +178,17 @@ export function ModelPicker({
                   className="pl-[26px] text-xs text-[var(--text-muted)]"
                 >
                   {note}
+                </span>
+              )}
+              {/* gemini-translation-dispatch: whose quota, and why the clock
+                  says more — the free tier is paced, and the 分鐘 above already
+                  includes that. Never 「免費」: Vido cannot know the tier. */}
+              {choice.provider === 'gemini' && (
+                <span
+                  data-testid={`consent-model-quota-${choice.id}`}
+                  className="pl-[26px] text-xs text-[var(--text-muted)]"
+                >
+                  {GEMINI_QUOTA_LINE}
                 </span>
               )}
             </label>

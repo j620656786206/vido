@@ -31,6 +31,21 @@
       "graded_at": "2026-09-03T00:00:00Z",
       "source": "eval-1",
       "note": "Vido 實測 2026-09（eval-1 盲測，10,304 句）"
+    },
+    {
+      "model_id": "gemini-3.5-flash-lite",
+      "grade": "A",
+      "zero_rate": 0.02,
+      "natural_rate": 0.895,
+      "cost_usd": 0.270312,
+      "cues": 200,
+      "prompt_version": "m1-v5+zh-tw-lex-1+standard",
+      "lexicon_version": "zh-tw-lex-1",
+      "judge_model": "claude-sonnet-5",
+      "judge_version": "judge-v1",
+      "graded_at": "2026-10-14T03:55:39Z",
+      "source": "golden",
+      "sample_version": "golden-v2"
     }
   ]
 }

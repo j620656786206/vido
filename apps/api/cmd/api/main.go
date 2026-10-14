@@ -236,6 +236,7 @@ func main() {
 		TMDb:       cfg.GetTMDbAPIKey(),
 		OpenAI:     cfg.GetOpenAIAPIKey(),
 		ElevenLabs: cfg.ElevenLabsAPIKey,
+		Gemini:     cfg.GetGeminiAPIKey(),
 	}, slog.Default(), services.WithBundledKeys(services.BundledKeys{TMDb: config.BundledTMDbKey()}))
 	slog.Info("Key resolver initialized", "tmdb_bundled_key_present", config.HasBundledTMDbKey())
 
@@ -664,7 +665,13 @@ func main() {
 	// omitted model_id resolves to. The default comes from the HOLDER, not the
 	// ai package constant, so an operator's CLAUDE_MODEL override is what the
 	// settings list and every quote are built on (CR H1).
-	modelCatalog := services.NewModelCatalogService(keyResolver, claudeHolder.EffectiveModel)
+	// gemini-translation-dispatch: translation calls go through ONE dispatcher
+	// that routes each model to its provider's holder (Claude ids → Claude,
+	// Gemini ids → the OpenAI-compatible Gemini client, paced for the free
+	// tier). The default stays Claude whenever a Claude key resolves.
+	geminiHolder := services.NewGeminiProviderHolder(keyResolver, cfg.GeminiMinInterval, aiGovernor, slog.Default())
+	translationDispatcher := services.NewTranslationDispatcher(claudeHolder, geminiHolder)
+	modelCatalog := services.NewModelCatalogService(keyResolver, translationDispatcher.EffectiveModel)
 
 	// Initialize ASR provider holder and transcription service (Story 9.2a;
 	// hot-reload by sub-5-2). Constructed UNCONDITIONALLY: the old
@@ -812,11 +819,14 @@ func main() {
 	// the moment one is saved. The old `if cfg.HasClaudeKey()` guard left these
 	// nil forever on a keyless boot, so a key added later reached nothing.
 	terminologyService := services.NewTerminologyCorrectionService(claudeHolder)
-	translationService := services.NewTranslationService(claudeHolder, sseHub)
+	translationService := services.NewTranslationService(translationDispatcher, sseHub)
 	subtitleEngine.SetTerminologyService(terminologyService)
 	transcriptionService.SetTranslationService(translationService)
 	slog.Info("AI services wired through the key holder",
-		"claude_configured", claudeHolder.IsConfigured(ctx))
+		"claude_configured", claudeHolder.IsConfigured(ctx),
+		"gemini_configured", geminiHolder.IsConfigured(ctx),
+		"translation_default", translationDispatcher.EffectiveModel(),
+		"gemini_min_interval", cfg.GeminiMinInterval.String())
 	slog.Info("Subtitle engine initialized", "providers", len(subtitleProviders))
 
 	// ── Subtitle generation pipeline (sub-1-6: D5 flag seam + FR13 + FR23) ──
@@ -845,7 +855,8 @@ func main() {
 	// sub-2-1a AC #5 re-point: the gate now asks the RESOLVER, not the boot-time
 	// env snapshot, so saving a key in the settings page un-gates the pipeline
 	// without a restart. Still a plain func() bool — no Rule 20 bump owed.
-	subtitleCapabilityGate := func() bool { return keyResolver.Has(context.Background(), services.KeyClaude) }
+	// gemini-translation-dispatch: a Gemini-only install can translate too.
+	subtitleCapabilityGate := func() bool { return translationDispatcher.IsConfigured(context.Background()) }
 	// CR sub-2-1a H1: construction is gated ONLY by the mode flag. Keeping
 	// `&& subtitleCapabilityGate()` here froze the gate's boot-time value into
 	// EXISTENCE — a keyless boot never built the pool, so a key saved later from
@@ -880,7 +891,7 @@ func main() {
 			// sub-6-5: the model id comes from the holder that actually sends
 			// the request, not from the env override — which was "" on every
 			// default-model run and left subtitle_runs.model_id empty.
-			subtitle.WithModelSource(claudeHolder.EffectiveModel),
+			subtitle.WithModelSource(translationDispatcher.EffectiveModel),
 			// sub-5-1 AC #3: per-item AI cost ceiling for the FR12/pool path —
 			// a ctx already carrying a Budget (the sub-4-2 consent batch) keeps
 			// its shared ceiling; only budget-less entries get this envelope.
@@ -1193,7 +1204,7 @@ func main() {
 	// and uses the same self-hosted ASR answer as the candidate sweep below.
 	transcriptionEstimateService := services.NewTranscriptionEstimateService(
 		transcriptionService,
-		claudeHolder.EffectiveModel,
+		translationDispatcher.EffectiveModel,
 		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),
 		slog.Default(),
 	)
@@ -1294,6 +1305,7 @@ func main() {
 		slog.Default(),
 	)
 	generationCandidateService.SetASRRateSource(asrHolder.ASRRate)
+	generationCandidateService.SetTranslationPacing(translationDispatcher.MinIntervalFor)
 	generationCandidateService.SetSSEHub(sseHub)
 	// sub-6-8a AC #3: price the sweep under every model this install can run,
 	// not just the default.
@@ -1349,7 +1361,7 @@ func main() {
 		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate, modelCatalog)
 	// sub-7-8c: 「試跑 20 句」 — an ungraded model tried on the golden sample
 	// with this box's own key; result kept in the settings table only.
-	modelPreview := preview.NewService(claudeHolder, modelCatalog, localizationSettings, repos.Settings, slog.Default())
+	modelPreview := preview.NewService(translationDispatcher, modelCatalog, localizationSettings, repos.Settings, slog.Default())
 	modelSettingsHandler := handlers.NewModelSettingsHandler(modelCatalog).WithPreview(modelPreview)
 	// sub-7-6b: the monthly AI spend summary over the subtitle_runs ledger
 	// (sub-7-6a). Movies/episodes only feed the runtime ladder behind the

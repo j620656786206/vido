@@ -154,12 +154,12 @@ func TestKeyResolver_ResolvesEachKeyIndependently(t *testing.T) {
 func TestKeyResolver_UnknownKeyNameIsAnError(t *testing.T) {
 	r := NewKeyResolver(&fakeSecrets{}, EnvKeys{}, nil)
 
-	_, _, err := r.Get(context.Background(), KeyName("gemini"))
+	_, _, err := r.Get(context.Background(), KeyName("mistral"))
 
 	// Distinct from "not configured": a typo'd key name is a programming error
 	// and must not masquerade as an unconfigured key.
 	require.Error(t, err)
-	assert.False(t, r.Has(context.Background(), KeyName("gemini")))
+	assert.False(t, r.Has(context.Background(), KeyName("mistral")))
 }
 
 // TestKeyResolver_BlankSecretIsTreatedAsAbsent — a stored empty string must not
