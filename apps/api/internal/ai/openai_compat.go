@@ -153,6 +153,7 @@ type openAICompatResponse struct {
 		Message struct {
 			Content string `json:"content"`
 		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
 		PromptTokens     int64 `json:"prompt_tokens"`
@@ -326,6 +327,11 @@ func (p *OpenAICompatProvider) attempt(ctx context.Context, body []byte) (openAI
 		return none, false, fmt.Errorf("%w: %v", ErrAIInvalidResponse, err)
 	}
 	if len(out.Choices) == 0 || strings.TrimSpace(out.Choices[0].Message.Content) == "" {
+		// The OpenAI shape of Claude's stop_reason=max_tokens: the reply ran
+		// out of room (thinking models count reasoning against the cap).
+		if len(out.Choices) > 0 && out.Choices[0].FinishReason == "length" {
+			return none, false, fmt.Errorf("%w: %w", ErrAIInvalidResponse, ErrAIResponseTruncated)
+		}
 		return none, false, ErrAIInvalidResponse
 	}
 	return openAICompatReply{

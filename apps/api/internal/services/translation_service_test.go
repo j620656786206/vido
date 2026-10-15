@@ -913,12 +913,12 @@ func TestTranslateWithGlossary_BatchSizeOption(t *testing.T) {
 		})
 	}
 	// disc-2026-10-translation-batch-size-default: with no model on the ctx
-	// the run uses the deployment default (claude-sonnet-5) — back at 10.
+	// the run uses the deployment default (claude-sonnet-5), batched by 50.
 	m := &echoIndexCompleter{}
 	out, _, err := NewTranslationService(m, nil).TranslateWithGlossary(context.Background(), blocks, nil, nil)
 	require.NoError(t, err)
 	require.Len(t, out, 25)
-	assert.Equal(t, 3, m.calls, "Sonnet translates 10 per request again")
+	assert.Equal(t, 1, m.calls, "25 cues fit in one Sonnet batch of 50")
 	assert.Equal(t, 10, prompts.SubtitleTranslatorBatchSize, "the app default must not move with this option")
 }
 
@@ -927,4 +927,81 @@ func TestTranslateWithGlossary_BatchSizeOption(t *testing.T) {
 // default gave the default model (claude-sonnet-5) a batch of 50.
 func batch10Ctx() context.Context {
 	return ai.WithModelID(context.Background(), "claude-haiku-4-5")
+}
+
+// truncatingCompleter answers like echoIndexCompleter but returns the
+// truncated-reply error for any request carrying more than max blocks, and
+// records whether the request asked for no thinking.
+type truncatingCompleter struct {
+	max          int
+	sizes        []int
+	thinkingOffs []bool
+}
+
+func (c *truncatingCompleter) CompleteText(ctx context.Context, _, user string, _ int) (string, error) {
+	body := user
+	if i := strings.Index(user, "## Translate the following blocks:"); i >= 0 {
+		body = user[i:]
+	}
+	idx := echoIndexLine.FindAllStringSubmatch(body, -1)
+	c.sizes = append(c.sizes, len(idx))
+	c.thinkingOffs = append(c.thinkingOffs, ai.ThinkingOffFromContext(ctx))
+	if len(idx) > c.max {
+		return "", fmt.Errorf("%w: %w", ai.ErrAIInvalidResponse, ai.ErrAIResponseTruncated)
+	}
+	var sb strings.Builder
+	for _, m := range idx {
+		sb.WriteString("[" + m[1] + "] 中文" + m[1] + "\n")
+	}
+	return sb.String(), nil
+}
+
+// disc-2026-10-translation-batch-truncation (ASR leg): a truncated batch is
+// re-sent as halves instead of keeping 10 English cues, and every request
+// asks for no reasoning tokens.
+func TestTranslateWithGlossary_TruncatedBatchIsSplitInHalf(t *testing.T) {
+	blocks := make([]TranslationBlock, 12)
+	for i := range blocks {
+		blocks[i] = TranslationBlock{Index: i + 1, Text: fmt.Sprintf("Line number %d here.", i+1)}
+	}
+	c := &truncatingCompleter{max: 5}
+	out, outcome, err := NewTranslationService(c, nil).TranslateWithGlossary(batch10Ctx(), blocks, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, []int{10, 5, 5, 2}, c.sizes)
+	for i, b := range out {
+		assert.Equal(t, fmt.Sprintf("中文%d", i+1), b.Text)
+	}
+	assert.Zero(t, outcome.EnglishKeptBlocks)
+	for i, off := range c.thinkingOffs {
+		assert.True(t, off, "request %d must ask for no thinking", i+1)
+	}
+}
+
+func TestTranslateWithGlossary_BlockTruncatedAloneKeepsItsEnglish(t *testing.T) {
+	blocks := []TranslationBlock{{Index: 1, Text: "Only line."}}
+	c := &truncatingCompleter{max: 0}
+	out, outcome, err := NewTranslationService(c, nil).TranslateWithGlossary(batch10Ctx(), blocks, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "Only line.", out[0].Text)
+	assert.Equal(t, 1, outcome.EnglishKeptBlocks)
+}
+
+type thinkingProbeCompleter struct{ off bool }
+
+func (c *thinkingProbeCompleter) CompleteText(ctx context.Context, _, _ string, _ int) (string, error) {
+	c.off = ai.ThinkingOffFromContext(ctx)
+	return "[1] 中文1", nil
+}
+
+func (c *thinkingProbeCompleter) CompleteTextWithUsage(ctx context.Context, _ ai.CompletionRequest) (ai.CompletionResult, error) {
+	c.off = ai.ThinkingOffFromContext(ctx)
+	return ai.CompletionResult{Text: "[1] 中文1"}, nil
+}
+
+// The extract leg's TranslateChunk asks for no reasoning tokens too.
+func TestTranslateChunk_AsksForNoThinking(t *testing.T) {
+	c := &thinkingProbeCompleter{}
+	_, _, _, err := NewTranslationService(c, nil).TranslateChunk(context.Background(), nil, nil, []prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Hi."}})
+	require.NoError(t, err)
+	assert.True(t, c.off)
 }

@@ -478,6 +478,13 @@ func (p *ClaudeProvider) CompleteTextWithUsage(ctx context.Context, req Completi
 			anthropic.NewUserMessage(anthropic.NewTextBlock(req.UserPrompt)),
 		},
 	}
+	// disc-2026-10-translation-batch-truncation: the caller asked for no
+	// reasoning tokens (subtitle translation) — they otherwise share max_tokens
+	// with the reply and can crowd it out entirely.
+	if ThinkingOffFromContext(ctx) {
+		disabled := anthropic.NewThinkingConfigDisabledParam()
+		params.Thinking = anthropic.ThinkingConfigParamUnion{OfDisabled: &disabled}
+	}
 	// Order is semantic, not cosmetic: prompt caching is a prefix match, so the
 	// caller's slice order is preserved exactly. An empty System slice leaves the
 	// field unset, so no "system" key is emitted at all.
@@ -514,6 +521,9 @@ func (p *ClaudeProvider) CompleteTextWithUsage(ctx context.Context, req Completi
 
 	text := textFromMessage(msg)
 	if text == "" {
+		if msg.StopReason == anthropic.StopReasonMaxTokens {
+			return CompletionResult{}, fmt.Errorf("%w: %w (output_tokens=%d)", ErrAIInvalidResponse, ErrAIResponseTruncated, msg.Usage.OutputTokens)
+		}
 		return CompletionResult{}, ErrAIInvalidResponse
 	}
 

@@ -418,6 +418,9 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 	if len(blocks) == 0 {
 		return nil, nil, TranslationOutcome{}, nil
 	}
+	// disc-2026-10-translation-batch-truncation: subtitle translation spends
+	// no reasoning tokens (they share max_tokens with the reply).
+	ctx = ai.WithThinkingOff(ctx)
 	promptGlossary := toPromptGlossary(glossary)
 	// 9R-8: composed ONCE — the media context is per-run, not per-batch.
 	cfg := newTranslateConfig(opts)
@@ -502,15 +505,8 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 			})
 		}
 
-		// Call Claude API
-		userPrompt := prompts.BuildSubtitleTranslatorPromptWithGlossary(promptBlocks, contextBlocks, promptGlossary)
-
-		translated, err := s.provider.CompleteText(
-			ctx,
-			systemPrompt,
-			userPrompt,
-			TranslationMaxTokens,
-		)
+		// Call the model; a reply truncated before any text is re-sent as halves.
+		translations, batchTerms, err := s.completeSplitting(ctx, systemPrompt, promptBlocks, contextBlocks, promptGlossary)
 
 		if err != nil {
 			// 9R-16 AC 6c: the per-run budget sentinel must escape the
@@ -542,13 +538,6 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 			continue
 		}
 
-		// Parse response and apply translations
-		indices := make([]int, len(batch))
-		for i, b := range batch {
-			indices[i] = b.Index
-		}
-
-		translations, batchTerms := parseTranslationResponseWithTerms(translated, indices)
 		harvested = mergeHarvestedTerms(harvested, batchTerms)
 
 		for i, b := range batch {
@@ -686,6 +675,8 @@ func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.System
 	if len(blocks) == 0 {
 		return nil, nil, ai.CompletionUsage{}, nil
 	}
+	// disc-2026-10-translation-batch-truncation: no reasoning tokens.
+	ctx = ai.WithThinkingOff(ctx)
 
 	indices := make([]int, len(blocks))
 	for i, b := range blocks {
@@ -719,6 +710,48 @@ func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.System
 	}
 	translations, terms := parseTranslationResponseWithTerms(text, indices)
 	return translations, terms, ai.CompletionUsage{}, nil
+}
+
+// completeSplitting is one ASR-leg batch request with the truncation fallback
+// (disc-2026-10-translation-batch-truncation): a reply that ran out of room
+// before any text is re-sent as two halves, down to single cues; a single cue
+// still truncated comes back untranslated and keeps its English. Every other
+// error is returned unchanged for the caller's keep-English / budget handling.
+func (s *TranslationService) completeSplitting(ctx context.Context, systemPrompt string, blocks, contextBlocks []prompts.SubtitleTranslatorBlock, glossary []prompts.GlossaryEntry) (map[int]string, map[string]string, error) {
+	userPrompt := prompts.BuildSubtitleTranslatorPromptWithGlossary(blocks, contextBlocks, glossary)
+	text, err := s.provider.CompleteText(ctx, systemPrompt, userPrompt, TranslationMaxTokens)
+	if err == nil {
+		indices := make([]int, len(blocks))
+		for i, b := range blocks {
+			indices[i] = b.Index
+		}
+		translations, terms := parseTranslationResponseWithTerms(text, indices)
+		return translations, terms, nil
+	}
+	if !errors.Is(err, ai.ErrAIResponseTruncated) {
+		return nil, nil, err
+	}
+	if len(blocks) == 1 {
+		slog.Warn("Translation reply truncated even for one block — keeping its English text",
+			"block", blocks[0].Index, "error", err)
+		return map[int]string{}, nil, nil
+	}
+	slog.Warn("Translation reply truncated — sending the batch again as two halves",
+		"batch_start", blocks[0].Index, "batch_end", blocks[len(blocks)-1].Index, "error", err)
+	mid := len(blocks) / 2
+	merged := make(map[int]string, len(blocks))
+	var terms map[string]string
+	for _, half := range [][]prompts.SubtitleTranslatorBlock{blocks[:mid], blocks[mid:]} {
+		got, halfTerms, herr := s.completeSplitting(ctx, systemPrompt, half, contextBlocks, glossary)
+		if herr != nil {
+			return nil, nil, herr
+		}
+		for index, t := range got {
+			merged[index] = t
+		}
+		terms = mergeHarvestedTerms(terms, halfTerms)
+	}
+	return merged, terms, nil
 }
 
 // flattenSystemBlocks collapses ordered system blocks into the single string

@@ -312,7 +312,7 @@ func TestSubtitleTranslatorSystemPrompt_SecondPersonDefaultsToNi(t *testing.T) {
 // golden-v2 exam move off the default.
 func TestSubtitleTranslatorBatchSizeFor(t *testing.T) {
 	for model, want := range map[string]int{
-		"claude-sonnet-5":       SubtitleTranslatorBatchSize, // back to 10 until a truncated chunk is split, not fatal
+		"claude-sonnet-5":       50,
 		"gemini-3.5-flash-lite": 20,
 		"claude-haiku-4-5":      SubtitleTranslatorBatchSize,
 		"":                      SubtitleTranslatorBatchSize,

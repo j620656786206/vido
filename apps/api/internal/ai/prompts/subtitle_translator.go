@@ -45,16 +45,18 @@ const SubtitleTranslatorBatchSize = 10
 // at a different batch (disc-2026-10-translation-batch-size-exam, 2026-10-15,
 // eval/golden-v2-2026-10/*-batch*.json). Only measured models are listed — an
 // unmeasured model keeps SubtitleTranslatorBatchSize.
-//   - claude-sonnet-5 is NOT listed (back to 10): on the exam 50 cues scored
-//     0.5%/96.5% and 0.5%/96.0% against 1.5%/90.0% at 10, but the first real
-//     episode at 50 (See S01E04, 2026-10-15) hit the 4096-token response cap
-//     on cues 151–200, the reply could not be parsed and the WHOLE run failed
-//     (disc-2026-10-translation-batch-truncation). Re-list it once a chunk
-//     that runs out of room is split and retried instead of failing the run.
+//   - claude-sonnet-5: 50. On the exam 50 cues scored 0.5%/96.5% and
+//     0.5%/96.0% against 1.5%/90.0% at 10. The first real episode at 50 (See
+//     S01E04) then failed: Sonnet 5 thinks by default, the thinking shares
+//     max_tokens with the reply, and one batch thought past 4096 with no text
+//     (disc-2026-10-translation-batch-truncation). Translation now sends
+//     thinking disabled (ai.WithThinkingOff) and splits a truncated batch in
+//     half; with thinking off, 50 cues scored 1.0%/95.0% and 0.5%/95.0%.
 //   - gemini-3.5-flash-lite: 20 cues held A on four runs (2.0–3.0% / 89–92%);
 //     50 broke 4 names on one run and 100 dropped the glossary wholesale on
 //     another (19 name mismatches, grade B) — the one thing Vido promises.
 var subtitleTranslatorBatchSizes = map[string]int{
+	"claude-sonnet-5":       50,
 	"gemini-3.5-flash-lite": 20,
 }
 
