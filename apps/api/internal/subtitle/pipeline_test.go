@@ -1051,8 +1051,8 @@ func batch10Ctx() context.Context {
 }
 
 // disc-2026-10-translation-batch-size-default: the chunk size follows the
-// model the run translates with — Sonnet (the default) 50, Gemini Flash-Lite
-// 20, an unmeasured model 10.
+// model the run translates with — Gemini Flash-Lite 20, everything else 10
+// (Sonnet went back to 10 after its first real 50-cue run truncated).
 func TestTranslateTrack_BatchSizeFollowsTheModel(t *testing.T) {
 	texts := make([]string, 0, 60)
 	for i := 1; i <= 60; i++ {
@@ -1063,7 +1063,7 @@ func TestTranslateTrack_BatchSizeFollowsTheModel(t *testing.T) {
 		ctx       context.Context
 		wantSizes []int
 	}{
-		"default model (sonnet)": {context.Background(), []int{50, 10}},
+		"default model (sonnet)": {context.Background(), []int{10, 10, 10, 10, 10, 10}},
 		"gemini flash-lite":      {ai.WithModelID(context.Background(), "gemini-3.5-flash-lite"), []int{20, 20, 20}},
 		"unmeasured (haiku)":     {batch10Ctx(), []int{10, 10, 10, 10, 10, 10}},
 	} {
