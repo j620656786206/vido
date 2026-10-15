@@ -182,15 +182,18 @@ Notes:
 - **Which model translates, and what it costs (sub-6-8a).** The default is
   `claude-sonnet-5`, chosen on measurement rather than taste: blind-scoring
   10,304 real cues from this library gave Sonnet 5 a 1.3% unusable rate and
-  89.6% good, against Haiku 4.5's 3.6% and 71.8%. Sonnet costs about $0.48 per
-  hour of runtime, Haiku about $0.18, when the file has an embedded text track
-  to translate. When Vido has to listen to the audio instead, translation costs
-  more — about $1.30 per hour on Sonnet and $0.43 on Haiku, plus speech
-  recognition — because that path re-sends the title's context with every
-  batch. Either way the cheaper model is offered as a
-  visible, per-run choice instead of a config flip nobody sees. The consent
-  screen prices every model your keys can reach and shows the estimated
-  processing time (Sonnet takes roughly 17% of a title's runtime, Haiku 11%).
+  89.6% good, against Haiku 4.5's 3.6% and 71.8%. Since 2026-10-15 Sonnet
+  translates 50 cues per request with thinking off, and costs about $0.28 per
+  hour of runtime when the file has an embedded text track (re-measured on
+  three episodes); Haiku still sends 10 per request and costs about $0.18.
+  When Vido has to listen to the audio instead, translation costs more —
+  about $0.68 per hour on Sonnet and $0.43 on Haiku, plus speech recognition —
+  because that path re-sends the title's context with every batch. Either way
+  the cheaper model is offered as a visible, per-run choice instead of a
+  config flip nobody sees. The consent screen prices every model your keys can
+  reach and shows the estimated processing time (Sonnet takes roughly 7% of a
+  title's runtime, Haiku 11%). Models nobody has measured are priced from
+  Sonnet's older 10-cue rate, so their quote errs high, never low.
   `GET /api/v1/settings/models` is the list; a run may name one with
   `model_id`. `CLAUDE_MODEL` still sets the deployment-wide starting point.
 - **Extraction is bounded by file size (sub-6-3).** Pulling the subtitle track

@@ -35,7 +35,7 @@ func TestTranscriptionEstimate_LegacyModeHasNoRoute(t *testing.T) {
 
 	assert.Empty(t, est.Route)
 	assert.Equal(t, TranscriptionPlanFull, est.Plan)
-	assert.Equal(t, 1.66, est.EstimatedUSD, "the ASR + translation quote, as before")
+	assert.Equal(t, 1.04, est.EstimatedUSD, "the ASR + translation quote, as before")
 }
 
 func TestTranscriptionEstimate_PersistedTracksDecideTheRouteWithoutProbing(t *testing.T) {
@@ -62,7 +62,7 @@ func TestTranscriptionEstimate_NoTracksAndStoredDurationProbesOnceForTheRoute(t 
 
 	assert.Equal(t, "asr", est.Route)
 	assert.Equal(t, TranscriptionPlanFull, est.Plan)
-	assert.Equal(t, 1.66, est.EstimatedUSD)
+	assert.Equal(t, 1.04, est.EstimatedUSD)
 	assert.Len(t, p.probed, 1, "one probe, for the route only")
 	assert.Empty(t, p.probedWD, "the duration was stored — the ladder did not probe")
 }
@@ -89,7 +89,7 @@ func TestTranscriptionEstimate_SkipRouteIsPricedLikeSpeechRecognition(t *testing
 
 	assert.Equal(t, "skip", est.Route)
 	assert.Equal(t, TranscriptionPlanFull, est.Plan)
-	assert.Equal(t, 1.66, est.EstimatedUSD)
+	assert.Equal(t, 1.04, est.EstimatedUSD)
 }
 
 func TestTranscriptionEstimate_ResumeOnlyAppliesOnTheSpeechRecognitionLane(t *testing.T) {
@@ -128,7 +128,7 @@ func TestTranscriptionEstimate_RouteProbeFailureLeavesRouteUnknown(t *testing.T)
 
 	assert.Empty(t, est.Route, "unknown is reported as absent, never guessed")
 	assert.Equal(t, TranscriptionPlanFull, est.Plan, "and the quote stays the safe (higher) one")
-	assert.Equal(t, 1.66, est.EstimatedUSD)
+	assert.Equal(t, 1.04, est.EstimatedUSD)
 }
 
 func TestTranscriptionEstimate_MalformedTracksJSONFallsBackToTheProbe(t *testing.T) {
