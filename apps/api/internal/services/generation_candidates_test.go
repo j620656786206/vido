@@ -772,9 +772,10 @@ func TestAnalyze_PricesEveryReachableModelAndKeepsTheRowsOnTheDefault(t *testing
 	assert.InDelta(t, sonnet.TotalUSD, res.Summary.EstimatedTotalUSD, 0.005,
 		"the headline total must be the DEFAULT model's price — an old client that never learned about model choice still reads a true number")
 
-	// eval-1 measured $0.48/hr on Sonnet against $0.18/hr on Haiku.
-	assert.InDelta(t, 2.67, sonnet.TotalUSD/haiku.TotalUSD, 0.15,
-		"the price gap the consent screen has to show is ~2.7×, not the 3× the rate card implies")
+	// Sonnet at 50 cues, thinking off: $0.28/hr (2026-10-15) against Haiku's
+	// eval-1 $0.18/hr at 10 cues.
+	assert.InDelta(t, 1.53, sonnet.TotalUSD/haiku.TotalUSD, 0.1,
+		"the price gap the consent screen has to show is ~1.5×, not the 3× the rate card implies")
 
 	// Per-row prices let the client re-price without re-running the sweep.
 	require.Len(t, sonnet.PerCandidate, 2)
@@ -817,7 +818,7 @@ func TestAnalyze_QuotesProcessingTimePerModel(t *testing.T) {
 	res, err := svc.Analyze(context.Background(), nil)
 	require.NoError(t, err)
 
-	assert.EqualValues(t, 17, res.EstimatedMinutesByModel["claude-sonnet-5"], "eval-1: Sonnet takes ~17% of runtime")
+	assert.EqualValues(t, 7, res.EstimatedMinutesByModel["claude-sonnet-5"], "2026-10-15, 50 cues: Sonnet takes ~7% of runtime")
 	assert.EqualValues(t, 11, res.EstimatedMinutesByModel["claude-haiku-4-5"], "…Haiku ~11%")
 }
 
@@ -838,21 +839,27 @@ func TestTranslationRate_IsMeasuredForEvaluatedModelsAndScaledOtherwise(t *testi
 	haiku := translationRatePerMinute("claude-haiku-4-5").InexactFloat64()
 	sonnet := translationRatePerMinute("claude-sonnet-5").InexactFloat64()
 
-	// eval-1 billed $2.229 (Haiku) and $5.951 (Sonnet) for 12h20m = 740 min.
+	// eval-1 billed $2.229 (Haiku) for 12h20m = 740 min; Sonnet re-measured
+	// 2026-10-15 at 50 cues, thinking off: S01E04–06 billed $0.486 for 1,461
+	// cues, × eval-1's 10,304 cues over 740 minutes.
 	assert.InDelta(t, 2.229/740, haiku, 0.0001)
-	assert.InDelta(t, 5.951/740, sonnet, 0.0001)
+	assert.InDelta(t, (0.159795+0.132408+0.193857)/(474+414+573)*10304/740, sonnet, 0.0001)
 
 	// The old flat 0.0004 under-quoted a 90-minute film by ~7×; that is the
 	// bug this recalibration exists to remove.
 	assert.Greater(t, haiku*90, 0.20, "a 90-minute film on the cheap model really does cost more than a quarter")
 
-	// An unmeasured model is scaled from the SLOWER, dearer anchor.
+	// An unmeasured model is scaled from the anchor: Sonnet's 10-cue eval-1
+	// rate, because an unmeasured model still sends 10 cues per request.
+	anchor := translationAnchorUSDPerMinute.InexactFloat64()
+	assert.InDelta(t, 5.951/740, anchor, 0.0001)
 	opus := translationRatePerMinute("claude-opus-4-8").InexactFloat64()
 	assert.Greater(t, opus, sonnet, "Opus is priced above Sonnet, so its quote must be too")
-	assert.InDelta(t, sonnet*(5.0+25.0)/(3.0+15.0), opus, 0.0001)
+	assert.InDelta(t, anchor*(5.0+25.0)/(3.0+15.0), opus, 0.0001)
 
 	unknown := translationRatePerMinute("some-future-model").InexactFloat64()
-	assert.Equal(t, sonnet, unknown, "an unknown model quotes at the anchor rather than under-promising")
+	assert.Equal(t, anchor, unknown, "an unknown model quotes at the anchor rather than under-promising")
+	assert.Greater(t, unknown, sonnet, "…which is above Sonnet's 50-cue rate, never below it")
 	assert.Equal(t, 0.17, translationTimeShare("some-future-model"))
 }
 
@@ -863,25 +870,31 @@ func TestASRLegTranslationRate_IsMeasuredSeparatelyFromTheExtractRoute(t *testin
 	sonnet := asrLegTranslationRatePerMinute("claude-sonnet-5").InexactFloat64()
 	haiku := asrLegTranslationRatePerMinute("claude-haiku-4-5").InexactFloat64()
 
-	// See S01E02: $1.022 for 659 cues = $0.001551/cue, × eval-1's 10,304 cues
-	// over 740 minutes.
-	assert.InDelta(t, 1.022/659*10304/740, sonnet, 0.0001)
-	// Haiku is unmeasured on this route — scaled from the Sonnet anchor by price.
-	assert.InDelta(t, sonnet*(1.0+5.0)/(3.0+15.0), haiku, 0.0001)
+	// 2026-10-15, 50 cues, thinking off: the 28-cue tail batch billed
+	// $0.022614 → $0.000808/cue, × eval-1's 10,304 cues over 740 minutes.
+	assert.InDelta(t, 0.022614/28*10304/740, sonnet, 0.0002)
+	// The anchor is the 10-cue See S01E02 measurement ($1.022 / 659 cues).
+	anchor := asrLegTranslationAnchorUSDPerMinute.InexactFloat64()
+	assert.InDelta(t, 1.022/659*10304/740, anchor, 0.0001)
+	// Haiku still sends 10 cues: pinned at the anchor scaled by its price.
+	assert.InDelta(t, anchor*(1.0+5.0)/(3.0+15.0), haiku, 0.0001)
 
 	for _, m := range []string{"claude-sonnet-5", "claude-haiku-4-5", "claude-opus-4-8", "some-future-model"} {
 		assert.True(t, asrLegTranslationRatePerMinute(m).GreaterThan(translationRatePerMinute(m)),
 			"%s: the uncached ASR leg must never quote below the cached extract leg", m)
 	}
-	assert.Equal(t, sonnet, asrLegTranslationRatePerMinute("some-future-model").InexactFloat64(),
+	assert.Equal(t, anchor, asrLegTranslationRatePerMinute("some-future-model").InexactFloat64(),
 		"an unknown model quotes at the anchor rather than under-promising")
 }
 
 // The bill that filed the bug: See S01E02, 56.95 min, Sonnet 5, hosted ASR,
-// quoted $0.80 and billed $1.36 (subtitle_runs.spent_usd 1.36365). The quote
-// must not fall below the bill again, nor overshoot it wildly.
+// quoted $0.80 and billed $1.36 (subtitle_runs.spent_usd 1.36365) at 10 cues
+// per request with thinking on. Since disc-2026-10-translation-rates-
+// recalibrate-after-batch the same episode costs: Whisper 56.95 × $0.006 plus
+// 659 cues × the measured $0.000808 per cue. The quote must cover that and
+// not overshoot it wildly.
 func TestEstimateUSD_ASRRouteCoversTheMeasuredSeeS01E02Bill(t *testing.T) {
-	const billed = 1.36
+	billed := 56.95*ai.EstimatedASRPerMinute(false).InexactFloat64() + 659*0.022614/28
 	quote := estimateUSD(RouteASR, 56.95, ai.EstimatedASRPerMinute(false), "claude-sonnet-5").InexactFloat64()
 
 	assert.GreaterOrEqual(t, quote, billed, "the quote under-promised the real invoice")

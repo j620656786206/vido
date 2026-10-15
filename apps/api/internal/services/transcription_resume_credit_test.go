@@ -28,9 +28,9 @@ func TestTranscriptionEstimate_StoredASRMinutesComeOffTheSpeechRecognitionHalf(t
 	est := newTestEstimator(plan, false).Estimate(context.Background(), sixtyMinuteMovie())
 
 	assert.Equal(t, TranscriptionPlanFull, est.Plan)
-	// 30 × 0.006 (the half not yet transcribed) + 60 × 0.0216 (translation has
+	// 30 × 0.006 (the half not yet transcribed) + 60 × 0.0113 (translation has
 	// not started) = 0.18 + 1.296 = 1.476 → $1.48, down from $1.66.
-	assert.Equal(t, 1.48, est.EstimatedUSD)
+	assert.Equal(t, 0.86, est.EstimatedUSD)
 	assert.Equal(t, 30.0, est.ResumedASRMinutes)
 	assert.Equal(t, 60.0, est.RuntimeMinutes, "runtime_minutes still means the whole film")
 	assert.Zero(t, est.CachedTranslationShare)
@@ -46,7 +46,7 @@ func TestTranscriptionEstimate_EnglishOnlyRunPaysOnlyTheMissingAudio(t *testing.
 func TestTranscriptionEstimate_FullyTranscribedPaysOnlyTranslation(t *testing.T) {
 	est := newTestEstimator(&stubPlanSource{available: true, translate: true, asrDone: 60}, false).
 		Estimate(context.Background(), sixtyMinuteMovie())
-	assert.Equal(t, 1.3, est.EstimatedUSD) // 60 × 0.0216
+	assert.Equal(t, 0.68, est.EstimatedUSD) // 60 × 0.0113
 }
 
 func TestTranscriptionEstimate_CachedCuesComeOffATranslateOnlyResume(t *testing.T) {
@@ -54,7 +54,7 @@ func TestTranscriptionEstimate_CachedCuesComeOffATranslateOnlyResume(t *testing.
 	est := newTestEstimator(plan, false).Estimate(context.Background(), sixtyMinuteMovie())
 
 	assert.Equal(t, TranscriptionPlanTranslateOnly, est.Plan)
-	assert.Equal(t, 0.32, est.EstimatedUSD) // 60 × 0.0216 × 0.25 = 0.324
+	assert.Equal(t, 0.17, est.EstimatedUSD) // 60 × 0.0113 × 0.25 = 0.1695
 	assert.Equal(t, 0.75, est.CachedTranslationShare)
 	assert.Zero(t, est.ResumedASRMinutes)
 	assert.Equal(t, []string{"translation:movie:movie-1"}, plan.creditAsk)
@@ -74,7 +74,7 @@ func TestTranscriptionEstimate_CreditIsOnlyAskedWhereTheRunWouldUseIt(t *testing
 	t.Run("speech recognition unavailable: the click would 503, no credit", func(t *testing.T) {
 		plan := &stubPlanSource{available: false, translate: true, asrDone: 30}
 		est := newTestEstimator(plan, false).Estimate(context.Background(), sixtyMinuteMovie())
-		assert.Equal(t, 1.66, est.EstimatedUSD)
+		assert.Equal(t, 1.04, est.EstimatedUSD)
 		assert.Empty(t, plan.creditAsk)
 	})
 	t.Run("extract lane: the pipeline translates the embedded track, not this cache", func(t *testing.T) {

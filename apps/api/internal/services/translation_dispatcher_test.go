@@ -145,5 +145,8 @@ func TestGenerationCandidates_PacedModelQuotesMoreMinutes(t *testing.T) {
 	require.NoError(t, err)
 	claude := res.EstimatedMinutesByModel["claude-sonnet-5"]
 	gemini := res.EstimatedMinutesByModel["gemini-3.5-flash-lite"]
-	assert.InDelta(t, 9, gemini-claude, 1, "claude %v gemini %v", claude, gemini)
+	// Plus the base processing share: Flash-Lite is unmeasured, so it quotes
+	// the 10-cue anchor share while Sonnet quotes its own 50-cue share.
+	wantGap := 9 + 60*(translationTimeShareAnchor-translationTimeShareByModel["claude-sonnet-5"])
+	assert.InDelta(t, wantGap, gemini-claude, 1, "claude %v gemini %v", claude, gemini)
 }

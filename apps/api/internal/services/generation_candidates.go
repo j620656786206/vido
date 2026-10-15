@@ -164,10 +164,28 @@ const (
 // results summed; starting from a value that is already ~1e-19 off the figure
 // eval-1 actually measured is a needless way to make the quote and the invoice
 // disagree.
+//
+// disc-2026-10-translation-rates-recalibrate-after-batch (2026-10-15): Sonnet
+// now translates 50 cues per request with thinking off (disc-2026-10-
+// translation-batch-size-default, disc-2026-10-translation-batch-truncation),
+// so the system prompt, glossary and context ride a fifth as many requests and
+// no reasoning tokens are billed. Re-measured on production, See S01E04–06:
+// $0.159795/474, $0.132408/414 (a 50-cue batch lost to a network outage is
+// excluded), $0.193857/573 cues = $0.000332 per cue; × eval-1's 13.92 cues per
+// runtime minute = $0.00462 ($0.28 an hour, was $0.48). Haiku still sends 10
+// per request and keeps its eval-1 rate.
 var translationUSDPerMinuteByModel = map[string]decimal.Decimal{
 	"claude-haiku-4-5": decimal.RequireFromString("0.00301"),
-	"claude-sonnet-5":  decimal.RequireFromString("0.00804"),
+	"claude-sonnet-5":  decimal.RequireFromString("0.00462"),
 }
+
+// translationAnchorUSDPerMinute is the rate an UNMEASURED model is scaled
+// from: Sonnet's eval-1 rate at 10 cues per request — the batch every
+// unmeasured model still uses (prompts.SubtitleTranslatorBatchSizeFor). It is
+// deliberately NOT Sonnet's current 50-cue rate: scaling Opus or Sonnet 4.6
+// from that would quote them as if they enjoyed a batch they do not get, i.e.
+// LOW, which is the one direction this screen must never err in.
+var translationAnchorUSDPerMinute = decimal.RequireFromString("0.00804")
 
 // translationCalibrationModel is the anchor an UNMEASURED model is priced
 // from: its measured rate scaled by that model's real price ratio. Sonnet,
@@ -207,32 +225,49 @@ const translationCalibrationModel = "claude-sonnet-5"
 //
 // ⚠️ Re-measure when backlog-asr-leg-unify-gated-pipeline gives this leg prompt
 // caching: the resend overhead this rate pays for disappears with it.
+//
+// disc-2026-10-translation-rates-recalibrate-after-batch (2026-10-15): Sonnet
+// re-measured at 50 cues per request, thinking off, on the See S01E02 clip in
+// a throwaway container. The NAS lost its connection during the first 50-cue
+// batch, so the measurement is the 28-cue tail batch: 5,283 input + 451
+// output tokens = $0.022614 → $0.000808 per cue × 13.92 = $0.0113 per runtime
+// minute ($0.68 an hour, was $1.30). A tail batch carries the per-batch resend
+// over fewer cues than a full 50-cue batch, so this errs high, the direction
+// the screen is allowed to err in. Haiku's row pins the value it used to be
+// scaled to (0.0216 × its 1/3 price ratio): it still sends 10 per request, so
+// it did not get cheaper.
 var asrLegTranslationUSDPerMinuteByModel = map[string]decimal.Decimal{
-	"claude-sonnet-5": decimal.RequireFromString("0.0216"),
+	"claude-haiku-4-5": decimal.RequireFromString("0.0072"),
+	"claude-sonnet-5":  decimal.RequireFromString("0.0113"),
 }
+
+// asrLegTranslationAnchorUSDPerMinute is the ASR leg's anchor for unmeasured
+// models: Sonnet's 10-cue measurement (S01E02, 2026-10-05). Same reasoning as
+// translationAnchorUSDPerMinute.
+var asrLegTranslationAnchorUSDPerMinute = decimal.RequireFromString("0.0216")
 
 // translationRatePerMinute is the per-runtime-minute LLM cost of a model on
 // the EXTRACT route (translating an embedded text track).
 func translationRatePerMinute(model string) decimal.Decimal {
-	return ratePerMinuteFrom(translationUSDPerMinuteByModel, model)
+	return ratePerMinuteFrom(translationUSDPerMinuteByModel, translationAnchorUSDPerMinute, model)
 }
 
 // asrLegTranslationRatePerMinute is the per-runtime-minute LLM cost of a model
 // on the ASR route (translating what speech recognition heard).
 func asrLegTranslationRatePerMinute(model string) decimal.Decimal {
-	return ratePerMinuteFrom(asrLegTranslationUSDPerMinuteByModel, model)
+	return ratePerMinuteFrom(asrLegTranslationUSDPerMinuteByModel, asrLegTranslationAnchorUSDPerMinute, model)
 }
 
 // ratePerMinuteFrom reads one route's rate table. Measured models use their
-// measured rate; anything else is the anchor scaled by the blended
+// measured rate; anything else is anchorRate (the route's 10-cue Sonnet
+// measurement, see translationAnchorUSDPerMinute) scaled by the blended
 // (input+output) price ratio — the two prices move together across every row
 // of the pricing table, so a single blended ratio is as good as a token-split
 // one and needs no assumption about the input/output mix.
-func ratePerMinuteFrom(rates map[string]decimal.Decimal, model string) decimal.Decimal {
+func ratePerMinuteFrom(rates map[string]decimal.Decimal, anchorRate decimal.Decimal, model string) decimal.Decimal {
 	if rate, ok := rates[model]; ok {
 		return rate
 	}
-	anchorRate := rates[translationCalibrationModel]
 	if !ai.HasPricing(model) {
 		// No real price row: PricingFor would hand back the cheapest-tier
 		// fallback, and scaling by it would quote an unknown model BELOW the
@@ -255,18 +290,26 @@ func blendedPer1M(p ai.ModelPricing) decimal.Decimal { return p.InputPer1M.Add(p
 
 // Processing time as a fraction of runtime, measured in the same eval-1 run
 // (two workers in parallel): Haiku finished 12h20m of video in 1h24m, Sonnet
-// in 2h03m. An unmeasured model is quoted at the slower anchor, for the same
-// reason its price is.
+// in 2h03m. An unmeasured model is quoted at translationTimeShareAnchor (that
+// 10-cue Sonnet figure), for the same reason its price is.
+//
+// disc-2026-10-translation-rates-recalibrate-after-batch: Sonnet at 50 cues,
+// thinking off, one item at a time on production: S01E04 186 s / 3,163 s,
+// S01E05 205 s / 3,110 s (with three network retries), S01E06 216 s / 3,264 s
+// = 0.059–0.066 of runtime → 0.07.
 var translationTimeShareByModel = map[string]float64{
 	"claude-haiku-4-5": 0.11,
-	"claude-sonnet-5":  0.17,
+	"claude-sonnet-5":  0.07,
 }
+
+// translationTimeShareAnchor is Sonnet's eval-1 share at 10 cues per request.
+const translationTimeShareAnchor = 0.17
 
 func translationTimeShare(model string) float64 {
 	if share, ok := translationTimeShareByModel[model]; ok {
 		return share
 	}
-	return translationTimeShareByModel[translationCalibrationModel]
+	return translationTimeShareAnchor
 }
 
 // GenerationCandidate is one row of the cost-preview screen.
