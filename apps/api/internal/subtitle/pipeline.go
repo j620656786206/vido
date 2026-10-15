@@ -962,7 +962,7 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 					ErrSubtitleTranslateFailed, err)
 			}
 
-			got, chunkTerms, chunkUsage, err := p.translator.TranslateChunk(chunkCtx, sys, contextBlocks, promptBlocksOf(pending))
+			got, chunkTerms, chunkUsage, requests, err := p.translateSplitting(chunkCtx, sys, contextBlocks, pending)
 			// The gate is released as WARM only when the request actually
 			// returned. A failed first request never wrote the provider-side
 			// prefix, so marking the show warm would open the whole 50-minute
@@ -972,7 +972,9 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 			// next waiter legitimately becomes the leader and re-attempts the
 			// warm-up, still serialized.
 			release(err == nil)
-			countRequest(ctx)
+			for range requests {
+				countRequest(ctx)
+			}
 			usage = addUsage(usage, chunkUsage)
 			if err != nil {
 				if !isTransientExhausted(ctx, err) {
@@ -1394,6 +1396,44 @@ func metadataOf(tctx TranslateContext) prompts.MediaMetadata {
 		Cast:          tctx.Cast,
 		Countries:     tctx.Countries,
 	}
+}
+
+// translateSplitting sends blocks as one request. When the reply ran out of
+// room before any text (ai.ErrAIResponseTruncated) it sends each half on its
+// own, down to a single cue — whose failure comes back as "no translation", so
+// the gate keeps that cue's English instead of the whole episode failing
+// (disc-2026-10-translation-batch-truncation; Ming Jwo's 「缺行切半重翻」).
+// Every other error is returned as before. requests is the number of requests
+// actually sent, for countRequest.
+func (p *Pipeline) translateSplitting(ctx context.Context, sys []ai.SystemBlock, contextBlocks []prompts.SubtitleTranslatorBlock, pending []SubtitleBlock) (map[int]string, map[string]string, ai.CompletionUsage, int, error) {
+	got, terms, usage, err := p.translator.TranslateChunk(ctx, sys, contextBlocks, promptBlocksOf(pending))
+	requests := 1
+	if err == nil || !errors.Is(err, ai.ErrAIResponseTruncated) {
+		return got, terms, usage, requests, err
+	}
+	if len(pending) == 1 {
+		p.logger.Warn("subtitle cue reply truncated even on its own — keeping its English original",
+			"cue_index", pending[0].Index, "error", err)
+		return map[int]string{}, nil, usage, requests, nil
+	}
+	p.logger.Warn("subtitle chunk reply truncated — sending it again as two halves",
+		"cue_range", cueRange(pending), "cues", len(pending), "error", err)
+	mid := len(pending) / 2
+	merged := make(map[int]string, len(pending))
+	var mergedTerms map[string]string
+	for _, half := range [][]SubtitleBlock{pending[:mid], pending[mid:]} {
+		g, t, u, n, herr := p.translateSplitting(ctx, sys, contextBlocks, half)
+		usage = addUsage(usage, u)
+		requests += n
+		if herr != nil {
+			return nil, nil, usage, requests, herr
+		}
+		for index, text := range g {
+			merged[index] = text
+		}
+		mergedTerms = mergeChunkTerms(mergedTerms, t)
+	}
+	return merged, mergedTerms, usage, requests, nil
 }
 
 // addUsage accumulates token usage across chunks and retries.

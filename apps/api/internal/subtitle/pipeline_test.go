@@ -1051,8 +1051,8 @@ func batch10Ctx() context.Context {
 }
 
 // disc-2026-10-translation-batch-size-default: the chunk size follows the
-// model the run translates with — Gemini Flash-Lite 20, everything else 10
-// (Sonnet went back to 10 after its first real 50-cue run truncated).
+// model the run translates with — Sonnet (the default) 50, Gemini Flash-Lite
+// 20, an unmeasured model 10.
 func TestTranslateTrack_BatchSizeFollowsTheModel(t *testing.T) {
 	texts := make([]string, 0, 60)
 	for i := 1; i <= 60; i++ {
@@ -1063,7 +1063,7 @@ func TestTranslateTrack_BatchSizeFollowsTheModel(t *testing.T) {
 		ctx       context.Context
 		wantSizes []int
 	}{
-		"default model (sonnet)": {context.Background(), []int{10, 10, 10, 10, 10, 10}},
+		"default model (sonnet)": {context.Background(), []int{50, 10}},
 		"gemini flash-lite":      {ai.WithModelID(context.Background(), "gemini-3.5-flash-lite"), []int{20, 20, 20}},
 		"unmeasured (haiku)":     {batch10Ctx(), []int{10, 10, 10, 10, 10, 10}},
 	} {
@@ -1084,4 +1084,67 @@ func TestTranslateTrack_BatchSizeFollowsTheModel(t *testing.T) {
 			assert.Equal(t, tc.wantSizes, sizes)
 		})
 	}
+}
+
+// disc-2026-10-translation-batch-truncation: a reply that ran out of room
+// before any text is re-sent as two halves instead of failing the episode.
+func TestTranslateTrack_TruncatedChunkIsSplitInHalf(t *testing.T) {
+	texts := make([]string, 0, 12)
+	for i := 1; i <= 12; i++ {
+		texts = append(texts, fmt.Sprintf("Line %d.", i))
+	}
+	truncated := fmt.Errorf("translate chunk: %w: %w", ai.ErrAIInvalidResponse, ai.ErrAIResponseTruncated)
+	tr := &fakeTranslator{fn: func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		if len(blocks) > 5 {
+			return nil, ai.CompletionUsage{}, truncated
+		}
+		out := make(map[int]string, len(blocks))
+		for _, b := range blocks {
+			out[b.Index] = fmt.Sprintf("第%d句", b.Index)
+		}
+		return out, ai.CompletionUsage{}, nil
+	}}
+	res, err := NewPipeline(tr, &recordingConverter{}, nil).TranslateTrack(batch10Ctx(), trackOf(cues(texts...)), TranslateContext{})
+	require.NoError(t, err, "a truncated reply must not fail the episode")
+	sizes := make([]int, 0, len(tr.calls))
+	for _, c := range tr.calls {
+		sizes = append(sizes, len(c.blocks))
+	}
+	assert.Equal(t, []int{10, 5, 5, 2}, sizes, "chunk 1 (10) truncated → halves 5+5; chunk 2 (2) fits")
+	for i, b := range res.Blocks {
+		assert.Equal(t, fmt.Sprintf("第%d句", i+1), b.Text)
+	}
+	assert.Equal(t, 0, res.StubbornCues)
+}
+
+func TestTranslateTrack_CueTruncatedEvenAloneKeepsItsEnglish(t *testing.T) {
+	texts := make([]string, 0, 25)
+	for i := 1; i <= 25; i++ {
+		texts = append(texts, fmt.Sprintf("Line %d.", i))
+	}
+	truncated := fmt.Errorf("%w: %w", ai.ErrAIInvalidResponse, ai.ErrAIResponseTruncated)
+	tr := &fakeTranslator{fn: func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		out := make(map[int]string, len(blocks))
+		for _, b := range blocks {
+			if b.Index == 3 {
+				return nil, ai.CompletionUsage{}, truncated // cue 3 always overflows
+			}
+			out[b.Index] = fmt.Sprintf("第%d句", b.Index)
+		}
+		return out, ai.CompletionUsage{}, nil
+	}}
+	res, err := NewPipeline(tr, &recordingConverter{}, nil).TranslateTrack(batch10Ctx(), trackOf(cues(texts...)), TranslateContext{})
+	require.NoError(t, err, "one unfixable cue is under the 5% ceiling of 25")
+	assert.Equal(t, "Line 3.", res.Blocks[2].Text, "the cue that overflows alone keeps its English")
+	assert.Equal(t, "第4句", res.Blocks[3].Text)
+	assert.Equal(t, 1, res.StubbornCues)
+}
+
+func TestTranslateTrack_OtherInvalidRepliesStillStopTheRun(t *testing.T) {
+	tr := &fakeTranslator{fn: func(_ int, _ []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		return nil, ai.CompletionUsage{}, ai.ErrAIInvalidResponse
+	}}
+	_, err := NewPipeline(tr, &recordingConverter{}, nil).TranslateTrack(batch10Ctx(), trackOf(cues("Line 1.", "Line 2.")), TranslateContext{})
+	require.ErrorIs(t, err, ErrSubtitleTranslateFailed)
+	assert.Len(t, tr.calls, 1, "only a TRUNCATED reply is split; any other malformed reply stops as before")
 }
