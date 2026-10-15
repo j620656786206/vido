@@ -63,7 +63,7 @@ func TestTranslateTrack_TransientExhaustedChunkKeepsEnglishAndContinues(t *testi
 	tr := failCallsWith(exhaustedTimeout(), 2)
 
 	scope := &processScope{ref: MediaRef{ID: "m1", MediaType: "movie"}}
-	ctx := withProcessScope(context.Background(), scope)
+	ctx := withProcessScope(batch10Ctx(), scope)
 
 	res, err := NewPipeline(tr, &recordingConverter{}, nil).
 		TranslateTrack(ctx, trackOf(source), TranslateContext{})
@@ -115,7 +115,7 @@ func TestTranslateTrack_TransientCeilingCountsQualityStubbornToo(t *testing.T) {
 	}
 
 	res, err := NewPipeline(tr, &recordingConverter{}, nil).
-		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+		TranslateTrack(batch10Ctx(), trackOf(source), TranslateContext{})
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrSubtitleTranslateFailed)
@@ -147,7 +147,7 @@ func TestTranslateTrack_TransientDuringQualityRetryCountsInBothPools(t *testing.
 	}
 
 	res, err := NewPipeline(tr, &recordingConverter{}, nil).
-		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+		TranslateTrack(batch10Ctx(), trackOf(source), TranslateContext{})
 	require.NoError(t, err)
 
 	require.Len(t, tr.calls, 3, "the retry that timed out is not retried again here (D8); chunk 2 still runs")
@@ -193,7 +193,7 @@ func TestTranslateTrack_TwoConsecutiveDeadChunksStopTheRun(t *testing.T) {
 	tr := failCallsWith(exhaustedTimeout(), 1, 2, 3, 4, 5)
 
 	res, err := NewPipeline(tr, &recordingConverter{}, nil).
-		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+		TranslateTrack(batch10Ctx(), trackOf(source), TranslateContext{})
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrSubtitleTranslateFailed)
@@ -210,7 +210,7 @@ func TestTranslateTrack_ASuccessBetweenDeadChunksResetsTheBreaker(t *testing.T) 
 	tr := failCallsWith(exhaustedTimeout(), 1, 3)
 
 	res, err := NewPipeline(tr, &recordingConverter{}, nil).
-		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+		TranslateTrack(batch10Ctx(), trackOf(source), TranslateContext{})
 	require.NoError(t, err)
 
 	assert.Len(t, tr.calls, 10)
@@ -231,7 +231,7 @@ func TestTranslateTrack_ContextWindowSkipsUntranslatedCues(t *testing.T) {
 	tr := failCallsWith(exhaustedTimeout(), 2)
 
 	_, err := NewPipeline(tr, &recordingConverter{}, nil).
-		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+		TranslateTrack(batch10Ctx(), trackOf(source), TranslateContext{})
 	require.NoError(t, err)
 
 	require.Len(t, tr.calls, 6)
@@ -340,7 +340,7 @@ func TestTranslateTrack_NarratesTransportRetriesAndTheEnglishVerdict(t *testing.
 	}}
 
 	scope := &processScope{ref: MediaRef{ID: "m1", MediaType: "movie"}}
-	ctx := withProcessScope(context.Background(), scope)
+	ctx := withProcessScope(batch10Ctx(), scope)
 
 	_, err := NewPipeline(narrating, &recordingConverter{}, nil, WithProgress(progress)).
 		TranslateTrack(ctx, trackOf(numberedCues(60)), TranslateContext{})

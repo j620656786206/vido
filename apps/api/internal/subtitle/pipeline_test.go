@@ -258,7 +258,7 @@ func TestTranslateTrack_ChunksAtBatchSizeWithTranslatedContextWindow(t *testing.
 	}
 
 	res, err := NewPipeline(tr, &recordingConverter{}, nil).
-		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+		TranslateTrack(batch10Ctx(), trackOf(source), TranslateContext{})
 	require.NoError(t, err)
 	require.Len(t, res.Blocks, 25)
 
@@ -305,7 +305,7 @@ func TestTranslateTrack_HarvestedTermsMergeFirstWinsAcrossChunks(t *testing.T) {
 	}
 
 	res, err := NewPipeline(tr, &recordingConverter{}, nil).
-		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+		TranslateTrack(batch10Ctx(), trackOf(source), TranslateContext{})
 	require.NoError(t, err)
 	require.Len(t, tr.calls, 2, "12 cues at batch size %d", prompts.SubtitleTranslatorBatchSize)
 
@@ -388,7 +388,7 @@ func TestTranslateTrack_StubbornCueUnderCeilingKeepsEnglish(t *testing.T) {
 	tr := &fakeTranslator{fn: alwaysEmptyFor(3)}
 
 	res, err := NewPipeline(tr, &recordingConverter{}, nil).
-		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+		TranslateTrack(batch10Ctx(), trackOf(source), TranslateContext{})
 	require.NoError(t, err, "1 stubborn cue in 20 is exactly the 5%% ceiling, not over it")
 
 	assert.Equal(t, 1, res.StubbornCues)
@@ -447,7 +447,7 @@ func TestTranslateTrack_UsageAggregatesAcrossChunksAndRetries(t *testing.T) {
 	}
 
 	res, err := NewPipeline(tr, &recordingConverter{}, nil).
-		TranslateTrack(context.Background(), trackOf(source), TranslateContext{})
+		TranslateTrack(batch10Ctx(), trackOf(source), TranslateContext{})
 	require.NoError(t, err)
 
 	// 2 chunks + 1 quality retry = 3 billed calls.
@@ -961,7 +961,7 @@ func TestTranslateTrack_RecordsPromptCacheVerdictFromTheFirstChunk(t *testing.T)
 			}
 
 			scope := &processScope{ref: MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie}}
-			ctx := withProcessScope(context.Background(), scope)
+			ctx := withProcessScope(batch10Ctx(), scope)
 
 			_, err := NewPipeline(tr, &recordingConverter{}, nil).TranslateTrack(ctx, trackOf(source), TranslateContext{})
 			require.NoError(t, err)
@@ -1041,4 +1041,47 @@ func TestTranslateTrack_MisalignedCueIsRetriedWithGlossaryAnchors(t *testing.T) 
 	assert.Equal(t, []int{2}, tr.calls[1].indexes(), "only the drifted cue is resent")
 	assert.Equal(t, "在擂台上打死過一個人。", res.Blocks[1].Text)
 	assert.Equal(t, 0, res.StubbornCues)
+}
+
+// batch10Ctx pins a model the app still translates 10 cues at a time, so the
+// batching tests keep their numbers after disc-2026-10-translation-batch-size-
+// default gave the default model (claude-sonnet-5) a batch of 50.
+func batch10Ctx() context.Context {
+	return ai.WithModelID(context.Background(), "claude-haiku-4-5")
+}
+
+// disc-2026-10-translation-batch-size-default: the chunk size follows the
+// model the run translates with — Sonnet (the default) 50, Gemini Flash-Lite
+// 20, an unmeasured model 10.
+func TestTranslateTrack_BatchSizeFollowsTheModel(t *testing.T) {
+	texts := make([]string, 0, 60)
+	for i := 1; i <= 60; i++ {
+		texts = append(texts, fmt.Sprintf("Line %d.", i))
+	}
+	source := cues(texts...)
+	for name, tc := range map[string]struct {
+		ctx       context.Context
+		wantSizes []int
+	}{
+		"default model (sonnet)": {context.Background(), []int{50, 10}},
+		"gemini flash-lite":      {ai.WithModelID(context.Background(), "gemini-3.5-flash-lite"), []int{20, 20, 20}},
+		"unmeasured (haiku)":     {batch10Ctx(), []int{10, 10, 10, 10, 10, 10}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			tr := &fakeTranslator{fn: func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+				out := make(map[int]string, len(blocks))
+				for _, b := range blocks {
+					out[b.Index] = fmt.Sprintf("第%d句", b.Index)
+				}
+				return out, ai.CompletionUsage{}, nil
+			}}
+			_, err := NewPipeline(tr, &recordingConverter{}, nil).TranslateTrack(tc.ctx, trackOf(source), TranslateContext{})
+			require.NoError(t, err)
+			sizes := make([]int, 0, len(tr.calls))
+			for _, c := range tr.calls {
+				sizes = append(sizes, len(c.blocks))
+			}
+			assert.Equal(t, tc.wantSizes, sizes)
+		})
+	}
 }

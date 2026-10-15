@@ -124,7 +124,9 @@ func TestModelCatalog_ListsEachProviderOnlyWhenItsKeyResolves(t *testing.T) {
 }
 
 func TestGenerationCandidates_PacedModelQuotesMoreMinutes(t *testing.T) {
-	// 60 runtime minutes ≈ 835 cues ≈ 84 batches; at 13 s a batch that is ~18 extra minutes.
+	// 60 runtime minutes ≈ 835 cues ≈ 42 batches of 20 (Flash-Lite's batch,
+	// disc-2026-10-translation-batch-size-default); at 13 s a batch that is
+	// ~9 extra minutes.
 	svc := NewGenerationCandidateService(&stubMovieFinder{movies: []models.Movie{movieRow("m1", "Dune", "/m/dune.mkv", 60, "")}}, nil, nil, &stubPredictor{probeRoute: RouteExtract}, false, 0, nil)
 	svc.SetModelCatalog(&stubCandidateCatalog{
 		models: []ai.ModelInfo{
@@ -143,5 +145,5 @@ func TestGenerationCandidates_PacedModelQuotesMoreMinutes(t *testing.T) {
 	require.NoError(t, err)
 	claude := res.EstimatedMinutesByModel["claude-sonnet-5"]
 	gemini := res.EstimatedMinutesByModel["gemini-3.5-flash-lite"]
-	assert.InDelta(t, 18, gemini-claude, 2, "claude %v gemini %v", claude, gemini)
+	assert.InDelta(t, 9, gemini-claude, 1, "claude %v gemini %v", claude, gemini)
 }

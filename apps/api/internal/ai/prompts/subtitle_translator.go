@@ -36,9 +36,34 @@ const SubtitleTranslatorPromptVersion = "m1-v5"
 // read-only context for each translation batch to maintain consistency (AC #2).
 const SubtitleTranslatorContextWindow = 5
 
-// SubtitleTranslatorBatchSize is the number of subtitle blocks per Claude request.
-// Balances API cost with translation quality.
+// SubtitleTranslatorBatchSize is the number of subtitle blocks per request for
+// a model nobody has measured at another size. Read the batch for a run through
+// SubtitleTranslatorBatchSizeFor, never this constant directly.
 const SubtitleTranslatorBatchSize = 10
+
+// subtitleTranslatorBatchSizes are the models measured on the golden-v2 exam
+// at a different batch (disc-2026-10-translation-batch-size-exam, 2026-10-15,
+// eval/golden-v2-2026-10/*-batch*.json). Only measured models are listed — an
+// unmeasured model keeps SubtitleTranslatorBatchSize.
+//   - claude-sonnet-5: 50 cues scored 0.5%/96.5% and 0.5%/96.0% (ruined /
+//     natural) against 1.5%/90.0% at 10, and costs less (the system prompt,
+//     glossary and context are sent a fifth as often).
+//   - gemini-3.5-flash-lite: 20 cues held A on four runs (2.0–3.0% / 89–92%);
+//     50 broke 4 names on one run and 100 dropped the glossary wholesale on
+//     another (19 name mismatches, grade B) — the one thing Vido promises.
+var subtitleTranslatorBatchSizes = map[string]int{
+	"claude-sonnet-5":       50,
+	"gemini-3.5-flash-lite": 20,
+}
+
+// SubtitleTranslatorBatchSizeFor is the number of subtitle blocks per request
+// for model (disc-2026-10-translation-batch-size-default).
+func SubtitleTranslatorBatchSizeFor(model string) int {
+	if n, ok := subtitleTranslatorBatchSizes[model]; ok {
+		return n
+	}
+	return SubtitleTranslatorBatchSize
+}
 
 // SubtitleTranslatorSystemPrompt instructs Claude to translate English subtitle
 // dialogue into natural Traditional Chinese (Taiwan usage).

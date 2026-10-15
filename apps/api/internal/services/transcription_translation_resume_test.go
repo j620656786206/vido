@@ -118,7 +118,7 @@ func TestTranslateSRT_WithoutAStoreIsUnchanged(t *testing.T) {
 	svc, _ := resumeWiredService(t, completer, nil)
 	tmp := t.TempDir()
 
-	_, _, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB,
+	_, _, err := svc.translateAndPersist(batch10Ctx(), "job-1", models.SubtitleRunMediaMovie, uuidB,
 		multiCueSRT(25), tmp+"/Movie.en.srt", tmp+"/Movie.mkv", tmp, true)
 
 	require.NoError(t, err)

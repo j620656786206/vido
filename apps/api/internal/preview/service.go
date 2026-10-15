@@ -150,7 +150,8 @@ func (s *Service) EstimateUSD(model string) float64 {
 		level = s.localization.Resolve(context.Background()).Level
 	}
 	systemTokens := float64(len(prompts.ComposeInvariantSystemPrompt(level))) / estCharsPerToken
-	batches := float64((PreviewCues + prompts.SubtitleTranslatorBatchSize - 1) / prompts.SubtitleTranslatorBatchSize)
+	batchSize := prompts.SubtitleTranslatorBatchSizeFor(model)
+	batches := float64((PreviewCues + batchSize - 1) / batchSize)
 	inTokens := batches*systemTokens + float64(PreviewCues*estTokensPerCueIn) + float64((batches-1)*prompts.SubtitleTranslatorContextWindow*estTokensPerCueIn)
 	outTokens := float64(PreviewCues * estTokensPerCueOut)
 	p := ai.PricingFor(model)

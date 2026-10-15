@@ -580,7 +580,8 @@ func (s *GenerationCandidateService) SetTranslationPacing(fn func(model string) 
 const cuesPerRuntimeMinute = 13.92
 
 // pacingMinutes is the extra wall-clock a paced model (Gemini's free tier)
-// adds: one gap per batch of prompts.SubtitleTranslatorBatchSize cues.
+// adds: one gap per batch of that model's batch size
+// (prompts.SubtitleTranslatorBatchSizeFor).
 func (s *GenerationCandidateService) pacingMinutes(route RoutePrediction, minutes float64, model string) float64 {
 	if s.translationPacing == nil || (route != RouteASR && route != RouteExtract) {
 		return 0
@@ -589,7 +590,7 @@ func (s *GenerationCandidateService) pacingMinutes(route RoutePrediction, minute
 	if gap <= 0 {
 		return 0
 	}
-	batches := math.Ceil(minutes * cuesPerRuntimeMinute / float64(prompts.SubtitleTranslatorBatchSize))
+	batches := math.Ceil(minutes * cuesPerRuntimeMinute / float64(prompts.SubtitleTranslatorBatchSizeFor(model)))
 	return batches * gap.Minutes()
 }
 

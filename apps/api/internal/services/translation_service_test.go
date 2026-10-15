@@ -99,7 +99,7 @@ func TestTranslationService_Translate_MultipleBatches(t *testing.T) {
 	}
 
 	svc := NewTranslationService(customMock, nil)
-	result, err := svc.Translate(context.Background(), blocks, nil)
+	result, err := svc.Translate(batch10Ctx(), blocks, nil)
 	require.NoError(t, err)
 	require.Len(t, result, 15)
 
@@ -144,7 +144,7 @@ func TestTranslationService_Translate_ContextPassing(t *testing.T) {
 	}
 
 	svc := NewTranslationService(trackingMock, nil)
-	_, err := svc.Translate(context.Background(), blocks, nil)
+	_, err := svc.Translate(batch10Ctx(), blocks, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 2, trackingMock.callCount)
 
@@ -856,7 +856,7 @@ func TestTranslateWithGlossaryHarvest_MetadataComposedOncePerRun(t *testing.T) {
 		blocks = append(blocks, TranslationBlock{Index: i, Text: fmt.Sprintf("Line %d", i)})
 	}
 
-	_, _, _, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil,
+	_, _, _, err := svc.TranslateWithGlossaryHarvest(batch10Ctx(), blocks, nil, nil,
 		WithMediaMetadata(sampleShowMetadata()))
 	require.NoError(t, err)
 	require.Len(t, mock.calls, 3, "25 blocks at batch size 10 = 3 batches")
@@ -905,12 +905,26 @@ func TestTranslateWithGlossary_BatchSizeOption(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := &echoIndexCompleter{}
 			svc := NewTranslationService(m, nil)
-			out, _, err := svc.TranslateWithGlossary(context.Background(), blocks, nil, nil, tc.opts...)
+			out, _, err := svc.TranslateWithGlossary(batch10Ctx(), blocks, nil, nil, tc.opts...)
 			require.NoError(t, err)
 			require.Len(t, out, 25)
 			assert.Equal(t, "中文25", out[24].Text)
 			assert.Equal(t, tc.wantCalls, m.calls)
 		})
 	}
+	// disc-2026-10-translation-batch-size-default: with no model on the ctx
+	// the run uses the deployment default (claude-sonnet-5), batched by 50.
+	m := &echoIndexCompleter{}
+	out, _, err := NewTranslationService(m, nil).TranslateWithGlossary(context.Background(), blocks, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, out, 25)
+	assert.Equal(t, 1, m.calls, "25 cues fit in one Sonnet batch of 50")
 	assert.Equal(t, 10, prompts.SubtitleTranslatorBatchSize, "the app default must not move with this option")
+}
+
+// batch10Ctx pins a model the app still translates 10 cues at a time, so the
+// batching tests keep their numbers after disc-2026-10-translation-batch-size-
+// default gave the default model (claude-sonnet-5) a batch of 50.
+func batch10Ctx() context.Context {
+	return ai.WithModelID(context.Background(), "claude-haiku-4-5")
 }

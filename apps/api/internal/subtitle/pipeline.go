@@ -906,7 +906,10 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 
 	// Chunk numbering is derived once so the per-chunk observation can report
 	// "N of M" without the caller having to recompute the batching rule.
-	totalChunks := (len(source) + prompts.SubtitleTranslatorBatchSize - 1) / prompts.SubtitleTranslatorBatchSize
+	// disc-2026-10-translation-batch-size-default: the batch belongs to the
+	// model this run translates with (Sonnet 50, Gemini Flash-Lite 20, others 10).
+	batchSize := prompts.SubtitleTranslatorBatchSizeFor(p.currentModelID(ctx))
+	totalChunks := (len(source) + batchSize - 1) / batchSize
 
 	// The ceiling denominator is the DELIVERED track, not always `source`: with
 	// a warm segment cache, sub-1-5b hands this stage only the miss subset
@@ -917,10 +920,10 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 	// processScope.
 	delivered := ceilingTotal(ctx, len(source))
 
-	for start := 0; start < len(source); start += prompts.SubtitleTranslatorBatchSize {
-		end := min(start+prompts.SubtitleTranslatorBatchSize, len(source))
+	for start := 0; start < len(source); start += batchSize {
+		end := min(start+batchSize, len(source))
 		chunk := source[start:end]
-		chunkNumber := start/prompts.SubtitleTranslatorBatchSize + 1
+		chunkNumber := start/batchSize + 1
 
 		// A whole track is tens of sequential chunks; check cancellation at the
 		// boundary so a shutdown stops promptly. Both sentinels are chained so
