@@ -1,6 +1,6 @@
 # Disc：報價跟著新批次重算——Sonnet 片內字幕每小時 US$0.48 → 0.28、聽寫 1.30 → 0.68
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-10-translation-batch-size-default` 與 `disc-2026-10-translation-batch-truncation` 之後，Sonnet 一次 50 句、不想，實際一集便宜約一半，但選片畫面和 README 還在用舊費率（報約兩倍）。Alexyu 2026-10-15 選 A：在正式機跑幾集、用實際帳單重算。
 
@@ -33,7 +33,7 @@ Status: review
 - [x] T1 費率與基準（AC 1～3）
 - [x] T2 文件（AC 4）
 - [x] T3 測試（AC 5）
-- [ ] T4 正式機（AC 6，合併後）
+- [x] T4 正式機（AC 6）：2026-10-15 image 5873a474 重新分析：片內字幕候選 52.35 分 → US$0.24、57.5 分 → US$0.27、42.3 分 → US$0.20（原本同長度約 US$0.42～0.46）；全片庫總報價 US$1,247 → US$751。
 
 ### Time-dependent visual coverage
 
