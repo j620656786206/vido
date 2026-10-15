@@ -140,13 +140,13 @@ func TestMergeReport_RefusesABatchSizeExperiment(t *testing.T) {
 // — a Sonnet report must be measured at 50, an old batch-10 one is refused.
 func TestMergeReport_AppBatchIsPerModel(t *testing.T) {
 	rep := sampleReport("A")
-	rep.ModelID = "claude-sonnet-5"
-	rep.BatchSize = 50
+	rep.ModelID = "gemini-3.5-flash-lite"
+	rep.BatchSize = 20
 	if _, err := ratingFromReport(rep); err != nil {
-		t.Fatalf("Sonnet at its app batch must merge: %v", err)
+		t.Fatalf("Flash-Lite at its app batch must merge: %v", err)
 	}
 	rep.BatchSize = 0 // legacy report, measured at 10
 	if _, err := ratingFromReport(rep); err == nil {
-		t.Fatal("a Sonnet report measured at 10 no longer describes how the app translates")
+		t.Fatal("a Flash-Lite report measured at 10 no longer describes how the app translates")
 	}
 }

@@ -913,12 +913,12 @@ func TestTranslateWithGlossary_BatchSizeOption(t *testing.T) {
 		})
 	}
 	// disc-2026-10-translation-batch-size-default: with no model on the ctx
-	// the run uses the deployment default (claude-sonnet-5), batched by 50.
+	// the run uses the deployment default (claude-sonnet-5) — back at 10.
 	m := &echoIndexCompleter{}
 	out, _, err := NewTranslationService(m, nil).TranslateWithGlossary(context.Background(), blocks, nil, nil)
 	require.NoError(t, err)
 	require.Len(t, out, 25)
-	assert.Equal(t, 1, m.calls, "25 cues fit in one Sonnet batch of 50")
+	assert.Equal(t, 3, m.calls, "Sonnet translates 10 per request again")
 	assert.Equal(t, 10, prompts.SubtitleTranslatorBatchSize, "the app default must not move with this option")
 }
 

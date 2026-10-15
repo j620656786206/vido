@@ -1,6 +1,6 @@
 # Disc：翻譯每批送幾句改成「看模型」——Sonnet 50 句、Gemini Flash-Lite 20 句、其他照舊 10 句
 
-Status: review
+Status: done
 
 **Source:** `disc-2026-10-translation-batch-size-exam`（PR #802）的量測。Alexyu 2026-10-15 選 **A**：Gemini 改 20 句；Claude Sonnet 再考一次 50 句，還是一樣好就也改。第二次 Sonnet 50 句：0.5%／96.0%（第一次 0.5%／96.5%；10 句是 1.5%／90.0%）→ 改。
 
@@ -27,13 +27,13 @@ Status: review
 - [x] T2 四個讀取點（AC 2）
 - [x] T3 考卷工具與 merge（AC 3）
 - [x] T4 測試（AC 4、5）
-- [ ] T5 正式機驗證（AC 6，合併後）
+- [x] T5 正式機驗證（AC 6）：❌ 2026-10-15 11:27 末日光明 S01E04（image 768ca070、預設 Sonnet、50 句一批）：474 句分 10 批，第 4 批（151–200 句）回應頂到 4096 tokens 上限被截斷、無法解析，**整個 run 失敗**，白花 US$0.126。前 3 批正常（輸出 748／2,064／845 tokens）。→ 當天 hotfix 把 Sonnet 退回 10 句（`fix/sonnet-batch-back-to-10`），Gemini 20 句保留；根因與「截斷就切半重翻」另立 `disc-2026-10-translation-batch-truncation`。
 
 ## Dev Notes
 
 - 只改量過的模型。Haiku、其他 Claude、其他 Gemini 都維持 10，量過再加進表裡。
 - `model_ratings.json` 裡 Gemini 的那列是 10 句一批量的；20 句四次都持平，不急著重新發布。
-- 回應上限 `TranslationMaxTokens = 4096`（`translation_service.go:36`，兩條路共用）：50 句中文約 2,000 tokens＋名詞回報，考卷上 Sonnet 50 句兩次都沒有被截斷（0 句回傳英文）；請求逾時由同一個上限推算（`ai.RequestTimeoutFor`），不變。
+- 回應上限 `TranslationMaxTokens = 4096`（`translation_service.go:36`，兩條路共用）：考卷上 Sonnet 50 句兩次都沒有被截斷，**但正式機第一集就有一批頂到上限**（見 T5）——考卷 200 句來自多部片、句子短，估「50 句約 2,000 tokens」是錯的。
 - 更大的批次讓「一批失敗」時留下的英文更多（Sonnet 一批 50 句）；既有的機制（品質沒過只重送那幾句、傳輸失敗重試、連兩批失敗就停）不變。
 
 ### Time-dependent visual coverage
