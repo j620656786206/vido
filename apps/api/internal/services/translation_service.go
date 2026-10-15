@@ -423,7 +423,9 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 	cfg := newTranslateConfig(opts)
 	systemPrompt := composeSystemPrompt(cfg.metadata, cfg.level, cfg.episode)
 
-	batchSize := prompts.SubtitleTranslatorBatchSize
+	// disc-2026-10-translation-batch-size-default: the batch belongs to the
+	// model this run translates with; an explicit WithBatchSize still wins.
+	batchSize := prompts.SubtitleTranslatorBatchSizeFor(s.EffectiveModelID(ctx))
 	if cfg.batchSize > 0 {
 		batchSize = cfg.batchSize
 	}

@@ -801,7 +801,7 @@ func TestTranslateAndPersist_BelowThresholdPartialStaysFound(t *testing.T) {
 	svc := newWriterWiredService(t, mock, writer)
 
 	tmpDir := t.TempDir()
-	zhPath, outcome, err := svc.translateAndPersist(context.Background(), "job-1", models.SubtitleRunMediaMovie, uuidB, srt.String(),
+	zhPath, outcome, err := svc.translateAndPersist(batch10Ctx(), "job-1", models.SubtitleRunMediaMovie, uuidB, srt.String(),
 		filepath.Join(tmpDir, "m.en.srt"), filepath.Join(tmpDir, "m.mkv"), tmpDir, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, zhPath)

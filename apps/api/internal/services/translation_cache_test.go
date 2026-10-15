@@ -202,7 +202,7 @@ func TestTranslate_ResumesFromTheCachedBatches(t *testing.T) {
 	// First run: the ceiling trips on batch 121 (1,200 cues already paid for).
 	first := &countingCompleter{failAt: 121}
 	svc := NewTranslationService(first, nil)
-	_, _, _, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil,
+	_, _, _, err := svc.TranslateWithGlossaryHarvest(batch10Ctx(), blocks, nil, nil,
 		WithSegmentCache(store, version))
 
 	require.Error(t, err)
@@ -217,7 +217,7 @@ func TestTranslate_ResumesFromTheCachedBatches(t *testing.T) {
 	second := &countingCompleter{}
 	svc2 := NewTranslationService(second, nil)
 	var progress []float64
-	result, _, outcome, err := svc2.TranslateWithGlossaryHarvest(context.Background(), blocks, nil,
+	result, _, outcome, err := svc2.TranslateWithGlossaryHarvest(batch10Ctx(), blocks, nil,
 		func(pct float64) { progress = append(progress, pct) }, WithSegmentCache(store, version))
 
 	require.NoError(t, err)
@@ -240,7 +240,7 @@ func TestTranslate_ResumesFromTheCachedBatches(t *testing.T) {
 	// A third run pays nothing at all.
 	third := &countingCompleter{}
 	svc3 := NewTranslationService(third, nil)
-	_, _, _, err = svc3.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil,
+	_, _, _, err = svc3.TranslateWithGlossaryHarvest(batch10Ctx(), blocks, nil, nil,
 		WithSegmentCache(store, version))
 	require.NoError(t, err)
 	assert.Equal(t, 0, third.count())
@@ -280,7 +280,7 @@ func TestTranslate_CacheFailuresNeverFailThePaidRun(t *testing.T) {
 		store.getErr = errors.New("db locked")
 		completer := &countingCompleter{}
 		svc := NewTranslationService(completer, nil)
-		result, _, _, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil,
+		result, _, _, err := svc.TranslateWithGlossaryHarvest(batch10Ctx(), blocks, nil, nil,
 			WithSegmentCache(store, version))
 		require.NoError(t, err)
 		assert.Equal(t, 3, completer.count())
@@ -292,7 +292,7 @@ func TestTranslate_CacheFailuresNeverFailThePaidRun(t *testing.T) {
 		store.setErr = errors.New("disk full")
 		completer := &countingCompleter{}
 		svc := NewTranslationService(completer, nil)
-		result, _, outcome, err := svc.TranslateWithGlossaryHarvest(context.Background(), blocks, nil, nil,
+		result, _, outcome, err := svc.TranslateWithGlossaryHarvest(batch10Ctx(), blocks, nil, nil,
 			WithSegmentCache(store, version))
 		require.NoError(t, err)
 		assert.Equal(t, 3, completer.count())
@@ -378,12 +378,12 @@ func TestTranslate_NoStoreIsTheOldBehaviour(t *testing.T) {
 
 	withNil := &countingCompleter{}
 	a, _, outA, errA := NewTranslationService(withNil, nil).TranslateWithGlossaryHarvest(
-		context.Background(), blocks, nil, nil)
+		batch10Ctx(), blocks, nil, nil)
 	require.NoError(t, errA)
 
 	plain := &countingCompleter{}
 	b, _, outB, errB := NewTranslationService(plain, nil).TranslateWithGlossaryHarvest(
-		context.Background(), blocks, nil, nil, WithSegmentCache(nil, testRunVersion()))
+		batch10Ctx(), blocks, nil, nil, WithSegmentCache(nil, testRunVersion()))
 	require.NoError(t, errB)
 
 	assert.Equal(t, a, b)
@@ -397,7 +397,7 @@ func TestTranslate_NoStoreIsTheOldBehaviour(t *testing.T) {
 func TestTranslate_CancelledRunKeepsWhatItPaidFor(t *testing.T) {
 	blocks := cacheTestBlocks(50)
 	store := newMemoryStore()
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(batch10Ctx())
 	// Cancelling from INSIDE the third call makes the race deterministic —
 	// a timer would finish after a 5-batch run that takes microseconds.
 	completer := &cancellingCompleter{cancelAt: 3, cancel: cancel}
@@ -412,7 +412,7 @@ func TestTranslate_CancelledRunKeepsWhatItPaidFor(t *testing.T) {
 	// …and the next run picks up exactly there.
 	resumed := &countingCompleter{}
 	_, _, _, err = NewTranslationService(resumed, nil).TranslateWithGlossaryHarvest(
-		context.Background(), blocks, nil, nil, WithSegmentCache(store, testRunVersion()))
+		batch10Ctx(), blocks, nil, nil, WithSegmentCache(store, testRunVersion()))
 	require.NoError(t, err)
 	assert.Equal(t, 3, resumed.count(), "30 remaining cues = 3 batches")
 }

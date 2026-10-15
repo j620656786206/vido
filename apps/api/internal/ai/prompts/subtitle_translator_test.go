@@ -307,3 +307,19 @@ func TestSubtitleTranslatorSystemPrompt_SecondPersonDefaultsToNi(t *testing.T) {
 	// not be read as part of.
 	assert.Less(t, strings.Index(p, `8. "You" has no gender`), strings.Index(p, "## Per-cue alignment"))
 }
+
+// disc-2026-10-translation-batch-size-default: only the models measured on the
+// golden-v2 exam move off the default.
+func TestSubtitleTranslatorBatchSizeFor(t *testing.T) {
+	for model, want := range map[string]int{
+		"claude-sonnet-5":       50,
+		"gemini-3.5-flash-lite": 20,
+		"claude-haiku-4-5":      SubtitleTranslatorBatchSize,
+		"":                      SubtitleTranslatorBatchSize,
+		"some-future-model":     SubtitleTranslatorBatchSize,
+	} {
+		if got := SubtitleTranslatorBatchSizeFor(model); got != want {
+			t.Errorf("%q: got %d, want %d", model, got, want)
+		}
+	}
+}

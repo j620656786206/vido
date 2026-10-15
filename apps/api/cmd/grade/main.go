@@ -220,6 +220,19 @@ func parseFlags(args []string) (config, error) {
 	return cfg, nil
 }
 
+// effectiveBatchSize is --batch-size when given, else the batch the app uses
+// for the model under test.
+func effectiveBatchSize(cfg config) int {
+	if cfg.batchSize > 0 {
+		return cfg.batchSize
+	}
+	model := cfg.model
+	if cfg.openaiModel != "" {
+		model = cfg.openaiModel
+	}
+	return prompts.SubtitleTranslatorBatchSizeFor(model)
+}
+
 // localModelPrefix stamps a local model's report so it can never collide with
 // a catalog id, and so --merge can refuse it.
 const localModelPrefix = "local:"
@@ -289,8 +302,12 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 	}
 
 	translator := services.NewTranslationService(underTest, nil)
-	batchOpt := services.WithBatchSize(cfg.batchSize)
-	chunkSize := max(translateChunk, cfg.batchSize)
+	// The batch the app would use for this model unless the run overrides it
+	// (disc-2026-10-translation-batch-size-default): a report must say which
+	// batch it measured, and --merge only takes the app's.
+	batchSize := effectiveBatchSize(cfg)
+	batchOpt := services.WithBatchSize(batchSize)
+	chunkSize := max(translateChunk, batchSize)
 	// Chunked on purpose: TranslateWithGlossary returns NOTHING when the
 	// budget sentinel fires mid-track (the segment cache is its resume seam,
 	// and this run has none), so a stop in cue 180 would throw away 179 paid
@@ -364,18 +381,12 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 	if err != nil {
 		return rep, err
 	}
-	if !local && cfg.batchSize != 0 {
-		rep.BatchSize = cfg.batchSize
+	if !local || cfg.promptStyle == promptStyleProduction {
+		rep.BatchSize = batchSize
 	}
 	if local {
 		rep.PromptStyle = cfg.promptStyle
 		rep.Endpoint = cfg.openaiBaseURL
-		if cfg.promptStyle == promptStyleProduction {
-			rep.BatchSize = cfg.batchSize
-			if rep.BatchSize == 0 {
-				rep.BatchSize = prompts.SubtitleTranslatorBatchSize
-			}
-		}
 		rep.EpisodeMinutesEst = eval.EpisodeMinutes(rep.TranslateMinutes, rep.Cues)
 		if rep.JudgeModel != "" {
 			rep.JudgeNote += "受考模型是本機模型、不是 Claude，沒有自評偏誤，但分數仍是 AI 評分。"

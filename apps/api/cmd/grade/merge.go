@@ -37,9 +37,13 @@ func ratingFromReport(rep eval.Report) (ai.ModelRating, error) {
 	}
 	// disc-2026-10-translation-batch-size-exam: a batch-size experiment is not
 	// how the app translates, so its letter would describe a product nobody
-	// runs. 0 = a Claude run at the default (the field is omitted).
-	if rep.BatchSize != 0 && rep.BatchSize != prompts.SubtitleTranslatorBatchSize {
-		return ai.ModelRating{}, fmt.Errorf("report for %s was measured at --batch-size %d but the app translates %d per request — an experiment, not mergeable", rep.ModelID, rep.BatchSize, prompts.SubtitleTranslatorBatchSize)
+	// runs. 0 = a report from before the field was always stamped (batch 10).
+	measured := rep.BatchSize
+	if measured == 0 {
+		measured = prompts.SubtitleTranslatorBatchSize
+	}
+	if app := prompts.SubtitleTranslatorBatchSizeFor(rep.ModelID); measured != app {
+		return ai.ModelRating{}, fmt.Errorf("report for %s was measured at batch %d but the app translates %d per request for this model — an experiment, not mergeable", rep.ModelID, measured, app)
 	}
 	if rep.SampleVersion != eval.SampleVersion {
 		return ai.ModelRating{}, fmt.Errorf("report measured on %q but this build embeds %q — re-run cmd/grade", rep.SampleVersion, eval.SampleVersion)

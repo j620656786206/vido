@@ -105,6 +105,7 @@ func writeJSON(t *testing.T, path string, v any) {
 func TestMergeReport_LocalPrefixedCatalogModelIsPublishedUnderItsRealID(t *testing.T) {
 	rep := sampleReport("A")
 	rep.ModelID = "local:gemini-3.5-flash-lite"
+	rep.BatchSize = prompts.SubtitleTranslatorBatchSizeFor("gemini-3.5-flash-lite")
 	row, err := ratingFromReport(rep)
 	if err != nil {
 		t.Fatal(err)
@@ -132,5 +133,20 @@ func TestMergeReport_RefusesABatchSizeExperiment(t *testing.T) {
 	rep.BatchSize = prompts.SubtitleTranslatorBatchSize
 	if _, err := ratingFromReport(rep); err != nil {
 		t.Fatalf("a report at the app's batch size stays mergeable: %v", err)
+	}
+}
+
+// disc-2026-10-translation-batch-size-default: "the app's batch" is per model
+// — a Sonnet report must be measured at 50, an old batch-10 one is refused.
+func TestMergeReport_AppBatchIsPerModel(t *testing.T) {
+	rep := sampleReport("A")
+	rep.ModelID = "claude-sonnet-5"
+	rep.BatchSize = 50
+	if _, err := ratingFromReport(rep); err != nil {
+		t.Fatalf("Sonnet at its app batch must merge: %v", err)
+	}
+	rep.BatchSize = 0 // legacy report, measured at 10
+	if _, err := ratingFromReport(rep); err == nil {
+		t.Fatal("a Sonnet report measured at 10 no longer describes how the app translates")
 	}
 }
