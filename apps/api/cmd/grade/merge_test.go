@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/eval"
 )
 
@@ -119,5 +120,17 @@ func TestMergeReport_LocalPrefixedCatalogModelIsPublishedUnderItsRealID(t *testi
 	rep.ModelID = "local:claude-sonnet-5"
 	if _, err := ratingFromReport(rep); err == nil {
 		t.Fatal("a Claude id behind a local endpoint is not the Claude the app dispatches to")
+	}
+}
+
+func TestMergeReport_RefusesABatchSizeExperiment(t *testing.T) {
+	rep := sampleReport("A")
+	rep.BatchSize = 50
+	if _, err := ratingFromReport(rep); err == nil || !strings.Contains(err.Error(), "experiment") {
+		t.Fatalf("a batch-50 report must not be published, got %v", err)
+	}
+	rep.BatchSize = prompts.SubtitleTranslatorBatchSize
+	if _, err := ratingFromReport(rep); err != nil {
+		t.Fatalf("a report at the app's batch size stays mergeable: %v", err)
 	}
 }

@@ -1,0 +1,1827 @@
+{
+  "model_id": "claude-sonnet-5",
+  "sample_version": "golden-v2",
+  "prompt_version": "m1-v5+zh-tw-lex-1+standard",
+  "lexicon_version": "zh-tw-lex-1",
+  "glossary_version": "b6fca95b1aa61361b0d70ed3175950876af475c0dbd782220692daf8dc2d42ff",
+  "judge_model": "claude-sonnet-5",
+  "judge_version": "judge-v1",
+  "cues": 200,
+  "zero_rate": 0.005,
+  "natural_rate": 0.965,
+  "rule_fail_rate": 0.005,
+  "rule_fails_by_reason": {
+    "name_mismatch": 1
+  },
+  "cost_usd": 0.319044,
+  "minutes": 2.20963554375,
+  "grade": "A",
+  "judge_note": "裁判為 Claude（claude-sonnet-5），評 Claude 模型時有自評偏誤；人評校準落地前，分數宜打折看。",
+  "graded_at": "2026-10-15T10:10:11.925384+08:00",
+  "batch_size": 50,
+  "translate_minutes": 1.0080830340333333,
+  "results": [
+    {
+      "id": "tos-01",
+      "source": "tos",
+      "raw": "你真是個混蛋，湯姆。",
+      "final": "你真是個混蛋，湯姆。",
+      "score": 2,
+      "judged": true,
+      "why": "自然道地"
+    },
+    {
+      "id": "tos-02",
+      "source": "tos",
+      "raw": "聽著希莉亞，我們都得追求自己的熱情...",
+      "final": "聽著希莉亞，我們都得追求自己的熱情...",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-03",
+      "source": "tos",
+      "raw": "...妳有妳的機器人學，我只想在太空裡大展身手。",
+      "final": "...妳有妳的機器人學，我只想在太空裡大展身手。",
+      "score": 2,
+      "judged": true,
+      "why": "自然道地"
+    },
+    {
+      "id": "tos-04",
+      "source": "tos",
+      "raw": "你何不乾脆承認，你是被我的機械手嚇到了？",
+      "final": "你何不乾脆承認，你是被我的機械手嚇到了？",
+      "score": 2,
+      "judged": true,
+      "why": "語氣自然"
+    },
+    {
+      "id": "tos-05",
+      "source": "tos",
+      "raw": "我才沒有被嚇到...那是...",
+      "final": "我才沒有被嚇到...那是...",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "tos-06",
+      "source": "tos",
+      "raw": "...好啦！好！",
+      "final": "...好啦！好！",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "tos-07",
+      "source": "tos",
+      "raw": "我是被嚇到了！我每晚都夢到自己被追殺...",
+      "final": "我是被嚇到了！我每晚都夢到自己被追殺...",
+      "score": 1,
+      "judged": true,
+      "why": "被追殺稍重"
+    },
+    {
+      "id": "tos-08",
+      "source": "tos",
+      "raw": "...被那些巨大的死亡機械爪追著跑...",
+      "final": "...被那些巨大的死亡機械爪追著跑...",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-09",
+      "source": "tos",
+      "raw": "「四十年後」隨便啦，湯姆，我們玩完了。",
+      "final": "「四十年後」隨便啦，湯姆，我們玩完了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "tos-10",
+      "source": "tos",
+      "raw": "機器人記憶同步並鎖定完成！",
+      "final": "機器人記憶同步並鎖定完成！",
+      "score": 2,
+      "judged": true,
+      "why": "自然精簡"
+    },
+    {
+      "id": "tos-11",
+      "source": "tos",
+      "raw": "這還真詭異。",
+      "final": "這還真詭異。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "tos-12",
+      "source": "tos",
+      "raw": "你不是應該在樓下嗎？",
+      "final": "你不是應該在樓下嗎？",
+      "score": 2,
+      "judged": true,
+      "why": "自然道地"
+    },
+    {
+      "id": "tos-13",
+      "source": "tos",
+      "raw": "我昨晚聽到你們講話了。",
+      "final": "我昨晚聽到你們講話了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-14",
+      "source": "tos",
+      "raw": "這不是我的錯，你知道的。",
+      "final": "這不是我的錯，你知道的。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-15",
+      "source": "tos",
+      "raw": "準備好了嗎？",
+      "final": "準備好了嗎？",
+      "score": 2,
+      "judged": true,
+      "why": "自然精簡"
+    },
+    {
+      "id": "tos-16",
+      "source": "tos",
+      "raw": "你當然準備好了，你可是搖滾巨星。",
+      "final": "你當然準備好了，你可是搖滾巨星。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-17",
+      "source": "tos",
+      "raw": "情況怎麼樣，貝里？",
+      "final": "情況怎麼樣，貝里？",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-18",
+      "source": "tos",
+      "raw": "我們大概還有十分鐘...",
+      "final": "我們大概還有十分鐘...",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-19",
+      "source": "tos",
+      "raw": "那太好了。",
+      "final": "那太好了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-20",
+      "source": "tos",
+      "raw": "一分鐘後開始！各系統就緒！對，就是你，動起來！",
+      "final": "一分鐘後開始！各系統就緒！對，就是你，動起來！",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-21",
+      "source": "tos",
+      "raw": "走！動作快！走走走！",
+      "final": "走！動作快！走走走！",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "tos-22",
+      "source": "tos",
+      "raw": "我喜歡！快點，走！",
+      "final": "我喜歡！快點，走！",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-23",
+      "source": "tos",
+      "raw": "真不錯。",
+      "final": "真不錯。",
+      "score": 2,
+      "judged": true,
+      "why": "簡潔自然"
+    },
+    {
+      "id": "tos-24",
+      "source": "tos",
+      "raw": "沒什麼好擔心的。",
+      "final": "沒什麼好擔心的。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-25",
+      "source": "tos",
+      "raw": "湯姆。",
+      "final": "湯姆。",
+      "score": 2,
+      "judged": true,
+      "why": "人名正確"
+    },
+    {
+      "id": "tos-26",
+      "source": "tos",
+      "raw": "她來了。",
+      "final": "她來了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-27",
+      "source": "tos",
+      "raw": "現在。",
+      "final": "現在。",
+      "score": 2,
+      "judged": true,
+      "why": "簡潔"
+    },
+    {
+      "id": "tos-28",
+      "source": "tos",
+      "raw": "你愛她。",
+      "final": "你愛她。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-29",
+      "source": "tos",
+      "raw": "她是你的熱情所在！",
+      "final": "她是你的熱情所在！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-30",
+      "source": "tos",
+      "raw": "對她溫柔一點。",
+      "final": "對她溫柔一點。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-31",
+      "source": "tos",
+      "raw": "要誠懇！呃...要溫柔。",
+      "final": "要誠懇！呃...要溫柔。",
+      "score": 2,
+      "judged": true,
+      "why": "語氣自然"
+    },
+    {
+      "id": "tos-32",
+      "source": "tos",
+      "raw": "提醒她什麼是愛。",
+      "final": "提醒她什麼是愛。",
+      "score": 2,
+      "judged": true,
+      "why": "自然簡潔"
+    },
+    {
+      "id": "tos-33",
+      "source": "tos",
+      "raw": "...預備，開始！",
+      "final": "...預備，開始！",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "tos-34",
+      "source": "tos",
+      "raw": "記憶覆寫進行中！",
+      "final": "記憶覆寫進行中！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-35",
+      "source": "tos",
+      "raw": "你真是個混蛋，湯姆！",
+      "final": "你真是個混蛋，湯姆！",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "tos-36",
+      "source": "tos",
+      "raw": "喔...抱歉！抱歉。",
+      "final": "喔...抱歉！抱歉。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-37",
+      "source": "tos",
+      "raw": "聽著希莉亞。",
+      "final": "聽著希莉亞。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "tos-38",
+      "source": "tos",
+      "raw": "我們都得追求自己的熱情。",
+      "final": "我們都得追求自己的熱情。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "tos-39",
+      "source": "tos",
+      "raw": "妳有妳的機器人學...",
+      "final": "妳有妳的機器人學...",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-40",
+      "source": "tos",
+      "raw": "...我只想在太空裡大展身手。",
+      "final": "...我只想在太空裡大展身手。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "tos-41",
+      "source": "tos",
+      "raw": "好了，他們來了。剩兩分鐘！",
+      "final": "好了，他們來了。剩兩分鐘！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-42",
+      "source": "tos",
+      "raw": "快一點，湯姆！",
+      "final": "快一點，湯姆！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-43",
+      "source": "tos",
+      "raw": "加快速度！",
+      "final": "加快速度！",
+      "score": 2,
+      "judged": true,
+      "why": "自然，意思到位"
+    },
+    {
+      "id": "tos-44",
+      "source": "tos",
+      "raw": "你何不乾脆承認，你是被我的機械手嚇到了？",
+      "final": "你何不乾脆承認，你是被我的機械手嚇到了？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-45",
+      "source": "tos",
+      "raw": "聽著希莉亞，我當時還年輕...",
+      "final": "聽著希莉亞，我當時還年輕...",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-46",
+      "source": "tos",
+      "raw": "...又是個混蛋。",
+      "final": "...又是個混蛋。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-47",
+      "source": "tos",
+      "raw": "但那也不該成為毀滅世界的理由。",
+      "final": "但那也不該成為毀滅世界的理由。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-48",
+      "source": "tos",
+      "raw": "他為什麼要這樣？",
+      "final": "他為什麼要這樣？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-49",
+      "source": "tos",
+      "raw": "我們已經試過那個了！",
+      "final": "我們已經試過那個了！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-50",
+      "source": "tos",
+      "raw": "中止！",
+      "final": "中止！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-51",
+      "source": "tos",
+      "raw": "卡！",
+      "final": "卡！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-52",
+      "source": "tos",
+      "raw": "哇啊！",
+      "final": "哇啊！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-53",
+      "source": "tos",
+      "raw": "哇啊！",
+      "final": "哇啊！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-54",
+      "source": "tos",
+      "raw": "不要啊！",
+      "final": "不要啊！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-55",
+      "source": "tos",
+      "raw": "你傷了我的心。",
+      "final": "你傷了我的心。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-56",
+      "source": "tos",
+      "raw": "我知道。",
+      "final": "我知道。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-57",
+      "source": "tos",
+      "raw": "你把我遺忘在人間。",
+      "final": "你把我遺忘在人間。",
+      "score": 2,
+      "judged": true,
+      "why": "自然，詩意"
+    },
+    {
+      "id": "tos-58",
+      "source": "tos",
+      "raw": "我知道。",
+      "final": "我知道。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-59",
+      "source": "tos",
+      "raw": "我應該直接把你捏碎。",
+      "final": "我應該直接把你捏碎。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-60",
+      "source": "tos",
+      "raw": "我...",
+      "final": "我...",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-61",
+      "source": "tos",
+      "raw": "對不起。",
+      "final": "對不起。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-62",
+      "source": "tos",
+      "raw": "即興發揮得不錯。",
+      "final": "即興發揮得不錯。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-63",
+      "source": "tos",
+      "raw": "不是我的錯！",
+      "final": "不是我的錯！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-64",
+      "source": "tos",
+      "raw": "這次算了。",
+      "final": "這次算了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然，語氣合理"
+    },
+    {
+      "id": "tos-65",
+      "source": "tos",
+      "raw": "片場安靜！",
+      "final": "片場安靜！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-66",
+      "source": "tos",
+      "raw": "時間不夠了！",
+      "final": "時間不夠了！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-67",
+      "source": "tos",
+      "raw": "快點！",
+      "final": "快點！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-68",
+      "source": "tos",
+      "raw": "啊啊啊啊啊！",
+      "final": "啊啊啊啊啊！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-69",
+      "source": "tos",
+      "raw": "記憶覆寫，90%。",
+      "final": "記憶覆寫，90%。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-70",
+      "source": "tos",
+      "raw": "隊長！我們必須中止！",
+      "final": "隊長！我們必須中止！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-71",
+      "source": "tos",
+      "raw": "世界已經變了，希莉亞...",
+      "final": "世界已經變了，希莉亞...",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-72",
+      "source": "tos",
+      "raw": "...也許我們也能改變。",
+      "final": "...也許我們也能改變。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-73",
+      "source": "tos",
+      "raw": "記憶覆寫完成！",
+      "final": "記憶覆寫完成！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-74",
+      "source": "tos",
+      "raw": "你知道的。",
+      "final": "你知道的。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "tos-75",
+      "source": "tos",
+      "raw": "這件事可以學到一個教訓。",
+      "final": "這件事可以學到一個教訓。",
+      "score": 1,
+      "judged": true,
+      "why": "稍生硬"
+    },
+    {
+      "id": "tos-76",
+      "source": "tos",
+      "raw": "本來可能更糟。",
+      "final": "本來可能更糟。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-007",
+      "source": "sita",
+      "raw": "瑞克想雇用我！他在一間新片廠。",
+      "final": "瑞克想雇用我！他在一間新片廠。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-013",
+      "source": "sita",
+      "raw": "你怎麼知道那有確切年份？",
+      "final": "你怎麼知道那有確切年份？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-015",
+      "source": "sita",
+      "raw": "14世紀其實算是最近的事。",
+      "final": "14世紀其實算是最近的事。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-022",
+      "source": "sita",
+      "raw": "我知道是因為他們夷平了那座神廟。",
+      "final": "我知道是因為他們夷平了那座神廟。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-026",
+      "source": "sita",
+      "raw": "它就在那裡啊！所以那故事一定是真的。",
+      "final": "它就在那裡啊！所以那故事一定是真的。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "sita-027",
+      "source": "sita",
+      "raw": "大概就跟聖經所根據的事件一樣真實吧。",
+      "final": "大概就跟聖經所根據的事件一樣真實吧。",
+      "score": 2,
+      "judged": true,
+      "why": "自然通順"
+    },
+    {
+      "id": "sita-028",
+      "source": "sita",
+      "raw": "你想知道整個故事嗎？",
+      "final": "你想知道整個故事嗎？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-029",
+      "source": "sita",
+      "raw": "喔，因為羅摩的父親有4個妻子。",
+      "final": "喔，因為羅摩的父親有4個妻子。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-033",
+      "source": "sita",
+      "raw": "4個兒子，3個妻子。好。",
+      "final": "4個兒子，3個妻子。好。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-046",
+      "source": "sita",
+      "raw": "對，西妲我也知道，西妲的父親是賈納楷。",
+      "final": "對，西妲我也知道，西妲的父親是賈納楷。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-047",
+      "source": "sita",
+      "raw": "西妲有很多名字，西妲只是其中一個。",
+      "final": "西妲有很多名字，西妲只是其中一個。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-061",
+      "source": "sita",
+      "raw": "於是她去要求他把羅摩放逐14年",
+      "final": "於是她去要求他把羅摩放逐14年",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-063",
+      "source": "sita",
+      "raw": "基本上就是眼不見為淨。",
+      "final": "基本上就是眼不見為淨。",
+      "score": 1,
+      "judged": true,
+      "why": "眼不見為淨語意稍偏"
+    },
+    {
+      "id": "sita-064",
+      "source": "sita",
+      "raw": "我兒羅摩，今天我想冊封你為阿逾陀的國王",
+      "final": "我兒羅摩，今天我想冊封你為阿逾陀的國王",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-065",
+      "source": "sita",
+      "raw": "但我那邪惡又工於心計的妻子凱寇姨——",
+      "final": "但我那邪惡又工於心計的妻子凱寇姨——",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-067",
+      "source": "sita",
+      "raw": "——剛提醒了我以前許下的一個古老誓言。",
+      "final": "——剛提醒了我以前許下的一個古老誓言。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-069",
+      "source": "sita",
+      "raw": "把你流放到森林裡14年！",
+      "final": "把你流放到森林裡14年！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-075",
+      "source": "sita",
+      "raw": "願神明與你同在。",
+      "final": "願神明與你同在。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-076",
+      "source": "sita",
+      "raw": "滾出去的時候別讓門夾到你屁股。",
+      "final": "滾出去的時候別讓門夾到你屁股。",
+      "score": 2,
+      "judged": true,
+      "why": "自然俚語"
+    },
+    {
+      "id": "sita-078",
+      "source": "sita",
+      "raw": "但既然所有印度男人都信守諾言...",
+      "final": "但既然所有印度男人都信守諾言...",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-084",
+      "source": "sita",
+      "raw": "他馬上就死了嗎？",
+      "final": "他馬上就死了嗎？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-085",
+      "source": "sita",
+      "raw": "有一場很大的戲，非常戲劇化",
+      "final": "有一場很大的戲，非常戲劇化",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-090",
+      "source": "sita",
+      "raw": "他簡直被罪惡感折磨，因為羅摩是那麼好的兒子。",
+      "final": "他簡直被罪惡感折磨，因為羅摩是那麼好的兒子。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-097",
+      "source": "sita",
+      "raw": "然後西妲說：「如果你走，我也走。」",
+      "final": "然後西妲說：「如果你走，我也走。」",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-100",
+      "source": "sita",
+      "raw": "他們騷擾我們的賢人，褻瀆他們的祭火。",
+      "final": "他們騷擾我們的賢人，褻瀆他們的祭火。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-102",
+      "source": "sita",
+      "raw": "可是羅摩，女人的歸屬就是在丈夫身邊！",
+      "final": "可是羅摩，女人的歸屬就是在丈夫身邊！",
+      "score": 1,
+      "judged": true,
+      "why": "歸屬較生硬"
+    },
+    {
+      "id": "sita-103",
+      "source": "sita",
+      "raw": "我願意承受任何苦難。",
+      "final": "我願意承受任何苦難。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-130",
+      "source": "sita",
+      "raw": "這只是六個月的合約，一下子就回來了！",
+      "final": "這只是六個月的合約，一下子就回來了！",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "sita-155",
+      "source": "sita",
+      "raw": "真正讓我佩服的是，他曾是斯里蘭卡的國王。",
+      "final": "真正讓我佩服的是，他曾是斯里蘭卡的國王。",
+      "rule_fails": [
+        "name_mismatch"
+      ],
+      "score": 0,
+      "judged": false
+    },
+    {
+      "id": "sita-160",
+      "source": "sita",
+      "raw": "那座橋至今還在，NASA 的影像是這麼說的。",
+      "final": "那座橋至今還在，NASA 的影像是這麼說的。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-161",
+      "source": "sita",
+      "raw": "真的嗎？NASA 說的？那一定是真的！",
+      "final": "真的嗎？NASA 說的？那一定是真的！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-162",
+      "source": "sita",
+      "raw": "說不定他們是在月球上看到的！",
+      "final": "說不定他們是在月球上看到的！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-165",
+      "source": "sita",
+      "raw": "我把她的名字唸錯了，天啊，他們一定會來找我算帳",
+      "final": "我把她的名字唸錯了，天啊，他們一定會來找我算帳",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "sita-168",
+      "source": "sita",
+      "raw": "拉伐那！羅摩在森林裡殺了你的羅剎！你必須報仇！",
+      "final": "拉伐那！羅摩在森林裡殺了你的羅剎！你必須報仇！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-169",
+      "source": "sita",
+      "raw": "不要這麼做，主上。羅摩很強大。",
+      "final": "不要這麼做，主上。羅摩很強大。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-170",
+      "source": "sita",
+      "raw": "妹妹，別拿妳這些小事來煩我。",
+      "final": "妹妹，別拿妳這些小事來煩我。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "sita-171",
+      "source": "sita",
+      "raw": "親愛的哥哥拉伐那，你見過羅摩的妻子西妲嗎？",
+      "final": "親愛的哥哥拉伐那，你見過羅摩的妻子西妲嗎？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-172",
+      "source": "sita",
+      "raw": "她是全世界最美的女人。",
+      "final": "她是全世界最美的女人。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-179",
+      "source": "sita",
+      "raw": "讓西妲做你的妻子吧，拉伐那。把她從羅摩身邊搶過來！",
+      "final": "讓西妲做你的妻子吧，拉伐那。把她從羅摩身邊搶過來！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-181",
+      "source": "sita",
+      "raw": "我不聽你的任何異議，馬力賈。你現在就得幫我。",
+      "final": "我不聽你的任何異議，馬力賈。你現在就得幫我。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-182",
+      "source": "sita",
+      "raw": "把自己變成一隻美麗的金鹿，引開羅摩的注意。",
+      "final": "把自己變成一隻美麗的金鹿，引開羅摩的注意。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-183",
+      "source": "sita",
+      "raw": "趁西妲沒人保護的時候，我就把她抓走！",
+      "final": "趁西妲沒人保護的時候，我就把她抓走！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-187",
+      "source": "sita",
+      "raw": "我不知道，西妲。這可能是個陷阱！",
+      "final": "我不知道，西妲。這可能是個陷阱！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-189",
+      "source": "sita",
+      "raw": "好吧，西妲。妳要求的這麼少，給我的卻這麼多。",
+      "final": "好吧，西妲。妳要求的這麼少，給我的卻這麼多。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-190",
+      "source": "sita",
+      "raw": "但答應我，我不在的時候妳不會離開小屋。森林很危險。",
+      "final": "但答應我，我不在的時候妳不會離開小屋。森林很危險。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-224",
+      "source": "sita",
+      "raw": "她到底掉了幾次首飾？",
+      "final": "她到底掉了幾次首飾？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-226",
+      "source": "sita",
+      "raw": "我是說，不對，記得吧，她根本沒戴首飾，因為她把所有東西都留下了",
+      "final": "我是說，不對，記得吧，她根本沒戴首飾，因為她把所有東西都留下了",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-230",
+      "source": "sita",
+      "raw": "別去挑戰這些故事的設定。",
+      "final": "別去挑戰這些故事的設定。",
+      "score": 2,
+      "judged": true,
+      "why": "自然，意思清楚"
+    },
+    {
+      "id": "sita-261",
+      "source": "sita",
+      "raw": "戴夫！你在哪裡？",
+      "final": "戴夫！你在哪裡？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-262",
+      "source": "sita",
+      "raw": "在特里凡得琅啊，傻瓜。在家裡。",
+      "final": "在特里凡得琅啊，傻瓜。在家裡。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-263",
+      "source": "sita",
+      "raw": "你家裡有電話？",
+      "final": "你家裡有電話？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-265",
+      "source": "sita",
+      "raw": "你已經離開一個月了，卻從來沒把電話號碼寄電子郵件給我。",
+      "final": "你已經離開一個月了，卻從來沒把電話號碼寄電子郵件給我。",
+      "score": 1,
+      "judged": true,
+      "why": "句式稍生硬"
+    },
+    {
+      "id": "sita-266",
+      "source": "sita",
+      "raw": "我沒寄嗎？嗯，我有個好消息。",
+      "final": "我沒寄嗎？嗯，我有個好消息。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-267",
+      "source": "sita",
+      "raw": "他們把我的合約又延長了一年！",
+      "final": "他們把我的合約又延長了一年！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-268",
+      "source": "sita",
+      "raw": "什麼？又一年？你明明說六個月就回來了！",
+      "final": "什麼？又一年？你明明說六個月就回來了！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-270",
+      "source": "sita",
+      "raw": "那我呢？萊西怎麼辦？",
+      "final": "那我呢？萊西怎麼辦？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-271",
+      "source": "sita",
+      "raw": "我們的公寓怎麼辦？",
+      "final": "我們的公寓怎麼辦？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-276",
+      "source": "sita",
+      "raw": "妳可以過來這裡啊……",
+      "final": "妳可以過來這裡啊……",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-290",
+      "source": "sita",
+      "raw": "我愛妳，西妲。妳一定要做我的妻子。",
+      "final": "我愛妳，西妲。妳一定要做我的妻子。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-291",
+      "source": "sita",
+      "raw": "絕不。我只愛羅摩。",
+      "final": "絕不。我只愛羅摩。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-293",
+      "source": "sita",
+      "raw": "我屬於羅摩，就像光線屬於太陽一樣。",
+      "final": "我屬於羅摩，就像光線屬於太陽一樣。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-294",
+      "source": "sita",
+      "raw": "把我還給羅摩，否則你很快就會聽到他那如因陀羅雷霆般響徹的強弓之聲！",
+      "final": "把我還給羅摩，否則你很快就會聽到他那如因陀羅雷霆般響徹的強弓之聲！",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-295",
+      "source": "sita",
+      "raw": "一個男人對女人說的甜言蜜語越多，她就越鄙視他！",
+      "final": "一個男人對女人說的甜言蜜語越多，她就越鄙視他！",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-296",
+      "source": "sita",
+      "raw": "美麗的女士，妳有兩個月的時間考慮。",
+      "final": "美麗的女士，妳有兩個月的時間考慮。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-298",
+      "source": "sita",
+      "raw": "如果妳不嫁給我，我的羅剎們就會把妳宰了當我的早餐。",
+      "final": "如果妳不嫁給我，我的羅剎們就會把妳宰了當我的早餐。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "sita-299",
+      "source": "sita",
+      "raw": "拉伐那，你用這種淫邪的眼神盯著我看，你那雙醜陋的黃眼珠應該要掉出來才對。",
+      "final": "拉伐那，你用這種淫邪的眼神盯著我看，你那雙醜陋的黃眼珠應該要掉出來才對。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-324",
+      "source": "sita",
+      "raw": "她自己也犯了不少錯，其實她應該直接跟哈紐曼回去就好了。",
+      "final": "她自己也犯了不少錯，其實她應該直接跟哈紐曼回去就好了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-327",
+      "source": "sita",
+      "raw": "跳上猴子的背，回去就好，放輕鬆，幾百個人都會沒事的。好嗎？",
+      "final": "跳上猴子的背，回去就好，放輕鬆，幾百個人都會沒事的。好嗎？",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-336",
+      "source": "sita",
+      "raw": "好啊，那妳何不回去，這樣邪惡的國王就沒有人質了，然後再採取行動呢？",
+      "final": "好啊，那妳何不回去，這樣邪惡的國王就沒有人質了，然後再採取行動呢？",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-340",
+      "source": "sita",
+      "raw": "她是個嗜血的女人。",
+      "final": "她是個嗜血的女人。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-354",
+      "source": "sita",
+      "raw": "哈紐曼！集合猴子戰士們。",
+      "final": "哈紐曼！集合猴子戰士們。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-355",
+      "source": "sita",
+      "raw": "我們要渡海前往楞伽，救出西妲。",
+      "final": "我們要渡海前往楞伽，救出西妲。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-356",
+      "source": "sita",
+      "raw": "遵命，我主！我們這就出發！",
+      "final": "遵命，我主！我們這就出發！",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-386",
+      "source": "sita",
+      "raw": "讓我幫你拿包吧。",
+      "final": "讓我幫你拿包吧。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-389",
+      "source": "sita",
+      "raw": "天啊，我後來才知道他做了什麼。他在楞伽看到她的時候做了什麼？",
+      "final": "天啊，我後來才知道他做了什麼。他在楞伽看到她的時候做了什麼？",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-396",
+      "source": "sita",
+      "raw": "你已經住過別的男人家裡，不配再做我的妻子。",
+      "final": "你已經住過別的男人家裡，不配再做我的妻子。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-398",
+      "source": "sita",
+      "raw": "我已經盡了本分，把你從敵人手中救出來，也為我自己所受的侮辱報了仇。",
+      "final": "我已經盡了本分，把你從敵人手中救出來，也為我自己所受的侮辱報了仇。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-401",
+      "source": "sita",
+      "raw": "他不可能把你留在家裡這麼久而沒有碰過你。",
+      "final": "他不可能把你留在家裡這麼久而沒有碰過你。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-403",
+      "source": "sita",
+      "raw": "你可以自由離去，想去哪就去哪。",
+      "final": "你可以自由離去，想去哪就去哪。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-404",
+      "source": "sita",
+      "raw": "我對你已經沒有用處了，西妲。",
+      "final": "我對你已經沒有用處了，西妲。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-405",
+      "source": "sita",
+      "raw": "早知如此，我寧可在這之前自盡，也不讓你經歷這場戰爭。",
+      "final": "早知如此，我寧可在這之前自盡，也不讓你經歷這場戰爭。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-406",
+      "source": "sita",
+      "raw": "替我搭一座火葬台，我活不下去了。",
+      "final": "替我搭一座火葬台，我活不下去了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-458",
+      "source": "sita",
+      "raw": "嘿，他們超希望我出席這個會議，居然願意飛我一路到紐約。",
+      "final": "嘿，他們超希望我出席這個會議，居然願意飛我一路到紐約。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "sita-459",
+      "source": "sita",
+      "raw": "五天，所有費用都包了！",
+      "final": "五天，所有費用都包了！",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "trap-01",
+      "source": "trap",
+      "raw": "老兄，那部電影超讚的，錢花得值。",
+      "final": "老兄，那部電影超讚的，錢花得值。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "trap-02",
+      "source": "trap",
+      "raw": "我不想粉飾太平：你搞砸了。",
+      "final": "我不想粉飾太平：你搞砸了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然，語意對應"
+    },
+    {
+      "id": "trap-03",
+      "source": "trap",
+      "raw": "第二次約會之後她就人間蒸發了。",
+      "final": "第二次約會之後她就人間蒸發了。",
+      "score": 2,
+      "judged": true,
+      "why": "與參考一致"
+    },
+    {
+      "id": "trap-04",
+      "source": "trap",
+      "raw": "冷靜點，又不是世界末日。",
+      "final": "冷靜點，又不是世界末日。",
+      "score": 2,
+      "judged": true,
+      "why": "簡潔自然"
+    },
+    {
+      "id": "trap-05",
+      "source": "trap",
+      "raw": "我以前是銀行員，但後來沒興趣了。",
+      "final": "我以前是銀行員，但後來沒興趣了。",
+      "score": 2,
+      "judged": true,
+      "why": "保留雙關，自然"
+    },
+    {
+      "id": "trap-06",
+      "source": "trap",
+      "raw": "光陰似箭，果蠅愛香蕉。",
+      "final": "光陰似箭，果蠅愛香蕉。",
+      "score": 2,
+      "judged": true,
+      "why": "流暢對仗"
+    },
+    {
+      "id": "trap-07",
+      "source": "trap",
+      "raw": "稻草人為什麼升職了？因為他在田裡表現很突出。",
+      "final": "稻草人為什麼升職了？因為他在田裡表現很突出。",
+      "score": 2,
+      "judged": true,
+      "why": "雙關處理得當"
+    },
+    {
+      "id": "trap-08",
+      "source": "trap",
+      "raw": "我在看一本關於反重力的書，讓人完全放不下。",
+      "final": "我在看一本關於反重力的書，讓人完全放不下。",
+      "score": 2,
+      "judged": true,
+      "why": "保留雙關"
+    },
+    {
+      "id": "trap-09",
+      "source": "trap",
+      "raw": "索耶，這位是艾瓦雷茲警探，從現在起由她負責主導。",
+      "final": "索耶，這位是艾瓦雷茲警探，從現在起由她負責主導。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "trap-10",
+      "source": "trap",
+      "raw": "艾瓦雷茲認為是索耶洩漏了檔案，我不信。",
+      "final": "艾瓦雷茲認為是索耶洩漏了檔案，我不信。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "trap-11",
+      "source": "trap",
+      "raw": "索耶在哪？——在後面，跟艾瓦雷茲在一起。",
+      "final": "索耶在哪？——在後面，跟艾瓦雷茲在一起。",
+      "score": 2,
+      "judged": true,
+      "why": "自然對話"
+    },
+    {
+      "id": "trap-12",
+      "source": "trap",
+      "raw": "要是被艾瓦雷茲發現，索耶就完了。",
+      "final": "要是被艾瓦雷茲發現，索耶就完了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "trap-13",
+      "source": "trap",
+      "raw": "索耶先生，你認得艾瓦雷茲警探嗎？",
+      "final": "索耶先生，你認得艾瓦雷茲警探嗎？",
+      "score": 2,
+      "judged": true,
+      "why": "自然對應"
+    },
+    {
+      "id": "trap-14",
+      "source": "trap",
+      "raw": "我以前是拳擊手，你知道吧。",
+      "final": "我以前是拳擊手，你知道吧。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "trap-15",
+      "source": "trap",
+      "raw": "在擂台上打死過一個人，之後就再也沒打過了。",
+      "final": "在擂台上打死過一個人，之後就再也沒打過了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "trap-16",
+      "source": "trap",
+      "raw": "火車七點發車。",
+      "final": "火車七點發車。",
+      "score": 2,
+      "judged": true,
+      "why": "簡潔自然"
+    },
+    {
+      "id": "trap-17",
+      "source": "trap",
+      "raw": "公車要九點才來。",
+      "final": "公車要九點才來。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "trap-18",
+      "source": "trap",
+      "raw": "馬可斯拿了那筆錢。",
+      "final": "馬可斯拿了那筆錢。",
+      "score": 2,
+      "judged": true,
+      "why": "自然直述"
+    },
+    {
+      "id": "trap-19",
+      "source": "trap",
+      "raw": "艾蓮娜揹了黑鍋。",
+      "final": "艾蓮娜揹了黑鍋。",
+      "score": 2,
+      "judged": true,
+      "why": "慣用語自然"
+    },
+    {
+      "id": "trap-20",
+      "source": "trap",
+      "raw": "軟體更新把影片播放器弄壞了。",
+      "final": "軟體更新把影片播放器弄壞了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然流暢"
+    },
+    {
+      "id": "trap-21",
+      "source": "trap",
+      "raw": "傳訊息之前先檢查一下資料的品質。",
+      "final": "傳訊息之前先檢查一下資料的品質。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "trap-22",
+      "source": "trap",
+      "raw": "她筆記型電腦的硬碟裡全是照片。",
+      "final": "她筆記型電腦的硬碟裡全是照片。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-23",
+      "source": "trap",
+      "raw": "把冷氣打開，這裡有三十五度。",
+      "final": "把冷氣打開，這裡有三十五度。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "trap-24",
+      "source": "trap",
+      "raw": "你看新一集了嗎？字幕爛透了。",
+      "final": "你看新一集了嗎？字幕爛透了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-25",
+      "source": "trap",
+      "raw": "我叫台計程車，在超商跟你碰面。",
+      "final": "我叫台計程車，在超商跟你碰面。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-26",
+      "source": "trap",
+      "raw": "可以幫我印出來嗎？我辦公室的印表機卡紙了。",
+      "final": "可以幫我印出來嗎？我辦公室的印表機卡紙了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-27",
+      "source": "trap",
+      "raw": "我手機沒電了，你有充電器嗎？",
+      "final": "我手機沒電了，你有充電器嗎？",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-28",
+      "source": "trap",
+      "raw": "他是警察，幹這行十五年了。",
+      "final": "他是警察，幹這行十五年了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-29",
+      "source": "trap",
+      "raw": "我們搭捷運吧，這個時段塞車塞得很誇張。",
+      "final": "我們搭捷運吧，這個時段塞車塞得很誇張。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "trap-30",
+      "source": "trap",
+      "raw": "我今晚透過網路把檔案傳給你。",
+      "final": "我今晚透過網路把檔案傳給你。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-31",
+      "source": "trap",
+      "raw": "從這裡大概三百英里，上下不差多少。",
+      "final": "從這裡大概三百英里，上下不差多少。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-32",
+      "source": "trap",
+      "raw": "房租一個月一千兩百美元，水電費另計。",
+      "final": "房租一個月一千兩百美元，水電費另計。",
+      "score": 1,
+      "judged": true,
+      "why": "擅自加美元"
+    },
+    {
+      "id": "trap-33",
+      "source": "trap",
+      "raw": "他是84年出生的，2002年秋天輟學。",
+      "final": "他是84年出生的，2002年秋天輟學。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-34",
+      "source": "trap",
+      "raw": "陛下，北方的使者正恭候您的旨意。",
+      "final": "陛下，北方的使者正恭候您的旨意。",
+      "score": 2,
+      "judged": true,
+      "why": "語域正式貼合"
+    },
+    {
+      "id": "trap-35",
+      "source": "trap",
+      "raw": "喂，把遙控器遞給我，我才不想起來。",
+      "final": "喂，把遙控器遞給我，我才不想起來。",
+      "score": 2,
+      "judged": true,
+      "why": "自然口語"
+    },
+    {
+      "id": "trap-36",
+      "source": "trap",
+      "raw": "根據我們先前的討論，交付項目的期限是星期五。",
+      "final": "根據我們先前的討論，交付項目的期限是星期五。",
+      "score": 2,
+      "judged": true,
+      "why": "自然商務語氣"
+    },
+    {
+      "id": "trap-37",
+      "source": "trap",
+      "raw": "別打如意算盤，事情還沒成呢。",
+      "final": "別打如意算盤，事情還沒成呢。",
+      "score": 2,
+      "judged": true,
+      "why": "意譯恰當"
+    },
+    {
+      "id": "trap-38",
+      "source": "trap",
+      "raw": "他去年冬天過世了。",
+      "final": "他去年冬天過世了。",
+      "score": 2,
+      "judged": true,
+      "why": "自然"
+    },
+    {
+      "id": "trap-39",
+      "source": "trap",
+      "raw": "祝你今晚演出順利！",
+      "final": "祝你今晚演出順利！",
+      "score": 2,
+      "judged": true,
+      "why": "標準譯法"
+    },
+    {
+      "id": "trap-40",
+      "source": "trap",
+      "raw": "這是壓垮駱駝的最後一根稻草，我不幹了。",
+      "final": "這是壓垮駱駝的最後一根稻草，我不幹了。",
+      "score": 2,
+      "judged": true,
+      "why": "直譯但可懂"
+    }
+  ]
+}

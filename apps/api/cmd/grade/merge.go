@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/eval"
 )
 
@@ -33,6 +34,12 @@ func ratingFromReport(rep eval.Report) (ai.ModelRating, error) {
 			return ai.ModelRating{}, fmt.Errorf("report for %s is a local model — local models are not published in the built-in ratings table", rep.ModelID)
 		}
 		rep.ModelID = bare
+	}
+	// disc-2026-10-translation-batch-size-exam: a batch-size experiment is not
+	// how the app translates, so its letter would describe a product nobody
+	// runs. 0 = a Claude run at the default (the field is omitted).
+	if rep.BatchSize != 0 && rep.BatchSize != prompts.SubtitleTranslatorBatchSize {
+		return ai.ModelRating{}, fmt.Errorf("report for %s was measured at --batch-size %d but the app translates %d per request — an experiment, not mergeable", rep.ModelID, rep.BatchSize, prompts.SubtitleTranslatorBatchSize)
 	}
 	if rep.SampleVersion != eval.SampleVersion {
 		return ai.ModelRating{}, fmt.Errorf("report measured on %q but this build embeds %q — re-run cmd/grade", rep.SampleVersion, eval.SampleVersion)

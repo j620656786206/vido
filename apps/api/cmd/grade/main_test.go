@@ -218,7 +218,6 @@ func TestParseFlags_LocalMode(t *testing.T) {
 		"unguessable template":  {"--openai-base-url", "http://nas/v1", "--openai-model", "qwen3:4b", "--prompt-style", "native"},
 		"batch size in native":  append([]string{"--prompt-style", "native", "--batch-size", "5"}, base...),
 		"negative batch size":   append([]string{"--batch-size", "-1"}, base...),
-		"batch size for claude": {"--model", "claude-haiku-4-5", "--batch-size", "5"},
 		"bad explicit template": append([]string{"--prompt-style", "native", "--native-template", "gpt"}, base...),
 		"also-judge empty cues": append([]string{"--also-judge", "simplified_leak,missing"}, base...),
 		"also-judge no judge":   append([]string{"--also-judge", "simplified_leak", "--no-judge"}, base...),
@@ -521,5 +520,30 @@ func TestRun_CustomSampleWithoutNamesIsTheNoGlossaryExam(t *testing.T) {
 	}
 	if rep.SampleVersion != eval.SampleVersionNoGlossary || rep.GlossaryVersion != "" {
 		t.Fatalf("an empty glossary sends nothing, so it is not the v2 exam: %q / %q", rep.SampleVersion, rep.GlossaryVersion)
+	}
+}
+
+// disc-2026-10-translation-batch-size-exam: --batch-size above the 20-cue
+// chunk must really send that many cues per request (the first 50/100 runs
+// were capped at 20 by the chunk), and a Claude run may take it too.
+func TestRun_BatchSizeAboveTheChunkIsHonoured(t *testing.T) {
+	var sent []string
+	judgeCalls := 0
+	d := localDeps(t, fakeLocal{prompts: &sent}, &judgeCalls)
+	cfg, err := parseFlags([]string{"--openai-base-url", "http://nas:8080/v1", "--openai-model", "gemini-3.5-flash-lite", "--limit", "100", "--batch-size", "50"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := run(context.Background(), cfg, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sent) != 2 || rep.BatchSize != 50 {
+		t.Fatalf("100 cues at --batch-size 50 should be 2 requests stamped 50, got %d requests, batch %d", len(sent), rep.BatchSize)
+	}
+
+	claude, err := parseFlags([]string{"--model", "claude-sonnet-5", "--batch-size", "50"})
+	if err != nil || claude.batchSize != 50 {
+		t.Fatalf("a Claude batch-size experiment must parse: %+v %v", claude, err)
 	}
 }
