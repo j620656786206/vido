@@ -1,6 +1,6 @@
 # Disc：一批翻譯回應被截斷就整集失敗——找出原因、改成切半重送
 
-Status: review
+Status: done
 
 **Source:** 2026-10-15 正式機 S01E04（Sonnet 50 句一批）第 4 批回應 output_tokens=4096、沒有文字 → `AI_INVALID_RESPONSE` → 整集失敗（US$0.126）。當天 hotfix #804 把 Sonnet 退回 10 句。Alexyu：「繼續修」。
 
@@ -40,7 +40,7 @@ Status: review
 - [x] T2 pipeline 與聽寫路的切半重送（AC 3）
 - [x] T3 測試（AC 5）
 - [x] T4 量測與批次決定（AC 4）
-- [ ] T5 正式機（AC 6）
+- [x] T5 正式機（AC 6）：✅ 2026-10-15 12:07 image 011e122d、末日光明 S01E04、預設 Sonnet 50 句、不想：474 句、11 次請求、US$0.160、3 分 6 秒，0 句留英文、0 次截斷。人名跟舊官方字幕一致（謝拉馬威 8／8、安女爵 5／5、塔馬迪尊 4／4、瑪嘉拉 4／4、敦爵士 4／4），無簡體。對照 S01E03（10 句、會想）：439 句、46 次請求、US$0.31、5 分鐘 → 每句費用約省一半。
 
 ### Time-dependent visual coverage
 
