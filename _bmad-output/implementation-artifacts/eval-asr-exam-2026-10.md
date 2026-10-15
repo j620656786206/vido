@@ -53,3 +53,18 @@ Story：`spike-asr-exam-2026-10`。分數是程式算的（`eval/asr-exam-2026-1
 
 - 中文考題：NAS 上的中文劇都沒有字幕軌，找不到答案。
 - 長片整段漏掉（2026-08 對 Scribe 的疑慮）：這份考卷只有 10 分鐘，看不到。開單後第一次在正式機跑整集時要看。
+
+## 補考：faster-whisper 照 FB 建議調參數（2026-10-15）
+
+觸發：FB Ming Jwo 建議 faster-whisper Large-v3-Turbo 開 `vad_filter=True`、關 `condition_on_previous_text`，可避開配樂崩段（`disc-2026-10-asr-exam-faster-whisper-vad-retake`）。同一份考卷、同一段 10 分鐘、Mac M5 Pro CPU int8、各 3 次（確定性，三次一樣）。
+
+| 設定 | 句數 | 亂補率 | 漏句率 | 時間中位 | 時間 p90 | 錯字率 | 3 次 | 每 10 分鐘耗時 |
+|---|---|---|---|---|---|---|---|---|
+| large-v3，VAD（原本那次） | 56 | 8.9% | 14.9% | 0.43s | 0.59s | 21.9% | ❌ 0/3 | 78 秒 |
+| large-v3，VAD＋`condition_on_previous_text=False` | 36 | 11.1% | 13.4% | 0.51s | 1.13s | 21.6% | ❌ 0/3 | 56 秒 |
+| **large-v3-turbo**，VAD＋`condition_on_previous_text=False` | 53 | **3.8%** | 19.4% | 0.31s | 0.51s | 18.6% | ❌ 0/3 | 27 秒 |
+| （對照）ElevenLabs Scribe v2 | 81–83 | 0～1.2% | 3.0% | 0.11s | 0.18s | 5.7～7.2% | ✅ 3/3 | — |
+
+- turbo 把亂補壓到門檻內（配樂段不再編台詞，Ming Jwo 說的對），但**漏句 19.4%**：打熊那段 VAD 還是整段切掉。
+- large-v3 關掉 `condition_on_previous_text` 反而句數變少（36）、時間誤差變大。
+- 結論不變：本機 faster-whisper 省錢可用，不是預設；預設仍是 Scribe v2。原始輸出 `eval/asr-exam-2026-10/runs/faster-whisper-{nocond,turbo-nocond}-{1,2,3}.json`，腳本 `fw_run2.py`（session scratchpad）。

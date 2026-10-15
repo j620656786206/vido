@@ -1,6 +1,6 @@
 # Disc：Gemini 免費方案每分鐘到底幾次——複量後把 13 秒改成 5 秒
 
-Status: review
+Status: done
 
 **Source:** 2026-10-14 FB Ming Jwo：「gemini-3.5-flash-lite 只要確保每分鐘 15 個 request 內就免費，我是每個 request 睡 4 秒」。我們 2026-10-14 早上量到 5/分鐘就 429，所以 #786 的預設是 13 秒一批。Alexyu 選 A 兩張都跑。
 
@@ -23,7 +23,7 @@ Status: review
 
 - [x] T1 預設值＋文件（AC 1、3）
 - [x] T2 測試（AC 2）
-- [ ] T3 正式機（AC 4，合併後）
+- [x] T3 正式機（AC 4）：2026-10-15 09:51 `update_container` 升到 c6e5202f，log `gemini_min_interval=5s`。
 
 ## Dev Notes
 

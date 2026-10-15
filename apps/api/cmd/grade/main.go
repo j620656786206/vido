@@ -42,7 +42,10 @@ import (
 	"github.com/vido/api/internal/zhtw"
 )
 
-// translateChunk is how many cues go to the translator per call (2 batches of 10).
+// translateChunk is how many cues go to the translator per call (2 batches of
+// 10). A --batch-size above it widens the chunk to one batch
+// (disc-2026-10-translation-batch-size-exam: with a fixed 20 the first
+// "50" and "100" runs were silently batch-20 runs).
 const translateChunk = 20
 
 // config is everything the flags decide.
@@ -199,11 +202,10 @@ func parseFlags(args []string) (config, error) {
 	if cfg.promptStyle == promptStyleNative {
 		return cfg, errors.New("--prompt-style native needs --openai-base-url (Claude is only graded through the production prompt)")
 	}
-	if cfg.batchSize != 0 {
-		// A Claude grade can be merged into the shipped ratings table, so it
-		// must be measured exactly the way the app translates.
-		return cfg, errors.New("--batch-size is only for --openai-base-url runs; Claude is graded at the app's batch size")
-	}
+	// --batch-size on a Claude run is an EXPERIMENT (disc-2026-10-translation-
+	// batch-size-exam): the report is stamped with the batch size and --merge
+	// refuses any report not measured at the app's batch size, so it can never
+	// reach the shipped ratings table.
 	if cfg.model == "" {
 		return cfg, errors.New("--model is required")
 	}
@@ -288,6 +290,7 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 
 	translator := services.NewTranslationService(underTest, nil)
 	batchOpt := services.WithBatchSize(cfg.batchSize)
+	chunkSize := max(translateChunk, cfg.batchSize)
 	// Chunked on purpose: TranslateWithGlossary returns NOTHING when the
 	// budget sentinel fires mid-track (the segment cache is its resume seam,
 	// and this run has none), so a stop in cue 180 would throw away 179 paid
@@ -295,8 +298,8 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 	// the only cost is the 5-cue context window resetting at chunk edges.
 	translate := func(ctx context.Context, cues []eval.Cue) (map[string]string, error) {
 		got := make(map[string]string, len(cues))
-		for start := 0; start < len(cues); start += translateChunk {
-			end := start + translateChunk
+		for start := 0; start < len(cues); start += chunkSize {
+			end := start + chunkSize
 			if end > len(cues) {
 				end = len(cues)
 			}
@@ -360,6 +363,9 @@ func run(ctx context.Context, cfg config, d deps) (eval.Report, error) {
 	rep, err := eval.Run(ctx, opts)
 	if err != nil {
 		return rep, err
+	}
+	if !local && cfg.batchSize != 0 {
+		rep.BatchSize = cfg.batchSize
 	}
 	if local {
 		rep.PromptStyle = cfg.promptStyle
