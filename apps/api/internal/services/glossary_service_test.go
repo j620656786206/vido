@@ -118,19 +118,21 @@ func (r *drawerAwareRepo) ListByScope(context.Context, string) ([]models.Glossar
 func (r *drawerAwareRepo) ListSeasonDrawers(context.Context, string) ([]models.GlossaryTerm, error) {
 	return r.drawers, nil
 }
-func (r *drawerAwareRepo) ClearSeasonDrawersOfTerm(_ context.Context, id string) (int64, error) {
-	r.cleared = append(r.cleared, id)
+func (r *drawerAwareRepo) ConfirmSeasonDrawersOfTerm(_ context.Context, id string) (int64, error) {
+	r.cleared = append(r.cleared, "confirm:"+id)
 	return 1, nil
 }
-func (r *drawerAwareRepo) DeleteSeasonDrawers(_ context.Context, scope string) (int64, error) {
-	r.cleared = append(r.cleared, "ALL:"+scope)
-	return 2, nil
+func (r *drawerAwareRepo) DeleteSeasonDrawersOfTerm(_ context.Context, id string) (int64, error) {
+	r.cleared = append(r.cleared, "delete:"+id)
+	return 1, nil
 }
 
 // disc-2026-10-glossary-season-scope-b: the panel list interleaves each term's
-// season drawers right after its show-wide row; an edit / confirm / delete of
-// the show-wide row clears that term's drawers.
-func TestGlossaryService_ListInterleavesSeasonDrawers_AndWritesClearThem(t *testing.T) {
+// season drawers right after its show-wide row.
+// ⚖️ 2026-10-18 (disc-2026-10-glossary-season-variants-card-a): a write to the
+// show-wide row acts on the card — confirm confirms its season spellings,
+// delete deletes them, an edit leaves them alone.
+func TestGlossaryService_ListInterleavesSeasonDrawers_AndWritesActOnTheCard(t *testing.T) {
 	one, two := 1, 2
 	repo := &drawerAwareRepo{
 		base: []models.GlossaryTerm{{ID: "h", TermSrc: "Haniwa", TermZh: "哈妮娃"}, {ID: "j", TermSrc: "Jerlamarel", TermZh: "傑拉馬瑞"}},
@@ -149,12 +151,14 @@ func TestGlossaryService_ListInterleavesSeasonDrawers_AndWritesClearThem(t *test
 	assert.Equal(t, []string{"h", "j", "j1", "j2"}, ids)
 
 	require.NoError(t, svc.Edit(context.Background(), "series-1", "j", "傑拉瑪瑞爾", true))
-	require.NoError(t, svc.Confirm(context.Background(), "series-1", "h"))
+	assert.Empty(t, repo.cleared, "an edit changes the show-wide spelling only")
+	require.NoError(t, svc.Confirm(context.Background(), "series-1", "j"))
 	require.NoError(t, svc.Delete(context.Background(), "series-1", "j"))
-	assert.Equal(t, []string{"j", "h", "j"}, repo.cleared)
+	assert.Equal(t, []string{"confirm:j", "delete:j"}, repo.cleared)
 
-	// CR 1: 全部確認 makes every show-wide row the user's word → all drawers go.
+	// 全部確認 goes to the repository's scope-wide confirm (which takes the
+	// drawers along) and deletes nothing.
 	_, err = svc.ConfirmAll(context.Background(), "series-1")
 	require.NoError(t, err)
-	assert.Equal(t, "ALL:tmdb:tv:80752", repo.cleared[len(repo.cleared)-1])
+	assert.Equal(t, []string{"confirm:j", "delete:j"}, repo.cleared)
 }

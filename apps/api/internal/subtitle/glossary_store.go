@@ -104,24 +104,24 @@ func (r *glossaryStoreRepository) LookupFor(ctx context.Context, showKey, episod
 	if err != nil || len(over) == 0 {
 		return base, nil
 	}
-	// A term the user confirmed or edited in the panel is their word: the
-	// drawer never overrides it (keys compared NOCASE like the unique index).
-	confirmed, err := r.repo.LookupByScope(ctx, scope, true)
-	if err != nil {
-		confirmed = nil
-	}
-	locked := make(map[string]struct{}, len(confirmed))
-	for k := range confirmed {
-		locked[strings.ToLower(k)] = struct{}{}
+	// ⚖️ 2026-10-18 (disc-2026-10-glossary-season-variants-card-a): a season
+	// spelling always wins for its season, confirmed show-wide term or not —
+	// the panel shows it under that term, and deleting it is how the user
+	// sends the season back to the show-wide spelling.
+	// Keys compare NOCASE like the unique index, so a show-wide key differing
+	// only in case is replaced rather than kept beside the season one.
+	overLower := make(map[string]struct{}, len(over))
+	for k := range over {
+		overLower[strings.ToLower(k)] = struct{}{}
 	}
 	merged := make(map[string]string, len(base)+len(over))
 	for k, v := range base {
+		if _, replaced := overLower[strings.ToLower(k)]; replaced {
+			continue
+		}
 		merged[k] = v
 	}
 	for k, v := range over {
-		if _, isLocked := locked[strings.ToLower(k)]; isLocked {
-			continue
-		}
 		merged[k] = v
 	}
 	return merged, nil

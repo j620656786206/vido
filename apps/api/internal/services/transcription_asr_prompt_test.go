@@ -191,9 +191,11 @@ func TestLoadGlossary_SeasonDrawerOverlays(t *testing.T) {
 	}
 	assert.Equal(t, map[string]string{"Jerlamarel": "傑拉馬瑞", "Haniwa": "哈妮娃"}, pairs)
 
-	// CR 1: a confirmed show-wide term is the user's word — no drawer override.
-	assert.Equal(t, map[string]string{"Jerlamarel": "傑拉瑪瑞爾", "Haniwa": "哈妮娃"},
-		overlaySeasonDrawer(map[string]string{"Jerlamarel": "傑拉瑪瑞爾", "Haniwa": "哈妮娃"}, map[string]string{"Jerlamarel": "謝拉馬威"}, map[string]string{"JERLAMAREL": "傑拉瑪瑞爾"}))
+	// ⚖️ 2026-10-18 (disc-2026-10-glossary-season-variants-card-a): the season
+	// spelling wins even over a confirmed show-wide term, and a show-wide key
+	// differing only in case is replaced, not kept beside it.
+	assert.Equal(t, map[string]string{"Jerlamarel": "謝拉馬威", "Haniwa": "哈妮娃"},
+		overlaySeasonDrawer(map[string]string{"JERLAMAREL": "傑拉瑪瑞爾", "Haniwa": "哈妮娃"}, map[string]string{"Jerlamarel": "謝拉馬威"}))
 }
 
 // disc-2026-10-asr-route-season-drawer-skipped: translationInputsFor must hand

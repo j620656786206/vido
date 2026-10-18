@@ -179,9 +179,11 @@ func TestGlossaryStore_LookupFor_SeasonDrawerOverlays(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, map[string]string{"Jerlamarel": "傑拉馬瑞", "Haniwa": "哈妮娃"}, got, "a season without a drawer gets the show-wide pick")
 
-	// CR 1: a term the user confirmed in the panel is never overridden by a drawer.
+	// ⚖️ 2026-10-18 (disc-2026-10-glossary-season-variants-card-a): confirming
+	// Baba Voss in the panel must not turn season 1's official spelling into
+	// season 2's — the season spelling wins over a confirmed show-wide term.
 	repo.confirmed = map[string]map[string]string{"tmdb:tv:80752": {"jerlamarel": "傑拉馬瑞"}}
 	got, err = store.LookupFor(context.Background(), "series-1", "ep-s1")
 	require.NoError(t, err)
-	assert.Equal(t, "傑拉馬瑞", got["Jerlamarel"], "the user's word wins, NOCASE")
+	assert.Equal(t, map[string]string{"Jerlamarel": "謝拉馬威", "Haniwa": "哈妮娃"}, got, "season 1 keeps 謝拉馬威 after the card is confirmed")
 }
