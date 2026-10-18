@@ -5758,6 +5758,41 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
   {
+    // disc-2026-10-glossary-panel-title-bar-squashed: a list long enough to
+    // overflow the 85vh panel. The 3-term fixture above never overflowed, so
+    // the 26px squashed title bar a 115-term prod table showed went unseen.
+    id: 'glossary-panel-v2/long-list',
+    label: 'subtitle/GlossaryPanelV2 (長清單 — 標題列不縮)',
+    component: GlossaryPanelV2,
+    props: {
+      mediaId: 'movie-glossary-long',
+      mediaTitle: '末日光明',
+      open: true,
+      onOpenChange: noop,
+    },
+    seedQueries: [
+      {
+        queryKey: glossaryKeys.list('movie-glossary-long'),
+        data: Array.from(
+          { length: 40 },
+          (_, i): GlossaryTerm => ({
+            id: `fx-gl-${i}`,
+            mediaId: 'movie-glossary-long',
+            termSrc: `Term ${String(i + 1).padStart(2, '0')}`,
+            termZh: `詞彙 ${i + 1}`,
+            language: 'zh-Hant',
+            source: 'subtitle',
+            confirmed: i % 3 === 0,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          })
+        ),
+      },
+    ],
+    penNode: 'screen-section', // Screen F6-D-v2 (dlfMR) — same shell, more rows
+    statesOnly: ['default'],
+  },
+  {
     // dsr-6f-2: the same panel as a phone bottom sheet (F6-M-v2 buepS). Radix
     // portal ⇒ the visual spec photographs the WINDOW, so this one really is
     // 390 wide and is the layout evidence the in-page row fixture cannot be.
