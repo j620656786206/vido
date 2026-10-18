@@ -26,7 +26,8 @@ import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mo
 import { cn } from '../../lib/utils';
 import { useGlossaryTerms, useGlossaryMutations } from '../../hooks/useGlossary';
 import { isImeComposing } from '../../utils/keyboard';
-import { GlossaryRowV2 } from './GlossaryRowV2';
+import { GlossaryOrphanCardV2, GlossaryRowV2 } from './GlossaryRowV2';
+import { groupGlossaryCards } from './glossaryCards';
 import { GlossaryImportResultCard } from './GlossaryImportResult';
 import type { GlossaryImportConflict, GlossaryImportResult } from '../../services/glossaryService';
 
@@ -132,7 +133,10 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
   }, [session]);
 
   const list = terms.data ?? [];
-  const unconfirmedCount = list.filter((t) => !t.confirmed).length;
+  // One card per source term (disc-2026-10-glossary-season-variants-card-b):
+  // the footer counts cards, not rows (F6s Note ⑥).
+  const cards = groupGlossaryCards(list);
+  const unconfirmedCount = cards.filter((c) => c.unconfirmed).length;
   const busy =
     add.isPending ||
     edit.isPending ||
@@ -378,6 +382,18 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
     </div>
   );
 
+  const editTerm = (termId: string, termZh: string) =>
+    runWrite(`「${termSrcOf(termId)}」的新譯名沒有存到，請再試一次`, () =>
+      // ⚖️ 2026-10-02: an edit is a review — it always confirms
+      // (the server enforces the same; source is never touched).
+      edit.mutateAsync({ termId, termZh, confirmed: true })
+    ).then(() => undefined);
+  const deleteTerm = (termId: string) => {
+    runWrite(`刪除「${termSrcOf(termId)}」失敗，請再試一次`, () =>
+      remove.mutateAsync(termId)
+    ).catch(() => undefined);
+  };
+
   const listOrEmpty =
     list.length === 0 ? (
       !adding && (
@@ -397,39 +413,33 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
       )
     ) : (
       <div className="flex flex-col gap-2" data-testid="glossary-list">
-        {list.map((term) => (
-          <GlossaryRowV2
-            key={term.id}
-            term={term}
-            busy={busy}
-            fallbackZh={
-              term.season !== undefined
-                ? list.find(
-                    (t) =>
-                      t.season === undefined &&
-                      t.termSrc.toLowerCase() === term.termSrc.toLowerCase()
-                  )?.termZh
-                : undefined
-            }
-            onConfirm={(termId) => {
-              runWrite(`確認「${termSrcOf(termId)}」失敗，請再試一次`, () =>
-                confirm.mutateAsync(termId)
-              ).catch(() => undefined);
-            }}
-            onEdit={(termId, termZh) =>
-              runWrite(`「${termSrcOf(termId)}」的新譯名沒有存到，請再試一次`, () =>
-                // ⚖️ 2026-10-02: an edit is a review — it always confirms
-                // (the server enforces the same; source is never touched).
-                edit.mutateAsync({ termId, termZh, confirmed: true })
-              )
-            }
-            onDelete={(termId) => {
-              runWrite(`刪除「${termSrcOf(termId)}」失敗，請再試一次`, () =>
-                remove.mutateAsync(termId)
-              ).catch(() => undefined);
-            }}
-          />
-        ))}
+        {cards.map((card) =>
+          card.main ? (
+            <GlossaryRowV2
+              key={card.key}
+              term={card.main}
+              seasons={card.shownSeasons}
+              unconfirmed={card.unconfirmed}
+              busy={busy}
+              onConfirm={(termId) => {
+                runWrite(`確認「${termSrcOf(termId)}」失敗，請再試一次`, () =>
+                  confirm.mutateAsync(termId)
+                ).catch(() => undefined);
+              }}
+              onEdit={editTerm}
+              onDelete={deleteTerm}
+            />
+          ) : (
+            <GlossaryOrphanCardV2
+              key={card.key}
+              termSrc={card.termSrc}
+              seasons={card.shownSeasons}
+              busy={busy}
+              onEdit={editTerm}
+              onDelete={deleteTerm}
+            />
+          )
+        )}
       </div>
     );
 
@@ -621,7 +631,7 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
           >
             {list.length > 0 ? (
               <p data-testid="glossary-footer-count">
-                共 <span className="font-mono tabular-nums">{list.length}</span> 條 ·{' '}
+                共 <span className="font-mono tabular-nums">{cards.length}</span> 條 ·{' '}
                 <span className="font-mono tabular-nums">{unconfirmedCount}</span> 條未確認
               </p>
             ) : (

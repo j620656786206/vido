@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { GlossaryRowV2 } from './GlossaryRowV2';
+import { GlossaryOrphanCardV2, GlossaryRowV2 } from './GlossaryRowV2';
 import type { GlossaryTerm } from '../../services/glossaryService';
 
 const term = (overrides: Partial<GlossaryTerm> = {}): GlossaryTerm => ({
@@ -426,91 +426,118 @@ describe('GlossaryRowV2 — two-line row on a phone (dsr-6f-2, F6-M-v2 buepS)', 
   });
 });
 
-describe('GlossaryRowV2 — season drawers (disc-2026-10-glossary-season-scope-b)', () => {
-  const drawer = {
-    id: 'j1',
+describe('GlossaryRowV2 — season lines (disc-2026-10-glossary-season-variants-card-b, F6s-D-v2)', () => {
+  const show = {
+    id: 'bv',
     mediaId: 's1',
-    termSrc: 'Jerlamarel',
-    termZh: '謝拉馬威',
+    termSrc: 'Baba Voss',
+    termZh: '巴霸沃斯',
     language: 'zh-Hant',
     source: 'official_subtitle' as const,
     confirmed: false,
-    season: 1,
     createdAt: '',
     updatedAt: '',
   };
+  const s1 = { ...show, id: 'bv1', termZh: '巴巴禾斯', season: 1 };
 
-  it('tags a season drawer row with its season', () => {
+  const renderCard = (props: Partial<Parameters<typeof GlossaryRowV2>[0]> = {}) =>
     render(
       <GlossaryRowV2
-        term={drawer}
+        term={show}
+        seasons={[s1]}
         onConfirm={() => {}}
         onEdit={async () => {}}
         onDelete={() => {}}
+        {...props}
       />
     );
-    expect(screen.getByTestId('glossary-season-j1')).toHaveTextContent('S1');
+
+  it('shows 「↳ 第 1 季官方寫法：巴巴禾斯」 inside the card, with no badge, no 確認 and no S1 pill', () => {
+    renderCard();
+    const line = screen.getByTestId('glossary-season-row-bv1');
+    expect(screen.getByTestId('glossary-row-bv')).toContainElement(line);
+    expect(line).toHaveTextContent('第 1 季官方寫法：巴巴禾斯');
+    expect(screen.queryByTestId('glossary-confirm-bv1')).toBeNull();
+    expect(screen.queryByTestId('glossary-source-bv1')).toBeNull();
+    expect(screen.queryByTestId('glossary-season-bv1')).toBeNull();
+    expect(screen.getByTestId('glossary-edit-bv1')).toBeInTheDocument();
+    expect(screen.getByTestId('glossary-delete-bv1')).toBeInTheDocument();
   });
 
-  // disc-2026-10-icon-only-native-title-audit — 「S1」 does not say what it
-  // means, so the sentence is in the shared tooltip, not a browser title.
-  it('the S1 badge explains itself on a tap and by name, with no title attribute', async () => {
-    render(
-      <GlossaryRowV2
-        term={drawer}
-        onConfirm={() => {}}
-        onEdit={async () => {}}
-        onDelete={() => {}}
-      />
+  it('the card is unconfirmed when a season line is, and its 確認 confirms the show-wide row', () => {
+    const onConfirm = vi.fn();
+    renderCard({ term: { ...show, confirmed: true }, unconfirmed: true, onConfirm });
+    expect(screen.getByTestId('glossary-unconfirmed-bv')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('glossary-confirm-bv'));
+    expect(onConfirm).toHaveBeenCalledWith('bv');
+  });
+
+  it('editing a season line edits that season only', async () => {
+    const onEdit = vi.fn(async () => {});
+    renderCard({ onEdit });
+    fireEvent.click(screen.getByTestId('glossary-edit-bv1'));
+    const input = screen.getByTestId('glossary-edit-input-bv1');
+    expect(input).toHaveAccessibleName('編輯 Baba Voss 第 1 季的譯名');
+    expect(screen.getByTestId('glossary-season-row-bv1')).toHaveAttribute(
+      'data-glossary-inline-editor',
+      ''
     );
-    const badge = screen.getByRole('button', { name: '第 1 季官方字幕的寫法' });
-    expect(badge).toBe(screen.getByTestId('glossary-season-j1'));
-    expect(badge.hasAttribute('title')).toBe(false);
+    fireEvent.change(input, { target: { value: '巴巴沃斯' } });
     await act(async () => {
-      fireEvent.pointerDown(badge, { pointerType: 'touch' });
-      fireEvent.click(badge, { detail: 1 });
+      fireEvent.click(screen.getByTestId('glossary-save-bv1'));
     });
-    expect(await screen.findByText('第 1 季官方字幕的寫法')).toBeInTheDocument();
+    expect(onEdit).toHaveBeenCalledWith('bv1', '巴巴沃斯');
   });
 
-  it('explains what deleting a season spelling does, naming the show-wide fallback', async () => {
-    render(
-      <GlossaryRowV2
-        term={drawer}
-        fallbackZh="傑拉馬瑞"
-        onConfirm={() => {}}
-        onEdit={async () => {}}
-        onDelete={() => {}}
-      />
+  it('deleting a season line names the show-wide fallback', async () => {
+    renderCard();
+    fireEvent.click(screen.getByTestId('glossary-delete-bv1'));
+    expect(await screen.findByTestId('glossary-delete-dialog-bv1')).toHaveTextContent(
+      '這是第 1 季官方字幕的寫法。刪掉後，補第 1 季的集數會改用全劇的寫法「巴霸沃斯」'
     );
-    fireEvent.click(screen.getByTestId('glossary-delete-j1'));
-    expect(await screen.findByTestId('glossary-delete-dialog-j1')).toHaveTextContent(
-      '這是第 1 季官方字幕的寫法。刪掉後，補第 1 季的集數會改用全劇的寫法「傑拉馬瑞」'
+  });
+
+  it('deleting the card says its season spellings go with it', async () => {
+    renderCard();
+    fireEvent.click(screen.getByTestId('glossary-delete-bv'));
+    expect(await screen.findByTestId('glossary-delete-dialog-bv')).toHaveTextContent(
+      '第 1 季的官方寫法「巴巴禾斯」也會一起刪掉'
     );
+  });
+
+  it('the season line and the main line put 編輯／刪除 in the same gap-3 pair', () => {
+    renderCard();
+    const pair = screen.getByTestId('glossary-edit-bv1').parentElement as HTMLElement;
+    expect(pair).toHaveClass('gap-3');
+    expect(pair).toContainElement(screen.getByTestId('glossary-delete-bv1'));
+    expect(screen.getByTestId('glossary-row-bv')).toHaveClass('gap-x-3', 'flex-wrap');
   });
 });
 
-describe('GlossaryRowV2 — orphan season drawer', () => {
-  it('says the name leaves the glossary when no show-wide row remains', async () => {
+describe('GlossaryOrphanCardV2', () => {
+  it('names the term and says deleting a season leaves it out of that season', async () => {
     render(
-      <GlossaryRowV2
-        term={{
-          id: 'o1',
-          mediaId: 's1',
-          termSrc: 'Oloman',
-          termZh: '奧路文',
-          language: 'zh-Hant',
-          source: 'official_subtitle',
-          confirmed: false,
-          season: 1,
-          createdAt: '',
-          updatedAt: '',
-        }}
-        onConfirm={() => {}}
+      <GlossaryOrphanCardV2
+        termSrc="Oloman"
+        seasons={[
+          {
+            id: 'o1',
+            mediaId: 's1',
+            termSrc: 'Oloman',
+            termZh: '奧路文',
+            language: 'zh-Hant',
+            source: 'official_subtitle',
+            confirmed: false,
+            season: 1,
+            createdAt: '',
+            updatedAt: '',
+          },
+        ]}
         onEdit={async () => {}}
         onDelete={() => {}}
       />
     );
+    expect(screen.getByTestId('glossary-orphan-oloman')).toHaveTextContent('全劇沒有這個詞');
     fireEvent.click(screen.getByTestId('glossary-delete-o1'));
     expect(await screen.findByTestId('glossary-delete-dialog-o1')).toHaveTextContent(
       '全劇層已經沒有這個詞'

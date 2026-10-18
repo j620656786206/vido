@@ -97,6 +97,42 @@ describe('GlossaryPanelV2', () => {
     expect(mocked.listTerms).toHaveBeenCalledWith('42');
   });
 
+  it('a term and its season spellings are one card, counted once (disc-2026-10-glossary-season-variants-card-b)', async () => {
+    mocked.listTerms.mockResolvedValue([
+      term({ id: 'bv', termSrc: 'Baba Voss', termZh: '巴霸沃斯', source: 'official_subtitle' }),
+      term({
+        id: 'bv1',
+        termSrc: 'Baba Voss',
+        termZh: '巴巴禾斯',
+        source: 'official_subtitle',
+        season: 1,
+      }),
+      term({
+        id: 'bv2',
+        termSrc: 'Baba Voss',
+        termZh: '巴霸沃斯',
+        source: 'official_subtitle',
+        season: 2,
+      }),
+      term({
+        id: 'h',
+        termSrc: 'Haniwa',
+        termZh: '哈妮娃',
+        source: 'official_subtitle',
+        confirmed: true,
+      }),
+    ]);
+    renderPanel();
+
+    const card = await screen.findByTestId('glossary-row-bv');
+    // Season 1 differs → its own line in the card; season 2 matches → no line.
+    expect(card).toContainElement(screen.getByTestId('glossary-season-row-bv1'));
+    expect(screen.queryByTestId('glossary-season-row-bv2')).toBeNull();
+    expect(screen.queryByTestId('glossary-row-bv1')).toBeNull();
+    expect(screen.getByTestId('glossary-list').children).toHaveLength(2);
+    expect(screen.getByTestId('glossary-footer-count')).toHaveTextContent('共 2 條 · 1 條未確認');
+  });
+
   it('shows the loading skeleton while the list query is in flight', () => {
     mocked.listTerms.mockReturnValue(new Promise(() => undefined) as never);
 
