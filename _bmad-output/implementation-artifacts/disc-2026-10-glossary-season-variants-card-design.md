@@ -1,6 +1,6 @@
 # Disc：名詞對照表「各季寫法不同」改成一張卡片（設計稿）
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 2026-10-18 Alexyu 在正式機看《末日光明》名詞對照表：「人名有多個翻譯，比如 Baba 就有三種翻譯，Baba Voss 也有多個翻譯。」查證後確認這是 `disc-2026-10-glossary-season-scope-b` 刻意做的：官方字幕第 1 季寫「巴巴禾斯」、第 2 季寫「巴霸沃斯」，Vido 每季照官方。面板卻把全劇、S1、S2 攤成三列，看起來像重複。
 
@@ -91,3 +91,11 @@ Status: ready-for-dev
 
 做完存檔（⌘S）。
 ```
+
+## Sally 複審（2026-10-18，MCP 唯讀）
+
+- 文案逐字對：兩張稿的人名、譯名、「第 1 季官方寫法：」、標題「名詞對照表 — 末日光明」、頁尾 5／4、F6s Note 七條全部一致。
+- `ctx.problems`：兩張稿的對話框與清單內 0 筆。`pen-tokens.json` 的 raw 計數全 0、clippingWarnings 維持 162（沒有新增）。
+- Haniwa 已確認：`gr-unconf`、`gr-act-confirm` 隱藏，正確。
+- ✅ 追認 inline agent 的偏差：手機 `gm-line2` gap `$Space/md → $Space/sm`、`gsm-season` gap `$Space/sm → $Space/xs`。原因屬實：「官方字幕」徽章比「字幕」寬 30px，358 寬放不下。
+- 小瑕疵（不退回）：「編輯／刪除」兩顆的間距跟著各列的 gap 走，所以「編輯」那一欄在主列與子列之間差 4px（桌面 63882 vs 63886；手機 23172／23176／23180）。「刪除」那欄是對齊的。實作時兩顆動作鈕要用同一個固定間距，讓「編輯」上下對齊——寫進前後端單。

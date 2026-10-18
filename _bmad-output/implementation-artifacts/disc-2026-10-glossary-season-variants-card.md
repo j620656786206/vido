@@ -1,6 +1,6 @@
 # Disc：名詞對照表「各季寫法不同」改成一張卡片（前後端）
 
-Status: backlog（blocked-by `disc-2026-10-glossary-season-variants-card-design`）
+Status: backlog（設計稿已完成：F6s-D-v2 `mHJar`、F6s-M-v2 `o40M1M`、元件 `QkRiY`／`lcSkQ`、F6s Note `QMmMg`）
 
 **Source:** 同設計單。⚖️ 2026-10-18 Alexyu 選「每季照官方」。
 
@@ -17,7 +17,7 @@ Status: backlog（blocked-by `disc-2026-10-glossary-season-variants-card-design`
 
 1. 後端：確認全劇列＝連同它的季別寫法一起確認（不刪）；編輯全劇列只改全劇譯名，季別寫法保留；刪除全劇列＝整張卡片（含季別寫法）一起刪；「全部確認」改成把季別寫法也確認，不刪。
 2. 讀端：已確認的季別寫法仍要套用到該季（確認 scope-a 的讀端規則「不覆蓋已確認的詞」沒有反過來擋掉它）。
-3. 前端：照設計稿把同一原文的列合成卡片；季別子列只在寫法不同時出現；頁尾數卡片。
+3. 前端：照設計稿把同一原文的列合成卡片；季別子列只在寫法不同時出現；頁尾數卡片。主列與子列的「編輯／刪除」用同一個固定間距，讓兩欄上下對齊（稿上差 4px 是 gap 跟著列走的副作用，不是刻意）。
 4. 一次性：正式機已經被清掉的季別寫法不回補（重新學習官方字幕就會回來）。
 
 ## Acceptance Criteria
