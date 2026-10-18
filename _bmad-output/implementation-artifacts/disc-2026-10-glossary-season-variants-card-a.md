@@ -1,6 +1,6 @@
 # Disc：各季寫法卡片 A（後端）——按「確認」不再刪掉某一季的官方寫法
 
-Status: review
+Status: done
 
 **Source:** ⚖️ 2026-10-18 Alexyu 選「每季照官方」（`disc-2026-10-glossary-season-variants-card-design`，PR #811）。原本一張單，Bob 建檔時照 Story Splitting Rule（跨前後端、每邊超過 3 項就拆）拆成 A（後端，本單）與 B（前端，`…-card-b`）。A 先做：它單獨上線就能擋掉「按確認會把第 1 季官方寫法刪掉」。
 

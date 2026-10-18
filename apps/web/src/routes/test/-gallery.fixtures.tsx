@@ -5850,6 +5850,52 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
     viewport: { width: 390, height: 844 },
   },
+  // disc-2026-10-glossary-season-variants-card-b: 《末日光明》 as on prod,
+  // 2026-10-18 — Baba / Baba Voss / Jerlamarel spelled differently in season 1.
+  // F6s-D-v2 (mHJar) on a desktop, F6s-M-v2 (o40M1M) on a phone.
+  ...(['', '-mobile'] as const).map((suffix) => {
+    const mediaId = `series-see-seasons${suffix}`;
+    const row = (
+      id: string,
+      termSrc: string,
+      termZh: string,
+      extra: Partial<GlossaryTerm> = {}
+    ): GlossaryTerm => ({
+      id: `fx-gs-${id}`,
+      mediaId,
+      termSrc,
+      termZh,
+      language: 'zh-Hant',
+      source: 'official_subtitle',
+      confirmed: false,
+      createdAt: '2026-10-18T00:00:00Z',
+      updatedAt: '2026-10-18T00:00:00Z',
+      ...extra,
+    });
+    const data: GlossaryTerm[] = [
+      ...(suffix ? [] : [row('aw', 'Alfre Woodard', '阿爾法·伍達德', { source: 'metadata' })]),
+      row('b', 'Baba', '巴霸'),
+      row('b1', 'Baba', '巴巴', { season: 1 }),
+      row('b2', 'Baba', '巴霸', { season: 2 }),
+      row('bv', 'Baba Voss', '巴霸沃斯'),
+      row('bv1', 'Baba Voss', '巴巴禾斯', { season: 1 }),
+      row('bv2', 'Baba Voss', '巴霸沃斯', { season: 2 }),
+      row('h', 'Haniwa', '哈妮娃', { confirmed: true }),
+      ...(suffix
+        ? []
+        : [row('j', 'Jerlamarel', '傑拉馬瑞'), row('j1', 'Jerlamarel', '謝拉馬威', { season: 1 })]),
+    ];
+    return {
+      id: `glossary-panel-v2/season-cards${suffix}`,
+      label: `subtitle/GlossaryPanelV2 (各季寫法不同 — ${suffix ? 'F6s-M-v2' : 'F6s-D-v2'})`,
+      component: GlossaryPanelV2,
+      props: { mediaId, mediaTitle: '末日光明', open: true, onOpenChange: noop },
+      seedQueries: [{ queryKey: glossaryKeys.list(mediaId), data }],
+      penNode: 'screen-section', // Screen F6s-D-v2 (mHJar) / F6s-M-v2 (o40M1M)
+      statesOnly: ['default'],
+      ...(suffix ? { viewport: { width: 390, height: 844 } } : {}),
+    } satisfies GalleryFixture;
+  }),
   {
     id: 'glossary-panel-v2/empty',
     label: 'subtitle/GlossaryPanelV2 (空狀態 尚無詞彙 — F7)',
