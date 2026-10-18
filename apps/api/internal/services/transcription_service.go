@@ -471,13 +471,9 @@ func (s *TranscriptionService) loadGlossary(ctx context.Context, glossaryKey, ep
 			if oerr != nil {
 				s.logger.Warn("glossary season drawer lookup failed — show-wide terms only", "media_id", episodeID, "season", season, "error", oerr)
 			} else if len(over) > 0 {
-				// A term the user confirmed or edited in the panel is their
-				// word: the drawer never overrides it (CR 1).
-				confirmed, cerr := s.glossaryRepo.LookupByScope(ctx, scope, true)
-				if cerr != nil {
-					confirmed = nil
-				}
-				m = overlaySeasonDrawer(m, over, confirmed)
+				// The season spelling wins even over a confirmed show-wide
+				// term (⚖️ 2026-10-18, disc-2026-10-glossary-season-variants-card-a).
+				m = overlaySeasonDrawer(m, over)
 				s.logger.Debug("glossary: season drawer applied", "media_id", episodeID, "season", season, "overrides", len(over))
 			}
 		}
@@ -492,22 +488,22 @@ func (s *TranscriptionService) loadGlossary(ctx context.Context, glossaryKey, ep
 	return pairs
 }
 
-// overlaySeasonDrawer lays a season's renderings over the show-wide map,
-// skipping any term the user confirmed (case-insensitive key, matching the
-// NOCASE unique index). PURE; never mutates its inputs.
-func overlaySeasonDrawer(base, over, confirmed map[string]string) map[string]string {
+// overlaySeasonDrawer lays a season's renderings over the show-wide map. A
+// show-wide key differing only in case is replaced too (the NOCASE unique
+// index makes them one term). PURE; never mutates its inputs.
+func overlaySeasonDrawer(base, over map[string]string) map[string]string {
+	overLower := make(map[string]struct{}, len(over))
+	for src := range over {
+		overLower[strings.ToLower(src)] = struct{}{}
+	}
 	merged := make(map[string]string, len(base)+len(over))
 	for src, zh := range base {
-		merged[src] = zh
-	}
-	lockedLower := make(map[string]struct{}, len(confirmed))
-	for src := range confirmed {
-		lockedLower[strings.ToLower(src)] = struct{}{}
-	}
-	for src, zh := range over {
-		if _, locked := lockedLower[strings.ToLower(src)]; locked {
+		if _, replaced := overLower[strings.ToLower(src)]; replaced {
 			continue
 		}
+		merged[src] = zh
+	}
+	for src, zh := range over {
 		merged[src] = zh
 	}
 	return merged

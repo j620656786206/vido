@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -396,12 +397,31 @@ func TestSeasonDrawers_ListAndClearOfTerm(t *testing.T) {
 	assert.Equal(t, 1, *drawers[0].Season)
 	assert.Equal(t, "Jerlamarel", drawers[0].TermSrc)
 
-	// A drawer row id is a no-op: deleting one season's spelling must not take the others.
-	n, err := repo.ClearSeasonDrawersOfTerm(ctx, s1)
+	// A drawer row id is a no-op: one season's spelling never acts on the others.
+	n, err := repo.ConfirmSeasonDrawersOfTerm(ctx, s1)
 	require.NoError(t, err)
 	assert.EqualValues(t, 0, n)
-	// The show-wide row clears its term's unconfirmed drawers, NOCASE, and nothing else.
-	n, err = repo.ClearSeasonDrawersOfTerm(ctx, showWide)
+	n, err = repo.DeleteSeasonDrawersOfTerm(ctx, s1)
+	require.NoError(t, err)
+	assert.EqualValues(t, 0, n)
+
+	// disc-2026-10-glossary-season-variants-card-a: confirming the card
+	// confirms its term's drawers (NOCASE) and keeps them; Paris is untouched.
+	n, err = repo.ConfirmSeasonDrawersOfTerm(ctx, showWide)
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, n)
+	drawers, err = repo.ListSeasonDrawers(ctx, "tmdb:tv:80752")
+	require.NoError(t, err)
+	require.Len(t, drawers, 4, "confirming deletes nothing")
+	for _, d := range drawers {
+		if strings.EqualFold(d.TermSrc, "Jerlamarel") {
+			assert.True(t, d.Confirmed, "%s s%d confirmed with the card", d.TermSrc, *d.Season)
+		}
+	}
+
+	// Deleting the card deletes its term's drawers, confirmed ones too — and
+	// nothing of another term or another show.
+	n, err = repo.DeleteSeasonDrawersOfTerm(ctx, showWide)
 	require.NoError(t, err)
 	assert.EqualValues(t, 2, n)
 	drawers, err = repo.ListSeasonDrawers(ctx, "tmdb:tv:80752")
@@ -409,7 +429,37 @@ func TestSeasonDrawers_ListAndClearOfTerm(t *testing.T) {
 	require.Len(t, drawers, 2)
 	assert.Equal(t, "Paris", drawers[0].TermSrc)
 	assert.Equal(t, "Paris", drawers[1].TermSrc)
-	n, err = repo.ClearSeasonDrawersOfTerm(ctx, "no-such-id")
+	other, err := repo.ListSeasonDrawers(ctx, "tmdb:tv:8")
+	require.NoError(t, err)
+	assert.Len(t, other, 1, "the prefix show's drawer stays")
+
+	n, err = repo.DeleteSeasonDrawersOfTerm(ctx, "no-such-id")
 	require.NoError(t, err)
 	assert.EqualValues(t, 0, n)
+}
+
+// disc-2026-10-glossary-season-variants-card-a: 全部確認 confirms the season
+// drawers with the show-wide rows instead of deleting them.
+func TestConfirmAllByScope_ConfirmsSeasonDrawersToo(t *testing.T) {
+	db := setupGlossaryDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	repo := NewGlossaryRepository(db)
+	ctx := context.Background()
+	for _, row := range []struct{ scope, src, zh string }{
+		{"tmdb:tv:80752", "Baba Voss", "巴霸沃斯"},
+		{"tmdb:tv:80752:s1", "Baba Voss", "巴巴禾斯"},
+		{"tmdb:tv:8:s1", "Baba Voss", "別部劇"},
+	} {
+		require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "s", Scope: row.scope, TermSrc: row.src, TermZh: row.zh, Source: models.GlossarySourceOfficialSubtitle}))
+	}
+
+	n, err := repo.ConfirmAllByScope(ctx, "tmdb:tv:80752")
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, n, "the show-wide row and its season-1 spelling")
+	s1, err := repo.LookupByScope(ctx, "tmdb:tv:80752:s1", true)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{"Baba Voss": "巴巴禾斯"}, s1, "kept and confirmed")
+	other, err := repo.LookupByScope(ctx, "tmdb:tv:8:s1", true)
+	require.NoError(t, err)
+	assert.Empty(t, other, "the prefix show is not confirmed")
 }

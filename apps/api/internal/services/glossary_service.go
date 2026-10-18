@@ -96,15 +96,27 @@ func (s *GlossaryService) List(ctx context.Context, mediaID string) ([]models.Gl
 // the many test fakes implementing it need not change.
 type seasonDrawerRepo interface {
 	ListSeasonDrawers(ctx context.Context, scope string) ([]models.GlossaryTerm, error)
-	ClearSeasonDrawersOfTerm(ctx context.Context, id string) (int64, error)
-	DeleteSeasonDrawers(ctx context.Context, scope string) (int64, error)
+	ConfirmSeasonDrawersOfTerm(ctx context.Context, id string) (int64, error)
+	DeleteSeasonDrawersOfTerm(ctx context.Context, id string) (int64, error)
 }
 
-// clearDrawersOf applies the user's word to every season: after an edit,
-// confirm or delete of a show-wide row, that term's unconfirmed drawers go.
-func (s *GlossaryService) clearDrawersOf(ctx context.Context, id string) {
+// ⚖️ 2026-10-18 (disc-2026-10-glossary-season-variants-card-a): every season
+// follows its own official spelling, and the panel shows a term and its
+// season spellings as one card. So a write to the show-wide row acts on the
+// card: confirm confirms the season spellings too, delete deletes them too,
+// and an edit changes the show-wide spelling only. Before this, all three
+// cleared the season spellings, and one 確認 on Baba Voss turned season 1's
+// official 巴巴禾斯 into season 2's 巴霸沃斯.
+
+func (s *GlossaryService) confirmDrawersOf(ctx context.Context, id string) {
 	if dr, ok := s.repo.(seasonDrawerRepo); ok {
-		_, _ = dr.ClearSeasonDrawersOfTerm(ctx, id)
+		_, _ = dr.ConfirmSeasonDrawersOfTerm(ctx, id)
+	}
+}
+
+func (s *GlossaryService) deleteDrawersOf(ctx context.Context, id string) {
+	if dr, ok := s.repo.(seasonDrawerRepo); ok {
+		_, _ = dr.DeleteSeasonDrawersOfTerm(ctx, id)
 	}
 }
 
@@ -143,10 +155,9 @@ func (s *GlossaryService) Edit(ctx context.Context, mediaID, id, termZh string, 
 	if strings.TrimSpace(id) == "" {
 		return &models.ValidationError{Field: "id", Message: "id is required"}
 	}
+	// The season spellings stay: they are what each season's official
+	// subtitles say, shown under this row and deletable one by one.
 	_, err := s.repo.Update(ctx, id, termZh, true)
-	if err == nil {
-		s.clearDrawersOf(ctx, id)
-	}
 	return err
 }
 
@@ -156,7 +167,7 @@ func (s *GlossaryService) Confirm(ctx context.Context, mediaID, id string) error
 	}
 	_, err := s.repo.Confirm(ctx, id)
 	if err == nil {
-		s.clearDrawersOf(ctx, id)
+		s.confirmDrawersOf(ctx, id)
 	}
 	return err
 }
@@ -169,23 +180,15 @@ func (s *GlossaryService) ConfirmAll(ctx context.Context, mediaID string) (int64
 	if err != nil {
 		return 0, err
 	}
-	n, err := s.repo.ConfirmAllByScope(ctx, scope)
-	if err == nil {
-		// Every show-wide row is now the user's word, so no unconfirmed season
-		// drawer applies to lookups any more; clearing them keeps the panel
-		// honest and lets 「N 條未確認」 reach zero (CR 1).
-		if dr, ok := s.repo.(seasonDrawerRepo); ok {
-			_, _ = dr.DeleteSeasonDrawers(ctx, scope)
-		}
-	}
-	return n, err
+	// The repository confirms the season spellings with their scope.
+	return s.repo.ConfirmAllByScope(ctx, scope)
 }
 
 func (s *GlossaryService) Delete(ctx context.Context, mediaID, id string) error {
 	if strings.TrimSpace(id) == "" {
 		return &models.ValidationError{Field: "id", Message: "id is required"}
 	}
-	// Clear first: the drawers are found through the row that is about to go.
-	s.clearDrawersOf(ctx, id)
+	// Drawers first: they are found through the row that is about to go.
+	s.deleteDrawersOf(ctx, id)
 	return s.repo.Delete(ctx, id)
 }

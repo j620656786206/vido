@@ -229,28 +229,56 @@ func (r *GlossaryRepository) ListSeasonDrawers(ctx context.Context, scope string
 	return out, rows.Err()
 }
 
-// ClearSeasonDrawersOfTerm removes the unconfirmed per-season drawers of the
-// term behind a show-wide row id (disc-2026-10-glossary-season-scope-b): once
-// the user edits, confirms or deletes the show-wide spelling, their word
-// applies to every season. A drawer row id is a no-op (deleting one season's
-// spelling must not take the others with it). Returns rows removed.
-func (r *GlossaryRepository) ClearSeasonDrawersOfTerm(ctx context.Context, id string) (int64, error) {
-	var scope, termSrc string
-	err := r.db.QueryRowContext(ctx, `SELECT scope, term_src FROM show_glossary WHERE id = ?`, id).Scan(&scope, &termSrc)
+// drawerPatternOfTerm finds the show-wide row behind id and returns the LIKE
+// pattern of its season drawers plus its term. ok is false for a missing id
+// or a drawer row id — a drawer has no drawers of its own, and acting on one
+// season's spelling must not touch the others.
+func (r *GlossaryRepository) drawerPatternOfTerm(ctx context.Context, id string) (pattern, termSrc string, ok bool, err error) {
+	var scope string
+	err = r.db.QueryRowContext(ctx, `SELECT scope, term_src FROM show_glossary WHERE id = ?`, id).Scan(&scope, &termSrc)
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, nil
+		return "", "", false, nil
 	}
 	if err != nil {
-		return 0, fmt.Errorf("failed to read glossary term for drawer clear: %w", err)
+		return "", "", false, fmt.Errorf("failed to read glossary term for its season drawers: %w", err)
 	}
 	if _, _, isDrawer := models.ParseGlossarySeasonScope(scope); isDrawer {
-		return 0, nil
+		return "", "", false, nil
+	}
+	return likeEscape(scope) + ":s%", termSrc, true, nil
+}
+
+// ConfirmSeasonDrawersOfTerm confirms the per-season drawers of the term
+// behind a show-wide row id (disc-2026-10-glossary-season-variants-card-a):
+// the panel shows a term and its seasons as one card, and confirming the card
+// confirms all of it. A drawer row id is a no-op. Returns rows confirmed.
+func (r *GlossaryRepository) ConfirmSeasonDrawersOfTerm(ctx context.Context, id string) (int64, error) {
+	pattern, termSrc, ok, err := r.drawerPatternOfTerm(ctx, id)
+	if err != nil || !ok {
+		return 0, err
+	}
+	res, err := r.db.ExecContext(ctx, `UPDATE show_glossary SET confirmed = 1, updated_at = ?
+		WHERE scope LIKE ? ESCAPE '\' AND term_src = ? COLLATE NOCASE AND confirmed = 0`,
+		time.Now(), pattern, termSrc)
+	if err != nil {
+		return 0, fmt.Errorf("failed to confirm glossary season drawers of term: %w", err)
+	}
+	return res.RowsAffected()
+}
+
+// DeleteSeasonDrawersOfTerm removes every per-season drawer of the term behind
+// a show-wide row id, confirmed or not (disc-2026-10-glossary-season-variants-card-a):
+// deleting the card deletes all of it, so no season spelling is left behind
+// as an orphan. A drawer row id is a no-op. Returns rows removed.
+func (r *GlossaryRepository) DeleteSeasonDrawersOfTerm(ctx context.Context, id string) (int64, error) {
+	pattern, termSrc, ok, err := r.drawerPatternOfTerm(ctx, id)
+	if err != nil || !ok {
+		return 0, err
 	}
 	res, err := r.db.ExecContext(ctx, `DELETE FROM show_glossary
-		WHERE scope LIKE ? ESCAPE '\' AND term_src = ? COLLATE NOCASE AND source = ? AND confirmed = 0`,
-		likeEscape(scope)+":s%", termSrc, models.GlossarySourceOfficialSubtitle)
+		WHERE scope LIKE ? ESCAPE '\' AND term_src = ? COLLATE NOCASE`, pattern, termSrc)
 	if err != nil {
-		return 0, fmt.Errorf("failed to clear glossary season drawers of term: %w", err)
+		return 0, fmt.Errorf("failed to delete glossary season drawers of term: %w", err)
 	}
 	return res.RowsAffected()
 }
@@ -357,11 +385,15 @@ func (r *GlossaryRepository) Confirm(ctx context.Context, id string) (time.Time,
 	return now, affectedOrNotFound(res, id)
 }
 
+// ConfirmAllByScope confirms a scope's rows and its season drawers
+// (`<scope>:s<N>`) together — a drawer is part of its term's card in the
+// panel (disc-2026-10-glossary-season-variants-card-a).
 func (r *GlossaryRepository) ConfirmAllByScope(ctx context.Context, scope string) (int64, error) {
 	now := time.Now()
 	res, err := r.db.ExecContext(ctx,
-		`UPDATE show_glossary SET confirmed = 1, updated_at = ? WHERE scope = ? AND confirmed = 0`,
-		now, scope)
+		`UPDATE show_glossary SET confirmed = 1, updated_at = ?
+		WHERE (scope = ? OR scope LIKE ? ESCAPE '\') AND confirmed = 0`,
+		now, scope, likeEscape(scope)+":s%")
 	if err != nil {
 		return 0, fmt.Errorf("failed to confirm all glossary terms: %w", err)
 	}
