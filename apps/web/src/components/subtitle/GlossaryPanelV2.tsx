@@ -442,23 +442,34 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
           // editor handles it); only an Esc from anywhere else closes the panel.
           if (e.target instanceof Element && e.target.closest(INLINE_EDITOR)) e.preventDefault();
         }}
+        // Focus the panel itself, not 全部確認: Radix would land on the first
+        // button, and one stray Enter would confirm every unconfirmed term.
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          (e.currentTarget as HTMLElement).focus();
+        }}
         closeClassName={cn(MOBILE_SHEET_CLOSE, 'max-sm:top-4')}
         // A phone gets the shared bottom sheet (dsr-6f-1); every desktop size,
         // position and radius is sm:-prefixed, or MOBILE_SHEET_CONTENT's own
         // unprefixed w-full / max-w-none / translate-0 / rounded-b-none would
         // fight it in twMerge and one of the two breakpoints would lose.
         className={cn(
-          'flex max-h-[85vh] flex-col gap-0 p-0 max-sm:overflow-hidden',
+          // outline-none: the panel takes focus on open (see onOpenAutoFocus) and
+          // is not a control, so it gets no ring — its buttons still do.
+          'flex max-h-[85vh] flex-col gap-0 p-0 outline-none max-sm:overflow-hidden',
           MOBILE_SHEET_CONTENT,
           'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-2rem)] sm:max-w-[880px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border-subtle)]'
         )}
       >
         <SheetGrabber data-testid="glossary-sheet-grabber" />
 
-        {/* Title bar — 44 high and borderless on a phone (F6-M-v2 buepS). */}
+        {/* Title bar — 44 high and borderless on a phone (F6-M-v2 buepS).
+            shrink-0: the panel's height is only a max-h, so a long list's
+            overflow is shared out by flex-basis and a padding-less h-14 bar
+            squashes to its text height (115 terms → 26px). */}
         <div
           data-testid="glossary-title-bar"
-          className="flex h-14 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12 max-sm:h-11 max-sm:border-b-0 max-sm:pl-4"
+          className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12 max-sm:h-11 max-sm:border-b-0 max-sm:pl-4"
         >
           <DialogTitle className="text-base font-semibold">名詞對照表 — {mediaTitle}</DialogTitle>
         </div>
@@ -604,7 +615,7 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
           <div
             data-testid="glossary-footer"
             className={cn(
-              'flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] px-6 py-2.5 text-sm text-[var(--text-secondary)] max-sm:px-4 max-sm:py-3.5 max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))]',
+              'flex shrink-0 items-center justify-between gap-3 border-t border-[var(--border-subtle)] px-6 py-2.5 text-sm text-[var(--text-secondary)] max-sm:px-4 max-sm:py-3.5 max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))]',
               list.length === 0 && 'max-sm:hidden'
             )}
           >

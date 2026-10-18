@@ -242,6 +242,34 @@ describe('GlossaryPanelV2', () => {
     });
   });
 
+  describe('a long list (disc-2026-10-glossary-panel-title-bar-squashed)', () => {
+    it('only the body scrolls — the title bar and footer never shrink', async () => {
+      // jsdom has no layout, so the guard is the token: without shrink-0 a
+      // 115-term list squashed the 56px title bar to 26px on prod.
+      mocked.listTerms.mockResolvedValue([term()]);
+      renderPanel();
+
+      expect(await screen.findByTestId('glossary-title-bar')).toHaveClass('h-14', 'shrink-0');
+      expect(await screen.findByTestId('glossary-footer')).toHaveClass('shrink-0');
+      expect(screen.getByTestId('glossary-body')).toHaveClass(
+        'flex-1',
+        'min-h-0',
+        'overflow-y-auto'
+      );
+    });
+
+    it('opening puts focus on the panel, not on 全部確認 (one Enter would confirm them all)', async () => {
+      mocked.listTerms.mockResolvedValue([term(), term({ id: 't2', termSrc: 'Vecna' })]);
+      renderPanel();
+
+      const panel = await screen.findByTestId('glossary-panel-v2');
+      await screen.findByTestId('glossary-confirm-all');
+      expect(document.activeElement).toBe(panel);
+      // …and the panel is not a control, so the ring stays off it.
+      expect(panel).toHaveClass('outline-none');
+    });
+  });
+
   describe('write failures say so (dsr-6c AC #5)', () => {
     it('a failed add names the term, keeps the form open and the drafts', async () => {
       mocked.listTerms.mockResolvedValue([term()]);
