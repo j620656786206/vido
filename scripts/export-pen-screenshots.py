@@ -377,6 +377,9 @@ SCREENS = {
     # sub-8-1 — 詞彙表匯出／匯入結果（衝突處理：保留我的／改用他的）
     "zv4hT": ("flow-f-subtitle-v2", "f6c-d-v2"),
     "x1uKHq": ("flow-f-subtitle-v2", "f6c-m-v2"),
+    # 名詞對照表 — 各季寫法不同（一個原文一張卡片 + ↳ 季別寫法子列）
+    "mHJar": ("flow-f-subtitle-v2", "f6s-d-v2"),
+    "o40M1M": ("flow-f-subtitle-v2", "f6s-m-v2"),
     "A85GFD": ("flow-f-subtitle-v2", "f7-d-v2"),
     "i9Nun1": ("flow-f-subtitle-v2", "f8-d-v2"),
     "H717g": ("flow-f-subtitle-v2", "f8-m-v2"),
