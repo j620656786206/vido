@@ -1,6 +1,6 @@
 # Disc：活動記錄每一筆字幕生成都寫出「花了多久、花了多少錢」（設計稿）
 
-Status: ready-for-pen
+Status: done
 
 **Source:** 2026-10-19 Alexyu：「目前生成出來的字幕只有在活動會看到本月 AI 花費，但是字幕生成花了多少時間有地方紀錄嗎？」
 
@@ -102,4 +102,10 @@ Status: ready-for-pen
 
 ## Dev Agent Record
 
-（待 Alexyu 跑完 inline agent、Sally 複審後填寫。）
+**2026-10-19 Alexyu 跑兩輪 inline agent；Sally MCP 唯讀複審通過。**
+
+- 第一輪：桌機字幕完成列、失敗列、規格說明都畫好；但失敗列右側沒改到（複製出來的列保留成功列的文字），手機右側兩行把說明擠到 131px → 第二輪修正（見上）。
+- 第二輪後逐字核對：桌機 `LndN2`「3 分鐘 · US$0.27／2 分鐘前」、`EVrLx`「4 秒 · 沒花錢／3 小時前」；手機 `JLTBV`、`akt4i` 右側只剩相對時間，`rowMeta` 在說明下一行（說明寬 214px）；`XYUmV` 最後一句已改。
+- 全部用變數；`ctx.problems` 只有手機 `sec-下載`、`sec-活動記錄` 原本就有的裁切。
+- **追認：** 手機 `textCol` 是整段換掉重建（Pencil 不讓插節點進實例），`rowTitle` 的 `fontWeight: "600"` 照元件原樣——元件本身就寫死 600，沒有對應變數，不算新增寫死值。
+- 截圖：只有 `k1-d.png` 變（`k1-m.png` 位元相同，手機這段在畫面外）；`check-design-refs.py` 通過（385 個檔頭）。
