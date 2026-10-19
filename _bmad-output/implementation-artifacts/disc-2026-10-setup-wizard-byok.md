@@ -1,6 +1,6 @@
 # Disc：首次設定精靈講清楚「AI 費用付給誰」，沒有 Claude 金鑰的人也能填 Gemini 試
 
-Status: review
+Status: done
 
 **Source:** 2026-10-19 party mode（founder-pm／founder-growth／John／Mary／Sally／Bob）。⚖️ **Alexyu 2026-10-19 選 B：先改精靈，改完再在 FB 招募文底下公開邀請**（不選 A「先發文、精靈之後再說」）。
 **為什麼：** v0.2.0（10-14）發版五天，查不到任何外人裝起來（GitHub 14 天 13 個不同訪客、`0.2.0` 映像 6 次下載、外人 issue 0）。FB 招募文 42 則留言裡：黃柏銘把「報價」讀成「付給測試者的工資」；Edward Fang「直接用 NAS 的 whisper，完全不燒 Claude API」；林琮耀問「是走 OpenAI API 嗎」。大部分 NAS 玩家**沒有 Claude 金鑰**，而精靈的金鑰那一步只給 Claude 一個欄位、只寫「用於字幕翻譯與 AI 檔名解析」，沒說錢付給誰、一集多少、沒金鑰怎麼辦。Gemini 的免費額度這條路，只有進「設定 → 金鑰設定」或設環境變數才看得到。
