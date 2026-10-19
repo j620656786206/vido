@@ -21,6 +21,16 @@ const SEP = ' · ';
 /** ⚖️ Sally 2026-10-19 (追認 3): the run's item has left the library. */
 export const MISSING_TITLE = '已不在媒體庫的項目';
 
+/** The spend part when the run cost nothing — a word, not an amount. */
+const NO_SPEND = '沒花錢';
+
+/**
+ * ⚖️ Alexyu 2026-10-19 1A: read before the meta by screen readers only, so
+ * 「3 分鐘 · US$0.27」 is heard as what the run cost, not as another time next to
+ * 「2 分鐘前」. Never drawn on screen.
+ */
+const META_LEAD = '花了';
+
 /** Route word before the cue count (追認 1; asr is ruling 2). */
 const ROUTE_WORD: Record<string, string> = {
   translate: '翻譯',
@@ -46,7 +56,7 @@ export function formatRunSpend(spentUsd: number | null | undefined): string | nu
   // A negative spend is not a thing the ledger records; saying nothing beats
   // printing a refund that never happened.
   if (ltUsd(spentUsd, 0)) return null;
-  if (!gtUsd(spentUsd, 0)) return '沒花錢';
+  if (!gtUsd(spentUsd, 0)) return NO_SPEND;
   // Ask usd() itself whether the amount rounds away, so this can never drift from
   // its rounding rule (a string check — no money is compared here).
   const shown = usd(spentUsd);
@@ -93,4 +103,17 @@ export function recentSubtitleMeta(ev: RecentEvent): string | null {
     (p): p is string => p !== null
   );
   return parts.length > 0 ? parts.join(SEP) : null;
+}
+
+/**
+ * The screen-reader-only word before the meta: 「花了」 when the meta names an
+ * amount (a time, or money that is not 「沒花錢」); null when there is nothing to
+ * follow it — 「花了沒花錢」 is not Chinese — or no meta at all. Decided from the
+ * formatted parts, so no money is compared here (currency.ts rule).
+ */
+export function recentSubtitleMetaLead(ev: RecentEvent): string | null {
+  const spend = formatRunSpend(ev.spentUsd);
+  const hasAmount =
+    formatRunDuration(ev.durationSeconds) !== null || (spend !== null && spend !== NO_SPEND);
+  return hasAmount ? META_LEAD : null;
 }

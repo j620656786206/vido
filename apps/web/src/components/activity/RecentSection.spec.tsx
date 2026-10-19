@@ -69,6 +69,40 @@ describe('RecentSection (disc-2026-10-activity-subtitle-run-time-b)', () => {
     expect(screen.getAllByText('3 分鐘 · US$0.27')).toHaveLength(1);
   });
 
+  it('the meta is read as 「花了…」 by screen readers; the visible text is unchanged (1A)', () => {
+    renderSection();
+    const [done, parse, failed] = screen.getAllByTestId('activity-recent-row');
+    const doneMeta = within(done).getByTestId('activity-recent-meta');
+    const failedMeta = within(failed).getByTestId('activity-recent-meta');
+    expect(doneMeta.textContent).toBe('花了3 分鐘 · US$0.27');
+    expect(failedMeta.textContent).toBe('花了4 秒 · 沒花錢');
+    // Screen-reader only: hidden by sr-only, a child of the meta node.
+    const lead = within(doneMeta).getByText('花了');
+    expect(lead).toHaveClass('sr-only');
+    expect(lead.parentElement).toBe(doneMeta);
+    expect(within(failedMeta).getByText('花了')).toHaveClass('sr-only');
+    // Inside the meta, before the amount and before the time — not on the time.
+    const rowText = done.textContent ?? '';
+    expect(rowText.indexOf('花了')).toBeGreaterThanOrEqual(0);
+    expect(rowText.indexOf('花了')).toBeLessThan(rowText.indexOf('3 分鐘'));
+    expect(rowText.indexOf('3 分鐘')).toBeLessThan(rowText.indexOf('2 分鐘前'));
+    const time = within(done).getByTestId('activity-recent-time');
+    expect(within(time).queryByText('花了')).toBeNull();
+    expect(time.textContent).toBe('2 分鐘前');
+    // Once per subtitle row — no second copy for the other breakpoint.
+    expect(within(done).getAllByText('花了')).toHaveLength(1);
+    // A parse row never gets it.
+    expect(within(parse).queryByText('花了')).toBeNull();
+  });
+
+  it('only 「沒花錢」 to say → no 「花了」 (「花了沒花錢」 is not Chinese)', () => {
+    renderSection([{ ...EVENTS[2], durationSeconds: undefined, spentUsd: 0 }]);
+    const meta = screen.getByTestId('activity-recent-meta');
+    expect(meta.textContent).toBe('沒花錢');
+    expect(within(meta).queryByText('花了')).toBeNull();
+    expect(meta.querySelector('.sr-only')).toBeNull();
+  });
+
   it('a fixed `now` pins every relative time', () => {
     renderSection();
     expect(screen.getAllByTestId('activity-recent-time').map((t) => t.textContent)).toEqual([
