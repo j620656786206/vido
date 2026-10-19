@@ -23,7 +23,18 @@ const jsonOk = <T>(body: T) => ({
 export function movieItem(
   id: string,
   title: string,
-  chineseSubtitle: 'zh_hant' | 'zh_hans' | 'zh' | 'none' | 'unknown' = 'none'
+  chineseSubtitle: 'zh_hant' | 'zh_hans' | 'zh' | 'none' | 'unknown' = 'none',
+  /** Wire-shape (snake_case) overrides — the list rows read these (library-list.spec.ts). */
+  overrides: Partial<{
+    parse_status: 'success' | 'pending' | 'failed';
+    file_path: string;
+    video_resolution: string;
+    video_codec: string;
+    audio_codec: string;
+    vote_average: number;
+    release_date: string;
+    genres: string[];
+  }> = {}
 ) {
   const tracks =
     chineseSubtitle === 'none'
@@ -49,6 +60,7 @@ export function movieItem(
       tmdb_id: 1,
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
+      ...overrides,
     },
   };
 }
