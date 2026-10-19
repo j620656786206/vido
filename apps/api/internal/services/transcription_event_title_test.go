@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -198,4 +199,42 @@ func TestRunTranscription_BatchPathSendsEmptyTitleWithoutExtraLookups(t *testing
 		}
 	}
 	assert.Equal(t, 0, reader.count(), "the batch path must not look a title up")
+}
+
+// disc-2026-10-live-activity-failure-reasons-a AC #1 / #4: the legacy path's
+// transcription_failed carries failure_reason — the activity record's code for
+// the same text — next to the untouched error and message.
+func TestFailJob_CarriesTheFailureReasonCode(t *testing.T) {
+	cases := []struct {
+		errMsg string
+		want   string
+	}{
+		{"extract audio: no audio track found in media file", models.SubtitleRunFailureNoAudioTrack},
+		{"transcription unavailable and resume not possible", models.SubtitleRunFailureASRUnconfigured},
+		{"transcribe: AI_CREDIT_EXHAUSTED: openai account has no credit left (insufficient_quota)", models.SubtitleRunFailureCreditExhausted},
+		{"transcribe: context canceled", models.SubtitleRunFailureCancelled},
+		// Also a folder that cannot be written — but the shared rule only
+		// knows the placer's wording, and the activity record says 生成失敗
+		// for it too (story Dev Notes「已知但不處理」). Same code on both sides.
+		{"save SRT: open /mnt/media/Movies/Dune (2024)/Dune.en.srt: permission denied", models.SubtitleRunFailureOther},
+		// The ledger row keeps 1024 bytes; words past the cut are not in the
+		// record, so they do not name the cause here either.
+		{"extract audio: " + strings.Repeat("ffmpeg stderr noise ", 60) + ": context deadline exceeded", models.SubtitleRunFailureOther},
+	}
+	for _, tc := range cases {
+		t.Run(tc.want+"/"+tc.errMsg[:min(len(tc.errMsg), 40)], func(t *testing.T) {
+			svc, client := titleTestService(t, nil, nil)
+			svc.failJob("job-1", "mv-legacy", tc.errMsg)
+
+			events := collectUntilTerminal(t, client, "mv-legacy")
+			last := events[len(events)-1]
+			require.Equal(t, EventTranscriptionFailed, last.Type)
+			data := last.Data.(map[string]interface{})
+			assert.Equal(t, tc.want, data["failure_reason"])
+			assert.Equal(t, models.SubtitleRunFailureReason(truncateLedgerMessage(tc.errMsg)), data["failure_reason"],
+				"the activity record classifies the stored text with the same function")
+			assert.Equal(t, tc.errMsg, data["error"], "error is unchanged — the dialog still shows it")
+			assert.Equal(t, "Transcription failed: "+tc.errMsg, data["message"])
+		})
+	}
 }

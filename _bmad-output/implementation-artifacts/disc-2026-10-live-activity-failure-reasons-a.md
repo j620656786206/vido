@@ -1,6 +1,6 @@
 # Disc：即時活動的失敗原因 A（後端）——字幕生成失敗的即時事件也帶「原因代碼」，跟活動記錄用同一把尺
 
-Status: ready-for-dev
+Status: done
 
 **Source:** `disc-2026-10-activity-subtitle-run-time-b`（PR #828）合併後，dev 回報：生成字幕畫面的「即時活動」認不出「寫不進資料夾」和「中途停止（取消）」。同一次失敗，即時活動寫「生成失敗」，活動記錄寫「影片所在的資料夾寫不進字幕」。
 ⚖️ **Alexyu 2026-10-19 裁定 2A：** 讓兩邊說法一致——即時活動改用活動記錄那份失敗原因文字（`FAILURE_COPY_BY_REASON`，#828 收成一份）。
@@ -68,10 +68,10 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 取消判斷共用（AC #2、#3）**：從 `failItem`（`process_item.go:857-860`）抽出 `isCallerCancellation(cause, ctxErr error) bool`（`errors.Is(cause, context.Canceled) || errors.Is(ctxErr, context.Canceled) || errors.Is(cause, ErrSubtitleExtractWaitAborted)`），`failItem` 改呼叫它（行為不變，既有測試照綠）。
-- [ ] **T2 單次生成（AC #1、#2、#3）**：`solo_runner.go` 加 `soloFailureReason`；`emitTerminal` 失敗段（`:410-418`）加 `data["failure_reason"] = soloFailureReason(run, runErr)`。`solo_runner_test.go` 加 AC #3 的表格測試。
-- [ ] **T3 舊路徑＋批次（AC #1、#4）**：`failJob`（`transcription_service.go:2361-2368`）加 `"failure_reason": models.SubtitleRunFailureReason(errMsg)`。`GenerationBatchItemState`（`generation_batch.go:144-150`）加 `FailureReason string \`json:"failure_reason"\``；`markItem`（`:837`）多收一個參數（或在 `:800-806` 的 `default` 分支另外設定），`default` 分支傳 `models.SubtitleRunFailureReason(err.Error())`，其他呼叫點傳 `""`；`finish(error)`（`:893-897`）設 `models.SubtitleRunFailureOther`。測試照 AC #4。
-- [ ] **T4 測試搬家＋註解（AC #5、#6、#7）**：`subtitle_run_failure_test.go` 補前端那份字串；改註解；`go test`／`go vet`／`staticcheck`。
+- [x] **T1 取消判斷共用（AC #2、#3）**：從 `failItem`（`process_item.go:857-860`）抽出 `isCallerCancellation(cause, ctxErr error) bool`（`errors.Is(cause, context.Canceled) || errors.Is(ctxErr, context.Canceled) || errors.Is(cause, ErrSubtitleExtractWaitAborted)`），`failItem` 改呼叫它（行為不變，既有測試照綠）。
+- [x] **T2 單次生成（AC #1、#2、#3）**：`solo_runner.go` 加 `soloFailureReason`；`emitTerminal` 失敗段（`:410-418`）加 `data["failure_reason"] = soloFailureReason(run, runErr)`。`solo_runner_test.go` 加 AC #3 的表格測試。
+- [x] **T3 舊路徑＋批次（AC #1、#4）**：`failJob`（`transcription_service.go:2361-2368`）加 `"failure_reason": models.SubtitleRunFailureReason(errMsg)`。`GenerationBatchItemState`（`generation_batch.go:144-150`）加 `FailureReason string \`json:"failure_reason"\``；`markItem`（`:837`）多收一個參數（或在 `:800-806` 的 `default` 分支另外設定），`default` 分支傳 `models.SubtitleRunFailureReason(err.Error())`，其他呼叫點傳 `""`；`finish(error)`（`:893-897`）設 `models.SubtitleRunFailureOther`。測試照 AC #4。
+- [x] **T4 測試搬家＋註解（AC #5、#6、#7）**：`subtitle_run_failure_test.go` 補前端那份字串；改註解；`go test`／`go vet`／`staticcheck`。
 
 ## Dev Notes
 
@@ -127,8 +127,45 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（dev agent，2026-10-19）
+
 ### Debug Log References
+
+- `go test ./...`、`go vet ./...`、`~/go/bin/staticcheck ./...`（apps/api）全綠。
+- 故意改壞驗證：①`emitTerminal` 改成只分類 `error` 文字 → 「原因只寫 signal: killed 的取消」「排隊逾時但文字沒寫 deadline」兩條變紅；②三個出口拿掉截斷 → 三支「關鍵字落在截斷點後面」的測試各自變紅。
 
 ### Completion Notes List
 
+**開工前以 `origin/main` 583b5a3e（#843 合併後）重新確認的合約與差異（story 與程式不一致處以程式為準）：**
+- 值域是**十一個**代碼（v2 多 `queue_timeout`），分類規則順序 queue_timeout → cancelled → budget → credit → target_not_writable → no_audio → ffmpeg → asr_unconfigured → unauthorized → timeout；未改規則或順序。
+- T1 照 v2 拆成兩個：`isCallerCancellation(cause, ctxErr)`（只含 Canceled 兩條）與 `isQueueTimeout(cause)`（`ErrSubtitleExtractWaitAborted`），`failItem` 改呼叫兩者，行為不變。
+- `soloFailureReason` 順序：row 的 `ErrorMessage` → 取消 → 排隊逾時 → 額度 → 預算 → 分類 `runErr` 文字。
+- 批次鍵清單測試實際在 `generation_batch_items_test.go`（`TestGenerationBatchItems_SSEKeySet`），不是 story 寫的 `generation_batch_test.go:275-291`；未動，另加 `TestGenerationBatchItems_ItemWireKeySet` 驗 `changed_item`／`items[]` 每一項的鍵。
+- `markItem` 多一個 `failureReason` 參數（呼叫點與一支既有測試跟著改）。
+
+**story 沒寫、這次多做的（對抗式自我審查抓到，範圍內）：**
+- **截斷一致**：紀錄存的 `error_message` 會被切在約 1 KB（管線 1000、舊路徑 1024 bytes）。ffmpeg stderr 很長時，唯一的關鍵字（例如結尾的 `context deadline exceeded`）會被切掉，活動記錄就寫「生成失敗」；事件若分類完整字串會寫「處理逾時」，兩邊又不一致。三個出口現在都分類「跟紀錄一樣切過」的文字（單次用 `truncateErrorMessage`、舊路徑與批次用 `truncateLedgerMessage`），各補一條會變紅的測試。額度／預算看錯誤型別，不受截斷影響（實際訊息裡代碼都在前幾百 bytes）。
+- **202 回應也多這個鍵**：`POST /subtitles/generation-batch` 的 `progress.items[]` 用同一個型別，所以也帶 `failure_reason`（`""`）；`generation_batch_handler_test.go` 的鍵清單跟著加。B 單在 `GenerationBatchItemState` 加 `failureReason?` 就涵蓋。
+
+**AC #5 搬測試結果：** 前端 `describe('failureCopy')` 的 19 個輸入在 Go 端（`TestSubtitleRunFailureReason_LiveLogStrings`）**全部**得到跟前端文字對應的代碼，沒有不一致。
+
+**其他觀察：**
+- 單次生成「沒有字幕來源也沒設語音辨識」（skip）也送 `transcription_failed`，`failure_reason` 是分類路由理由的結果 → `other`（跟今天前端的「生成失敗」相同）。活動記錄對 skip 不給原因代碼，所以這一種沒有「跟紀錄比」的對象。
+- 舊路徑 `save SRT: … permission denied` 維持 `other`（Dev Notes 已知、兩邊一致）。
+
 ### File List
+
+- apps/api/internal/subtitle/process_item.go
+- apps/api/internal/subtitle/solo_runner.go
+- apps/api/internal/subtitle/solo_runner_test.go
+- apps/api/internal/services/transcription_service.go
+- apps/api/internal/services/transcription_event_title_test.go
+- apps/api/internal/services/generation_batch.go
+- apps/api/internal/services/generation_batch_items_test.go
+- apps/api/internal/handlers/generation_batch_handler_test.go
+- apps/api/internal/models/subtitle_run_failure.go
+- apps/api/internal/models/subtitle_run_failure_test.go
+- apps/api/internal/sse/hub.go
+- _bmad-output/implementation-artifacts/disc-2026-10-live-activity-failure-reasons-a.md
+- _bmad-output/implementation-artifacts/disc-2026-10-live-activity-failure-reasons-b.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml

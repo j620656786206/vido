@@ -38,6 +38,10 @@ const (
 	// plus items and changed_item (dsr-6d-a AC #2 [@contract-v1], additive):
 	// running events carry the one queue entry whose state changed and a null
 	// items; the terminal event carries the whole queue and a null changed_item.
+	// Each entry (changed_item, items[]) carries failure_reason, always present:
+	// a models.SubtitleRunFailure* code when status is failed and reason is
+	// error, "" otherwise (disc-2026-10-live-activity-failure-reasons-a).
+	// transcription_failed carries the same key (every event; same codes).
 	// status ∈ running|complete|cancelled|error|budget_ceiling. Per-item STAGE
 	// detail is NOT duplicated here — FE joins the transcription_* events by
 	// current_media_id.

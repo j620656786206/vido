@@ -82,6 +82,13 @@ Status: ready-for-dev
 - AC #5「對十個代碼逐一」→ 改成對 `Object.keys(FAILURE_COPY_BY_REASON)` 逐一，以後再加代碼就不用改測試。
 - `TABLE`／`failureCopy()` 上一張沒動（即時活動實際收不到 `queue_timeout`：自動生成不送 `transcription_failed`），本單照原計畫刪掉。
 
+### A 單實作確認（2026-10-19，A 單合併）
+
+- 鍵名與值域照上面：`transcription_failed.failure_reason` 每一個都有（十一個代碼之一）；`changed_item`／`items[]` 每一項的 `failure_reason` 一定在，`failed`＋`reason: 'error'` 才是代碼，其餘 `''`。
+- 多一個地方帶這個鍵：`POST /api/v1/subtitles/generation-batch` 202 回應的 `progress.items[]`（同一個型別），AC #1 在 `GenerationBatchItemState` 加 `failureReason?` 就涵蓋。
+- 後端分類的是「跟紀錄一樣切過（約 1 KB）」的文字，所以即時活動與活動記錄連「錯誤訊息很長、關鍵字被切掉」的情況也講同一句（都是「生成失敗」）。
+- 前端 `describe('failureCopy')` 的每個輸入已在 Go 端 `TestSubtitleRunFailureReason_LiveLogStrings` 落地，結果全部一致，AC #6 可以照計畫刪掉那組測試。
+
 ### 不要做的事
 
 - 不要在前端保留任何「英文錯誤字串 → 原因」的比對當備援（那正是兩邊說法不一致的來源）。沒有代碼就是「生成失敗」。

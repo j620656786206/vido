@@ -879,9 +879,9 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 		//     stderr can cut off the trailing "deadline exceeded";
 		//  3. anything else, an ordinary deadline included, is unmarked.
 		switch {
-		case errors.Is(cause, context.Canceled) || errors.Is(ctx.Err(), context.Canceled):
+		case isCallerCancellation(cause, ctx.Err()):
 			msg = CancelledRunPrefix + msg
-		case errors.Is(cause, ErrSubtitleExtractWaitAborted):
+		case isQueueTimeout(cause):
 			msg = QueueTimeoutRunPrefix + msg
 		}
 		run.ErrorMessage = truncateErrorMessage(msg)
@@ -901,6 +901,26 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 	p.emitProgress(ref, StageFailed, err.Error())
 	p.logger.Error("subtitle pipeline failed", "media_id", ref.ID, "media_type", ref.MediaType, "stage", stage, "error", err)
 	return nil, err
+}
+
+// isCallerCancellation is failItem's "the CALLER stopped it" test — the
+// condition for CancelledRunPrefix. ctxErr is the item ctx's Err(): a
+// subprocess killed by cancellation surfaces as "signal: killed", not as
+// context.Canceled, so the cause alone cannot tell. SoloRunner's live
+// transcription_failed event asks the same question through this function, so
+// the event and the run row can never disagree about a cancel
+// (disc-2026-10-live-activity-failure-reasons-a). Checked BEFORE isQueueTimeout:
+// a cancel that arrived while the item was queued is still a cancel.
+func isCallerCancellation(cause, ctxErr error) bool {
+	return errors.Is(cause, context.Canceled) || errors.Is(ctxErr, context.Canceled)
+}
+
+// isQueueTimeout is failItem's "its deadline ran out in (or because of) the
+// extraction queue" test — the condition for QueueTimeoutRunPrefix, checked
+// only after isCallerCancellation said no (disc-2026-10-run-timeout-not-cancel
+// AC #3). Shared with SoloRunner's live event like isCallerCancellation.
+func isQueueTimeout(cause error) bool {
+	return errors.Is(cause, ErrSubtitleExtractWaitAborted)
 }
 
 // restoreMediaStatus puts the media row back where Load found it (status,

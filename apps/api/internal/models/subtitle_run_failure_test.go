@@ -133,6 +133,47 @@ func TestSubtitleRunFailureReason_QueueTimeout(t *testing.T) {
 	}
 }
 
+// disc-2026-10-live-activity-failure-reasons-a AC #5: every input of the web
+// client's raw-string matcher (generationEventCopy.spec.ts describe('failureCopy'),
+// which -b deletes along with the matcher) lands here first, with the code
+// whose words the client showed for it. All of them agreed when moved
+// (2026-10-19) — the client's 已達預算上限 is budget_exceeded, 找不到可用的音軌
+// no_audio_track, and so on.
+func TestSubtitleRunFailureReason_LiveLogStrings(t *testing.T) {
+	cases := []struct {
+		msg  string
+		want string
+	}{
+		{"translate: translate: translation stopped at block 3: AI_BUDGET_EXCEEDED: per-run AI budget ceiling reached", SubtitleRunFailureBudgetExceeded},
+		{"select audio track: no audio track found in media file", SubtitleRunFailureNoAudioTrack},
+		{"extract audio: ffmpeg not available", SubtitleRunFailureFFmpegMissing},
+		{"list audio tracks: ffmpeg not available", SubtitleRunFailureFFmpegMissing},
+		{"transcription unavailable and resume not possible", SubtitleRunFailureASRUnconfigured},
+		{"transcribe: transcribe chunk 2/9: AI_UNAUTHORIZED: invalid key", SubtitleRunFailureUnauthorized},
+		{"transcribe: AI_TIMEOUT: provider did not answer", SubtitleRunFailureTimeout},
+		{"transcribe: transcription run timed out after 45m2s in transcribing (media 157 min, budget 4712 s — raise TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE): context deadline exceeded", SubtitleRunFailureTimeout},
+		{"extract audio: audio extraction timed out: ffmpeg timed out after 33m24s on Movie.mkv (file 66.8 GB, timeout 2004 s — raise SUBTITLE_EXTRACT_PER_GB_SECONDS for slow disks): context deadline exceeded", SubtitleRunFailureTimeout},
+		{`transcribe: whisper: API error: status 401 — {"error":"invalid key"}`, SubtitleRunFailureUnauthorized},
+		{"transcribe: whisper: OpenAI API key not configured", SubtitleRunFailureASRUnconfigured},
+		{"OpenAI 帳號沒有額度了，請到 https://platform.openai.com/settings/organization/billing 儲值後再按一次生成", SubtitleRunFailureCreditExhausted},
+		{"transcribe: transcribe chunk 1/6: whisper: API error: AI_CREDIT_EXHAUSTED: openai account has no credit left (insufficient_quota)", SubtitleRunFailureCreditExhausted},
+		{"transcribe: whisper: request timed out", SubtitleRunFailureTimeout},
+		{"extract audio: context deadline exceeded", SubtitleRunFailureTimeout},
+		// The client's fallbacks (生成失敗).
+		{"save SRT: open /mnt/media/Movies/Dune (2024)/Dune.en.srt: permission denied", SubtitleRunFailureOther},
+		{"save SRT: open /mnt/media/secret/path.srt: no space left on device", SubtitleRunFailureOther},
+		{"", SubtitleRunFailureOther},
+		// The client's "first match wins" case: a budget stop inside a
+		// timeout-shaped message is still a budget stop.
+		{"transcribe: timed out after AI_BUDGET_EXCEEDED: ceiling", SubtitleRunFailureBudgetExceeded},
+	}
+	for _, tc := range cases {
+		t.Run(tc.msg, func(t *testing.T) {
+			assert.Equal(t, tc.want, SubtitleRunFailureReason(tc.msg))
+		})
+	}
+}
+
 // Every code the function can return is one of the eleven the contract names —
 // the web client's FAILURE_COPY_BY_REASON has exactly these keys.
 func TestSubtitleRunFailureReason_CodesAreTheContract(t *testing.T) {

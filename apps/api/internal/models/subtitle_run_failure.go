@@ -5,7 +5,9 @@ import "strings"
 // Failure-reason codes for a failed subtitle run, as the activity record sends
 // them (GET /api/v1/activity recent.events[].failure_reason —
 // disc-2026-10-activity-subtitle-run-time-a AC #1 [@contract-v2]; v2 added
-// queue_timeout — disc-2026-10-run-timeout-not-cancel). Codes only:
+// queue_timeout — disc-2026-10-run-timeout-not-cancel) and as the live events
+// send them (transcription_failed and generation_batch_progress items'
+// failure_reason — disc-2026-10-live-activity-failure-reasons-a). Codes only:
 // the words live on the client (apps/web generationEventCopy.ts
 // FAILURE_COPY_BY_REASON), and the raw error_message never leaves the server —
 // it carries NAS paths and ffmpeg stderr.
@@ -37,16 +39,17 @@ const (
 //     (fsprobe.ProbeWritableContext) says both "not writable" and "timed out",
 //     and the user's fix is the folder, not patience.
 //
-// The match strings are the same set as the `failureCopy` TABLE in
-// apps/web/src/components/subtitle/generationEventCopy.ts (the live log's
-// raw-string matcher), plus queue_timeout, cancelled and target_not_writable,
-// which only this side knows. The live log can still show a cancel or a write
-// failure — it just words them 生成失敗, because its raw-string matcher does
-// not know them (disc-2026-10-live-activity-failure-reasons-b moves it onto
-// these codes). queue_timeout never reaches the live log at all: only the free
-// lane can time out in the extraction queue, and it does not emit
-// transcription_failed. Until -b lands, a rule the live log can see is added
-// on both sides together.
+// These rules are the ONE classifier: the activity record and the live events
+// (transcription_failed from the solo runner and the legacy path, the batch's
+// changed_item / items[]) all send the code this function returns
+// (disc-2026-10-live-activity-failure-reasons-a). Once -b merges, the web
+// client only looks the code up — it removes the raw-string `failureCopy`
+// TABLE, which until then still words the live log — and a new rule is added
+// here only, changing the activity record and the live log together.
+// Every string the client TABLE knows is pinned in subtitle_run_failure_test.go
+// (TestSubtitleRunFailureReason_LiveLogStrings). queue_timeout never reaches
+// the live log: only the free lane can time out in the extraction queue, and
+// it does not emit transcription_failed.
 var subtitleRunFailureRules = []struct {
 	reason string
 	match  func(msg string) bool
@@ -134,10 +137,9 @@ func containsAny(needles ...string) func(string) bool {
 // error type — survive truncation; for every other rule the stored text is
 // all there is.
 //
-// Apart from those prefixes and target_not_writable, the match strings are
-// the same as `failureCopy`'s TABLE in
-// apps/web/src/components/subtitle/generationEventCopy.ts (see the note on
-// subtitleRunFailureRules).
+// The live events use this function too (subtitle.soloFailureReason, the
+// legacy failJob, the batch's markItem) — see the note on
+// subtitleRunFailureRules.
 func SubtitleRunFailureReason(errorMessage string) string {
 	for _, r := range subtitleRunFailureRules {
 		if r.match(errorMessage) {
