@@ -280,6 +280,7 @@ SCREENS = {
     "EsoIv": ("flow-a-browse-v2", "a2p-d"),
     "LcHBs": ("flow-a-browse-v2", "a3p-d"),
     "b1H71g": ("flow-a-browse-v2", "a4p-d"),
+    "EkB8g": ("flow-a-browse-v2", "a4p-m"),
     "R3FqJc": ("flow-a-browse-v2", "a7p-d"),
     "dVGIa": ("flow-a-browse-v2", "a8p-d"),
     "BfGVZ": ("flow-a-browse-v2", "a1p-m"),
