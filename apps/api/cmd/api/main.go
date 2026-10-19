@@ -1387,6 +1387,9 @@ func main() {
 	// disc-2026-10-activity-generation-progress-detail: the generating rows show
 	// "轉錄 2/6 段" from the same hub observer the 管理字幕 reattach reads.
 	activityService.SetStepReader(generationPhases)
+	// disc-2026-10-activity-subtitle-run-time-a: every finished subtitle
+	// generation joins the activity record, with how long and how much.
+	activityService.SetRecentRuns(repos.SubtitleRuns)
 	activityHandler := handlers.NewActivityHandler(activityService)
 
 	// Home v3 readout-band aggregate (ux3-1-6, tech-spec D1). The four in-flight
