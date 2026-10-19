@@ -19,8 +19,6 @@ import {
   Captions,
   FileSearch,
   Download,
-  CircleCheck,
-  AlertTriangle,
   ChevronRight,
   Activity,
   Sparkles,
@@ -36,12 +34,11 @@ import type {
   ActiveJobsSection,
   PendingSection,
   DownloadsSection,
-  RecentSection,
 } from '../../services/activityService';
-import { formatRelativeTime } from '../../utils/relativeTime';
 import { ActivityRow } from './ActivityRow';
 import { ActivitySectionShell } from './ActivitySectionShell';
 import { SpendSectionView, spendHasContent } from './SpendSection';
+import { RecentSection } from './RecentSection';
 import { ActivitySkeleton, ActivityEmpty, ActivitySectionError } from './ActivityStates';
 
 const ACTIVE_META: Record<string, { icon: LucideIcon; title: string }> = {
@@ -298,39 +295,6 @@ function DownloadsSectionView({
   );
 }
 
-function RecentSectionView({ section, onRetry }: { section: RecentSection; onRetry: () => void }) {
-  if (section.status === 'unavailable') {
-    return (
-      <ActivitySectionShell title="活動記錄">
-        <ActivitySectionError onRetry={onRetry} testId="activity-recent-error" />
-      </ActivitySectionShell>
-    );
-  }
-  if (section.events.length === 0) return null;
-  return (
-    <ActivitySectionShell title="活動記錄">
-      {section.events.map((ev, i) => {
-        const failed = ev.result === 'failed';
-        return (
-          <ActivityRow
-            key={`${ev.detail ?? 'event'}-${i}`}
-            icon={failed ? AlertTriangle : CircleCheck}
-            iconTone={failed ? 'error' : 'success'}
-            title={failed ? '解析失敗' : '解析完成'}
-            detail={ev.detail}
-            testId="activity-recent-row"
-            right={
-              <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">
-                {formatRelativeTime(ev.at)}
-              </span>
-            }
-          />
-        );
-      })}
-    </ActivitySectionShell>
-  );
-}
-
 const routeApi = getRouteApi('/activity');
 
 export function ActivityHub() {
@@ -421,7 +385,7 @@ export function ActivityHub() {
           <PendingSectionView section={data.pending} onRetry={retry} />
           <DownloadsSectionView section={data.downloads} onRetry={retry} />
           <SpendSectionView summary={spend.data} failed={spend.isError} onRetry={retrySpend} />
-          <RecentSectionView section={data.recent} onRetry={retry} />
+          <RecentSection section={data.recent} onRetry={retry} />
         </>
       )}
 

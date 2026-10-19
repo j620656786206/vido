@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { failureCopy, feedRowView } from './generationEventCopy';
+import {
+  FAILURE_COPY_BY_REASON,
+  failureCopy,
+  failureCopyForReason,
+  feedRowView,
+} from './generationEventCopy';
 
 // dsr-6d-c-2 AC #5 — transcription_failed carries the backend's raw error
 // (English, sometimes a server file path). The live log shows one Chinese
@@ -328,5 +333,47 @@ describe('feedRowView', () => {
     expect(stage('passed')).toBe('（這一步已完成）');
     expect(stage('stopped')).toBe('（已中斷）');
     expect(feedRowView({ seq: 1, kind: 'done', ...film }).srState).toBeNull();
+  });
+});
+
+// disc-2026-10-activity-subtitle-run-time-b AC #6 — one copy of the failure words:
+// the raw-string matcher and the activity record's reason codes share objects.
+describe('FAILURE_COPY_BY_REASON', () => {
+  it.each([
+    ['AI_BUDGET_EXCEEDED: ceiling', 'budget_exceeded'],
+    ['no audio track found', 'no_audio_track'],
+    ['ffmpeg not available', 'ffmpeg_missing'],
+    ['API key not configured', 'asr_unconfigured'],
+    ['AI_CREDIT_EXHAUSTED: openai', 'credit_exhausted'],
+    ['status 401', 'unauthorized'],
+    ['deadline exceeded', 'timeout'],
+    ['AI_INVALID_RESPONSE: Cannot parse AI response', 'other'],
+  ] as const)('failureCopy(%s) is the %s entry itself', (raw, reason) => {
+    expect(failureCopy(raw)).toBe(FAILURE_COPY_BY_REASON[reason]);
+  });
+
+  it('has exactly the ten contract codes', () => {
+    expect(Object.keys(FAILURE_COPY_BY_REASON).sort()).toEqual(
+      [
+        'asr_unconfigured',
+        'budget_exceeded',
+        'cancelled',
+        'credit_exhausted',
+        'ffmpeg_missing',
+        'no_audio_track',
+        'other',
+        'target_not_writable',
+        'timeout',
+        'unauthorized',
+      ].sort()
+    );
+  });
+
+  it('an unknown, missing or prototype-named code falls back to 生成失敗', () => {
+    expect(failureCopyForReason('nope').text).toBe('生成失敗');
+    expect(failureCopyForReason(undefined).text).toBe('生成失敗');
+    expect(failureCopyForReason('constructor').text).toBe('生成失敗');
+    expect(failureCopyForReason('target_not_writable').text).toBe('影片所在的資料夾寫不進字幕');
+    expect(failureCopyForReason('cancelled').text).toBe('中途停止');
   });
 });

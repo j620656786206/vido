@@ -58,12 +58,37 @@ export interface DownloadsSection {
   total: number;
   error?: string;
 }
-/** A recently-finished job. v1 sources parse events only (see contract doc). */
+/**
+ * A recently-finished job. Two sources, merged newest first by the backend:
+ * parse jobs (`kind: "parse"` — `detail` only) and subtitle-generation runs
+ * (`kind: "subtitle"` — disc-2026-10-activity-subtitle-run-time-a AC #1
+ * `[@contract-v1]`). A subtitle event never carries `detail` (that would be the
+ * raw Go error with a server path); its copy is built on the client from the
+ * fields below. Every subtitle-only field is optional: an absent `spentUsd`
+ * means "not recorded", NOT $0 — the backend sends `0` for a free run.
+ */
 export interface RecentEvent {
-  kind: 'parse' | string;
+  kind: 'parse' | 'subtitle' | string;
   result: 'completed' | 'failed' | string;
   detail?: string;
   at: string;
+  /** `movie` | `episode` | `series`. */
+  mediaType?: string;
+  /** Film / series title; `""` when the item has left the library. */
+  mediaTitle?: string;
+  /** Only for `mediaType === 'episode'` when the episode still exists. */
+  seasonNumber?: number;
+  episodeNumber?: number;
+  /** `models.SubtitleRunRoute*` vocabulary; absent on pre-migration-041 runs. */
+  route?: string;
+  /** Completed runs with at least one cue. */
+  cueCount?: number;
+  /** completed_at − started_at, rounded to the second. */
+  durationSeconds?: number;
+  /** Raw spend (not pre-rounded); absent = not recorded. */
+  spentUsd?: number;
+  /** One of the ten `RunFailureReason` codes; failed runs only. */
+  failureReason?: string;
 }
 export interface RecentSection {
   status: SectionStatus;
