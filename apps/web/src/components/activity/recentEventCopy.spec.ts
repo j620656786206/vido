@@ -6,6 +6,7 @@ import {
   formatRunSpend,
   recentSubtitleDetail,
   recentSubtitleMeta,
+  recentSubtitleMetaLead,
   recentSubtitleName,
 } from './recentEventCopy';
 
@@ -173,6 +174,47 @@ describe('recentSubtitleMeta (AC #4)', () => {
     expect(recentSubtitleMeta(run({ durationSeconds: 211 }))).toBe('4 分鐘');
     expect(recentSubtitleMeta(run({ spentUsd: 0.197439 }))).toBe('US$0.20');
     expect(recentSubtitleMeta(run())).toBeNull();
+  });
+});
+
+describe('recentSubtitleMetaLead (sr-only 花了)', () => {
+  it.each<[string, Partial<RecentEvent>, string | null, string | null]>([
+    ['time + money', { durationSeconds: 180, spentUsd: 0.27 }, '3 分鐘 · US$0.27', '花了'],
+    ['time + no spend', { durationSeconds: 4, spentUsd: 0 }, '4 秒 · 沒花錢', '花了'],
+    ['time only (old row, spend NULL)', { durationSeconds: 180 }, '3 分鐘', '花了'],
+    ['money only (clock went back)', { spentUsd: 0.27 }, 'US$0.27', '花了'],
+    ['sub-cent money only', { spentUsd: 0.004 }, '不到 US$0.01', '花了'],
+    ['沒花錢 only — nothing to follow 花了', { spentUsd: 0 }, '沒花錢', null],
+    ['neither part — no meta at all', {}, null, null],
+  ])('%s', (_label, over, meta, lead) => {
+    const ev = run(over);
+    expect(recentSubtitleMeta(ev)).toBe(meta);
+    expect(recentSubtitleMetaLead(ev)).toBe(lead);
+  });
+
+  it('a value the formatter drops counts as missing (negative spend, bad duration)', () => {
+    expect(recentSubtitleMetaLead(run({ spentUsd: -0.27 }))).toBeNull();
+    expect(recentSubtitleMetaLead(run({ durationSeconds: Number.NaN, spentUsd: 0 }))).toBeNull();
+    expect(recentSubtitleMetaLead(run({ durationSeconds: -5, spentUsd: 0.27 }))).toBe('花了');
+  });
+
+  // Adversarial review: the two are computed apart, so pin that 「花了」 is
+  // never read with nothing after it, and the meta never starts with 沒花錢 under it.
+  it('「花了」 only ever leads a meta that starts with an amount', () => {
+    const durations = [undefined, Number.NaN, -5, 0, 4, 180, 3600];
+    const spends = [undefined, Number.NaN, -0.27, 0, 0.004, 0.27];
+    for (const durationSeconds of durations) {
+      for (const spentUsd of spends) {
+        const ev = run({ durationSeconds, spentUsd });
+        const meta = recentSubtitleMeta(ev);
+        if (recentSubtitleMetaLead(ev) === null) {
+          expect(meta === null || meta === '沒花錢').toBe(true);
+        } else {
+          expect(meta).not.toBeNull();
+          expect(meta?.startsWith('沒花錢')).toBe(false);
+        }
+      }
+    }
   });
 });
 

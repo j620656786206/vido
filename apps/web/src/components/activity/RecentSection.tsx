@@ -12,6 +12,9 @@
  *   fields (recentEventCopy), and 「花多久 · 花多少錢」 as a meta line that sits
  *   above the time on desktop and under the description on a phone (⚖️ Sally
  *   2026-10-19 rulings 2, 5, 6). Only two states: a money stop is still 沒做成.
+ *   The meta starts with a screen-reader-only 「花了」 (⚖️ Alexyu 2026-10-19 1A)
+ *   so it is not heard as one more time next to the relative time; the screen
+ *   is unchanged.
  */
 import { AlertTriangle, CircleCheck } from 'lucide-react';
 import type {
@@ -22,7 +25,11 @@ import { formatRelativeTime } from '../../utils/relativeTime';
 import { ActivityRow } from './ActivityRow';
 import { ActivitySectionShell } from './ActivitySectionShell';
 import { ActivitySectionError } from './ActivityStates';
-import { recentSubtitleDetail, recentSubtitleMeta } from './recentEventCopy';
+import {
+  recentSubtitleDetail,
+  recentSubtitleMeta,
+  recentSubtitleMetaLead,
+} from './recentEventCopy';
 
 interface RecentSectionProps {
   section: RecentSectionData;
@@ -45,6 +52,7 @@ function TimeLabel({ at, now }: { at: string; now?: number }) {
 function SubtitleRow({ ev, now }: { ev: RecentEvent; now?: number }) {
   const failed = ev.result === 'failed';
   const meta = recentSubtitleMeta(ev);
+  const lead = recentSubtitleMetaLead(ev);
   return (
     <ActivityRow
       icon={failed ? AlertTriangle : CircleCheck}
@@ -60,6 +68,7 @@ function SubtitleRow({ ev, now }: { ev: RecentEvent; now?: number }) {
             data-testid="activity-recent-meta"
             className="font-mono text-xs text-[var(--text-secondary)] sm:text-sm"
           >
+            {lead && <span className="sr-only">{lead}</span>}
             {meta}
           </span>
         )

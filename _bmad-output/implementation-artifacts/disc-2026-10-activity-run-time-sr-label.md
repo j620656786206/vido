@@ -1,6 +1,6 @@
 # Disc：活動記錄的「花多久 · 花多少錢」前面，讀螢幕軟體多唸一句「花了」——畫面不變
 
-Status: ready-for-dev
+Status: done
 
 **Source:** `disc-2026-10-activity-subtitle-run-time-b`（PR #828）合併後，dev 回報：讀螢幕軟體把桌機右側兩行「3 分鐘 · US$0.27」和「2 分鐘前」連在一起唸成「3 分鐘 US$0.27 2 分鐘前」，聽的人分不出哪個是「花了多久」、哪個是「多久以前」。
 ⚖️ **Alexyu 2026-10-19 裁定 1A：** 在「花多久 · 花多少錢」前面加一段只給讀螢幕軟體唸的「花了」（sr-only），**畫面不變**。桌機和手機都要（手機那段在說明下一行——同一個節點，改一次兩邊都有）。
@@ -53,10 +53,10 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 純函式（AC #5）**：`recentEventCopy.ts` 在 `recentSubtitleMeta`（`:90-96`）旁加 `recentSubtitleMetaLead`；常數 `'花了'` 放檔內（同 `MISSING_TITLE` `:22` 的寫法，附一行註解寫 ⚖️ Alexyu 2026-10-19 1A）；`recentEventCopy.spec.ts` 加一個 `describe('recentSubtitleMetaLead (sr-only 花了)')`，表格七列。
-- [ ] **T2 元件（AC #1–#3）**：`RecentSection.tsx:57-66` 的 meta span 內、`{meta}` 前面加 `{lead && <span className="sr-only">{lead}</span>}`；檔頭註解（`:11-14`）補一句「meta 前有 sr-only 花了，讀螢幕軟體才分得出跟相對時間」。
-- [ ] **T3 測試（AC #4）**：`RecentSection.spec.tsx` 在「each subtitle row has exactly one meta node」（`:60-70`）後面加一個 `it`，涵蓋 AC #4 五點。
-- [ ] **T4 收尾（AC #6、#7）**：visual 不更新跑一次；lint／typecheck／format。
+- [x] **T1 純函式（AC #5）**：`recentEventCopy.ts` 在 `recentSubtitleMeta`（`:90-96`）旁加 `recentSubtitleMetaLead`；常數 `'花了'` 放檔內（同 `MISSING_TITLE` `:22` 的寫法，附一行註解寫 ⚖️ Alexyu 2026-10-19 1A）；`recentEventCopy.spec.ts` 加一個 `describe('recentSubtitleMetaLead (sr-only 花了)')`，表格七列。
+- [x] **T2 元件（AC #1–#3）**：`RecentSection.tsx:57-66` 的 meta span 內、`{meta}` 前面加 `{lead && <span className="sr-only">{lead}</span>}`；檔頭註解（`:11-14`）補一句「meta 前有 sr-only 花了，讀螢幕軟體才分得出跟相對時間」。
+- [x] **T3 測試（AC #4）**：`RecentSection.spec.tsx` 在「each subtitle row has exactly one meta node」（`:60-70`）後面加一個 `it`，涵蓋 AC #4 五點。
+- [x] **T4 收尾（AC #6、#7）**：visual 不更新跑一次；lint／typecheck／format。
 
 ## Dev Notes
 
@@ -117,8 +117,26 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5 (claude-opus-5-5)
+
 ### Debug Log References
+
+- AC #6 的指令 `pnpm test:visual --grep activity-recent` 回「No tests found」：visual 是**一支** test 走完整個畫廊（`components.visual.spec.ts`），標題不含夾具 id，`--grep` 只能篩 test 標題。改跑全套：`VISUAL_BUCKETS=4 AI_PROVIDER=claude CLAUDE_API_KEY=<假金鑰> pnpm exec playwright test --project=visual --workers=4` → 4 passed，`git status -- tests` 無變更。
+- 突變測試：拿掉 sr-only span、拿掉 `sr-only` class、無條件回「花了」三種改法，新測試都會紅（1／1／4 條）。
 
 ### Completion Notes List
 
+- `recentSubtitleMetaLead(ev)`：有「花多久」那段，或「花多少錢」那段不是「沒花錢」→ `'花了'`；否則 `null`。用 `formatRunDuration`／`formatRunSpend` 的結果判斷，沒有比錢。「沒花錢」抽成檔內常數 `NO_SPEND`，`formatRunSpend` 與 lead 共用，改字不會兩邊不一致。
+- `RecentSection` 的 meta 節點裡、文字前加 `{lead && <span className="sr-only">{lead}</span>}`；`ActivityRow` 沒動，testid 沒動。
+- 本機 Playwright（`/activity`，API 用 route 假資料、固定時鐘）：1440 與 390 兩種寬度，meta `textContent` 為「花了3 分鐘 · US$0.27」「花了4 秒 · 沒花錢」「沒花錢」；Chrome 無障礙樹依序是「花了」「3 分鐘 · US$0.27」「2 分鐘前」；sr-only 元素 1×1、`clip-path: inset(50%)`。改前（main 的兩個檔）與改後各截 4 張（區塊＋整頁 × 兩種寬度），**位元組完全相同**。
+- 對抗式自我審查補了一條不變式測試：「花了」只出現在以「量」開頭的 meta 前（7 種時間 × 6 種金額全組合）。
+- 範圍外（PR「沒做的事」）：VoiceOver＋Safari 可能把 sr-only 與後面的字當成兩個停頓點分開唸；中間的「·」各家讀法不同；選取複製整列會帶到「花了」。皆未立案，等真的用讀螢幕軟體時再看。
+
 ### File List
+
+- apps/web/src/components/activity/recentEventCopy.ts
+- apps/web/src/components/activity/recentEventCopy.spec.ts
+- apps/web/src/components/activity/RecentSection.tsx
+- apps/web/src/components/activity/RecentSection.spec.tsx
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/implementation-artifacts/disc-2026-10-activity-run-time-sr-label.md
