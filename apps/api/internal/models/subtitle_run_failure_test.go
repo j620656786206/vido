@@ -134,8 +134,8 @@ func TestSubtitleRunFailureReason_QueueTimeout(t *testing.T) {
 }
 
 // disc-2026-10-live-activity-failure-reasons-a AC #5: every input of the web
-// client's raw-string matcher (generationEventCopy.spec.ts describe('failureCopy'),
-// which -b deletes along with the matcher) lands here first, with the code
+// client's former raw-string matcher (generationEventCopy.spec.ts
+// describe('failureCopy'), deleted by -b along with the matcher) lives here, with the code
 // whose words the client showed for it. All of them agreed when moved
 // (2026-10-19) — the client's 已達預算上限 is budget_exceeded, 找不到可用的音軌
 // no_audio_track, and so on.

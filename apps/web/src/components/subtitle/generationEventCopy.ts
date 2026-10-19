@@ -5,19 +5,17 @@
  * one recorded row into what the pane draws. The ten row kinds are specified on
  * the .pen spec screen F11-SPEC-LOG (tT3JX) — change them there too.
  *
- * `failureCopy` — the Chinese sentence for a failed generation run.
+ * Why a run failed: the backend decides the reason code itself
+ * (`models.SubtitleRunFailureReason`) and sends it as `failure_reason` on the
+ * live events (`transcription_failed`, the batch's `changed_item`) and on the
+ * activity record alike (disc-2026-10-live-activity-failure-reasons-a/-b). The
+ * client only looks the code up in FAILURE_COPY_BY_REASON — it never matches
+ * raw error strings, so the live log and the activity page always word the
+ * same failure the same way. No code (or an unknown one) says 生成失敗.
  *
- * `transcription_failed` carries the backend's raw error — English, wrapped in
- * stage prefixes, and for a filesystem failure it includes a server path
- * (`failJob`, transcription_service.go). There is no machine-readable reason
- * code on that event; the only structure is the upper-case `AI_*` prefixes the
- * AI layer embeds in the string. So this maps known substrings to one sentence
- * each and says 生成失敗 for everything else. The raw string is never returned
- * (the server log already has it).
- *
- * Batch items do not come through here first: their reason is the structured
- * `changed_item.reason`, worded by generationQueueRow's `queueRowLabel`. This
- * table only refines the vague `reason: "error"` case.
+ * A batch item's `skipped` / `busy_elsewhere` is the structured
+ * `changed_item.reason`, worded by generationQueueRow's `queueRowLabel`; the
+ * reason code only refines `reason: "error"`.
  */
 import type { FeedRow, FeedStage } from '../../hooks/useGenerationJobsFeed';
 import { queueRowLabel, queueRowTitle } from './generationQueueRow';
@@ -36,16 +34,15 @@ export interface FailureCopy {
 }
 
 /**
- * The reason codes a finished subtitle run carries on GET /api/v1/activity
- * (`failure_reason`, disc-2026-10-activity-subtitle-run-time-a AC #1
- * `[@contract-v2]`; v2 added `queue_timeout`). The backend classifies the raw
- * error itself (`models.SubtitleRunFailureReason`); its rules are a SUPERSET of
- * TABLE below — it also knows `queue_timeout`, `cancelled` and
- * `target_not_writable`, and checks them in its own order. (`queue_timeout`
- * never reaches the live log: only the automatic free lane can time out in the
- * extraction queue, and it does not send transcription_failed.) The WORDS are
- * shared; the matching is not (yet). The live log therefore still says 生成失敗
- * for a write failure the activity record names.
+ * The reason codes the backend sends as `failure_reason` — on a finished
+ * subtitle run in GET /api/v1/activity (disc-2026-10-activity-subtitle-run-
+ * time-a AC #1 `[@contract-v2]`; v2 added `queue_timeout`) and on the live
+ * generation events (disc-2026-10-live-activity-failure-reasons-a AC #1
+ * `[@contract-v1]`). One classifier decides them all
+ * (`models.SubtitleRunFailureReason`); the client only looks them up.
+ * (`queue_timeout` in practice never reaches the live log: only the automatic
+ * free lane can time out in the extraction queue, and it does not send
+ * transcription_failed.)
  */
 export type RunFailureReason =
   | 'queue_timeout'
@@ -61,9 +58,9 @@ export type RunFailureReason =
   | 'other';
 
 /**
- * One sentence per reason — the single copy of the failure words. TABLE (the
- * raw-string matcher for the live log) points at these same frozen objects, so
- * the two surfaces never word the same reason two ways.
+ * One sentence per reason — the single copy of the failure words, read by both
+ * the live log (feedRowView) and the activity record (recentEventCopy), so the
+ * two surfaces never word the same reason two ways.
  */
 export const FAILURE_COPY_BY_REASON: Readonly<Record<RunFailureReason, FailureCopy>> = {
   // disc-2026-10-run-timeout-not-cancel (⚖️ Sally 2026-10-19): waited too long
@@ -93,39 +90,6 @@ export function failureCopyForReason(reason: string | null | undefined): Failure
   return Object.prototype.hasOwnProperty.call(FAILURE_COPY_BY_REASON, reason ?? '')
     ? FAILURE_COPY_BY_REASON[reason as RunFailureReason]
     : FAILURE_COPY_BY_REASON.other;
-}
-
-/** First match wins; order matters (a budget stop can mention a timeout). */
-const TABLE: ReadonlyArray<{ match: readonly string[]; copy: FailureCopy }> = [
-  { match: ['AI_BUDGET_EXCEEDED'], copy: FAILURE_COPY_BY_REASON.budget_exceeded },
-  { match: ['no audio track found'], copy: FAILURE_COPY_BY_REASON.no_audio_track },
-  { match: ['ffmpeg not available'], copy: FAILURE_COPY_BY_REASON.ffmpeg_missing },
-  {
-    match: ['transcription unavailable', 'API key not configured'],
-    copy: FAILURE_COPY_BY_REASON.asr_unconfigured,
-  },
-  // The solo runner's sentence says 帳號沒有額度, the legacy path keeps the
-  // AI_CREDIT_EXHAUSTED code in its raw error.
-  {
-    match: ['AI_CREDIT_EXHAUSTED', '帳號沒有額度'],
-    copy: FAILURE_COPY_BY_REASON.credit_exhausted,
-  },
-  // The LLM side says AI_UNAUTHORIZED; the Whisper side says `status 401`.
-  { match: ['AI_UNAUTHORIZED', 'status 401'], copy: FAILURE_COPY_BY_REASON.unauthorized },
-  {
-    match: ['AI_TIMEOUT', 'timed out', 'deadline exceeded'],
-    copy: FAILURE_COPY_BY_REASON.timeout,
-  },
-];
-
-const FALLBACK: FailureCopy = FAILURE_COPY_BY_REASON.other;
-
-export function failureCopy(error: string | null | undefined): FailureCopy {
-  if (!error) return FALLBACK;
-  for (const row of TABLE) {
-    if (row.match.some((m) => error.includes(m))) return row.copy;
-  }
-  return FALLBACK;
 }
 
 export type FeedGlyph =
@@ -242,7 +206,7 @@ export function feedRowView(row: FeedRow): FeedRowView {
     case 'failed': {
       const name = filmName(row);
       if (row.reason === null) {
-        const copy = failureCopy(row.error);
+        const copy = failureCopyForReason(row.failureReason);
         if (copy.stopped) {
           return view({
             glyph: 'circle-alert',
@@ -255,9 +219,12 @@ export function feedRowView(row: FeedRow): FeedRowView {
         }
         return failedView(name, copy.text);
       }
+      // A batch item that failed with `error`: the code says why — always as a
+      // failure (AC #3). A real money stop does not end up here: the batch
+      // itself ends as budget_ceiling / credit_exhausted and pauses the item.
       const text =
-        row.reason === 'error' && row.error
-          ? failureCopy(row.error).text
+        row.reason === 'error'
+          ? failureCopyForReason(row.failureReason).text
           : queueRowLabel({ status: 'failed', reason: row.reason }).text;
       return failedView(name, text);
     }

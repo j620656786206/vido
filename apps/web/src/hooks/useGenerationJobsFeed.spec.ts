@@ -62,13 +62,23 @@ function connected() {
   return { result, es };
 }
 
-const item = (mediaId: string, title: string, status: string, reason = '', seriesTitle = '') => ({
+const item = (
+  mediaId: string,
+  title: string,
+  status: string,
+  reason = '',
+  seriesTitle = '',
+  failureReason = ''
+) => ({
   media_id: mediaId,
   title,
   media_type: seriesTitle ? 'episode' : 'movie',
   series_title: seriesTitle,
   status,
   reason,
+  // disc-2026-10-live-activity-failure-reasons-a AC #1: always on the wire;
+  // a code only for failed + error.
+  failure_reason: failureReason,
 });
 
 /** A running-batch frame carrying one changed item (dsr-6d-a AC #2). */
@@ -383,7 +393,7 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     expect(result.current.singleJobs['m1']).toMatchObject({ spentUsd: 0.2, budgetUsd: 2 });
   });
 
-  it('a single failure keeps the raw error for the view to translate (reason null = not a batch item)', () => {
+  it('a single failure keeps the backend reason code, never the raw error (reason null = not a batch item)', () => {
     const { result, es } = connected();
     act(() => {
       es.emit('transcription_extracting', { media_id: 'm2', phase: 'extracting', title: '' });
@@ -391,15 +401,50 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
         media_id: 'm2',
         phase: 'failed',
         title: '',
-        error: 'select audio track: no audio track found in media file',
+        error: 'place: placer: write failed: open /media/Movies/B/B.zh-TW.srt: permission denied',
+        message: 'place: placer: write failed: open /media/Movies/B/B.zh-TW.srt: permission denied',
+        failure_reason: 'target_not_writable',
       });
     });
     expect(result.current.singleJobs['m2']).toBeUndefined();
-    expect(result.current.feed.at(-1)).toMatchObject({
+    const row = result.current.feed.at(-1);
+    expect(row).toEqual({
+      seq: expect.any(Number),
       kind: 'failed',
+      mediaId: 'm2',
+      title: '',
+      seriesTitle: '',
       reason: null,
-      error: 'select audio track: no audio track found in media file',
+      failureReason: 'target_not_writable',
     });
+    // AC #2: the raw string (with its server path) is nowhere in the log.
+    const feed = JSON.stringify(result.current.feed);
+    expect(feed).not.toContain('permission denied');
+    expect(feed).not.toContain('/media/');
+  });
+
+  it('a single failure without a code (an older server) keeps null — never the raw error in its place', () => {
+    const { result, es } = connected();
+    act(() =>
+      es.emit('transcription_failed', {
+        media_id: 'm2',
+        phase: 'failed',
+        title: 'B',
+        error: 'select audio track: no audio track found in media file',
+      })
+    );
+    expect(result.current.feed.at(-1)).toMatchObject({ kind: 'failed', failureReason: null });
+    expect(JSON.stringify(result.current.feed)).not.toContain('no audio track');
+    act(() =>
+      es.emit('transcription_failed', {
+        media_id: 'm4',
+        phase: 'failed',
+        title: 'D',
+        error: 'x',
+        failure_reason: '',
+      })
+    );
+    expect(result.current.feed.at(-1)).toMatchObject({ kind: 'failed', failureReason: null });
   });
 
   it('never keeps a media id as a title (a UUID is not a title)', () => {
@@ -505,6 +550,7 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
         phase: 'failed',
         title: '',
         error: 'translate: translate: translation stopped at block 9: AI_BUDGET_EXCEEDED: ceiling',
+        failure_reason: 'budget_exceeded',
       });
       es.emit('generation_batch_progress', terminal('budget_ceiling'));
     });
@@ -552,6 +598,7 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
         phase: 'failed',
         title: '',
         error: 'extract audio: context canceled',
+        failure_reason: 'cancelled',
       });
       es.emit('generation_batch_progress', terminal('cancelled'));
     });
@@ -602,11 +649,30 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
       mediaId: 'm3',
       title: 'C',
       reason: 'busy_elsewhere',
-      error: null,
+      failureReason: null,
     });
   });
 
-  it('reason "error" keeps the member transcription_failed text so the view can be specific', () => {
+  it('reason "error" takes the code from changed_item.failure_reason (the translate-then-write failure sends no transcription_failed)', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m3', 'C', 'running')));
+      es.emit('subtitle_progress', { media_id: 'm3', stage: 'translating', message: '' });
+      es.emit(
+        'generation_batch_progress',
+        running(item('m3', 'C', 'failed', 'error', '', 'target_not_writable'))
+      );
+    });
+    expect(result.current.feed.at(-1)).toMatchObject({
+      kind: 'failed',
+      mediaId: 'm3',
+      title: 'C',
+      reason: 'error',
+      failureReason: 'target_not_writable',
+    });
+  });
+
+  it('a member transcription_failed before changed_item changes nothing: changed_item decides', () => {
     const { result, es } = connected();
     act(() => {
       es.emit('generation_batch_progress', running(item('m3', 'C', 'running')));
@@ -615,13 +681,38 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
         phase: 'failed',
         title: '',
         error: 'select audio track: no audio track found in media file',
+        failure_reason: 'no_audio_track',
       });
-      es.emit('generation_batch_progress', running(item('m3', 'C', 'failed', 'error')));
+      es.emit(
+        'generation_batch_progress',
+        running(item('m3', 'C', 'failed', 'error', '', 'timeout'))
+      );
     });
-    expect(result.current.feed.at(-1)).toMatchObject({
-      kind: 'failed',
+    const failed = result.current.feed.filter((r) => r.kind === 'failed');
+    expect(failed).toHaveLength(1);
+    expect(failed[0]).toMatchObject({ reason: 'error', failureReason: 'timeout' });
+    expect(JSON.stringify(result.current.feed)).not.toContain('no audio track');
+  });
+
+  it('a batch failure that is not `error` carries no code, even if one is sent', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('generation_batch_progress', running(item('m3', 'C', 'running')));
+      es.emit(
+        'generation_batch_progress',
+        running(item('m3', 'C', 'failed', 'skipped', '', 'other'))
+      );
+      es.emit('generation_batch_progress', running(item('m4', 'D', 'running')));
+      // An `error` item whose code is missing (older server) says nothing specific.
+      es.emit('generation_batch_progress', running(item('m4', 'D', 'failed', 'error')));
+    });
+    expect(rowsFor(result.current.feed, 'm3').at(-1)).toMatchObject({
+      reason: 'skipped',
+      failureReason: null,
+    });
+    expect(rowsFor(result.current.feed, 'm4').at(-1)).toMatchObject({
       reason: 'error',
-      error: 'select audio track: no audio track found in media file',
+      failureReason: null,
     });
   });
 
@@ -815,6 +906,7 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
         phase: 'failed',
         title: 'A',
         error: 'transcribe: whisper: request timed out',
+        failure_reason: 'timeout',
       });
     });
     expect(result.current.feed[0]).toMatchObject({ kind: 'stage', state: 'stopped' });
@@ -890,12 +982,14 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
         phase: 'failed',
         title: '',
         error: 'select audio track: no audio track found in media file',
+        failure_reason: 'no_audio_track',
       });
     });
     expect(result.current.feed.at(-1)).toMatchObject({
       kind: 'failed',
       mediaId: 'q1',
       reason: null,
+      failureReason: 'no_audio_track',
     });
   });
 
