@@ -414,9 +414,57 @@ func (s *SoloRunner) emitTerminal(ref MediaRef, job *soloJob, outcome *ProcessOu
 	message, detail := failureMessage(run, runErr, job.Budget)
 	data["message"] = message
 	data["error"] = detail
+	// The reason CODE the activity record gives this same run (failure_reason,
+	// disc-2026-10-live-activity-failure-reasons-a AC #1): the client words it
+	// from the code; `error` stays for the dialog's diagnostic line.
+	data["failure_reason"] = soloFailureReason(run, runErr)
 	s.broadcast(services.EventTranscriptionFailed, data)
 	s.logger.Warn("solo subtitle run did not produce a subtitle",
 		"job_id", job.ID, "media_id", ref.ID, "media_type", ref.MediaType, "message", message, "error", detail)
+}
+
+// soloFailureReason is the failure_reason code of a solo run's
+// transcription_failed event — the same code the activity record derives from
+// the run row (models.SubtitleRunFailureReason(run.ErrorMessage)), so the live
+// log and the activity page name the same cause
+// (disc-2026-10-live-activity-failure-reasons-a AC #2).
+//
+// The row is the record when the pipeline hands it back. When the run FAILED,
+// failItem returns no outcome — only the error — and the stored message may
+// carry a prefix the error does not (failItem adds it from the error TYPE, and
+// a killed subprocess says "signal: killed", not "context canceled"). So the
+// error is asked the same type questions failItem asks, through the same
+// predicates, in the same order, before its text is classified — and the text
+// is cut exactly as failItem stores it (truncateErrorMessage): a long ffmpeg
+// stderr can push the only telling words past the cut, and then the record
+// says other, so the live log must too. (The credit and budget checks come
+// from the error's type; their codes sit within the first few hundred bytes
+// of any real message, so the stored text names them as well.)
+func soloFailureReason(run *models.SubtitleRun, runErr error) string {
+	if run != nil && run.ErrorMessage != "" {
+		return models.SubtitleRunFailureReason(run.ErrorMessage)
+	}
+	if runErr == nil {
+		return models.SubtitleRunFailureOther
+	}
+	// ctxErr nil: the solo run's ctx is cancelled only after ProcessItem
+	// returns, so failItem's ctx.Err() leg cannot have fired for it.
+	if isCallerCancellation(runErr, nil) {
+		return models.SubtitleRunFailureCancelled
+	}
+	if isQueueTimeout(runErr) {
+		// No deadline on a solo run today, so unreachable — kept so the rule
+		// cannot drift from failItem's when one is added.
+		return models.SubtitleRunFailureQueueTimeout
+	}
+	var credit *ai.CreditExhaustedError
+	if errors.As(runErr, &credit) {
+		return models.SubtitleRunFailureCreditExhausted
+	}
+	if errors.Is(runErr, ai.ErrBudgetExceeded) {
+		return models.SubtitleRunFailureBudgetExceeded
+	}
+	return models.SubtitleRunFailureReason(truncateErrorMessage(runErr.Error()))
 }
 
 // completeMessageForRoute is the zh-TW verdict per lane. Rule 3: the words
@@ -442,8 +490,8 @@ func failureMessage(run *models.SubtitleRun, runErr error, budget *ai.Budget) (m
 	// An empty provider account: say whose, and where to top it up — the raw
 	// error used to be the provider's whole JSON body
 	// (disc-2026-09-asr-quota-429-treated-as-transient). The detail is a
-	// sentence (it starts in CJK, so the panel shows it as prose) and carries
-	// 帳號沒有額度 for the workspace log's failureCopy table.
+	// sentence (it starts in CJK, so the panel shows it as prose); the live
+	// log reads failure_reason (soloFailureReason), not this text.
 	var credit *ai.CreditExhaustedError
 	if runErr != nil && errors.As(runErr, &credit) {
 		name := credit.DisplayName()

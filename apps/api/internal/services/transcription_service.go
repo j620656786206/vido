@@ -2352,6 +2352,11 @@ func serializeTranslationBlocksToSRT(blocks []TranslationBlock) string {
 	return sb.String()
 }
 
+// failJob emits the legacy path's transcription_failed. failure_reason is the
+// code the activity record gives the same failure (models.SubtitleRunFailureReason
+// over the same text the ledger row stores, cut the same way —
+// disc-2026-10-live-activity-failure-reasons-a AC #1); the client words it,
+// `error`/`message` stay for the diagnostic line.
 func (s *TranscriptionService) failJob(jobID string, mediaID string, errMsg string) {
 	s.logger.Error("transcription failed",
 		"job_id", jobID,
@@ -2359,12 +2364,13 @@ func (s *TranscriptionService) failJob(jobID string, mediaID string, errMsg stri
 		"error", errMsg,
 	)
 	s.broadcastEvent(EventTranscriptionFailed, map[string]interface{}{
-		"job_id":   jobID,
-		"media_id": mediaID,
-		"title":    s.eventTitle(mediaID),
-		"phase":    "failed",
-		"error":    errMsg,
-		"message":  "Transcription failed: " + errMsg,
+		"job_id":         jobID,
+		"media_id":       mediaID,
+		"title":          s.eventTitle(mediaID),
+		"phase":          "failed",
+		"error":          errMsg,
+		"message":        "Transcription failed: " + errMsg,
+		"failure_reason": models.SubtitleRunFailureReason(truncateLedgerMessage(errMsg)),
 	})
 }
 

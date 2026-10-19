@@ -7,7 +7,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -347,6 +349,8 @@ func TestSoloRunner_FailedTerminals(t *testing.T) {
 		assert.Equal(t, "failed", data["phase"])
 		assert.Equal(t, "這部影片沒有可用的字幕來源，也沒有設定語音辨識", data["message"])
 		assert.Contains(t, data, "spent_usd")
+		assert.Equal(t, models.SubtitleRunFailureOther, data["failure_reason"],
+			"every failed terminal carries the code; a skip's routing reason names no known cause")
 		assert.False(t, s.guard.IsInFlight(s.ref))
 	})
 
@@ -374,6 +378,135 @@ func TestSoloRunner_FailedTerminals(t *testing.T) {
 		data := last.Data.(map[string]interface{})
 		assert.Contains(t, data["error"], "ffmpeg exploded")
 	})
+}
+
+// killedByCancel is a cause whose TYPE says "the caller cancelled" while its
+// text does not — the shape failItem's comment warns about (a subprocess
+// killed by cancellation reads "signal: killed").
+type killedByCancel struct{}
+
+func (killedByCancel) Error() string { return "signal: killed" }
+func (killedByCancel) Unwrap() error { return context.Canceled }
+
+// stoppedByDeadline is the queue-timeout twin: the deadline ran out, the text
+// does not say so.
+type stoppedByDeadline struct{}
+
+func (stoppedByDeadline) Error() string { return "ffmpeg stopped" }
+func (stoppedByDeadline) Unwrap() error { return context.DeadlineExceeded }
+
+// disc-2026-10-live-activity-failure-reasons-a AC #2 / #3: the live event's
+// failure_reason is the code the activity record derives from THIS run's row
+// (models.SubtitleRunFailureReason(error_message)) — for every way a solo run
+// can fail, including the ones only the error's type gives away.
+func TestSoloRunner_FailureReasonMatchesTheActivityRecord(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(s *soloHarness)
+		want  string
+	}{
+		{
+			// 正式機 和平使者 S01E01: translated, then the sidecar write failed.
+			name: "placer permission denied after translating",
+			setup: func(s *soloHarness) {
+				s.placer.err = fmt.Errorf("placer: write failed: write temp file: open /media/tv/x.zh-Hant.srt.tmp: %w", fs.ErrPermission)
+			},
+			want: models.SubtitleRunFailureTargetNotWritable,
+		},
+		{
+			name:  "cancelled: the cause is context.Canceled",
+			setup: func(s *soloHarness) { s.router.err = fmt.Errorf("extract: %w", context.Canceled) },
+			want:  models.SubtitleRunFailureCancelled,
+		},
+		{
+			name:  "cancelled: the cause only SAYS signal: killed",
+			setup: func(s *soloHarness) { s.router.err = fmt.Errorf("extract: %w", killedByCancel{}) },
+			want:  models.SubtitleRunFailureCancelled,
+		},
+		{
+			name: "cancelled while queued for the extraction slot",
+			setup: func(s *soloHarness) {
+				s.router.err = fmt.Errorf("extract: %w: %w", ErrSubtitleExtractWaitAborted, context.Canceled)
+			},
+			want: models.SubtitleRunFailureCancelled,
+		},
+		{
+			name: "queue timeout: wait aborted on a deadline",
+			setup: func(s *soloHarness) {
+				s.router.err = fmt.Errorf("extract: %w: %w", ErrSubtitleExtractWaitAborted, context.DeadlineExceeded)
+			},
+			want: models.SubtitleRunFailureQueueTimeout,
+		},
+		{
+			name: "queue timeout: wait aborted, the text never says deadline",
+			setup: func(s *soloHarness) {
+				s.router.err = fmt.Errorf("extract: %w: %w", ErrSubtitleExtractWaitAborted, stoppedByDeadline{})
+			},
+			want: models.SubtitleRunFailureQueueTimeout,
+		},
+		{
+			name:  "budget ceiling",
+			setup: func(s *soloHarness) { s.router.err = fmt.Errorf("translate: %w", ai.ErrBudgetExceeded) },
+			want:  models.SubtitleRunFailureBudgetExceeded,
+		},
+		{
+			name: "AI account with no credit",
+			setup: func(s *soloHarness) {
+				s.router.err = fmt.Errorf("transcribe: %w",
+					&ai.CreditExhaustedError{Provider: "openai", Code: "insufficient_quota", BillingURL: ai.OpenAIBillingURL})
+			},
+			want: models.SubtitleRunFailureCreditExhausted,
+		},
+		{
+			name:  "anything else",
+			setup: func(s *soloHarness) { s.router.err = errors.New("ffmpeg exploded") },
+			want:  models.SubtitleRunFailureOther,
+		},
+		{
+			// The stored row is cut at maxErrorMessage; a long ffmpeg stderr
+			// pushes the only telling words past the cut, so the record says
+			// other — and the live event must not say 處理逾時 for it.
+			name: "the telling words sit past the stored cut",
+			setup: func(s *soloHarness) {
+				s.router.err = fmt.Errorf("extract: SUBTITLE_EXTRACT_FAILED: ffmpeg stopped by the caller's deadline after 3m0s on x.mkv (ffmpeg stderr: %s): context deadline exceeded",
+					strings.Repeat("size=34kB time=00:28:10.85 ", 40))
+			},
+			want: models.SubtitleRunFailureOther,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newSoloHarness(t, translateDecision("Hi"), nil)
+			tc.setup(s)
+			startAndWait(t, s, "")
+
+			last := s.hub.last()
+			require.Equal(t, services.EventTranscriptionFailed, last.Type)
+			data := last.Data.(map[string]interface{})
+
+			row := s.runs.lastUpdate(t)
+			require.Equal(t, models.SubtitleRunFailed, row.Status)
+			assert.Equal(t, models.SubtitleRunFailureReason(row.ErrorMessage), data["failure_reason"],
+				"the live event and the activity record name the same cause (row: %q)", row.ErrorMessage)
+			assert.Equal(t, tc.want, data["failure_reason"])
+			assert.NotEmpty(t, data["error"], "error stays for the dialog's diagnostic line")
+		})
+	}
+}
+
+// soloFailureReason reads the row when the pipeline hands one back (a skip
+// verdict, or a run that ended without an error) and the error otherwise.
+func TestSoloFailureReason_RowFirstThenError(t *testing.T) {
+	skipped := &models.SubtitleRun{Status: models.SubtitleRunSkipped, ErrorMessage: "no usable embedded text subtitle track (0 image-codec track(s), 0 text)"}
+	assert.Equal(t, models.SubtitleRunFailureOther, soloFailureReason(skipped, nil))
+
+	stored := &models.SubtitleRun{Status: models.SubtitleRunFailed, ErrorMessage: "cancelled: subtitle pipeline: movie x: route: signal: killed"}
+	assert.Equal(t, models.SubtitleRunFailureCancelled, soloFailureReason(stored, errors.New("signal: killed")),
+		"the stored row wins when the pipeline hands it back")
+
+	assert.Equal(t, models.SubtitleRunFailureOther, soloFailureReason(nil, nil))
+	assert.Equal(t, models.SubtitleRunFailureNoAudioTrack,
+		soloFailureReason(nil, errors.New("asr fallback: extract audio: no audio track found in media file")))
 }
 
 // ─── AC #9: Status ──────────────────────────────────────────────────────────

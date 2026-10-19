@@ -252,9 +252,10 @@ func TestStartGenerationBatch_Accepted202CarriesProgress(t *testing.T) {
 	progItems := prog["items"].([]interface{})
 	require.Len(t, progItems, 2, "progress.items has one entry per total_items")
 	head := progItems[0].(map[string]interface{})
-	assert.ElementsMatch(t, []string{"media_id", "title", "media_type", "series_title", "status", "reason"}, keysOf(head))
+	assert.ElementsMatch(t, []string{"media_id", "title", "media_type", "series_title", "status", "reason", "failure_reason"}, keysOf(head))
 	assert.Equal(t, "running", head["status"])
 	assert.Equal(t, "", head["reason"])
+	assert.Equal(t, "", head["failure_reason"], "failure_reason is always present, \"\" unless a failed error item (disc-2026-10-live-activity-failure-reasons-a)")
 	assert.Equal(t, "", progItems[1].(map[string]interface{})["series_title"], "series_title is always present")
 }
 

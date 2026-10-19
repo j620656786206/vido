@@ -5,8 +5,11 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -65,6 +68,13 @@ func assertInvariants(t *testing.T, prog *GenerationBatchProgress) {
 		}
 		if it.Status != GenerationBatchItemFailed {
 			assert.Equal(t, GenerationBatchItemReasonNone, it.Reason, "reason is only set on failed items (%s)", it.MediaID)
+		}
+		// disc-2026-10-live-activity-failure-reasons-a AC #1: a code only on
+		// a failed `error` item, "" everywhere else.
+		if it.Status == GenerationBatchItemFailed && it.Reason == GenerationBatchItemReasonError {
+			assert.NotEmpty(t, it.FailureReason, "a failed error item names its cause (%s)", it.MediaID)
+		} else {
+			assert.Empty(t, it.FailureReason, "failure_reason is only set on failed error items (%s)", it.MediaID)
 		}
 	}
 	assert.Equal(t, prog.SuccessCount, done, "success_count == done items")
@@ -142,6 +152,114 @@ func TestGenerationBatchItems_FailureReasons(t *testing.T) {
 	}
 	assert.Equal(t, 4, last.FailCount, "fail_count semantics unchanged: skips and busy items still count as failures")
 	assertInvariants(t, last)
+}
+
+// disc-2026-10-live-activity-failure-reasons-a AC #1 / #4: changed_item and
+// the terminal items[] carry failure_reason — the activity record's code for
+// the run's error — on a failed `error` item, and "" on every other item.
+func TestGenerationBatchItems_FailureReasonCode(t *testing.T) {
+	const (
+		uuidE = "4e98edc6-1eab-4d7c-9dcb-e5a6b7c8d9e1"
+		uuidF = "5f98edc6-2eab-4d7c-9dcb-e5a6b7c8d9f2"
+	)
+	// The 正式機 和平使者 S01E01 shape: translated, then the placer could not
+	// write the sidecar (the pipeline-mode runner returns ProcessItem's error).
+	placerDenied := fmt.Errorf("subtitle pipeline: episode %s: place: placer: write failed: write temp file: open /media/tv/x.zh-Hant.srt.tmp: %w", uuidA, fs.ErrPermission)
+	runner := &fakeGenerationRunner{
+		available: true,
+		errs: map[string]error{
+			uuidA: placerDenied,
+			uuidB: errors.New("ffmpeg exploded"),
+			uuidC: fmt.Errorf("media %s: only non-target tracks: %w", uuidC, ErrGenerationItemSkipped),
+			uuidD: fmt.Errorf("media %s 已在管線佇列處理中: %w", uuidD, ErrTranscriptionInProgress),
+			// The run row keeps ~1 KB; a timeout named only past the cut is
+			// other in the record, so it is other here too.
+			uuidE: fmt.Errorf("subtitle pipeline: movie %s: route: SUBTITLE_EXTRACT_FAILED: ffmpeg stopped (ffmpeg stderr: %s): context deadline exceeded",
+				uuidE, strings.Repeat("size=34kB time=00:28:10.85 ", 40)),
+			uuidF: errors.New("subtitle pipeline: movie f: route: SUBTITLE_EXTRACT_FAILED: ffmpeg timed out after 10m0s on f.mkv: context deadline exceeded"),
+		},
+	}
+	finder := &fakeCandidateFinder{movies: []models.Movie{
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/b.mkv"),
+		genMovie(uuidC, "C", "/m/c.mkv"),
+		genMovie(uuidD, "D", "/m/d.mkv"),
+		genMovie(uuidE, "E", "/m/e.mkv"),
+		genMovie(uuidF, "F", "/m/f.mkv"),
+		genMovie(uuidSeven, "Seven", "/m/7.mkv"),
+	}}
+	p, client := newTestGenerationProcessor(t, runner, finder, 5)
+
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
+	require.NoError(t, err)
+	waitUntilIdle(t, p)
+	events := eventsUntilTerminal(t, client)
+
+	want := map[string]string{
+		uuidA:     models.SubtitleRunFailureTargetNotWritable,
+		uuidB:     models.SubtitleRunFailureOther,
+		uuidC:     "", // skipped
+		uuidD:     "", // busy_elsewhere
+		uuidE:     models.SubtitleRunFailureOther,
+		uuidF:     models.SubtitleRunFailureTimeout,
+		uuidSeven: "", // done
+	}
+	require.Contains(t, placerDenied.Error(), "permission denied")
+	assert.Equal(t, models.SubtitleRunFailureReason(placerDenied.Error()), want[uuidA],
+		"the same code the activity record derives from the stored message")
+
+	// Every changed_item: running and successful states carry "", the final
+	// state of each item carries its code.
+	finalChange := map[string]string{}
+	for _, ev := range events[:len(events)-1] {
+		ch, ok := ev["changed_item"].(GenerationBatchItemState)
+		require.True(t, ok)
+		if ch.Status == GenerationBatchItemRunning {
+			assert.Empty(t, ch.FailureReason, "a running item has no failure reason (%s)", ch.MediaID)
+			continue
+		}
+		finalChange[ch.MediaID] = ch.FailureReason
+	}
+	assert.Equal(t, want, finalChange, "changed_item.failure_reason")
+
+	got := map[string]string{}
+	for _, it := range terminalItems(t, events) {
+		got[it.MediaID] = it.FailureReason
+	}
+	assert.Equal(t, want, got, "terminal items[].failure_reason")
+	assertInvariants(t, lastSnapshot(t, p))
+}
+
+// AC #1: changed_item and every items[] entry always carry the key on the
+// wire (GenerationBatchItemState's "every key is always present" rule) — ""
+// is a value, never an omission.
+func TestGenerationBatchItems_ItemWireKeySet(t *testing.T) {
+	runner := &fakeGenerationRunner{available: true, errs: map[string]error{uuidB: errors.New("boom")}}
+	p, client := newTestGenerationProcessor(t, runner, threeMovies(), 5)
+
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
+	require.NoError(t, err)
+	waitUntilIdle(t, p)
+	events := eventsUntilTerminal(t, client)
+
+	want := []string{"media_id", "title", "media_type", "series_title", "status", "reason", "failure_reason"}
+	keysOf := func(v interface{}) []string {
+		raw, err := json.Marshal(v)
+		require.NoError(t, err)
+		var m map[string]interface{}
+		require.NoError(t, json.Unmarshal(raw, &m))
+		keys := make([]string, 0, len(m))
+		for k := range m {
+			keys = append(keys, k)
+		}
+		return keys
+	}
+	for _, ev := range events[:len(events)-1] {
+		assert.ElementsMatch(t, want, keysOf(ev["changed_item"]))
+	}
+	for _, it := range terminalItems(t, events) {
+		assert.ElementsMatch(t, want, keysOf(it))
+	}
 }
 
 func TestGenerationBatchItems_RunningBroadcastsCarryTheChangedItem(t *testing.T) {
@@ -399,6 +517,8 @@ func TestGenerationBatchItems_PanicEndsTheBatchWithError(t *testing.T) {
 	for _, it := range last.Items {
 		if it.MediaID == uuidB {
 			assert.Equal(t, GenerationBatchItemReasonError, it.Reason)
+			assert.Equal(t, models.SubtitleRunFailureOther, it.FailureReason,
+				"a panic has no run error to classify")
 		}
 	}
 	assert.Equal(t, 1, last.FailCount, "the item that panicked counts as failed")
@@ -623,7 +743,7 @@ func TestGenerationBatchItems_FinishIgnoresAStaleBatch(t *testing.T) {
 	drainEvents(t, client)
 
 	p.finish("a-batch-that-ended-long-ago", GenerationBatchStatusError, 0, GenerationBatchItem{}, ai.NewBudget(5))
-	p.markItem("a-batch-that-ended-long-ago", 2, GenerationBatchItem{MediaID: uuidC}, GenerationBatchItemFailed, GenerationBatchItemReasonError, ai.NewBudget(5))
+	p.markItem("a-batch-that-ended-long-ago", 2, GenerationBatchItem{MediaID: uuidC}, GenerationBatchItemFailed, GenerationBatchItemReasonError, models.SubtitleRunFailureOther, ai.NewBudget(5))
 
 	live := p.SnapshotFor(liveID)
 	require.NotNil(t, live, "the live batch must still be running")

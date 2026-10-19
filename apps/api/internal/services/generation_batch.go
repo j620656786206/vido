@@ -143,10 +143,16 @@ type GenerationBatchItem struct {
 
 // GenerationBatchItemState is a queue entry plus its state (dsr-6d-a AC #1
 // [@contract-v1]). Every key is always present — reason is "" unless failed.
+//
+// failure_reason (disc-2026-10-live-activity-failure-reasons-a AC #1,
+// additive) is one of the models.SubtitleRunFailure* codes when status is
+// failed AND reason is error — the code the activity record gives the same
+// run, so the live log can word it the same way — and "" otherwise.
 type GenerationBatchItemState struct {
 	GenerationBatchItem
-	Status GenerationBatchItemStatus `json:"status"`
-	Reason GenerationBatchItemReason `json:"reason"`
+	Status        GenerationBatchItemStatus `json:"status"`
+	Reason        GenerationBatchItemReason `json:"reason"`
+	FailureReason string                    `json:"failure_reason"`
 }
 
 // GenerationRunner executes one consented batch item. Implementations are
@@ -743,7 +749,7 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 			return
 		}
 
-		p.markItem(batchID, i, item, GenerationBatchItemRunning, GenerationBatchItemReasonNone, budget)
+		p.markItem(batchID, i, item, GenerationBatchItemRunning, GenerationBatchItemReasonNone, "", budget)
 
 		err := p.runner.ExecuteGeneration(ctx, item.MediaID, item.MediaType, item.filePath, item.mediaDir)
 		var credit *ai.CreditExhaustedError
@@ -752,7 +758,7 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 			p.logger.Info("generation batch item succeeded",
 				"batch_id", batchID, "index", i+1, "total", len(items),
 				"media_id", item.MediaID, "title", item.Title)
-			p.markItem(batchID, i, item, GenerationBatchItemDone, GenerationBatchItemReasonNone, budget)
+			p.markItem(batchID, i, item, GenerationBatchItemDone, GenerationBatchItemReasonNone, "", budget)
 		case ctx.Err() != nil:
 			// The in-flight item died because the batch was cancelled — report
 			// cancelled, not failed (AC 2).
@@ -789,20 +795,26 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 			p.logger.Warn("generation batch item skipped — counted as failed",
 				"batch_id", batchID, "index", i+1, "total", len(items),
 				"media_id", item.MediaID, "title", item.Title, "reason", err)
-			p.markItem(batchID, i, item, GenerationBatchItemFailed, GenerationBatchItemReasonSkipped, budget)
+			p.markItem(batchID, i, item, GenerationBatchItemFailed, GenerationBatchItemReasonSkipped, "", budget)
 		case errors.Is(err, ErrTranscriptionInProgress):
 			// The user ran that item from the detail dialog mid-batch, or the
 			// pool owns it right now: count the failure, keep going (AC 5).
 			p.logger.Warn("generation batch item already being processed elsewhere — continuing",
 				"batch_id", batchID, "index", i+1, "total", len(items),
 				"media_id", item.MediaID, "title", item.Title, "error", err)
-			p.markItem(batchID, i, item, GenerationBatchItemFailed, GenerationBatchItemReasonBusyElsewhere, budget)
+			p.markItem(batchID, i, item, GenerationBatchItemFailed, GenerationBatchItemReasonBusyElsewhere, "", budget)
 		default:
 			// Per-item tolerance (AC 5): count the failure, keep going.
 			p.logger.Warn("generation batch item failed — continuing",
 				"batch_id", batchID, "index", i+1, "total", len(items),
 				"media_id", item.MediaID, "title", item.Title, "error", err)
-			p.markItem(batchID, i, item, GenerationBatchItemFailed, GenerationBatchItemReasonError, budget)
+			// The same classifier the activity record runs over this run's
+			// stored error_message — ProcessItem and the Route C ledger store
+			// this error's text, cut at ~1 KB (1000 / 1024 bytes) — so both
+			// name the same cause even when a long ffmpeg stderr pushed the
+			// telling words past the cut.
+			p.markItem(batchID, i, item, GenerationBatchItemFailed, GenerationBatchItemReasonError,
+				models.SubtitleRunFailureReason(truncateLedgerMessage(err.Error())), budget)
 		}
 	}
 
@@ -833,8 +845,9 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 
 // markItem moves queue entry i to status and updates the counters in the SAME
 // critical section (dsr-6d-a AC #1), then broadcasts a running event carrying
-// just that entry. Running also advances current_*.
-func (p *GenerationBatchProcessor) markItem(batchID string, i int, item GenerationBatchItem, status GenerationBatchItemStatus, reason GenerationBatchItemReason, budget *ai.Budget) {
+// just that entry. Running also advances current_*. failureReason is the
+// failure_reason code — "" unless status is failed and reason is error.
+func (p *GenerationBatchProcessor) markItem(batchID string, i int, item GenerationBatchItem, status GenerationBatchItemStatus, reason GenerationBatchItemReason, failureReason string, budget *ai.Budget) {
 	var payload map[string]interface{}
 	p.withLock(func() {
 		b := p.activeBatch
@@ -844,6 +857,7 @@ func (p *GenerationBatchProcessor) markItem(batchID string, i int, item Generati
 		entry := &b.Items[i]
 		entry.Status = status
 		entry.Reason = reason
+		entry.FailureReason = failureReason
 		switch status {
 		case GenerationBatchItemRunning:
 			b.CurrentIndex = i + 1
@@ -894,6 +908,9 @@ func (p *GenerationBatchProcessor) finish(batchID, status string, currentIndex i
 				if entry.Status == GenerationBatchItemRunning {
 					entry.Status = GenerationBatchItemFailed
 					entry.Reason = GenerationBatchItemReasonError
+					// The batch panicked mid-item: there is no run error
+					// here to classify.
+					entry.FailureReason = models.SubtitleRunFailureOther
 					b.FailCount++
 				} else {
 					entry.Status = GenerationBatchItemCancelled
