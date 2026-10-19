@@ -58,6 +58,7 @@ snake_case on the wire; the web client camelCases at the `fetchApi` boundary (Ru
 | `pending.parse_count` | `ParseJobRepository.GetPending()` (existing iface) | ✅ live (capped at 500) |
 | `downloads` | `DownloadService.GetDownloadCounts()` | ✅ live |
 | `recent.events` | `ParseJobRepository.ListAll()` filtered to completed/failed | ✅ live, **parse events only** — scan/subtitle/AI *completion* isn't persisted yet (a future activity-log table); v1 honestly shows parse terminal events, capped at 8 |
+| `recent.events` `kind:"subtitle"` | `SubtitleRunRepository.RecentTerminalRuns()` (completed/failed runs, joined to the library title) | ✅ live since disc-2026-10-activity-subtitle-run-time-a (`[@contract-v1]`, keys in that story's AC #1): merged with parse events newest first, one cap of 8; scan/AI completion still not persisted |
 
 ## Footprint
 

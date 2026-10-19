@@ -124,7 +124,7 @@ const subtitleRunColumns = `id, media_id, media_type, tmdb_id, metadata_hash, gl
 // table alias — derived, never hand-copied, so a joined SELECT can never drift
 // from scanSubtitleRun's order (Rule 15).
 func subtitleRunColumnsAs(alias string) string {
-	cols := strings.Split(subtitleRunColumns, ", ")
+	cols := strings.Split(subtitleRunColumns, ",")
 	for i, c := range cols {
 		cols[i] = alias + "." + strings.TrimSpace(c)
 	}
@@ -466,9 +466,14 @@ func (r *SubtitleRunRepository) AutoProducedBetween(ctx context.Context, from, t
 
 // recentTerminalRunsQuery is RecentTerminalRuns' SQL (a var so the
 // query-plan test EXPLAINs the very text the method runs). The unary `+` on
-// r.status keeps SQLite off idx_subtitle_runs_status: completed+failed is
-// nearly every row, so that index buys nothing and forces a full sort, while
-// walking idx_subtitle_runs_completed_at backwards stops after LIMIT rows.
+// r.status keeps SQLite off idx_subtitle_runs_status — that plan reads every
+// completed and failed run and sorts them all. Walking
+// idx_subtitle_runs_completed_at backwards instead stops once LIMIT rows
+// match; the trade-off is that it steps over every newer non-terminal row
+// that has a completed_at (skipped runs: deferred-paid / skip) on the way.
+// Cheap at today's sizes (正式機 34 runs); a partial index on
+// completed_at WHERE status IN ('completed','failed') is the fix if a large
+// auto pass ever writes thousands of skips.
 var recentTerminalRunsQuery = `SELECT ` + subtitleRunColumnsAs("r") + `,
 		COALESCE(m.title, s.title, sd.title, ''), e.season_number, e.episode_number
 	FROM subtitle_runs r

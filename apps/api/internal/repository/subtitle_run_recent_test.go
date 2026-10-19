@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"testing"
 	"time"
 
@@ -216,6 +217,36 @@ func TestSubtitleRunRepository_RecentTerminalRuns_UsesCompletedAtIndex(t *testin
 		plan += detail + "\n"
 	}
 	require.NoError(t, rows.Err())
-	assert.Contains(t, plan, "idx_subtitle_runs_completed_at", plan)
-	assert.NotContains(t, plan, "USE TEMP B-TREE FOR ORDER BY", "a full sort of every run would defeat LIMIT: "+plan)
+	// The walk starts on the completed_at index (stops after LIMIT matches);
+	// the only sort allowed is SQLite's tie-break on r.id among rows that
+	// share a completed_at ("LAST TERM"), never a sort of every run.
+	assert.True(t, strings.HasPrefix(plan, "SEARCH r USING INDEX idx_subtitle_runs_completed_at"), plan)
+	assert.NotContains(t, plan, "USE TEMP B-TREE FOR ORDER BY", plan)
+}
+
+// An episode whose series row is gone still comes back, untitled. FKs off
+// (setupSubtitleRunDB) so the orphan can exist the way an old row might.
+func TestSubtitleRunRepository_RecentTerminalRuns_OrphanEpisode(t *testing.T) {
+	db := setupSubtitleRunDB(t)
+	_, err := db.Exec(`INSERT INTO episodes (id, series_id, season_number, episode_number, subtitle_status, created_at, updated_at)
+		VALUES ('orphan-ep', 'gone-series', 1, 4, 'not_searched', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`)
+	require.NoError(t, err)
+	seedRecentRuns(t, db, []recentRunSeed{
+		{id: "orphan", mediaID: "orphan-ep", mediaType: "episode", status: models.SubtitleRunCompleted,
+			started: "2026-10-19T00:00:00Z", completed: "2026-10-19T00:01:00Z"},
+	})
+	got, err := NewSubtitleRunRepository(db).RecentTerminalRuns(context.Background(), 8)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "", got[0].MediaTitle)
+}
+
+// subtitleRunColumnsAs qualifies every column, whatever the spacing.
+func TestSubtitleRunColumnsAs(t *testing.T) {
+	cols := strings.Split(subtitleRunColumnsAs("r"), ", ")
+	assert.Len(t, cols, 24)
+	for _, c := range cols {
+		assert.True(t, strings.HasPrefix(c, "r."), c)
+		assert.NotContains(t, c, " ", c)
+	}
 }

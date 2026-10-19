@@ -336,23 +336,37 @@ func (s *ActivityService) downloadsSection(ctx context.Context) DownloadsSection
 // recentSection merges the two finished-job sources newest first and keeps
 // the latest recentEventsMax — one cap for both; the newest win. Each source
 // degrades on its own: one failing leaves the other's events (status ok, the
-// failure logged); only both missing or failing marks the section unavailable.
+// failure logged). The section is unavailable when both are missing or
+// failing — and also when one failed and the other has nothing to show: an
+// "ok" empty record renders as nothing at all, which would hide the failure
+// (正式機 has no parse jobs, so a broken subtitle source would otherwise just
+// make the section vanish, with no error and no retry).
+//
+// The wire `error` stays what it was when only the parse source existed (its
+// own message); any case involving the subtitle source sends a fixed message
+// and keeps the repository error in the log.
 func (s *ActivityService) recentSection(ctx context.Context) RecentSection {
 	parseEvents, parseErr := s.recentParseEvents(ctx)
 	runEvents, runErr := s.recentRunEvents(ctx)
+	parseFailed := parseErr != nil && !errors.Is(parseErr, errSourceNotWired)
+	runFailed := runErr != nil && !errors.Is(runErr, errSourceNotWired)
+
+	if parseFailed {
+		slog.Warn("activity: recent parse source failed", "error", parseErr)
+	}
+	if runFailed {
+		slog.Warn("activity: recent subtitle-run source failed", "error", runErr)
+	}
 
 	if parseErr != nil && runErr != nil {
-		msg := parseErr.Error()
-		if !errors.Is(runErr, errSourceNotWired) {
-			msg = errors.Join(parseErr, runErr).Error()
+		if errors.Is(runErr, errSourceNotWired) {
+			// Subtitle source not wired: exactly the parse-only behaviour.
+			return RecentSection{Status: sectionUnavailable, Error: parseErr.Error()}
 		}
-		return RecentSection{Status: sectionUnavailable, Error: msg}
+		return RecentSection{Status: sectionUnavailable, Error: errSourceNotWired.Error()}
 	}
-	if parseErr != nil && !errors.Is(parseErr, errSourceNotWired) {
-		slog.Warn("activity: parse source failed; recent shows subtitle runs only", "error", parseErr)
-	}
-	if runErr != nil && !errors.Is(runErr, errSourceNotWired) {
-		slog.Warn("activity: subtitle-run source failed; recent shows parse events only", "error", runErr)
+	if (parseFailed || runFailed) && len(parseEvents)+len(runEvents) == 0 {
+		return RecentSection{Status: sectionUnavailable, Error: errSourceNotWired.Error()}
 	}
 
 	events := append(parseEvents, runEvents...)
@@ -454,7 +468,9 @@ func subtitleRunEvent(r repository.RecentSubtitleRun) (RecentEvent, bool) {
 		Route:      run.Route,
 		id:         run.ID,
 	}
-	if run.MediaType == models.SubtitleRunMediaEpisode && r.SeasonNumber != nil && r.EpisodeNumber != nil {
+	// Numbers only travel with a title: an episode whose series row is gone
+	// is "an item that left the library", not "S01E04 of nothing".
+	if run.MediaType == models.SubtitleRunMediaEpisode && title != "" && r.SeasonNumber != nil && r.EpisodeNumber != nil {
 		sn, en := *r.SeasonNumber, *r.EpisodeNumber
 		ev.SeasonNumber, ev.EpisodeNumber = &sn, &en
 	}

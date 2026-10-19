@@ -1,11 +1,13 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"testing"
 	"time"
@@ -383,6 +385,13 @@ func TestActivity_RecentSourcesDegradeIndependently(t *testing.T) {
 		{"parse not wired → subtitle only", nil, runsOK, sectionOK, []string{"subtitle"}},
 		{"subtitle not wired → today's behaviour", parseOK, nil, sectionOK, []string{"parse"}},
 		{"both fail → unavailable", parseBad, runsBad, sectionUnavailable, nil},
+		{"parse not wired, subtitle fails → unavailable", nil, runsBad, sectionUnavailable, nil},
+		// 正式機 shape: no parse jobs at all. A failing subtitle source must
+		// show the error + retry, not an "ok" empty record that renders as
+		// nothing.
+		{"subtitle fails, parse has nothing → unavailable", fakeParse{}, runsBad, sectionUnavailable, nil},
+		{"parse fails, subtitle has nothing → unavailable", parseBad, fakeRecentRuns{}, sectionUnavailable, nil},
+		{"nothing failed, nothing finished → ok empty", fakeParse{}, fakeRecentRuns{}, sectionOK, []string{}},
 		{"parse fails, subtitle not wired → unavailable as today", parseBad, nil, sectionUnavailable, nil},
 		{"neither wired → unavailable", nil, nil, sectionUnavailable, nil},
 	}
@@ -397,12 +406,64 @@ func TestActivity_RecentSourcesDegradeIndependently(t *testing.T) {
 			if tc.wantKinds == nil {
 				assert.Empty(t, got.Events)
 				assert.NotEmpty(t, got.Error)
+				// No repository error text on the wire once the subtitle
+				// source is involved (it stays in the log).
+				assert.NotContains(t, got.Error, "runs db locked")
 				return
 			}
 			assert.Equal(t, tc.wantKinds, kinds)
 			assert.Empty(t, got.Error)
 		})
 	}
+}
+
+// A failing source is logged (AC #6), including when both fail.
+func TestActivity_RecentSourceFailureIsLogged(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	now := at("2026-10-19T00:00:00Z")
+	newRecentOnlyService(fakeParse{all: []*models.ParseJob{parseDone("p", now)}}, fakeRecentRuns{err: errors.New("runs db locked")}).
+		GetActivity(context.Background())
+	assert.Contains(t, buf.String(), "subtitle-run source failed")
+	assert.Contains(t, buf.String(), "runs db locked")
+
+	buf.Reset()
+	newRecentOnlyService(fakeParse{allErr: errors.New("parse db locked")}, fakeRecentRuns{err: errors.New("runs db locked")}).
+		GetActivity(context.Background())
+	assert.Contains(t, buf.String(), "parse db locked")
+	assert.Contains(t, buf.String(), "runs db locked")
+
+	// A source that is simply not wired is not a failure.
+	buf.Reset()
+	newRecentOnlyService(fakeParse{all: []*models.ParseJob{parseDone("p", now)}}, nil).GetActivity(context.Background())
+	assert.Empty(t, buf.String())
+}
+
+// 正式機 stores nine fractional digits; `at` keeps them, in UTC, RFC 3339.
+func TestActivity_RecentAtKeepsNanosecondsInUTC(t *testing.T) {
+	completed := time.Date(2026, 10, 19, 9, 25, 1, 473263247, time.FixedZone("CST", 8*3600))
+	run := doneRun("ns", completed, models.SubtitleRunCompleted)
+	events := recentWire(t, newRecentOnlyService(fakeParse{}, fakeRecentRuns{runs: []repository.RecentSubtitleRun{run}}))
+	require.Len(t, events, 1)
+	assert.Equal(t, "2026-10-19T01:25:01.473263247Z", events[0]["at"])
+}
+
+// The series row is gone but its episode survived: no title, so no
+// "S01E04 of nothing" either.
+func TestActivity_RecentNoEpisodeNumbersWithoutTitle(t *testing.T) {
+	sn, en := 1, 4
+	run := doneRun("orphan", at("2026-10-19T00:00:00Z"), models.SubtitleRunCompleted)
+	run.Run.MediaType = models.SubtitleRunMediaEpisode
+	run.MediaTitle = ""
+	run.SeasonNumber, run.EpisodeNumber = &sn, &en
+	events := recentWire(t, newRecentOnlyService(fakeParse{}, fakeRecentRuns{runs: []repository.RecentSubtitleRun{run}}))
+	require.Len(t, events, 1)
+	assert.Equal(t, "", events[0]["media_title"])
+	assert.NotContains(t, events[0], "season_number")
+	assert.NotContains(t, events[0], "episode_number")
 }
 
 // Today's unavailable message is kept when only the parse source exists.

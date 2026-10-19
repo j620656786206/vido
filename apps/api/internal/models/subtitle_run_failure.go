@@ -79,6 +79,12 @@ func containsAny(needles ...string) func(string) bool {
 // anything unrecognised (AI_INVALID_RESPONSE included — ⚖️ Sally 2026-10-19
 // 追認 4) is SubtitleRunFailureOther.
 //
+// error_message is stored truncated (~1000 bytes, process_item.go /
+// transcription_ledger.go) and may carry ffmpeg stderr: a cause written at the
+// very end of a long path can be cut off (→ other), and stderr text can
+// contain a later rule's words. Classifying at write time would remove both;
+// today the stored text is all there is.
+//
 // Same match strings as `failureCopy`'s TABLE in
 // apps/web/src/components/subtitle/generationEventCopy.ts — a new rule is
 // added on both sides together.
