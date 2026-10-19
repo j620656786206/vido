@@ -333,8 +333,8 @@ Vido 會在使用者不在的時候，於別人的 NAS 上持續跑上好幾分�
 
 ## Typography
 
-**內文字體：** Noto Sans TC（後備 `-apple-system`、`BlinkMacSystemFont`、`Segoe UI`、`Roboto`、sans-serif）
-**讀數字體：** JetBrains Mono（後備 Consolas、Monaco、monospace）
+**內文字體：** Noto Sans TC（隨 Vido 打包：`@fontsource-variable/noto-sans-tc`，可變字重，只會用到 400／500／600／700，不連外；英數字也由它負責；後備 `-apple-system`、`BlinkMacSystemFont`、`Segoe UI`、`Roboto`、`PingFang TC`、`Microsoft JhengHei`、sans-serif）
+**讀數字體：** JetBrains Mono（隨 Vido 打包：`@fontsource-variable/jetbrains-mono`，可變字重，不連外；關閉連字；後備 `ui-monospace`、SF Mono、Menlo、Monaco、Consolas、monospace；路徑與檔名裡的中文落到 Noto Sans TC）
 
 **個性：** 一套人文主義無襯線扛下所有閱讀工作，加一套等寬字專門留給「必須對齊或互相比較的數字」。**沒有 display 字體、沒有編輯式的字體配對**——字體系統的任務是在昏暗房間裡小尺寸也讀得清楚，第二種個性只會礙事。
 

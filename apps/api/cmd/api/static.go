@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,6 +20,23 @@ const (
 	// cacheNoStore ensures index.html is never cached so users always get the latest SPA.
 	cacheNoStore = "no-store, no-cache, must-revalidate"
 )
+
+// gzipExcludedExtensions lists files that are already compressed, so gzipping
+// them again only burns NAS CPU (a woff2 is Brotli inside — a 74 KB Noto Sans TC
+// slice came out 78 bytes LARGER after gzip). WithExcludedExtensions REPLACES
+// gin-contrib/gzip's default list instead of adding to it, so the four image
+// defaults (.png .gif .jpeg .jpg) must be restated here or images start being
+// gzipped.
+var gzipExcludedExtensions = []string{".png", ".gif", ".jpeg", ".jpg", ".woff2"}
+
+// compressionMiddleware gzips responses (replaces Nginx gzip). The SSE endpoint
+// is excluded to preserve streaming (http.Flusher compatibility).
+func compressionMiddleware() gin.HandlerFunc {
+	return gzip.Gzip(gzip.DefaultCompression,
+		gzip.WithExcludedPaths([]string{"/api/v1/events"}),
+		gzip.WithExcludedExtensions(gzipExcludedExtensions),
+	)
+}
 
 // getPublicDir returns the static assets directory path.
 // Uses VIDO_PUBLIC_DIR env var if set, otherwise defaults to /app/public.
