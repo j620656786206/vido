@@ -1,6 +1,6 @@
 # Disc（後端＋前端）：影片旁邊有英文字幕檔，就直接拿來翻，不再花錢聽寫
 
-Status: backlog（⚖️ 要 Alexyu 裁定：推翻 sub-1-4「片旁字幕檔歸搜尋引擎管」）
+Status: backlog（傘狀單，已拆 -b1／-b2／-b3）
 
 **Source:** `backlog-movie-generate-overwrites-existing-en-srt` 拆出的第二張（第一張 `-a` 是「絕不覆寫」安全網）。2026-10-19 正式機重現：《Tears of Steel》旁邊放著官方英文字幕，按「生成字幕」仍花錢聽寫（估價 $0.19、說明「語音辨識＋AI 翻譯」）。
 
@@ -13,7 +13,18 @@ Status: backlog（⚖️ 要 Alexyu 裁定：推翻 sub-1-4「片旁字幕檔歸
 - **對話框文字只看估價**：`ManageSubtitleDialogV2.tsx:923-947` `<ButtonCost label="生成字幕">`；說明句來自 `generateCostView.ts`（`DEFAULT_LINE` `:49`「語音辨識＋AI 翻譯，約需數分鐘」、`EXTRACT_LINE` `:64` 只在 `plan === 'extract'`）。對話框**有**讀片旁字幕清單（`GET …/subtitles/inventory`，`ManageSubtitleDialogV2.tsx:344`、`buildInventoryRows` `:153-184`），但只拿來顯示，不影響按鈕。
 - **翻譯路線本身不寫 `.en.srt`**：`deliverable` → `translateWithCache`（`process_item.go:396-401`）→ `placer.Place` 只寫 zh-Hant（`:269`、`pipeline.go:743`）。所以只要路由選了翻譯，就不會碰使用者的英文檔。
 
-## 要 Alexyu 裁定的事
+## ⚖️ 2026-10-19 裁定（party mode：founder-pm／Winston／Mary／Sally／Bob；Alexyu 選 A）
+
+- **推翻 sub-1-4 的範圍限制**：片旁英文字幕可以當翻譯來源。查證：那條原文是 M1 的範圍限制（`sub-1-4-extract-filter-route.md` AC #8「No external-sidecar handling … M1 pipeline is embedded-only」），不是產品決定，之後沒人回頭看，還被 `router_test.go:546` 鎖住。
+- **為什麼兩個月沒人發現**：作者 NAS 5,622 部影片只有 2 個片旁英文字幕（其中 1 個是 Tears of Steel 實測放的）；目標使用者（*arr＋Bazarr）的 Bazarr 預設就是存 `片名.en.srt`，Lingarr 做的也是翻這種檔。n=1 的片庫測不到別人最常見的情況。
+- **Alexyu 補充的風險**：片旁字幕可能是使用者自己下載的，跟影片時間軸對不上（版本差、影格率差、根本是別部片）。翻一份對不上的字幕，中文一樣對不上、還付了錢。
+- **所以先檢查再用**：
+  - `-b1` 後端，免費本機檢查時間軸（重用 `ai/whisper.go` 的 `detectSilences`）。
+  - `-b2` 後端，路由與估價只在對得上時改用片旁字幕。
+  - `-b3` 前端＋設計，對話框白話說明＋讓使用者選；對不上時**不准默默改走比較貴的聽寫**。
+- 順序：`-a`（絕不覆寫）→ `-b1` → `-b2` → `-b3`。`-b` 全部合併前，FB 文不寫「有英文字幕就便宜」。
+
+## 原本列給 Alexyu 的問題（已裁定，保留紀錄）
 
 1. **推翻 sub-1-4 的那條線嗎？** 讓路由把「片旁的 `<base>.en.srt`／`.eng.srt`／`.en.ass`」當成翻譯來源，優先序排在片內英文軌之後、聽寫之前。Bob 建議：**推翻**——當初的理由是「片旁字幕歸搜尋引擎」，但使用者自己放的英文字幕不是搜尋結果，用它翻比聽寫便宜、時間軸也是原本的。
 2. **片內英文軌和片旁英文檔都有時用哪個？** Bob 建議：片內優先（跟現在一樣），片旁只在片內沒有時才用。
