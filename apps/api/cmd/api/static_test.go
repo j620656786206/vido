@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"mime"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -227,6 +228,13 @@ func setupCompressedRouter(t *testing.T) *gin.Engine {
 	router := gin.New()
 	router.Use(securityHeadersMiddleware())
 	router.Use(compressionMiddleware())
+	router.GET("/api/v1/events", func(c *gin.Context) {
+		c.Header("Content-Type", "text/event-stream")
+		c.String(http.StatusOK, strings.Repeat("data: ping\n\n", 200))
+	})
+	router.GET("/api/v1/movies", func(c *gin.Context) {
+		c.String(http.StatusOK, strings.Repeat(`{"id":"m"}`, 200))
+	})
 	registerStaticRoutes(router, publicDir)
 	return router
 }
@@ -276,4 +284,29 @@ func TestCompression_CSSStillGzipped(t *testing.T) {
 
 func TestGzipExcludedExtensions_ExactList(t *testing.T) {
 	assert.Equal(t, []string{".png", ".gif", ".jpeg", ".jpg", ".woff2"}, gzipExcludedExtensions)
+}
+
+// The SSE stream must stay uncompressed (http.Flusher) — the exclusion moved
+// into compressionMiddleware with this change, so pin it here.
+func TestCompression_SSEStreamNotGzipped(t *testing.T) {
+	router := setupCompressedRouter(t)
+
+	w := getWithGzip(router, "/api/v1/events")
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Empty(t, w.Header().Get("Content-Encoding"))
+}
+
+// Ordinary API JSON keeps its gzip.
+func TestCompression_APIStillGzipped(t *testing.T) {
+	router := setupCompressedRouter(t)
+
+	w := getWithGzip(router, "/api/v1/movies")
+
+	assert.Equal(t, "gzip", w.Header().Get("Content-Encoding"))
+}
+
+// Registered in init(), not left to the sniffer: alpine has no mime.types.
+func TestWoff2MimeTypeRegistered(t *testing.T) {
+	assert.Equal(t, "font/woff2", mime.TypeByExtension(".woff2"))
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -28,6 +29,14 @@ const (
 // defaults (.png .gif .jpeg .jpg) must be restated here or images start being
 // gzipped.
 var gzipExcludedExtensions = []string{".png", ".gif", ".jpeg", ".jpg", ".woff2"}
+
+// The runtime image (alpine) ships no /etc/mime.types and Go's built-in table
+// stops at .wasm, so without this a .woff2 only got font/woff2 by content
+// sniffing its "wOF2" signature. Register it so the header does not depend on
+// the sniffer.
+func init() {
+	_ = mime.AddExtensionType(".woff2", "font/woff2")
+}
 
 // compressionMiddleware gzips responses (replaces Nginx gzip). The SSE endpoint
 // is excluded to preserve streaming (http.Flusher compatibility).

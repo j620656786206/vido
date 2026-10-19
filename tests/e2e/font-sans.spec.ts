@@ -39,15 +39,27 @@ test.describe('body text is the bundled Noto Sans TC @e2e @fonts', () => {
   test('[P1] body computes to Noto Sans TC, it loads from Vido, under the page budget', async ({
     page,
   }) => {
-    const fonts: { url: string; bytes: number }[] = [];
+    const fonts: { url: string; status: number; type: string; head: string; bytes: number }[] = [];
     const pending: Promise<void>[] = [];
     page.on('response', (res) => {
-      if (res.request().resourceType() !== 'font') return;
+      if (res.request().resourceType() !== 'font' || res.url().startsWith('data:')) return;
+      const meta = {
+        url: res.url(),
+        status: res.status(),
+        type: res.headers()['content-type'] ?? '',
+      };
       pending.push(
         res
           .body()
-          .then((b) => void fonts.push({ url: res.url(), bytes: b.length }))
-          .catch(() => void fonts.push({ url: res.url(), bytes: -1 }))
+          .then(
+            (b) =>
+              void fonts.push({
+                ...meta,
+                head: b.subarray(0, 4).toString('latin1'),
+                bytes: b.length,
+              })
+          )
+          .catch(() => void fonts.push({ ...meta, head: '', bytes: -1 }))
       );
     });
 
@@ -62,6 +74,7 @@ test.describe('body text is the bundled Noto Sans TC @e2e @fonts', () => {
         loadedNoto: [...document.fonts].filter(
           (f) => f.family.replace(/["']/g, '') === 'Noto Sans TC Variable' && f.status === 'loaded'
         ).length,
+        errored: [...document.fonts].filter((f) => f.status === 'error').map((f) => f.family),
       };
     });
     await Promise.all(pending);
@@ -71,6 +84,7 @@ test.describe('body text is the bundled Noto Sans TC @e2e @fonts', () => {
     // A loaded FontFace, not document.fonts.check() — check() can answer true for
     // a family that does not exist, which would make this pass hollow.
     expect(facts.loadedNoto).toBeGreaterThanOrEqual(1);
+    expect(facts.errored).toEqual([]);
 
     const remote = fonts.filter((f) => !isLocal(f.url));
     expect(remote).toEqual([]);
@@ -78,7 +92,11 @@ test.describe('body text is the bundled Noto Sans TC @e2e @fonts', () => {
     expect(noto.length).toBeGreaterThanOrEqual(1);
     const notoBytes = noto.reduce((sum, f) => sum + f.bytes, 0);
     console.log(`[font-sans] /library first load: ${noto.length} Noto files, ${notoBytes} bytes`);
-    expect(noto.every((f) => f.bytes > 0)).toBe(true);
+    // A static server's SPA fallback answers a missing woff2 with 200 + index.html,
+    // which would still have bytes > 0; only a real woff2 starts with "wOF2".
+    for (const f of noto) {
+      expect(f, f.url).toMatchObject({ status: 200, type: 'font/woff2', head: 'wOF2' });
+    }
     expect(notoBytes).toBeLessThan(NOTO_BUDGET_BYTES);
   });
 });

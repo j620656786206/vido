@@ -39,27 +39,46 @@ test.describe('font-mono is the bundled JetBrains Mono @e2e @fonts', () => {
   test('[P1] a font-mono readout computes to JetBrains Mono, loads it, ligatures off, no CDN', async ({
     page,
   }) => {
-    const fontUrls: string[] = [];
-    page.on('request', (req) => {
-      if (req.resourceType() === 'font') fontUrls.push(req.url());
+    const fonts: { url: string; status: number; type: string; head: string }[] = [];
+    const pending: Promise<void>[] = [];
+    page.on('response', (res) => {
+      if (res.request().resourceType() !== 'font' || res.url().startsWith('data:')) return;
+      pending.push(
+        res
+          .body()
+          .then((b) => b.subarray(0, 4).toString('latin1'))
+          .catch(() => '')
+          .then((head) => {
+            fonts.push({
+              url: res.url(),
+              status: res.status(),
+              type: res.headers()['content-type'] ?? '',
+              head,
+            });
+          })
+      );
     });
 
     await page.goto('/library');
     await expect(page.getByTestId('list-row-v2-m2')).toBeVisible({ timeout: 15000 });
-    const mono = page.getByTestId('library-list-v2').locator('.font-mono').first();
-    await expect(mono).toBeVisible();
+    // The failed row's file name: the text where `--` / `...` must not ligate.
+    const fileName = page.getByTestId('list-row-filename');
+    await expect(fileName).toContainText('--2024...');
 
-    const facts = await mono.evaluate(async (el) => {
+    const facts = await fileName.evaluate(async (el) => {
       await document.fonts.ready;
       const cs = window.getComputedStyle(el);
+      const faces = [...document.fonts];
       return {
         family: cs.fontFamily,
         features: cs.fontFeatureSettings,
-        loaded: [...document.fonts]
+        loaded: faces
           .filter((f) => f.status === 'loaded')
           .map((f) => f.family.replace(/["']/g, '')),
+        errored: faces.filter((f) => f.status === 'error').map((f) => f.family),
       };
     });
+    await Promise.all(pending);
 
     expect(facts.family).toMatch(/^"?JetBrains Mono Variable"?,/);
     expect(facts.features).toContain('"calt" 0');
@@ -67,8 +86,15 @@ test.describe('font-mono is the bundled JetBrains Mono @e2e @fonts', () => {
     // A real FontFace that finished loading — not document.fonts.check(), which
     // answers true for a family that does not exist at all.
     expect(facts.loaded).toContain('JetBrains Mono Variable');
+    expect(facts.errored).toEqual([]);
 
-    expect(fontUrls.some((u) => u.includes('jetbrains-mono-'))).toBe(true);
-    expect(fontUrls.filter((u) => !u.startsWith('data:') && !isLocal(u))).toEqual([]);
+    expect(fonts.filter((f) => !isLocal(f.url))).toEqual([]);
+    const jb = fonts.filter((f) => f.url.includes('jetbrains-mono-'));
+    expect(jb.length).toBeGreaterThanOrEqual(1);
+    // A static server's SPA fallback answers a missing woff2 with 200 + index.html;
+    // only a real woff2 starts with the "wOF2" signature.
+    for (const f of jb) {
+      expect(f, f.url).toMatchObject({ status: 200, type: 'font/woff2', head: 'wOF2' });
+    }
   });
 });

@@ -14,7 +14,7 @@ Vido 前端打包 `@fontsource-variable/jetbrains-mono@5.3.0`（JetBrains Mono �
 ## OFL 條件怎麼滿足
 
 - 每一份字型拷貝都附著作權聲明與授權全文：映像裡的授權檔就在字型旁邊（OFL 條件 2）。
-- 未修改字型檔（沒有自己裁字、裁軸、改名），所以不涉及保留字型名稱（Reserved Font Name）。
+- Vido 沒有修改字型檔：woff2 是 Fontsource 發布的原檔（上游已依 Google Fonts 切成 `unicode-range` 子集），Vido 沒有再裁字、裁字重、改名，所以不涉及保留字型名稱（Reserved Font Name）。
 - 不單獨販售字型；字型只隨 Vido 一起散布（OFL 條件 1）。
 
 升級時只改根目錄 `package.json` 的版本號，並重新複製套件 `LICENSE` 到 `apps/web/public/licenses/JetBrainsMono-OFL.txt`。本文件不是法律意見。

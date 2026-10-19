@@ -15,7 +15,7 @@ Vido 前端打包 `@fontsource-variable/noto-sans-tc@5.3.0`（Noto Sans TC 可�
 ## OFL 條件怎麼滿足
 
 - 字型檔本身的授權欄（name ID 13）是空的，所以授權全文一定要另外附：映像裡的授權檔就在字型旁邊（OFL 條件 2）。
-- 未修改字型檔（沒有自己裁字、裁字重、改名），所以不涉及保留字型名稱 'Source'。
+- Vido 沒有修改字型檔：woff2 是 Fontsource 發布的原檔（上游已依 Google Fonts 切成 `unicode-range` 子集），Vido 沒有再裁字、裁字重、改名，所以不涉及保留字型名稱 'Source'。
 - 不單獨販售字型；字型只隨 Vido 一起散布（OFL 條件 1）。
 
 升級時只改根目錄 `package.json` 的版本號，並重新複製套件 `LICENSE` 到 `apps/web/public/licenses/NotoSansTC-OFL.txt`。本文件不是法律意見。
