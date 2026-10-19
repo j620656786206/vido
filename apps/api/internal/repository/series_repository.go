@@ -370,14 +370,20 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 		return nil, nil, fmt.Errorf("failed to count series: %w", err)
 	}
 
-	// Build and execute list query
+	// Build and execute list query. sort_by=subtitle_status is NOT a column
+	// sort (alphabetical subtitle_status is not the badge order) — see
+	// subtitleTriageOrderBy (disc-2026-10-library-list-triage-a).
+	orderBy := sortBy + " " + params.SortOrder
+	if params.SortBy == "subtitle_status" {
+		orderBy = subtitleTriageOrderBy("chinese_subtitle_rollup", params.SortOrder)
+	}
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM series
 		%s
-		ORDER BY %s %s
+		ORDER BY %s
 		LIMIT ? OFFSET ?
-	`, seriesSelectColumns, whereClause, sortBy, params.SortOrder)
+	`, seriesSelectColumns, whereClause, orderBy)
 
 	// Add limit and offset to args
 	args = append(args, params.Limit(), params.Offset())
