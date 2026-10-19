@@ -248195,7 +248195,7 @@
               "name": "N4-D",
               "clip": true,
               "width": 1440,
-              "height": 900,
+              "height": 1131,
               "fill": "$bg-primary",
               "layout": "none",
               "children": [
@@ -248373,7 +248373,7 @@
                           "fill": "$text-secondary",
                           "textGrowth": "fixed-width",
                           "width": 448,
-                          "content": "設定 API 金鑰以啟用進階功能。可以稍後在設定頁面新增。",
+                          "content": "Vido 不收錢。AI 字幕用你自己的金鑰，費用直接記在你的 Claude 或 Gemini 帳號，不經過 Vido；每次按下去之前，Vido 會先告訴你大約花多少。兩把都可以先空著，之後到設定頁再填。",
                           "lineHeight": "$Type/Body/Line",
                           "fontFamily": "$Type/Family/Primary",
                           "fontSize": "$Type/Body/Size",
@@ -248499,11 +248499,95 @@
                               "fill": "$text-muted",
                               "textGrowth": "fixed-width",
                               "width": 448,
-                              "content": "用於字幕翻譯與 AI 檔名解析",
+                              "content": "預設的翻譯模型。一集影集（約一小時、有英文字幕）大約 US$0.15～0.3。",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
                               "fontWeight": "$Type/Label/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "UO6yD",
+                              "name": "link",
+                              "fill": "$accent-text",
+                              "content": "怎麼申請 Claude 金鑰 ↗",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WpMiP",
+                          "name": "f-Gemini 金鑰",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/sm",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uRAmx",
+                              "name": "t",
+                              "fill": "$text-secondary",
+                              "content": "Gemini 金鑰（選填）",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "QiQGb",
+                              "name": "input",
+                              "width": "fill_container",
+                              "height": 44,
+                              "fill": "$bg-secondary",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "$border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                "$Space/none",
+                                "$Space/md"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WWwVR",
+                                  "name": "v",
+                                  "fill": "$text-muted",
+                                  "content": "輸入 Gemini API 金鑰...",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Mono",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "psdTP",
+                              "name": "t",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": 448,
+                              "content": "沒有 Claude 金鑰？用你自己的 Gemini 免費額度也能翻；每分鐘 5 次，Vido 會自動放慢。",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "$Type/Label/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Mbkml",
+                              "name": "link",
+                              "fill": "$accent-text",
+                              "content": "怎麼申請 Gemini 金鑰 ↗",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -248535,7 +248619,7 @@
                               "fill": "$text-primary",
                               "textGrowth": "fixed-width",
                               "width": 392,
-                              "content": "跳過 API 金鑰設定將會限制 AI 檔名解析與字幕翻譯；電影和影集的元資料會使用內建的 TMDb 金鑰。",
+                              "content": "Claude 和 Gemini 金鑰都沒填的話，就不能做 AI 字幕翻譯和檔名解析；電影和影集的元資料會使用內建的 TMDb 金鑰。",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
