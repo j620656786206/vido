@@ -71,6 +71,68 @@ describe('queueRowLabel (dsr-6d-b AC #3 — the row says what the backend says)'
     });
   });
 
+  // disc-2026-10-generation-queue-failure-reason AC #2/#12: the run's failure
+  // code words an `error` row — the same sentence as the live log beside it.
+  describe('failed + error — worded by the run failure code', () => {
+    const failed = (failureReason: string | null | undefined) =>
+      queueRowLabel(view({ status: 'failed', reason: 'error', failureReason }));
+
+    it.each([
+      ['target_not_writable', '影片所在的資料夾寫不進字幕'],
+      ['cancelled', '中途停止'],
+      ['no_audio_track', '找不到可用的音軌'],
+    ])('%s → %s, red with the alert glyph', (code, text) => {
+      expect(failed(code)).toEqual({
+        text,
+        className: 'text-[var(--error-text)]',
+        icon: 'alert',
+      });
+    });
+
+    it('a money code is still a red failure — `stopped` is not read here', () => {
+      // A real budget / credit stop pauses the item; only a code that lost its
+      // type on the way lands on failed + error, and the queue says 失敗.
+      expect(failed('budget_exceeded')).toEqual({
+        text: '已達預算上限',
+        className: 'text-[var(--error-text)]',
+        icon: 'alert',
+      });
+      expect(failed('credit_exhausted').className).toBe('text-[var(--error-text)]');
+    });
+
+    it.each([null, undefined, '', 'other', 'nope', 'constructor', '__proto__'])(
+      'no code / unknown / prototype name %s → 生成失敗',
+      (code) => {
+        expect(failed(code).text).toBe('生成失敗');
+      }
+    );
+
+    it('a code never rewords skipped / busy_elsewhere / a reason-less failure', () => {
+      const code = 'target_not_writable';
+      expect(
+        queueRowLabel(view({ status: 'failed', reason: 'busy_elsewhere', failureReason: code }))
+          .text
+      ).toBe('這部正在別處處理');
+      expect(
+        queueRowLabel(view({ status: 'failed', reason: 'skipped', failureReason: code })).text
+      ).toBe('沒有可用的字幕來源');
+      expect(queueRowLabel(view({ status: 'failed', reason: '', failureReason: code })).text).toBe(
+        '生成失敗'
+      );
+    });
+
+    it('the sub-status line under the title repeats the worded reason', () => {
+      const v = view({ status: 'failed', reason: 'error', failureReason: 'target_not_writable' });
+      expect(queueRowSubStatus(v, queueRowLabel(v).text)).toBe('影片所在的資料夾寫不進字幕');
+    });
+
+    it('a code on a non-failed row changes nothing', () => {
+      expect(
+        queueRowLabel(view({ status: 'done', reason: 'error', failureReason: 'timeout' })).text
+      ).toBe('完成');
+    });
+  });
+
   describe('running — the label is the CURRENT stage, verbatim from the frozen list', () => {
     it.each([
       ['extracting', GENERATION_STAGES[0]],

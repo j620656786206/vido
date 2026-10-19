@@ -6,6 +6,7 @@ import {
   type RunFailureReason,
 } from './generationEventCopy';
 import { recentSubtitleDetail } from '../activity/recentEventCopy';
+import { queueRowLabel } from './generationQueueRow';
 
 // dsr-6d-c-2 AC #2 — the ten row kinds, as the view draws them.
 describe('feedRowView', () => {
@@ -86,17 +87,18 @@ describe('feedRowView', () => {
     expect(v.stageClass).toContain('--success-text');
   });
 
+  // disc-2026-10-generation-queue-failure-reason AC #7/#11: the reason is the
+  // row's SECOND line (`detail`), no longer a `·` part next to the film name.
   it('④ a batch failure uses the backend reason; `error` is refined by its reason code', () => {
     expect(
-      feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'skipped', failureReason: null }).parts
-    ).toEqual(['奧本海默', '沒有可用的字幕來源']);
+      feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'skipped', failureReason: null })
+    ).toMatchObject({ parts: ['奧本海默'], detail: '沒有可用的字幕來源' });
     expect(
       feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'error', failureReason: 'timeout' })
-        .parts
-    ).toEqual(['奧本海默', '處理逾時']);
+    ).toMatchObject({ parts: ['奧本海默'], detail: '處理逾時' });
     expect(
-      feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'error', failureReason: null }).parts
-    ).toEqual(['奧本海默', '生成失敗']);
+      feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'error', failureReason: null })
+    ).toMatchObject({ parts: ['奧本海默'], detail: '生成失敗' });
     // disc-2026-10-live-activity-failure-reasons-b: the batch's translate-then-
     // write failure (正式機 和平使者 S01E01) used to say 生成失敗 here.
     const notWritable = feedRowView({
@@ -108,7 +110,8 @@ describe('feedRowView', () => {
     });
     expect(notWritable).toMatchObject({
       stage: '失敗',
-      parts: ['奧本海默', '影片所在的資料夾寫不進字幕'],
+      parts: ['奧本海默'],
+      detail: '影片所在的資料夾寫不進字幕',
       announce: '失敗：奧本海默，影片所在的資料夾寫不進字幕',
     });
     expect(notWritable.stageClass).toContain('--error-text');
@@ -120,8 +123,8 @@ describe('feedRowView', () => {
         ...film,
         reason: 'busy_elsewhere',
         failureReason: 'target_not_writable',
-      }).parts
-    ).toEqual(['奧本海默', '這部正在別處處理']);
+      })
+    ).toMatchObject({ parts: ['奧本海默'], detail: '這部正在別處處理' });
   });
 
   it('a single job: the code decides the words; no code, an unknown or a prototype name says 生成失敗', () => {
@@ -130,17 +133,23 @@ describe('feedRowView', () => {
     expect(single('target_not_writable')).toMatchObject({
       glyph: 'triangle-alert',
       stage: '失敗',
-      parts: ['奧本海默', '影片所在的資料夾寫不進字幕'],
+      parts: ['奧本海默'],
+      detail: '影片所在的資料夾寫不進字幕',
       announce: '失敗：奧本海默，影片所在的資料夾寫不進字幕',
     });
     expect(single('cancelled')).toMatchObject({
       stage: '失敗',
-      parts: ['奧本海默', '中途停止'],
+      parts: ['奧本海默'],
+      detail: '中途停止',
       announce: '失敗：奧本海默，中途停止',
     });
-    expect(single('queue_timeout').parts).toEqual(['奧本海默', '處理逾時']);
+    expect(single('queue_timeout')).toMatchObject({ parts: ['奧本海默'], detail: '處理逾時' });
     for (const code of [null, '', 'nope', 'constructor', '__proto__']) {
-      expect(single(code)).toMatchObject({ stage: '失敗', parts: ['奧本海默', '生成失敗'] });
+      expect(single(code)).toMatchObject({
+        stage: '失敗',
+        parts: ['奧本海默'],
+        detail: '生成失敗',
+      });
     }
   });
 
@@ -155,7 +164,9 @@ describe('feedRowView', () => {
     expect(v).toMatchObject({
       glyph: 'circle-alert',
       stage: '已停止',
-      parts: ['奧本海默', '已達預算上限'],
+      parts: ['奧本海默'],
+      detail: '已達預算上限',
+      announce: '已停止：奧本海默，已達預算上限',
     });
     expect(v.stageClass).toContain('--warning-text');
   });
@@ -171,7 +182,9 @@ describe('feedRowView', () => {
     expect(v).toMatchObject({
       glyph: 'circle-alert',
       stage: '已停止',
-      parts: ['奧本海默', 'AI 帳號沒有額度'],
+      parts: ['奧本海默'],
+      detail: 'AI 帳號沒有額度',
+      announce: '已停止：奧本海默，AI 帳號沒有額度',
     });
     expect(v.stageClass).toContain('--warning-text');
   });
@@ -210,9 +223,12 @@ describe('feedRowView', () => {
   it('⑥–⑩ batch rows are about 本批次', () => {
     expect(batch('complete')).toMatchObject({ stage: '批次完成', parts: ['本批次'], trail: null });
     expect(batch('complete').stageClass).toContain('--success-text');
+    // F11-SPEC-LOG ⑦ stays one line: the counts are about the batch, not a
+    // film's reason (Sally 裁定 3) — no second line.
     expect(batch('complete', 2)).toMatchObject({
       stage: '批次完成',
       parts: ['本批次', '完成 3 部、失敗 2 部'],
+      detail: null,
     });
     expect(batch('complete', 2).stageClass).not.toContain('--success');
     expect(batch('cancelled')).toMatchObject({
@@ -245,6 +261,38 @@ describe('feedRowView', () => {
     expect(batch('credit_exhausted', 0, 'anthropic').trail).toBe('Anthropic');
     // An older server sends no provider — say AI, never an empty trail.
     expect(batch('credit_exhausted').trail).toBe('AI');
+  });
+
+  // disc-2026-10-generation-queue-failure-reason AC #7/#9/#11: only "one film +
+  // why" (④ 失敗, ⑤ / ⑤b 已停止) has a second line; every other row is one line.
+  it('only ④ ⑤ ⑤b carry a second line; stage, done and batch rows have none', () => {
+    const stage = (state: 'live' | 'passed' | 'stopped') =>
+      feedRowView({
+        seq: 1,
+        kind: 'stage',
+        ...film,
+        stage: 'transcribing',
+        state,
+        percentage: null,
+        pipeline: false,
+      });
+    const oneLine = [
+      stage('live'),
+      stage('passed'),
+      stage('stopped'),
+      feedRowView({ seq: 1, kind: 'done', ...film }),
+      batch('complete'),
+      batch('complete', 2),
+      batch('cancelled'),
+      batch('error'),
+      batch('budget_ceiling'),
+      batch('credit_exhausted', 0, 'openai'),
+    ];
+    for (const v of oneLine) expect(v.detail).toBeNull();
+    // The batch rows keep their parts exactly as before (Sally 裁定 3).
+    expect(batch('cancelled').parts).toEqual(['本批次', '完成 3 部']);
+    expect(batch('budget_ceiling')).toMatchObject({ parts: ['本批次'], trail: '$5.00' });
+    expect(stage('live').parts).toEqual(['奧本海默']);
   });
 
   it('no row ever uses a base semantic colour as text', () => {
@@ -311,10 +359,11 @@ describe('feedRowView', () => {
   });
 });
 
-// disc-2026-10-live-activity-failure-reasons-b AC #5 — the live log and the
-// activity record word every reason code the same way. Iterates the table's own
-// keys, so a code added later is covered without touching this test.
-describe('live log ⇄ activity record: one sentence per reason code', () => {
+// disc-2026-10-live-activity-failure-reasons-b AC #5 + disc-2026-10-generation-
+// queue-failure-reason AC #10 — the live log, the activity record AND the queue
+// row word every reason code the same way. Iterates the table's own keys, so a
+// code added later is covered without touching this test.
+describe('live log ⇄ activity record ⇄ queue: one sentence per reason code', () => {
   const codes = Object.keys(FAILURE_COPY_BY_REASON) as RunFailureReason[];
 
   it.each(codes)('%s', (code) => {
@@ -328,8 +377,9 @@ describe('live log ⇄ activity record: one sentence per reason code', () => {
       reason: null,
       failureReason: code,
     });
-    // The live log's reason cell is the table's sentence…
-    expect(single.parts[1]).toBe(text);
+    // The live log's reason line is the table's sentence…
+    expect(single.detail).toBe(text);
+    expect(single.parts).toEqual(['奧本海默']);
     expect(single.stage).toBe(stopped ? '已停止' : '失敗');
     // …and the activity record's description ends with the very same words.
     const activity = recentSubtitleDetail({
@@ -340,19 +390,26 @@ describe('live log ⇄ activity record: one sentence per reason code', () => {
       mediaTitle: '奧本海默',
       failureReason: code,
     });
-    expect(activity).toBe(`奧本海默 · ${single.parts[1]}`);
-    // A batch `error` row with the same code says the same words.
-    expect(
-      feedRowView({
-        seq: 1,
-        kind: 'failed',
-        mediaId: 'm1',
-        title: '奧本海默',
-        seriesTitle: '',
-        reason: 'error',
-        failureReason: code,
-      }).parts[1]
-    ).toBe(text);
+    expect(activity).toBe(`奧本海默 · ${single.detail}`);
+    // A batch `error` row with the same code says the same words…
+    const batchRow = feedRowView({
+      seq: 1,
+      kind: 'failed',
+      mediaId: 'm1',
+      title: '奧本海默',
+      seriesTitle: '',
+      reason: 'error',
+      failureReason: code,
+    });
+    expect(batchRow.detail).toBe(text);
+    // …and so does the queue row on the left of the same screen — always as a
+    // red failure, whatever the code's `stopped` says (a real money stop pauses).
+    const queue = queueRowLabel({ status: 'failed', reason: 'error', failureReason: code });
+    expect(queue.text).toBe(text);
+    expect(queue.text).toBe(single.detail);
+    expect(queue.text).toBe(batchRow.detail);
+    expect(queue.className).toContain('--error-text');
+    expect(queue.icon).toBe('alert');
   });
 });
 

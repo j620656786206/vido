@@ -1,6 +1,6 @@
 # Disc：生成畫面的失敗原因——左邊佇列講出原因、右邊即時活動把原因放第二行，片名不再被擠掉
 
-Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design` 已跟本檔同一個 PR 合併，2026-10-19 解除 blocked）
+Status: review（2026-10-19 dev 完成、PR 已開；⚠️ 停在合併前：產生字幕對話框在 320 寬手機片名只剩「和…」一個字，照 AC #14 停止條件等 Alexyu／Sally 裁定，見 Completion Notes）
 
 **Source（兩件事併一張）：**
 1. `disc-2026-10-live-activity-failure-reasons-b`（PR #846）合併時 dev 回報（範圍外）：生成字幕畫面右邊「即時活動」已經寫「影片所在的資料夾寫不進字幕」，左邊「生成佇列」同一部片還寫「生成失敗」——同一個畫面、同一次失敗，兩邊對不起來。⚖️ **Alexyu 2026-10-19 裁定 2A：** 開單補上，佇列失敗項目改用同一份失敗原因文字（`FAILURE_COPY_BY_REASON`）。
@@ -122,12 +122,12 @@ Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design`
 
 ## Tasks / Subtasks
 
-- [ ] **T0 解開條件（AC #0）**：確認 Sally 稿 PR 已合併、三張截圖與 `pen-node-ids.json` 已更新、裁定沒變。
-- [ ] **T1 文字搬家（AC #1）**：`runFailureCopy.ts`；`generationEventCopy.ts` 轉出；既有 `generationEventCopy.spec.ts`／`recentEventCopy.spec.ts` 零變化地綠。
-- [ ] **T2 左欄佇列（AC #2–#6）**：`generationQueueRow.ts`、`GenerationWorkspaceV2.tsx`（`QueueRow` 兩處：`:293` 傳代碼、`:319` 片名兩行）、`GenerationBatchDialogV2.tsx:373`、`generationEventCopy.ts:225-228`。
-- [ ] **T3 右欄即時活動（AC #7–#9）**：`generationEventCopy.ts`（`FeedRowView.detail`、`view()`、`failedView`、⑤⑤b）、`GenerationWorkspaceV2.tsx`（`FeedRowItem` 兩行排法、圖示對第一行、片名兩行）、註解。
-- [ ] **T4 測試（AC #10–#13）**：三方一致性、改寫既有 `parts` 斷言、四個 spec 新增、七種故意改壞。
-- [ ] **T5 量測＋UX 驗收＋基準＋收尾（AC #14–#17）**：390／320／1440 量測、對三張稿、新夾具、`complete-with-failures` darwin 更新與 linux 刪除、lint／typecheck／format／design-refs／E2E；更新 `sprint-status.yaml`。
+- [x] **T0 解開條件（AC #0）**：確認 Sally 稿 PR 已合併、三張截圖與 `pen-node-ids.json` 已更新、裁定沒變。
+- [x] **T1 文字搬家（AC #1）**：`runFailureCopy.ts`；`generationEventCopy.ts` 轉出；既有 `generationEventCopy.spec.ts`／`recentEventCopy.spec.ts` 零變化地綠。
+- [x] **T2 左欄佇列（AC #2–#6）**：`generationQueueRow.ts`、`GenerationWorkspaceV2.tsx`（`QueueRow` 兩處：`:293` 傳代碼、`:319` 片名兩行）、`GenerationBatchDialogV2.tsx:373`、`generationEventCopy.ts:225-228`。
+- [x] **T3 右欄即時活動（AC #7–#9）**：`generationEventCopy.ts`（`FeedRowView.detail`、`view()`、`failedView`、⑤⑤b）、`GenerationWorkspaceV2.tsx`（`FeedRowItem` 兩行排法、圖示對第一行、片名兩行）、註解。
+- [x] **T4 測試（AC #10–#13）**：三方一致性、改寫既有 `parts` 斷言、四個 spec 新增、七種故意改壞。
+- [x] **T5 量測＋UX 驗收＋基準＋收尾（AC #14–#17）**：390／320／1440 量測、對三張稿、新夾具、`complete-with-failures` darwin 更新與 linux 刪除、lint／typecheck／format／design-refs／E2E；更新 `sprint-status.yaml`。
 
 ## Dev Notes
 
@@ -194,8 +194,48 @@ Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design`
 
 ### Agent Model Used
 
+Claude Opus 5.5（claude-opus-5-5）
+
 ### Debug Log References
+
+- AC #13 故意改壞（每項改壞→跑 generationEventCopy／generationQueueRow／GenerationWorkspaceV2 三支 spec→還原）：
+  - (i) `queueRowLabel` 把 `no_audio_track` 寫死成別的字 → 2 紅（三方一致性 no_audio_track、佇列 it.each）。
+  - (ii) `queueRowLabel` 改回只查 `FAILURE_TEXT` → 20 紅（三方一致性除 `other` 全紅、12(a)(b)(c)、#846 端到端）。
+  - (iii) 工作區 `QueueRow` 拿掉 `failureReason` → 2 紅（12(a)(b)）。
+  - (iv) `failedView` 原因塞回 `parts` → 16 紅（11 的 ④／單次、三方一致性、12(b)(c)）。
+  - (v) 原因前加回 `·` → 3 紅（12(b)(c)、無代碼）。
+  - (vi) 即時活動片名改回 `truncate` → 1 紅（12(c)）。
+  - (vii) 佇列片名改回 `truncate` → 2 紅；說明行改 `--error-text` → 1 紅（12(a)）。
+- 本機 `batch-subtitle.spec.ts` 兩案紅（POST body 多一個 `model_id: "claude-sonnet-5"`）：本機為了讓 Go API 起得來帶了 `AI_PROVIDER=claude`，模型挑選器因此送出 model_id；本單沒動 POST 組法，CI 環境為準。
 
 ### Completion Notes List
 
+- **AC #0：** `origin/main` 的 sprint-status `disc-2026-10-live-activity-row-layout-design: done`（PR #850）；`pen-node-ids.json` 有 `stf9c`／`cu3CY`／`c5WP3`／`f14sNh`／`Ah8fN`；Sally 稿 done 說明列了 ④ 手機示範 `T6WrrI`（358 寬）、`evt-fail`（`mHyTb`）。八條裁定與本單一致，沒有改 AC。
+- **AC #14 量測**（本機 chromium、狀態查詢＋假 SSE stub，三部失敗片都用最長原因 `target_not_writable`）：
+  - 即時活動 390（展開，列寬 356）：「和平使者 S01E01」107px 一行、「花月殺手」56px 一行、魔戒長片名 246px 兩行；原因三列都一行整句；圖示中心與階段字中心差 0px；原因左緣與階段字左緣差 0px；頁面寬 390 無橫捲。
+  - 即時活動 320（列寬 286）：同上兩部一行整句看得到；魔戒 176px 兩行；原因一行整句；差值都是 0。
+  - 即時活動 1440（側欄列寬 398）：「和平使者 S01E01」整個看得到（#846 是「和平使者 …」）；魔戒 288px 兩行；原因一行；差值 0。
+  - 佇列 390：片名格 192px，「和平使者 S01E01」「花月殺手」一行、魔戒兩行；說明行一行整句、次要色。320：片名格 122px，「和平使者 S01E01」折兩行看得完整、魔戒兩行後「…」；說明行折兩行整句。1440：片名格 554px 都一行，說明行一行。
+  - **產生字幕對話框：** 880 片名格 474px，三部都完整。390 片名格 88px，「和平使者 S…」（看得到 6 字，集數被截）、「花月殺手」完整、魔戒 5 字。**320 片名格 18px，三部都只剩「和…」「花…」「魔…」一個字**（標籤「影片所在的資料夾寫不進字幕」178px 不讓）。390 沒踩到停止條件，但 320 手機踩到 → 照停止條件停在合併前，等裁定。
+- **AC #15 UX 驗收：** 1440 截圖對 `f11-d-v2.png`（即時活動失敗列兩行、原因在階段字正下方、次要色；佇列同一部片同一句、說明行次要色、徽章紅「失敗」）一致；390 展開即時活動對 F11-SPEC-LOG ④ 手機示範一致（片名一行整個看得到、原因第二行整句）；390 佇列對 `f11-m-v2.png` `Ah8fN` 一致。截圖在 scratchpad `queue-reason-ux/`。
+- **AC #16 視覺基準：** `complete-with-failures` 如預期改變（兩列 ④ 變兩行），darwin 本機重產、linux `git rm`；新增 `failures-long-titles`（darwin 本機產，linux 交 CI bootstrap）。其餘 `running`／`budget_ceiling`／`credit_exhausted`／`idle` 沒有變（`test:visual` 全綠）。⚠️ 夾具的長片名比 AC 寫的再長一截（加「4K 數位修復二十週年紀念典藏版（含幕後花絮與導演講評音軌）」）：AC 原本那串在 400 側欄剛好兩行放得下，證明不了「超過兩行加 …」；量測仍用 AC 原本的片名。
+- 範圍外：生成步驟條（GenerationProgressV2）、管理字幕對話框（ManageSubtitleDialogV2）、`useGenerationProgress` 仍有「生成失敗」字樣，不在本單。
+
 ### File List
+
+- apps/web/src/components/subtitle/runFailureCopy.ts（新增）
+- apps/web/src/components/subtitle/generationEventCopy.ts
+- apps/web/src/components/subtitle/generationEventCopy.spec.ts
+- apps/web/src/components/subtitle/generationQueueRow.ts
+- apps/web/src/components/subtitle/generationQueueRow.spec.ts
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.tsx
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.spec.tsx
+- apps/web/src/components/subtitle/GenerationBatchDialogV2.tsx
+- apps/web/src/components/subtitle/GenerationBatchDialogV2.spec.tsx
+- apps/web/src/hooks/useGenerationBatchProgress.spec.ts
+- apps/web/src/services/subtitleService.ts
+- apps/web/src/routes/test/-gallery.fixtures.tsx
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/complete-with-failures/default-visual-darwin.png（更新）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/complete-with-failures/default-visual-linux.png（刪除，交 CI 重產）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/failures-long-titles/default-visual-darwin.png（新增）
+- _bmad-output/implementation-artifacts/sprint-status.yaml

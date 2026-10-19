@@ -59,7 +59,7 @@ import {
 } from '../../hooks/useGenerationProgress';
 import { GenerationProgressV2 } from './GenerationProgressV2';
 import { GenerationConsentView } from './consent/GenerationConsentView';
-import { queueRowLabel, queueRowTitle } from './generationQueueRow';
+import { queueRowLabel, queueRowTitle, type QueueRowView } from './generationQueueRow';
 import { libraryKeys } from '../../hooks/useLibrary';
 import { detailKeys } from '../../hooks/useMediaDetails';
 import { activityKeys } from '../../hooks/useActivity';
@@ -177,7 +177,7 @@ function RowStageLabel({
   view,
   phase,
 }: {
-  view: { status: GenerationBatchItemState['status']; reason: GenerationBatchItemState['reason'] };
+  view: QueueRowView;
   phase?: GenerationProgressState['phase'] | null;
 }) {
   const label = queueRowLabel(view, phase);
@@ -370,7 +370,7 @@ function QueueRow({
           {queueRowTitle(item)}
         </span>
         <RowStageLabel
-          view={{ status: item.status, reason: item.reason }}
+          view={{ status: item.status, reason: item.reason, failureReason: item.failureReason }}
           phase={activeItemProgress?.phase}
         />
       </div>

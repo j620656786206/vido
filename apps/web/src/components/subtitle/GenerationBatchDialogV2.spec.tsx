@@ -1331,6 +1331,26 @@ describe('GenerationBatchPanelV2 — rows from progress.items (dsr-6d-b AC #2/#3
     expect(screen.getByTestId(`gen-batch-row-${M5}`)).toHaveAttribute('data-state', 'running');
   });
 
+  // disc-2026-10-generation-queue-failure-reason AC #3/#12: the dialog shares
+  // queueRowLabel with the workspace, so an `error` row names the run's reason.
+  it("[P0] a failed + error row names the reason code's sentence, not 生成失敗", () => {
+    renderPanel({
+      status: 'running',
+      progress: progressOf({
+        currentMediaId: M2,
+        items: [
+          { ...state(M1, '沙丘：第二部', 'failed', 'error'), failureReason: 'no_audio_track' },
+          state(M2, '奧本海默', 'running'),
+        ],
+      }),
+      items: [],
+    });
+    const row = screen.getByTestId(`gen-batch-row-${M1}`);
+    expect(row).toHaveAttribute('data-state', 'failed');
+    expect(row).toHaveTextContent('找不到可用的音軌');
+    expect(row).not.toHaveTextContent('生成失敗');
+  });
+
   it('[P0] 🔴 #9 a failed row draws NO stepper (it is not being worked on)', () => {
     renderPanel({
       status: 'running',

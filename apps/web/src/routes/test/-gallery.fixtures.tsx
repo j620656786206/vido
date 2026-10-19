@@ -468,6 +468,13 @@ function TmdbDownSuggestions({ withLocal }: { withLocal: boolean }) {
 // cannot drift apart, and so the counts always agree with the rendered rows (the
 // old fixtures said 38 total / 26 paused while rendering 3 rows, all of them 完成).
 const WS_FX_IDS = ['ws-m0', 'ws-m12', 'ws-m20'] as const;
+/**
+ * disc-2026-10-generation-queue-failure-reason — long enough to need MORE than
+ * two lines in the 400px live log (so the … clamp shows) and two lines in the
+ * queue: the story's 魔戒 title plus an edition suffix.
+ */
+const WS_FX_LONG_TITLE =
+  '魔戒首部曲：魔戒現身 加長版導演剪輯特別收藏版 4K 數位修復二十週年紀念典藏版（含幕後花絮與導演講評音軌）';
 const WS_FX_ITEMS = [
   { mediaId: WS_FX_IDS[0], title: '沙丘：第二部', mediaType: 'movie', seriesTitle: '' },
   { mediaId: WS_FX_IDS[1], title: '奧本海默', mediaType: 'movie', seriesTitle: '' },
@@ -7354,6 +7361,100 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onDismiss: asyncNoop,
     },
     penNode: 'screen-section', // Screen F12-D-v2 (iH98f) — terminal variant
+    statesOnly: ['default'],
+  },
+  {
+    // disc-2026-10-generation-queue-failure-reason AC #16: the queue on the left
+    // and the live log on the right word ONE failure the same way, the reason is
+    // the log row's second line, and a long film name wraps to two lines (then …)
+    // instead of being squeezed by the reason (F11-D-v2 l8FsB evt-fail / f14sNh,
+    // F11-SPEC-LOG tT3JX ④).
+    id: 'generation-workspace-v2/failures-long-titles',
+    label: 'subtitle/GenerationWorkspaceV2 (failures — same reason both sides, long titles)',
+    component: GenerationWorkspaceV2,
+    width: 1200,
+    props: {
+      mode: 'complete',
+      progress: {
+        batchId: 'b3',
+        totalItems: 3,
+        currentIndex: 3,
+        currentMediaId: '',
+        currentItem: '',
+        successCount: 1,
+        failCount: 2,
+        pausedCount: 0,
+        status: 'complete',
+        spentUsd: 0.6,
+        budgetUsd: 5,
+        items: [
+          {
+            mediaId: 'ws-fl-0',
+            title: '花月殺手',
+            mediaType: 'movie',
+            seriesTitle: '',
+            status: 'done',
+            reason: '',
+            failureReason: '',
+          },
+          {
+            mediaId: 'ws-fl-1',
+            title: 'S01E01',
+            mediaType: 'episode',
+            seriesTitle: '和平使者',
+            status: 'failed',
+            reason: 'error',
+            failureReason: 'target_not_writable',
+          },
+          {
+            mediaId: 'ws-fl-2',
+            title: WS_FX_LONG_TITLE,
+            mediaType: 'movie',
+            seriesTitle: '',
+            status: 'failed',
+            reason: 'error',
+            failureReason: 'no_audio_track',
+          },
+        ],
+      },
+      feed: [
+        { seq: 1, kind: 'done', mediaId: 'ws-fl-0', title: '花月殺手', seriesTitle: '' },
+        {
+          seq: 2,
+          kind: 'failed',
+          mediaId: 'ws-fl-1',
+          title: 'S01E01',
+          seriesTitle: '和平使者',
+          reason: 'error',
+          failureReason: 'target_not_writable',
+        },
+        {
+          seq: 3,
+          kind: 'failed',
+          mediaId: 'ws-fl-2',
+          title: WS_FX_LONG_TITLE,
+          seriesTitle: '',
+          reason: 'error',
+          failureReason: 'no_audio_track',
+        },
+        {
+          seq: 4,
+          kind: 'batch',
+          batchId: 'b3',
+          status: 'complete',
+          successCount: 1,
+          failCount: 2,
+          budgetUsd: 5,
+        },
+      ],
+      feedConnected: true,
+      onLaunch: noop,
+      onConfirmCancelAll: asyncNoop,
+      onResume: noop,
+      onRetryData: noop,
+      onDismiss: asyncNoop,
+    },
+    penNode: 'screen-section', // Screen F11-D-v2 (l8FsB) — evt-fail / f14sNh
     statesOnly: ['default'],
   },
   {

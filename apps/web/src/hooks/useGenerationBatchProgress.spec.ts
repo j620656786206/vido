@@ -321,6 +321,32 @@ describe('useGenerationBatchProgress — queue merge (dsr-6d-b AC #5)', () => {
     ]);
   });
 
+  // disc-2026-10-generation-queue-failure-reason AC #12: the queue row reads
+  // the item's failure code — it must survive the merge (snake → camel).
+  it('[P0] changed_item carries failure_reason through to the item as failureReason', () => {
+    const { result } = renderHook(() => useGenerationBatchProgress());
+    act(() => result.current.startTracking({ batchId: 'gb-1', items: seededQueue() }));
+    const es = MockEventSource.instances[0];
+
+    act(() =>
+      es.emit(
+        'generation_batch_progress',
+        wireEvent({
+          items: null,
+          changed_item: wireItem(ITEM_B, {
+            status: 'failed',
+            reason: 'error',
+            failure_reason: 'target_not_writable',
+          }),
+        })
+      )
+    );
+
+    const b = result.current.progress.items!.find((i) => i.mediaId === ITEM_B)!;
+    expect(b).toMatchObject({ status: 'failed', reason: 'error' });
+    expect(b.failureReason).toBe('target_not_writable');
+  });
+
   it('[P0] a changed_item for an id that is not in the queue is DROPPED, never appended', () => {
     const { result } = renderHook(() => useGenerationBatchProgress());
     act(() => result.current.startTracking({ items: seededQueue() }));

@@ -1216,14 +1216,131 @@ describe('GenerationWorkspaceV2 (dsr-6f-4 — phone page)', () => {
     );
   });
 
-  it('[P2] guard: a row sub-status may wrap on a phone, the title span is untouched', () => {
+  it('[P2] guard: a row sub-status may wrap on a phone; the title wraps to two lines at most', () => {
     render(<GenerationWorkspaceV2 {...props()} />);
     const row = screen.getByTestId('workspace-queue-row-m0');
+    // disc-2026-10-generation-queue-failure-reason AC #6: line-clamp-2 replaced
+    // the one-line truncate (F11-M-v2 Ah8fN).
     expect(row.querySelector('.font-semibold.text-base')!.className).toBe(
-      'truncate text-base font-semibold text-[var(--text-primary)]'
+      'line-clamp-2 break-words text-base font-semibold text-[var(--text-primary)]'
     );
     expect(within(row).getByText('已完成，字幕已寫入檔案').className).toContain(
       'max-sm:whitespace-normal'
     );
+  });
+});
+
+// disc-2026-10-generation-queue-failure-reason — the queue on the left and the
+// live log on the right word one failure the same way, and the reason no longer
+// squeezes the film name (F11-D-v2 l8FsB f14sNh / evt-fail, F11-SPEC-LOG tT3JX).
+describe('GenerationWorkspaceV2 — one failure, one sentence, both sides', () => {
+  const PEACE = '和平使者 S01E01';
+  const NOT_WRITABLE = '影片所在的資料夾寫不進字幕';
+  const failedItem = (failureReason: string): GenerationBatchItemState => ({
+    ...item('m7', PEACE, 'failed', 'error'),
+    failureReason,
+  });
+  const failedRow: FeedRow = {
+    seq: 3,
+    kind: 'failed',
+    mediaId: 'm7',
+    title: PEACE,
+    seriesTitle: '',
+    reason: 'error',
+    failureReason: 'target_not_writable',
+  };
+  const batchDone: FeedRow = {
+    seq: 4,
+    kind: 'batch',
+    batchId: 'b1',
+    status: 'complete',
+    successCount: 3,
+    failCount: 2,
+    budgetUsd: 5,
+    creditProvider: '',
+  };
+  const renderFailure = () =>
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          progress: progress({
+            items: [failedItem('target_not_writable'), item('m12', '奧本海默', 'running')],
+          }),
+          feed: [...feed, failedRow, batchDone],
+        })}
+      />
+    );
+  const feedRows = () =>
+    within(screen.getByTestId('workspace-event-log')).getAllByTestId('workspace-feed-row');
+
+  it('[P0] (a) a failed queue row says the reason in secondary text, badge 失敗, two-line title, no stepper', () => {
+    renderFailure();
+    const row = screen.getByTestId('workspace-queue-row-m7');
+    expect(row).toHaveAttribute('data-state', 'failed');
+    expect(row).toHaveTextContent(NOT_WRITABLE);
+    expect(row).not.toHaveTextContent('生成失敗');
+    // The badge still says 失敗 (the state); the line under the title is the why.
+    expect(within(row).getByText('失敗')).toBeInTheDocument();
+    const sub = within(row).getByText(NOT_WRITABLE);
+    expect(sub.className).toContain('--text-secondary');
+    expect(sub.className).not.toContain('--error-text');
+    const title = within(row).getByText(PEACE);
+    expect(title).toHaveClass('line-clamp-2');
+    expect(title).not.toHaveClass('truncate');
+    // Only the running row draws a stepper.
+    expect(within(row).queryByTestId('generation-progress-v2')).toBeNull();
+  });
+
+  it('[P0] (b) the queue row and the live-log row for the same film say the same sentence', () => {
+    renderFailure();
+    const queueText = screen.getByTestId('workspace-queue-row-m7').textContent!;
+    const logRow = feedRows().find((r) => r.textContent!.includes(PEACE))!;
+    expect(logRow).toBeDefined();
+    expect(queueText).toContain(NOT_WRITABLE);
+    expect(within(logRow).getByTestId('workspace-feed-row-detail').textContent).toBe(NOT_WRITABLE);
+  });
+
+  it('[P0] (c) the reason is the second line — whole, no ·, outside the name line; the name wraps to two lines', () => {
+    renderFailure();
+    const logRow = feedRows().find((r) => r.textContent!.includes(PEACE))!;
+    const detail = within(logRow).getByTestId('workspace-feed-row-detail');
+    expect(detail.textContent).toBe(NOT_WRITABLE);
+    expect(detail.className).toContain('--text-secondary');
+    expect(detail.className).not.toMatch(/\b(truncate|line-clamp-\d)\b/);
+    const name = within(logRow).getByText(PEACE);
+    expect(name).toHaveClass('line-clamp-2');
+    expect(name).not.toHaveClass('truncate');
+    // The name's line does not contain the reason.
+    const nameLine = name.closest('div')!;
+    expect(nameLine.contains(detail)).toBe(false);
+    expect(nameLine).not.toHaveTextContent(NOT_WRITABLE);
+    expect(nameLine).toHaveTextContent('失敗');
+    // ⑦ 批次完成 stays one line: no second-line element.
+    const batchRow = feedRows().find((r) => r.textContent!.includes('批次完成'))!;
+    expect(batchRow).toHaveTextContent('完成 3 部、失敗 2 部');
+    expect(within(batchRow).queryByTestId('workspace-feed-row-detail')).toBeNull();
+    // Every film name in the log may wrap (two lines), never a one-line truncate.
+    for (const r of feedRows()) expect(r.querySelector('.truncate')).toBeNull();
+  });
+
+  it('[P1] the glyph sits in a one-line-tall box at the top of the row, not centred on two lines', () => {
+    renderFailure();
+    const logRow = feedRows().find((r) => r.textContent!.includes(PEACE))!;
+    expect(logRow).toHaveClass('items-start');
+    const box = logRow.querySelector('svg')!.parentElement!;
+    expect(box).toHaveClass('h-[1lh]', 'items-center', 'text-sm');
+  });
+
+  it('[P1] a failure with no code (older server) still says 生成失敗 on both sides', () => {
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          progress: progress({ items: [item('m7', PEACE, 'failed', 'error')] }),
+          feed: [{ ...failedRow, failureReason: null }],
+        })}
+      />
+    );
+    expect(screen.getByTestId('workspace-queue-row-m7')).toHaveTextContent('生成失敗');
+    expect(screen.getByTestId('workspace-feed-row-detail').textContent).toBe('生成失敗');
   });
 });
