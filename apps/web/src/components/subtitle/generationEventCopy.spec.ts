@@ -1,82 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   FAILURE_COPY_BY_REASON,
-  failureCopy,
   failureCopyForReason,
   feedRowView,
+  type RunFailureReason,
 } from './generationEventCopy';
-
-// dsr-6d-c-2 AC #5 — transcription_failed carries the backend's raw error
-// (English, sometimes a server file path). The live log shows one Chinese
-// sentence instead; the raw string never reaches the screen.
-describe('failureCopy', () => {
-  it.each([
-    [
-      'translate: translate: translation stopped at block 3: AI_BUDGET_EXCEEDED: per-run AI budget ceiling reached',
-      '已達預算上限',
-      true,
-    ],
-    ['select audio track: no audio track found in media file', '找不到可用的音軌', false],
-    ['extract audio: ffmpeg not available', '伺服器缺少 ffmpeg', false],
-    ['list audio tracks: ffmpeg not available', '伺服器缺少 ffmpeg', false],
-    ['transcription unavailable and resume not possible', '語音辨識未設定', false],
-    ['transcribe: transcribe chunk 2/9: AI_UNAUTHORIZED: invalid key', 'API 金鑰無效', false],
-    ['transcribe: AI_TIMEOUT: provider did not answer', '處理逾時', false],
-    // The backend's one-line run-deadline sentence (disc-2026-09-transcription-run-5min-hard-timeout).
-    [
-      'transcribe: transcription run timed out after 45m2s in transcribing (media 157 min, budget 4712 s — raise TRANSCRIPTION_SECONDS_PER_MEDIA_MINUTE): context deadline exceeded',
-      '處理逾時',
-      false,
-    ],
-    [
-      'extract audio: audio extraction timed out: ffmpeg timed out after 33m24s on Movie.mkv (file 66.8 GB, timeout 2004 s — raise SUBTITLE_EXTRACT_PER_GB_SECONDS for slow disks): context deadline exceeded',
-      '處理逾時',
-      false,
-    ],
-    ['transcribe: whisper: API error: status 401 — {"error":"invalid key"}', 'API 金鑰無效', false],
-    ['transcribe: whisper: OpenAI API key not configured', '語音辨識未設定', false],
-    // disc-2026-09-asr-quota-429-treated-as-transient: the solo runner's sentence, and the legacy raw error.
-    // No credit is a stop, not a failure (F11-SPEC-LOG ⑤b).
-    [
-      'OpenAI 帳號沒有額度了，請到 https://platform.openai.com/settings/organization/billing 儲值後再按一次生成',
-      'AI 帳號沒有額度',
-      true,
-    ],
-    [
-      'transcribe: transcribe chunk 1/6: whisper: API error: AI_CREDIT_EXHAUSTED: openai account has no credit left (insufficient_quota)',
-      'AI 帳號沒有額度',
-      true,
-    ],
-    ['transcribe: whisper: request timed out', '處理逾時', false],
-    ['extract audio: context deadline exceeded', '處理逾時', false],
-  ])('%s → %s', (error, text, stopped) => {
-    expect(failureCopy(error)).toEqual({ text, stopped });
-  });
-
-  it('falls back to 生成失敗 for anything it does not recognise, including nothing at all', () => {
-    expect(
-      failureCopy('save SRT: open /mnt/media/Movies/Dune (2024)/Dune.en.srt: permission denied')
-    ).toEqual({
-      text: '生成失敗',
-      stopped: false,
-    });
-    expect(failureCopy('')).toEqual({ text: '生成失敗', stopped: false });
-    expect(failureCopy(null)).toEqual({ text: '生成失敗', stopped: false });
-    expect(failureCopy(undefined)).toEqual({ text: '生成失敗', stopped: false });
-  });
-
-  it('the first match wins — a budget stop inside a timeout-shaped message is still a budget stop', () => {
-    expect(failureCopy('transcribe: timed out after AI_BUDGET_EXCEEDED: ceiling').stopped).toBe(
-      true
-    );
-  });
-
-  it('never returns any part of the raw backend string', () => {
-    const raw = 'save SRT: open /mnt/media/secret/path.srt: no space left on device';
-    const { text } = failureCopy(raw);
-    expect(text).not.toMatch(/[A-Za-z/]/);
-  });
-});
+import { recentSubtitleDetail } from '../activity/recentEventCopy';
 
 // dsr-6d-c-2 AC #2 — the ten row kinds, as the view draws them.
 describe('feedRowView', () => {
@@ -157,22 +86,62 @@ describe('feedRowView', () => {
     expect(v.stageClass).toContain('--success-text');
   });
 
-  it('④ a batch failure uses the backend reason; `error` is refined by the member failure text', () => {
+  it('④ a batch failure uses the backend reason; `error` is refined by its reason code', () => {
     expect(
-      feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'skipped', error: null }).parts
+      feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'skipped', failureReason: null }).parts
     ).toEqual(['奧本海默', '沒有可用的字幕來源']);
+    expect(
+      feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'error', failureReason: 'timeout' })
+        .parts
+    ).toEqual(['奧本海默', '處理逾時']);
+    expect(
+      feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'error', failureReason: null }).parts
+    ).toEqual(['奧本海默', '生成失敗']);
+    // disc-2026-10-live-activity-failure-reasons-b: the batch's translate-then-
+    // write failure (正式機 和平使者 S01E01) used to say 生成失敗 here.
+    const notWritable = feedRowView({
+      seq: 1,
+      kind: 'failed',
+      ...film,
+      reason: 'error',
+      failureReason: 'target_not_writable',
+    });
+    expect(notWritable).toMatchObject({
+      stage: '失敗',
+      parts: ['奧本海默', '影片所在的資料夾寫不進字幕'],
+      announce: '失敗：奧本海默，影片所在的資料夾寫不進字幕',
+    });
+    expect(notWritable.stageClass).toContain('--error-text');
+    // A code only refines `error`: skipped / busy_elsewhere keep their own words.
     expect(
       feedRowView({
         seq: 1,
         kind: 'failed',
         ...film,
-        reason: 'error',
-        error: 'extract audio: context deadline exceeded',
+        reason: 'busy_elsewhere',
+        failureReason: 'target_not_writable',
       }).parts
-    ).toEqual(['奧本海默', '處理逾時']);
-    expect(
-      feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'error', error: null }).parts
-    ).toEqual(['奧本海默', '生成失敗']);
+    ).toEqual(['奧本海默', '這部正在別處處理']);
+  });
+
+  it('a single job: the code decides the words; no code, an unknown or a prototype name says 生成失敗', () => {
+    const single = (failureReason: string | null) =>
+      feedRowView({ seq: 1, kind: 'failed', ...film, reason: null, failureReason });
+    expect(single('target_not_writable')).toMatchObject({
+      glyph: 'triangle-alert',
+      stage: '失敗',
+      parts: ['奧本海默', '影片所在的資料夾寫不進字幕'],
+      announce: '失敗：奧本海默，影片所在的資料夾寫不進字幕',
+    });
+    expect(single('cancelled')).toMatchObject({
+      stage: '失敗',
+      parts: ['奧本海默', '中途停止'],
+      announce: '失敗：奧本海默，中途停止',
+    });
+    expect(single('queue_timeout').parts).toEqual(['奧本海默', '處理逾時']);
+    for (const code of [null, '', 'nope', 'constructor', '__proto__']) {
+      expect(single(code)).toMatchObject({ stage: '失敗', parts: ['奧本海默', '生成失敗'] });
+    }
   });
 
   it('⑤ a single job stopped by the budget is 已停止 in ochre', () => {
@@ -181,7 +150,7 @@ describe('feedRowView', () => {
       kind: 'failed',
       ...film,
       reason: null,
-      error: 'AI_BUDGET_EXCEEDED: x',
+      failureReason: 'budget_exceeded',
     });
     expect(v).toMatchObject({
       glyph: 'circle-alert',
@@ -197,8 +166,7 @@ describe('feedRowView', () => {
       kind: 'failed',
       ...film,
       reason: null,
-      error:
-        'OpenAI 帳號沒有額度了，請到 https://platform.openai.com/settings/organization/billing 儲值後再按一次生成',
+      failureReason: 'credit_exhausted',
     });
     expect(v).toMatchObject({
       glyph: 'circle-alert',
@@ -291,7 +259,14 @@ describe('feedRowView', () => {
         percentage: 1,
       }),
       feedRowView({ seq: 1, kind: 'done', ...film }),
-      feedRowView({ seq: 1, kind: 'failed', ...film, reason: null, error: '' }),
+      feedRowView({ seq: 1, kind: 'failed', ...film, reason: null, failureReason: null }),
+      feedRowView({
+        seq: 1,
+        kind: 'failed',
+        ...film,
+        reason: null,
+        failureReason: 'budget_exceeded',
+      }),
       batch('complete'),
       batch('error'),
       batch('budget_ceiling'),
@@ -336,21 +311,59 @@ describe('feedRowView', () => {
   });
 });
 
-// disc-2026-10-activity-subtitle-run-time-b AC #6 — one copy of the failure words:
-// the raw-string matcher and the activity record's reason codes share objects.
-describe('FAILURE_COPY_BY_REASON', () => {
-  it.each([
-    ['AI_BUDGET_EXCEEDED: ceiling', 'budget_exceeded'],
-    ['no audio track found', 'no_audio_track'],
-    ['ffmpeg not available', 'ffmpeg_missing'],
-    ['API key not configured', 'asr_unconfigured'],
-    ['AI_CREDIT_EXHAUSTED: openai', 'credit_exhausted'],
-    ['status 401', 'unauthorized'],
-    ['deadline exceeded', 'timeout'],
-    ['AI_INVALID_RESPONSE: Cannot parse AI response', 'other'],
-  ] as const)('failureCopy(%s) is the %s entry itself', (raw, reason) => {
-    expect(failureCopy(raw)).toBe(FAILURE_COPY_BY_REASON[reason]);
+// disc-2026-10-live-activity-failure-reasons-b AC #5 — the live log and the
+// activity record word every reason code the same way. Iterates the table's own
+// keys, so a code added later is covered without touching this test.
+describe('live log ⇄ activity record: one sentence per reason code', () => {
+  const codes = Object.keys(FAILURE_COPY_BY_REASON) as RunFailureReason[];
+
+  it.each(codes)('%s', (code) => {
+    const { text, stopped } = FAILURE_COPY_BY_REASON[code];
+    const single = feedRowView({
+      seq: 1,
+      kind: 'failed',
+      mediaId: 'm1',
+      title: '奧本海默',
+      seriesTitle: '',
+      reason: null,
+      failureReason: code,
+    });
+    // The live log's reason cell is the table's sentence…
+    expect(single.parts[1]).toBe(text);
+    expect(single.stage).toBe(stopped ? '已停止' : '失敗');
+    // …and the activity record's description ends with the very same words.
+    const activity = recentSubtitleDetail({
+      kind: 'subtitle',
+      result: 'failed',
+      at: '2026-10-19T00:00:00Z',
+      mediaType: 'movie',
+      mediaTitle: '奧本海默',
+      failureReason: code,
+    });
+    expect(activity).toBe(`奧本海默 · ${single.parts[1]}`);
+    // A batch `error` row with the same code says the same words.
+    expect(
+      feedRowView({
+        seq: 1,
+        kind: 'failed',
+        mediaId: 'm1',
+        title: '奧本海默',
+        seriesTitle: '',
+        reason: 'error',
+        failureReason: code,
+      }).parts[1]
+    ).toBe(text);
   });
+});
+
+// disc-2026-10-activity-subtitle-run-time-b AC #6 — one copy of the failure words.
+describe('FAILURE_COPY_BY_REASON', () => {
+  it.each(Object.keys(FAILURE_COPY_BY_REASON) as RunFailureReason[])(
+    'failureCopyForReason(%s) is the entry itself',
+    (reason) => {
+      expect(failureCopyForReason(reason)).toBe(FAILURE_COPY_BY_REASON[reason]);
+    }
+  );
 
   it('has exactly the eleven contract codes', () => {
     expect(Object.keys(FAILURE_COPY_BY_REASON).sort()).toEqual(

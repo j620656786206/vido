@@ -42,14 +42,14 @@ const (
 // These rules are the ONE classifier: the activity record and the live events
 // (transcription_failed from the solo runner and the legacy path, the batch's
 // changed_item / items[]) all send the code this function returns
-// (disc-2026-10-live-activity-failure-reasons-a). Once -b merges, the web
-// client only looks the code up — it removes the raw-string `failureCopy`
-// TABLE, which until then still words the live log — and a new rule is added
+// (disc-2026-10-live-activity-failure-reasons-a). The web client only looks
+// the code up — it no longer matches raw error strings
+// (disc-2026-10-live-activity-failure-reasons-b) — so a new rule is added
 // here only, changing the activity record and the live log together.
-// Every string the client TABLE knows is pinned in subtitle_run_failure_test.go
-// (TestSubtitleRunFailureReason_LiveLogStrings). queue_timeout never reaches
-// the live log: only the free lane can time out in the extraction queue, and
-// it does not emit transcription_failed.
+// Every string the client's old matcher knew is pinned in
+// subtitle_run_failure_test.go (TestSubtitleRunFailureReason_LiveLogStrings).
+// queue_timeout in practice never reaches the live log: only the free lane can
+// time out in the extraction queue, and it does not emit transcription_failed.
 var subtitleRunFailureRules = []struct {
 	reason string
 	match  func(msg string) bool

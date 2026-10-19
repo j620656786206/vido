@@ -98,8 +98,14 @@ export type FeedRow =
       kind: 'failed';
       /** Batch item: the backend reason. Single job: null. */
       reason: GenerationBatchItemReason | null;
-      /** The raw backend error, for the view to map — never displayed as-is. */
-      error: string | null;
+      /**
+       * The backend's reason code (`failure_reason`, disc-2026-10-live-activity-
+       * failure-reasons-a AC #1 `[@contract-v1]`; the same classifier the
+       * activity record uses). The view looks the words up; null = no code
+       * (unknown cause, or a batch failure that is not `error`). The raw error
+       * string is deliberately NOT kept — it can carry a server path.
+       */
+      failureReason: string | null;
     })
   | {
       seq: number;
@@ -150,8 +156,6 @@ export interface GenerationJobsFeedState {
    * changed_item, cleared at the batch terminal or `endBatch()`.
    */
   members: Record<string, MemberInfo>;
-  /** A member's own transcription_failed text, used when its reason is `error`. */
-  memberErrors: Record<string, string>;
   /** `${batchId}:${status}` terminals already written. */
   batchRowsSeen: string[];
 }
@@ -162,7 +166,6 @@ const initialState: GenerationJobsFeedState = {
   seq: 0,
   connected: false,
   members: {},
-  memberErrors: {},
   batchRowsSeen: [],
 };
 
@@ -174,7 +177,12 @@ interface TranscriptionPayload {
   phase?: string;
   percentage?: number;
   message?: string;
-  error?: string;
+  /**
+   * `transcription_failed` only: one of the backend's reason codes (every
+   * failed event carries one). The event's raw `error` is not read here — the
+   * detail dialog (useGenerationProgress) is the one place that shows it.
+   */
+  failureReason?: string;
   /** 9R-17: solo runs only. */
   spentUsd?: number;
   budgetUsd?: number;
@@ -194,6 +202,8 @@ interface ChangedItem {
   seriesTitle?: string;
   status: GenerationBatchItemStatus;
   reason: GenerationBatchItemReason;
+  /** A code when `failed` + `error`, `''` otherwise (always sent; optional for old fixtures). */
+  failureReason?: string;
 }
 /** Camelized generation_batch_progress payload, `items` stripped before conversion. */
 interface BatchPayload {
@@ -327,7 +337,7 @@ function endMembership(state: GenerationJobsFeedState): GenerationJobsFeedState 
   const ids = state.members;
   const feed = settle(state.feed, (row) => row.mediaId in ids, 'stopped');
   if (feed === state.feed && Object.keys(ids).length === 0) return state;
-  return { ...state, feed, members: {}, memberErrors: {} };
+  return { ...state, feed, members: {} };
 }
 
 function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobsFeedState {
@@ -427,13 +437,9 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
       }
       const feed = settle(state.feed, ofFilm(mediaId), ok ? 'passed' : 'stopped');
       if (!soloTitle && state.members[mediaId]) {
-        // A batch member: its result comes from changed_item. Remember why it
-        // failed in case the batch only says `error`.
-        const memberErrors =
-          !ok && action.payload.error
-            ? { ...state.memberErrors, [mediaId]: action.payload.error }
-            : state.memberErrors;
-        return { ...state, feed, memberErrors };
+        // A batch member: its result — and why it failed — comes from
+        // changed_item, which carries its own failure_reason.
+        return feed === state.feed ? state : { ...state, feed };
       }
       const title = soloTitle || state.singleJobs[mediaId]?.title || '';
       const row: NewRow = ok
@@ -444,7 +450,7 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
             title,
             seriesTitle: '',
             reason: null,
-            error: action.payload.error ?? action.payload.message ?? null,
+            failureReason: action.payload.failureReason || null,
           };
       const next = append(feed, state.seq, row);
       return { ...state, ...next, singleJobs: withoutKey(state.singleJobs, mediaId) };
@@ -479,10 +485,7 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
         // Its events may have arrived before we knew it was the batch's.
         delete singleJobs[it.mediaId];
       }
-      const memberErrors = Object.fromEntries(
-        Object.entries(state.memberErrors).filter(([id]) => id in members)
-      );
-      return { ...ended, members, memberErrors, singleJobs, feed: backfill(ended.feed, members) };
+      return { ...ended, members, singleJobs, feed: backfill(ended.feed, members) };
     }
 
     case 'END_BATCH':
@@ -492,7 +495,7 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
       const { payload } = action;
       const status = payload.status ?? '';
       const batchId = payload.batchId ?? '';
-      let { feed, seq, members, singleJobs, memberErrors } = state;
+      let { feed, seq, members, singleJobs } = state;
 
       const changed = payload.changedItem;
       if (changed?.mediaId) {
@@ -518,7 +521,7 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
                   mediaId: id,
                   ...info,
                   reason: changed.reason,
-                  error: changed.reason === 'error' ? (memberErrors[id] ?? null) : null,
+                  failureReason: changed.reason === 'error' ? changed.failureReason || null : null,
                 };
           // The same result may already be in the log (a changed_item: running
           // lost to the hub made the run look like a single job).
@@ -529,7 +532,6 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
             seq = next.seq;
           }
           members = withoutKey(members, id);
-          memberErrors = withoutKey(memberErrors, id);
           // busy_elsewhere: the film IS running — as someone else's single job.
           if (!busy) singleJobs = withoutKey(singleJobs, id);
         }
@@ -553,10 +555,9 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
         seq = next.seq;
         batchRowsSeen = [...batchRowsSeen.slice(-19), key];
         members = {};
-        memberErrors = {};
       }
 
-      return { ...state, feed, seq, members, singleJobs, memberErrors, batchRowsSeen };
+      return { ...state, feed, seq, members, singleJobs, batchRowsSeen };
     }
 
     default:

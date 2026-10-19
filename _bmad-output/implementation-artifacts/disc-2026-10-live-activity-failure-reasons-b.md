@@ -1,6 +1,6 @@
 # Disc：即時活動的失敗原因 B（前端）——生成畫面的即時活動跟活動記錄講同一句失敗原因
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 同 A 單。`disc-2026-10-activity-subtitle-run-time-b`（PR #828）合併後，dev 回報：生成字幕畫面的「即時活動」認不出「寫不進資料夾」和「中途停止（取消）」，同一次失敗那邊寫「生成失敗」，活動記錄寫「影片所在的資料夾寫不進字幕」。
 ⚖️ **Alexyu 2026-10-19 裁定 2A：** 即時活動改用活動記錄那份失敗原因文字（`FAILURE_COPY_BY_REASON`）。
@@ -67,10 +67,10 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 型別＋hook（AC #1、#2）**：`subtitleService.ts`、`useGenerationJobsFeed.ts`（`TranscriptionPayload`、`ChangedItem`、`FeedRow`、`SINGLE_FAILED`、`BATCH`、拿掉 `memberErrors`）＋ `useGenerationJobsFeed.spec.ts`。
-- [ ] **T2 畫面文字（AC #3、#5）**：`generationEventCopy.ts` `case 'failed'` 改查 `failureCopyForReason`；新增 AC #5 一致性測試。
-- [ ] **T3 刪字串比對（AC #4、#6）**：刪 `TABLE`／`FALLBACK`／`failureCopy`、改註解；改寫 `generationEventCopy.spec.ts`、`GenerationWorkspaceV2.spec.tsx` 的既有案例。
-- [ ] **T4 夾具＋收尾（AC #7–#10）**：夾具欄位改名；visual 不更新跑一次；窄畫面量測；lint／typecheck／format。
+- [x] **T1 型別＋hook（AC #1、#2）**：`subtitleService.ts`、`useGenerationJobsFeed.ts`（`TranscriptionPayload`、`ChangedItem`、`FeedRow`、`SINGLE_FAILED`、`BATCH`、拿掉 `memberErrors`）＋ `useGenerationJobsFeed.spec.ts`。
+- [x] **T2 畫面文字（AC #3、#5）**：`generationEventCopy.ts` `case 'failed'` 改查 `failureCopyForReason`；新增 AC #5 一致性測試。
+- [x] **T3 刪字串比對（AC #4、#6）**：刪 `TABLE`／`FALLBACK`／`failureCopy`、改註解；改寫 `generationEventCopy.spec.ts`、`GenerationWorkspaceV2.spec.tsx` 的既有案例。
+- [x] **T4 夾具＋收尾（AC #7–#10）**：夾具欄位改名；visual 不更新跑一次；窄畫面量測；lint／typecheck／format。
 
 ## Dev Notes
 
@@ -136,8 +136,38 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（dev agent，2026-10-19）
+
 ### Debug Log References
+
+- `npx vitest run src/components/subtitle src/hooks src/components/activity src/services src/routes`：91 檔／1788 條全綠。
+- `pnpm nx run web:typecheck` 綠；`pnpm run lint:all`「✖ 170 problems (0 errors, 170 warnings)」（全是既有警告，改動的檔案沒有新警告）；format:check 綠。
+- `AI_PROVIDER=claude pnpm test:visual`（不更新）全綠，沒有任何 png 變動。（`--grep generation-workspace-v2` 抓不到測試：視覺測試是單一 test 跑全部夾具，所以整套跑一次。）
+- Go 註解（`models/subtitle_run_failure.go`、`_test.go` 兩處提到「-b 合併後」）改成現在式；`go vet`、`staticcheck`、`go test ./internal/models` 綠。
+- 故意改壞驗證：`feedRowView` 把 `cancelled` 寫死成「已取消」→ 一致性測試 `cancelled` 與單次失敗測試變紅，還原後綠。
 
 ### Completion Notes List
 
+- **合約照 main 上的程式確認**（#844）：`transcription_failed.failure_reason`、`changed_item.failure_reason`／`items[].failure_reason`，十一個代碼（含 `queue_timeout`）；`''` 視同沒有代碼。
+- **AC #2**：`FeedRow` failed 只存 `failureReason`；`TranscriptionPayload` 拿掉 `error?`（hook 不再讀，詳情對話框自己的型別不受影響）；`memberErrors` 全部移除。批次成員的 `transcription_failed` 現在只結束那一步，不再記任何字串。
+- **AC #5**：一致性測試對 `Object.keys(FAILURE_COPY_BY_REASON)` 逐一（十一個），同時比單次列、批次 `error` 列、活動記錄說明三處。
+- **AC #6 #13**：選「hook＋假 EventSource」——在 `GenerationWorkspaceV2.spec.tsx` 用真的 hook 接假串流，事件帶原始字串（含 `/mnt/media` 路徑），斷言整頁不含路徑、`permission denied`、`no audio track`。
+- **AC #9 窄畫面量測（本機真頁面、假 SSE，片名「魔戒首部曲：魔戒現身 加長版導演剪輯特別收藏版」＋原因「影片所在的資料夾寫不進字幕」）**：
+  - 390（F11-M-v2，展開即時活動）：列寬 356px，原因 182px 完整，**片名那格 34px＝只剩 1 個字＋「…」**（「魔…」「和…」「花…」，連 4 個字的「花月殺手」也只剩 1 字）。照 AC 字面（不是只剩「…」、原因沒被截）算過，但片名實際上認不出來 → 回報給 Alexyu／Sally 裁定，沒有改版面。
+  - 1440：即時活動欄寬 398px，片名那格 76px（約 5 字），「和平使者 S01E01」會變「和平使者 …」，集數看不到。
+- **UX 驗證**：本機 `/activity?view=generation` 收到寫不進資料夾、取消、排隊逾時、其他四種單次失敗＋一個批次翻譯後寫不進，截 1440／390；活動頁同四部的說明逐字相同（「和平使者 S01E01 · 影片所在的資料夾寫不進字幕」「芭比 · 中途停止」「奧本海默 · 處理逾時」「沙丘：第二部 · 生成失敗」）。列的樣子跟 F11-SPEC-LOG ⑥ 一致（紅色三角＋失敗・片名・原因）。
+- **自我審查發現、範圍外**：同一個畫面左邊的「生成佇列」列，`error` 失敗的項目仍寫「生成失敗」（`queueRowLabel` 不看代碼），右邊即時活動已寫「影片所在的資料夾寫不進字幕」。本單 Dev Notes 明定不動 `queueRowLabel`，資料已經在 `items[].failure_reason`，要不要跟進待裁定。
+
 ### File List
+
+- apps/web/src/services/subtitleService.ts
+- apps/web/src/hooks/useGenerationJobsFeed.ts
+- apps/web/src/hooks/useGenerationJobsFeed.spec.ts
+- apps/web/src/components/subtitle/generationEventCopy.ts
+- apps/web/src/components/subtitle/generationEventCopy.spec.ts
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.spec.tsx
+- apps/web/src/routes/test/-gallery.fixtures.tsx
+- apps/api/internal/models/subtitle_run_failure.go（只改註解）
+- apps/api/internal/models/subtitle_run_failure_test.go（只改註解）
+- _bmad-output/implementation-artifacts/disc-2026-10-live-activity-failure-reasons-b.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml

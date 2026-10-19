@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { useEffect } from 'react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GenerationWorkspaceV2, type GenerationWorkspaceV2Props } from './GenerationWorkspaceV2';
 import type { GenerationBatchProgressState } from '../../hooks/useGenerationBatchProgress';
 import type { GenerationBatchItemState } from '../../services/subtitleService';
-import type { FeedRow } from '../../hooks/useGenerationJobsFeed';
+import { useGenerationJobsFeed, type FeedRow } from '../../hooks/useGenerationJobsFeed';
 
 const item = (
   mediaId: string,
@@ -653,8 +654,94 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
   });
 
   it('[P0] 🔴 #13 a failure speaks Chinese — the raw backend string (and its server path) never reaches the page', () => {
-    const raw = 'save SRT: open /mnt/media/Movies/Dune.en.srt: permission denied';
-    const { container } = render(
+    // disc-2026-10-live-activity-failure-reasons-b: hook → page, end to end. The
+    // backend still sends the raw `error` (the detail dialog shows it); the
+    // hook keeps only the reason code, so nothing raw can reach this log.
+    const raw =
+      'place: placer: write failed: open /mnt/media/Movies/Dune/Dune.zh-TW.srt: permission denied';
+    const sources: FakeEventSource[] = [];
+    class FakeEventSource {
+      readyState = 0;
+      onopen: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private listeners: Record<string, ((e: MessageEvent) => void)[]> = {};
+      constructor() {
+        sources.push(this);
+      }
+      addEventListener(type: string, cb: (e: MessageEvent) => void) {
+        (this.listeners[type] ||= []).push(cb);
+      }
+      close() {
+        this.readyState = 2;
+      }
+      emit(type: string, data: unknown) {
+        const frame = { data: JSON.stringify({ id: 'x', type, data }) } as MessageEvent;
+        (this.listeners[type] || []).forEach((cb) => cb(frame));
+      }
+    }
+    vi.stubGlobal('EventSource', FakeEventSource);
+    function Harness() {
+      const { feed: live, startTracking } = useGenerationJobsFeed();
+      useEffect(() => startTracking(), [startTracking]);
+      return <GenerationWorkspaceV2 {...props({ feed: live })} />;
+    }
+    try {
+      const { container } = render(<Harness />);
+      act(() => {
+        const es = sources[0];
+        es.onopen?.();
+        es.emit('transcription_failed', {
+          media_id: 'm1',
+          phase: 'failed',
+          title: '沙丘',
+          error: raw,
+          message: raw,
+          failure_reason: 'target_not_writable',
+        });
+        es.emit('transcription_failed', {
+          media_id: 'm2',
+          phase: 'failed',
+          title: '芭比',
+          error: 'select audio track: no audio track found in media file',
+          failure_reason: 'no_audio_track',
+        });
+        // An older server: a raw error and no code at all.
+        es.emit('transcription_failed', {
+          media_id: 'm4',
+          phase: 'failed',
+          title: '墨西哥',
+          error: 'save SRT: open /mnt/media/Movies/M/M.srt: permission denied',
+        });
+        es.emit('generation_batch_progress', {
+          batch_id: 'b1',
+          status: 'running',
+          changed_item: {
+            media_id: 'm3',
+            title: '花月殺手',
+            media_type: 'movie',
+            series_title: '',
+            status: 'failed',
+            reason: 'busy_elsewhere',
+            failure_reason: '',
+          },
+        });
+      });
+      const [a, b, d, c] = rows();
+      expect(a).toHaveTextContent('失敗');
+      expect(a).toHaveTextContent('影片所在的資料夾寫不進字幕');
+      expect(b).toHaveTextContent('找不到可用的音軌');
+      expect(d).toHaveTextContent('生成失敗');
+      expect(c).toHaveTextContent('這部正在別處處理');
+      expect(container.innerHTML).not.toContain('/mnt/media');
+      expect(container.innerHTML).not.toContain('permission denied');
+      expect(container.innerHTML).not.toContain('no audio track');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('[P0] the live log and the activity record word a failure the same way (目標資料夾寫不進、中途停止)', () => {
+    render(
       <GenerationWorkspaceV2
         {...props({
           feed: [
@@ -662,10 +749,10 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
               seq: 1,
               kind: 'failed',
               mediaId: 'm1',
-              title: '沙丘',
+              title: '和平使者 S01E01',
               seriesTitle: '',
-              reason: null,
-              error: raw,
+              reason: 'error',
+              failureReason: 'target_not_writable',
             },
             {
               seq: 2,
@@ -674,28 +761,19 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
               title: '芭比',
               seriesTitle: '',
               reason: null,
-              error: 'select audio track: no audio track found in media file',
-            },
-            {
-              seq: 3,
-              kind: 'failed',
-              mediaId: 'm3',
-              title: '花月殺手',
-              seriesTitle: '',
-              reason: 'busy_elsewhere',
-              error: null,
+              failureReason: 'cancelled',
             },
           ],
         })}
       />
     );
-    const [a, b, c] = rows();
+    const [a, b] = rows();
     expect(a).toHaveTextContent('失敗');
-    expect(a).toHaveTextContent('生成失敗');
-    expect(b).toHaveTextContent('找不到可用的音軌');
-    expect(c).toHaveTextContent('這部正在別處處理');
-    expect(container.innerHTML).not.toContain('/mnt/media');
-    expect(container.innerHTML).not.toContain('no audio track');
+    expect(a).toHaveTextContent('和平使者 S01E01');
+    expect(a).toHaveTextContent('影片所在的資料夾寫不進字幕');
+    expect(a.innerHTML).toContain('--error-text');
+    expect(b).toHaveTextContent('中途停止');
+    expect(b).not.toHaveTextContent('已停止');
   });
 
   it('[P0] a single job stopped by the budget is 已停止 (ochre), not 失敗', () => {
@@ -710,7 +788,7 @@ describe('GenerationWorkspaceV2 — the live log tells the truth (dsr-6d-c-2)', 
               title: '芭比',
               seriesTitle: '',
               reason: null,
-              error: 'translate: AI_BUDGET_EXCEEDED: ceiling',
+              failureReason: 'budget_exceeded',
             },
           ],
         })}

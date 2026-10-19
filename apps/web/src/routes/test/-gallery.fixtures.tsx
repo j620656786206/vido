@@ -7296,8 +7296,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       // The log names the SAME reasons as the queue rows beside it.
       feed: [
         wsFxFeed(1, 0, { kind: 'done' }),
-        wsFxFeed(2, 1, { kind: 'failed', reason: 'busy_elsewhere', error: null }),
-        wsFxFeed(3, 2, { kind: 'failed', reason: 'skipped', error: null }),
+        wsFxFeed(2, 1, { kind: 'failed', reason: 'busy_elsewhere', failureReason: null }),
+        wsFxFeed(3, 2, { kind: 'failed', reason: 'skipped', failureReason: null }),
         {
           seq: 4,
           kind: 'batch',
