@@ -292,6 +292,17 @@ func TestSetupHandler_Complete(t *testing.T) {
 			expectedStatus: http.StatusConflict,
 		},
 		{
+			// setup-wizard-byok: the wire name the web client sends must bind.
+			name:        "success - gemini_api_key binds to GeminiApiKey",
+			requestBody: map[string]interface{}{"language": "zh-TW", "gemini_api_key": "AIza-1"},
+			setupMock: func(m *MockSetupService) {
+				m.On("CompleteSetup", mock.Anything, mock.MatchedBy(func(c models.SetupConfig) bool {
+					return c.GeminiApiKey == "AIza-1" && c.ClaudeApiKey == ""
+				})).Return(nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
 			name:           "error - invalid JSON",
 			requestBody:    "not json",
 			setupMock:      func(m *MockSetupService) {},

@@ -84,6 +84,24 @@ describe('setupService', () => {
       );
     });
 
+    it('sends the Gemini key as gemini_api_key (setup-wizard-byok)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ success: true, data: { message: 'Setup completed successfully' } }),
+      });
+
+      await setupService.completeSetup({ language: 'zh-TW', geminiApiKey: 'AIza-1' });
+
+      // Must match the models.SetupConfig json tag, or the key is dropped silently.
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${API_BASE}/setup/complete`,
+        expect.objectContaining({
+          body: JSON.stringify({ language: 'zh-TW', gemini_api_key: 'AIza-1' }),
+        })
+      );
+    });
+
     it('throws when setup already completed', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,

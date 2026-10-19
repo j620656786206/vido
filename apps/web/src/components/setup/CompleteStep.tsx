@@ -33,6 +33,11 @@ export function CompleteStep({ data, onNext, onBack, isSubmitting }: StepProps) 
       set: !!data.claudeApiKey,
     },
     {
+      label: 'Gemini 金鑰',
+      value: data.geminiApiKey ? '已設定' : '未設定',
+      set: !!data.geminiApiKey,
+    },
+    {
       label: '匿名使用回報',
       value: data.usageReportEnabled ? '開啟' : '關閉',
       set: data.usageReportEnabled === true,

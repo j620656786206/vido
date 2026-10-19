@@ -741,6 +741,31 @@ func TestSetupService_KeysNotWritable(t *testing.T) {
 		assert.ErrorIs(t, err, ErrKeysNotWritable)
 	})
 
+	t.Run("validate api-keys refuses a Gemini key it cannot store", func(t *testing.T) {
+		svc := NewSetupService(new(MockSettingsRepo), nil)
+		svc.SetKeyWriter(notWritable(new(MockSecretsService)))
+
+		err := svc.ValidateStep(context.Background(), "api-keys", map[string]interface{}{
+			"gemini_api_key": "AIza-1",
+		})
+
+		assert.ErrorIs(t, err, ErrKeysNotWritable)
+	})
+
+	t.Run("complete refuses a Gemini-only key before writing anything", func(t *testing.T) {
+		repo := new(MockSettingsRepo)
+		sec := new(MockSecretsService)
+		repo.On("GetBool", mock.Anything, "setup_completed").Return(false, notFound)
+		svc := NewSetupService(repo, sec)
+		svc.SetKeyWriter(notWritable(sec))
+
+		err := svc.CompleteSetup(context.Background(), SetupConfig{Language: "zh-TW", GeminiApiKey: "AIza-1"})
+
+		assert.ErrorIs(t, err, ErrKeysNotWritable)
+		repo.AssertNotCalled(t, "SetString", mock.Anything, mock.Anything, mock.Anything)
+		sec.AssertNotCalled(t, "Store", mock.Anything, mock.Anything, mock.Anything)
+	})
+
 	t.Run("validate api-keys still lets the user go on with no keys", func(t *testing.T) {
 		svc := NewSetupService(new(MockSettingsRepo), nil)
 		svc.SetKeyWriter(notWritable(new(MockSecretsService)))
@@ -748,6 +773,7 @@ func TestSetupService_KeysNotWritable(t *testing.T) {
 		require.NoError(t, svc.ValidateStep(context.Background(), "api-keys", map[string]interface{}{
 			"tmdb_api_key":   "",
 			"claude_api_key": "   ",
+			"gemini_api_key": "",
 		}))
 	})
 
