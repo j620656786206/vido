@@ -2,9 +2,13 @@ import { createFileRoute, useMatchRoute, Outlet, redirect } from '@tanstack/reac
 import type { LibraryMediaType } from '../types/library';
 import { LibraryBrowseV2 } from '../components/library/LibraryBrowseV2';
 
+/**
+ * No `page` / `pageSize` (disc-2026-10-library-list-triage-b2 AC #7): they were the old
+ * LibraryPage's paging, read by nothing since the infinite scroll took over — its page
+ * size is `PAGE_SIZE` in hooks/useLibraryInfinite.ts — yet defaulted here to 1 / 20, so
+ * the first navigate() wrote `pageSize=20` into a URL that shows 36 rows a page.
+ */
 interface LibrarySearchParams {
-  page?: number;
-  pageSize?: number;
   type?: LibraryMediaType;
   sortBy?: string;
   sortOrder?: string;
@@ -34,11 +38,11 @@ interface LibrarySearchParams {
 
 export const Route = createFileRoute('/library')({
   validateSearch: (search: Record<string, unknown>): LibrarySearchParams => ({
-    page: typeof search.page === 'number' ? search.page : 1,
-    pageSize: typeof search.pageSize === 'number' ? search.pageSize : 20,
+    // No default: the type is the PATH (/library/movies, /library/tv) — a defaulted
+    // 'all' only got written back as `?type=all`, even onto /library/movies (b2).
     type: ['all', 'movie', 'tv'].includes(search.type as string)
       ? (search.type as LibraryMediaType)
-      : 'all',
+      : undefined,
     sortBy: typeof search.sortBy === 'string' ? search.sortBy : undefined,
     sortOrder: ['asc', 'desc'].includes(search.sortOrder as string)
       ? (search.sortOrder as string)
@@ -59,6 +63,24 @@ export const Route = createFileRoute('/library')({
         ? true
         : undefined,
   }),
+  // b2 AC #7: every URL built for /library (and its /movies, /tv children) drops the
+  // dead paging params, so an old bookmark that still carries `page=1&pageSize=20`
+  // loses them on its first navigate instead of keeping them forever via `...prev`.
+  search: {
+    middlewares: [
+      ({ search, next }) => {
+        const {
+          page: _page,
+          pageSize: _pageSize,
+          ...rest
+        } = next(search) as LibrarySearchParams & {
+          page?: unknown;
+          pageSize?: unknown;
+        };
+        return rest;
+      },
+    ],
+  },
   // ux3-0-5: old ?type= deep links → clean type routes (D2). Route-level redirect
   // (never a component redirect, F1); 'all'/absent stays at /library (merged view).
   beforeLoad: ({ search }) => {

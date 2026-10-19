@@ -1,7 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { LibraryGridSkeletonV2, LibraryNoResultV2, LibraryErrorV2 } from './LibraryStatesV2';
+import {
+  LibraryGridSkeletonV2,
+  LibraryListSkeletonV2,
+  LibraryNoResultV2,
+  LibraryErrorV2,
+} from './LibraryStatesV2';
 import { LIBRARY_GRID_COLS } from './libraryGridCols';
+import { LIBRARY_LIST_COLS, LIBRARY_LIST_GAP } from './libraryListCols';
 
 describe('LibraryStatesV2', () => {
   it('skeleton renders the requested number of placeholder cards and is busy', () => {
@@ -111,5 +117,37 @@ describe('LibraryStatesV2', () => {
       );
       expect(text.children[1].firstElementChild!.getAttribute('class')).toContain('w-[60px]');
     });
+  });
+});
+
+// disc-2026-10-library-list-triage-b2 AC #6: the list view's own skeleton.
+describe('LibraryListSkeletonV2 (b2)', () => {
+  const tokens = (el: Element) => (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+
+  it('[P0] eight busy rows inside the list frame, under the @container the list uses', () => {
+    render(<LibraryListSkeletonV2 />);
+    const sk = screen.getByTestId('library-list-skeleton');
+    expect(sk).toHaveAttribute('aria-busy', 'true');
+    expect(sk).toHaveAttribute('aria-label', '載入中');
+    expect(sk.querySelectorAll('li')).toHaveLength(8);
+    // the same frame as LibraryListV2: one border, rounded, clipped
+    expect(tokens(sk)).toEqual(
+      expect.arrayContaining(['overflow-hidden', 'border', 'border-[var(--border-subtle)]'])
+    );
+    expect(tokens(sk.parentElement!)).toContain('@container');
+  });
+
+  it('[P0] every row sits on the SAME column table as the real rows (libraryListCols.ts)', () => {
+    render(<LibraryListSkeletonV2 count={3} />);
+    const grids = screen.getByTestId('library-list-skeleton').querySelectorAll('li > div');
+    expect(grids).toHaveLength(3);
+    const want = [...LIBRARY_LIST_COLS.split(/\s+/), ...LIBRARY_LIST_GAP.split(/\s+/)];
+    for (const g of grids) expect(tokens(g)).toEqual(expect.arrayContaining(want));
+  });
+
+  it('[P1] the bars breathe, and only when motion is allowed', () => {
+    render(<LibraryListSkeletonV2 count={2} />);
+    const grids = screen.getByTestId('library-list-skeleton').querySelectorAll('li > div');
+    for (const g of grids) expect(tokens(g)).toContain('motion-safe:animate-breathe');
   });
 });

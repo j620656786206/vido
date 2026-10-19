@@ -41,6 +41,31 @@ describe('SortSelector', () => {
     expect(screen.getByTestId('sort-option-title')).toHaveTextContent('標題');
     expect(screen.getByTestId('sort-option-release_date')).toHaveTextContent('年份');
     expect(screen.getByTestId('sort-option-rating')).toHaveTextContent('評分');
+    // disc-2026-10-library-list-triage-b2 AC #1: the fifth, 字幕狀態 (缺中文 first).
+    expect(screen.getByTestId('sort-option-subtitle_status')).toHaveTextContent('字幕狀態');
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      '新增日期',
+      '標題',
+      '年份',
+      '評分',
+      '字幕狀態',
+    ]);
+  });
+
+  it('[P0] 字幕狀態 is picked ascending (缺中文 first); picking it again flips to descending', async () => {
+    const onSortChange = vi.fn();
+    const { rerender } = render(
+      <SortSelector sortBy="created_at" sortOrder="desc" onSortChange={onSortChange} />
+    );
+    await userEvent.click(screen.getByTestId('sort-selector-button'));
+    await userEvent.click(screen.getByTestId('sort-option-subtitle_status'));
+    expect(onSortChange).toHaveBeenLastCalledWith('subtitle_status', 'asc');
+
+    rerender(<SortSelector sortBy="subtitle_status" sortOrder="asc" onSortChange={onSortChange} />);
+    expect(screen.getByTestId('sort-selector-button')).toHaveTextContent('字幕狀態');
+    await userEvent.click(screen.getByTestId('sort-selector-button'));
+    await userEvent.click(screen.getByTestId('sort-option-subtitle_status'));
+    expect(onSortChange).toHaveBeenLastCalledWith('subtitle_status', 'desc');
   });
 
   it('calls onSortChange when selecting a different sort option', async () => {

@@ -93,9 +93,9 @@ const movie = (id: string, title: string): LibraryItem => ({
 });
 
 /**
- * Mount the REAL /library layout (validateSearch + beforeLoad + component) with
- * the real child path-marker components — the closest test double to the
- * production tree that doesn't drag in __root's shell chassis.
+ * Mount the REAL /library layout (validateSearch + search middlewares + beforeLoad +
+ * component) with the real child path-marker components — the closest test double to
+ * the production tree that doesn't drag in __root's shell chassis.
  */
 function renderLibrary(initial: string) {
   const rootRoute = createRootRoute();
@@ -103,6 +103,7 @@ function renderLibrary(initial: string) {
     getParentRoute: () => rootRoute,
     path: '/library',
     validateSearch: LibraryRoute.options.validateSearch,
+    search: LibraryRoute.options.search,
     beforeLoad: LibraryRoute.options.beforeLoad,
     component: LibraryRoute.options.component,
   });
@@ -209,5 +210,94 @@ describe('routes/library — URL ↔ UI consistency (ux3-cutover-3)', () => {
     await screen.findByTestId('library-filter-rail');
     expect(h.lastArgs?.genres).toBe('動作,科幻');
     expect(screen.getByTestId('library-rail-active-count')).toHaveTextContent('2');
+  });
+});
+
+// disc-2026-10-library-list-triage-b2 AC #7: the dead page / pageSize params are gone —
+// the URL used to grow `page=1&pageSize=20` on the first navigate while the page shows 36.
+describe('routes/library — no dead paging params in the URL (b2 AC #7)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('a', '電影甲')], totalItems: 1 });
+    h.lastArgs = undefined;
+    // view + sort persist in localStorage; start each case on the grid / default sort.
+    localStorage.clear();
+  });
+
+  const noPaging = (router: { state: { location: { search: object; href: string } } }) => {
+    expect(router.state.location.search).not.toHaveProperty('page');
+    expect(router.state.location.search).not.toHaveProperty('pageSize');
+    expect(router.state.location.href).not.toMatch(/pageSize|[?&]page=/);
+  };
+
+  it('[P1] switching to the list view, sorting and filtering never write page / pageSize', async () => {
+    const user = userEvent.setup();
+    const { router } = renderLibrary('/library');
+    await screen.findByTestId('library-grid-v2');
+    noPaging(router);
+
+    await user.click(screen.getByLabelText('列表檢視'));
+    await waitFor(() => expect(router.state.location.search).toHaveProperty('view', 'list'));
+    noPaging(router);
+
+    await user.click(screen.getByTestId('sort-selector-button'));
+    await user.click(screen.getByTestId('sort-option-subtitle_status'));
+    await waitFor(() =>
+      expect(router.state.location.search).toHaveProperty('sortBy', 'subtitle_status')
+    );
+    noPaging(router);
+
+    await user.click(screen.getByTestId('filter-chinese-missing'));
+    await waitFor(() =>
+      expect(router.state.location.search).toHaveProperty('chineseSubtitle', 'missing')
+    );
+    noPaging(router);
+  });
+
+  it('[P2] an old bookmark carrying page / pageSize still opens; the next navigate drops them', async () => {
+    const user = userEvent.setup();
+    const { router } = renderLibrary('/library?page=3&pageSize=20');
+    await screen.findByTestId('library-grid-v2');
+    await user.click(screen.getByLabelText('列表檢視'));
+    await waitFor(() => expect(router.state.location.search).toHaveProperty('view', 'list'));
+    noPaging(router);
+  });
+});
+
+// Found by b2: navigate() from the /library route api with no `to` landed on /library,
+// so on 電影／影集 any sort, view or filter change dropped you on 全部 (`type=all`). The
+// 「N 部缺中文」 link counts within the type, so it must not leave it either.
+describe('routes/library — sort / view / filter stay on the type route (b2)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('a', '電影甲')], totalItems: 1 });
+    h.lastArgs = undefined;
+    localStorage.clear();
+  });
+
+  it.each([
+    ['/library/movies', 'movie'],
+    ['/library/tv', 'tv'],
+    ['/library', 'all'],
+  ] as const)('[P0] on %s every change keeps the path and the query type', async (path, type) => {
+    const user = userEvent.setup();
+    const { router } = renderLibrary(path);
+    await screen.findByTestId('library-grid-v2');
+
+    await user.click(screen.getByLabelText('列表檢視'));
+    await waitFor(() => expect(router.state.location.search).toHaveProperty('view', 'list'));
+    expect(router.state.location.pathname).toBe(path);
+
+    await user.click(screen.getByTestId('sort-selector-button'));
+    await user.click(screen.getByTestId('sort-option-title'));
+    await waitFor(() => expect(router.state.location.search).toHaveProperty('sortBy', 'title'));
+    expect(router.state.location.pathname).toBe(path);
+
+    await user.click(screen.getByTestId('filter-chinese-missing'));
+    await waitFor(() =>
+      expect(router.state.location.search).toHaveProperty('chineseSubtitle', 'missing')
+    );
+    expect(router.state.location.pathname).toBe(path);
+    expect(router.state.location.search).not.toHaveProperty('type');
+    expect(h.lastArgs?.type).toBe(type);
+    expect(h.lastArgs?.chineseSubtitle).toBe('missing');
   });
 });

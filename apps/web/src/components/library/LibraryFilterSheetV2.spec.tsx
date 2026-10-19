@@ -50,11 +50,19 @@ describe('LibraryFilterSheetV2 (dsr-1b-b A6p-M)', () => {
     g.listArgs = [];
   });
 
-  it('[P0] sort is a radiogroup of the four SORT_OPTIONS, in their words, one checked', () => {
+  it('[P0] sort is a radiogroup of the five SORT_OPTIONS, in their words, one checked', () => {
     renderSheet();
     const group = screen.getByRole('radiogroup', { name: '排序方式' });
     const radios = within(group).getAllByRole('radio');
     expect(radios.map((r) => r.textContent)).toEqual(SORT_OPTIONS.map((o) => o.label));
+    // disc-2026-10-library-list-triage-b2 AC #1: the same five words as the desktop dropdown.
+    expect(radios.map((r) => r.textContent)).toEqual([
+      '新增日期',
+      '標題',
+      '年份',
+      '評分',
+      '字幕狀態',
+    ]);
     expect(radios.filter((r) => r.getAttribute('aria-checked') === 'true')).toHaveLength(1);
     expect(screen.getByTestId('library-sort-created_at')).toHaveAttribute('data-order', 'desc');
   });
@@ -129,6 +137,15 @@ describe('LibraryFilterSheetV2 (dsr-1b-b A6p-M)', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it('[P0] 字幕狀態 is picked ascending (缺中文 first) and 套用 commits it (b2 AC #1)', async () => {
+    const user = userEvent.setup();
+    const { onSortChange } = renderSheet();
+    await user.click(screen.getByTestId('library-sort-subtitle_status'));
+    expect(screen.getByTestId('library-sort-subtitle_status')).toHaveAttribute('data-order', 'asc');
+    await user.click(screen.getByTestId('library-filter-apply'));
+    expect(onSortChange).toHaveBeenCalledWith('subtitle_status', 'asc');
+  });
+
   it('[P1] 套用 with an unchanged sort does not fire onSortChange', async () => {
     const user = userEvent.setup();
     const { onSortChange, onApply } = renderSheet();
@@ -190,13 +207,14 @@ describe('LibraryFilterSheetV2 — CR follow-ups (dsr-1b-b)', () => {
   it('[P0] the sort group is one Tab stop: only the checked chip is tabbable, arrows wrap', () => {
     renderSheet();
     const radios = screen.getAllByRole('radio');
-    expect(radios.map((r) => r.tabIndex)).toEqual([0, -1, -1, -1]);
+    expect(radios.map((r) => r.tabIndex)).toEqual([0, -1, -1, -1, -1]);
     fireEvent.keyDown(radios[0], { key: 'ArrowRight' });
     expect(screen.getByTestId('library-sort-title')).toHaveFocus();
     fireEvent.keyDown(screen.getByTestId('library-sort-title'), { key: 'ArrowLeft' });
     fireEvent.keyDown(screen.getByTestId('library-sort-created_at'), { key: 'ArrowLeft' });
-    expect(screen.getByTestId('library-sort-rating')).toHaveFocus();
-    fireEvent.keyDown(screen.getByTestId('library-sort-rating'), { key: 'ArrowDown' });
+    // b2: the fifth chip (字幕狀態) is now the last one the wrap lands on.
+    expect(screen.getByTestId('library-sort-subtitle_status')).toHaveFocus();
+    fireEvent.keyDown(screen.getByTestId('library-sort-subtitle_status'), { key: 'ArrowDown' });
     expect(screen.getByTestId('library-sort-created_at')).toHaveFocus();
   });
 

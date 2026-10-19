@@ -26,6 +26,7 @@ import {
   useBatchDelete,
   useBatchReparse,
   useBatchExport,
+  useLibraryList,
 } from '../../hooks/useLibrary';
 import { SelectionToolbar } from './SelectionToolbar';
 import { BatchConfirmDialog } from './BatchConfirmDialog';
@@ -37,9 +38,14 @@ import { FilterChips } from './FilterChips';
 import { ViewToggle, type ViewMode } from './ViewToggle';
 import { PosterCardV2 } from './PosterCardV2';
 import { LibraryListV2 } from './LibraryListV2';
-import { LibraryFilterSheetV2 } from './LibraryFilterSheetV2';
+import { LibraryFilterSheetV2, sheetCountParams } from './LibraryFilterSheetV2';
 import { LibraryFilterRail } from './LibraryFilterRail';
-import { LibraryGridSkeletonV2, LibraryNoResultV2, LibraryErrorV2 } from './LibraryStatesV2';
+import {
+  LibraryGridSkeletonV2,
+  LibraryListSkeletonV2,
+  LibraryNoResultV2,
+  LibraryErrorV2,
+} from './LibraryStatesV2';
 import { LIBRARY_GRID_COLS } from './libraryGridCols';
 import { yearFilterLabel } from './FilterPanel';
 import {
@@ -79,6 +85,12 @@ const TYPE_TITLE: Record<LibraryMediaType, string> = {
   tv: '影集',
 };
 const DEFAULT_SORT = { sortBy: 'created_at' as SortField, sortOrder: 'desc' as SortOrder };
+/** The clean route each type lives on (ux3-0-5). */
+const TYPE_PATH = {
+  all: '/library',
+  movie: '/library/movies',
+  tv: '/library/tv',
+} as const satisfies Record<LibraryMediaType, string>;
 
 function getStoredView(): ViewMode {
   try {
@@ -263,11 +275,16 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
   const unmatchedCount =
     (movieStats.data?.unmatchedCount ?? 0) + (seriesStats.data?.unmatchedCount ?? 0);
 
+  // Stay on the type's own route. `navigate` comes from the /library route api, so a
+  // navigate with no `to` lands on /library itself: on 電影 or 影集 every sort, view or
+  // filter change used to drop you on 全部 (with `type=all` in the URL) — found by
+  // disc-2026-10-library-list-triage-b2, whose 「N 部缺中文」 counts within the type.
+  const typePath = TYPE_PATH[currentType];
   const patchSearch = useCallback(
     (patch: Record<string, unknown>) => {
-      navigate({ search: (prev) => ({ ...prev, ...patch }) });
+      navigate({ to: typePath, search: (prev) => ({ ...prev, type: undefined, ...patch }) });
     },
-    [navigate]
+    [navigate, typePath]
   );
 
   const handleSortChange = useCallback(
@@ -317,12 +334,38 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
       }),
     [patchSearch]
   );
+  // A4p 「· N 部缺中文」 (disc-2026-10-library-list-triage-b2 AC #3, ⚖️ Sally 5): how many
+  // titles the 缺中文字幕 chip would list on top of what is filtered now. The SAME
+  // 1-row query the sort+filter sheet's 「套用篩選 · N 部」 makes (sheetCountParams), so
+  // the number cannot disagree with the list the link opens — no count endpoint, no
+  // second copy of the rule. Not asked while a 字幕 filter is on: the link has no work
+  // to do then.
+  const hasSubtitleFilter = chineseSubtitles.length > 0;
+  const missingZh = useLibraryList(
+    sheetCountParams(
+      { ...filters, chineseSubtitle: ['missing'] },
+      currentType,
+      effectiveSortBy,
+      effectiveSortOrder
+    ),
+    { enabled: !hasSubtitleFilter }
+  );
+  const missingZhCount =
+    !hasSubtitleFilter && !missingZh.isError ? (missingZh.data?.totalItems ?? 0) : 0;
+  const showMissingZh = missingZhCount > 0;
+  const showOnlyMissingZh = useCallback(() => {
+    applyFilters({ ...filters, chineseSubtitle: ['missing'] });
+    // The link unmounts with the filter it just set; keep focus on the page instead of
+    // dropping it to <body>.
+    headingRef.current?.focus();
+  }, [applyFilters, filters]);
+
+  // P3 跳到結果 (AC #4): skip the header, the rail's chips and the toolbar (≈40 Tabs).
+  const resultsRef = useRef<HTMLElement>(null);
+
   const handleTypeChange = useCallback(
     (t: LibraryMediaType) =>
-      navigate({
-        to: t === 'movie' ? '/library/movies' : t === 'tv' ? '/library/tv' : '/library',
-        search: (prev) => ({ ...prev, type: undefined }),
-      }),
+      navigate({ to: TYPE_PATH[t], search: (prev) => ({ ...prev, type: undefined }) }),
     [navigate]
   );
 
@@ -529,8 +572,12 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     setGenerationBatchSelection([]);
     setGenerationForceAnalyze(true);
     setIsBatchSubtitleOpen(true);
-    navigate({ search: (prev) => ({ ...prev, generate: undefined }), replace: true });
-  }, [generateParam, navigate]);
+    navigate({
+      to: typePath,
+      search: (prev) => ({ ...prev, type: undefined, generate: undefined }),
+      replace: true,
+    });
+  }, [generateParam, navigate, typePath]);
 
   // Keyboard shortcuts while selecting (Escape exits, Ctrl/Cmd+A selects loaded).
   useEffect(() => {
@@ -551,9 +598,29 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
   const gridColsClass = railCollapsed
     ? LIBRARY_GRID_COLS.railCollapsed
     : LIBRARY_GRID_COLS.railOpen;
+  // b2 AC #6: the list view loads under a list-shaped skeleton, not poster tiles.
+  const loadingSkeleton =
+    view === 'list' ? (
+      <LibraryListSkeletonV2 />
+    ) : (
+      <LibraryGridSkeletonV2 railCollapsed={railCollapsed} />
+    );
 
   return (
-    <div className="px-4 py-6 sm:px-6">
+    <div className="relative px-4 py-6 sm:px-6">
+      {/* P3 跳到結果 (b2 AC #4): the first stop on the page, seen only when focused. It
+          moves focus with focus() — an href="#…" jump would let the hash into the URL. */}
+      <a
+        href="#library-results"
+        data-testid="library-skip-to-results"
+        onClick={(e) => {
+          e.preventDefault();
+          resultsRef.current?.focus();
+        }}
+        className="sr-only rounded-[var(--radius-md)] bg-[var(--bg-secondary)] text-sm font-medium text-[var(--text-primary)] shadow-[var(--shadow-xl)] focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-30 focus:px-3 focus:py-2 sm:focus:left-6"
+      >
+        跳到結果
+      </a>
       {/* A3p-D 頁首 — the screen says WHERE YOU ARE and HOW MUCH IS HERE in one
             line. ⚖️ Alexyu 2026-09-16 (dsr-1 AC #7): the count belongs beside the
             title, counted in 部 — 「電影 1,284 部」 reads as a sentence, and the
@@ -584,10 +651,25 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
           {!isLoading && !isError && (
             <span
               data-testid="library-result-count"
-              className="font-mono text-xs tabular-nums text-[var(--text-secondary)]"
+              className="shrink-0 whitespace-nowrap font-mono text-xs tabular-nums text-[var(--text-secondary)]"
             >
               {totalItems.toLocaleString()} 部
             </span>
+          )}
+          {/* b2 AC #3 — its own element, NOT inside library-result-count: that span's text
+              is matched exactly (「2 部」) by the e2e. Pressing it = the 缺中文字幕 chip.
+              The padding/negative margin grow the tap target without moving the line. */}
+          {!isLoading && !isError && showMissingZh && (
+            <button
+              type="button"
+              data-testid="library-missing-zh-link"
+              onClick={showOnlyMissingZh}
+              aria-label={`${missingZhCount.toLocaleString()} 部缺中文，只看缺中文字幕的片`}
+              className="-my-2.5 min-w-0 truncate py-2.5 font-mono text-xs tabular-nums text-[var(--accent-text)] underline-offset-2 hover:underline"
+            >
+              <span aria-hidden="true">· </span>
+              {missingZhCount.toLocaleString()} 部缺中文
+            </button>
           )}
         </div>
         {/* A6p-M / A3p-M (dsr-1b-b): on a phone the sort+filter sheet opens from a 44×44
@@ -772,82 +854,91 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
             </div>
           )}
 
-          {/* States */}
-          {isError ? (
-            <LibraryErrorV2 code={(error as { code?: string })?.code} onRetry={() => refetch()} />
-          ) : isLoading ? (
-            <LibraryGridSkeletonV2 railCollapsed={railCollapsed} />
-          ) : isEmpty ? (
-            hasActiveFilters ? (
-              <LibraryNoResultV2
-                onClearFilters={clearFilters}
-                mediaType={currentType}
-                activeFilters={activeFilterLabels}
-              />
-            ) : (
-              (() => {
-                const state = classifyEmptyState({
-                  qbtConfigured: qbtConfig.data?.configured,
-                  mediaLibrariesCount: mediaLibraries.data?.libraries?.length ?? 0,
-                  itemsCount: 0,
-                  isLoading: qbtConfig.isLoading || mediaLibraries.isLoading,
-                });
-                if (state === 'loading')
-                  return <LibraryGridSkeletonV2 railCollapsed={railCollapsed} />;
-                if (state === 'no-qbt') return <EmptyNoQBT />;
-                if (state === 'no-folder') return <EmptyNoFolder />;
-                return <EmptyReadyForScan />;
-              })()
-            )
-          ) : view === 'grid' ? (
-            <div
-              data-testid="library-grid-v2"
-              className={`grid ${LIBRARY_GRID_COLS.gap} ${gridColsClass}`}
-            >
-              {display.map((d) => (
-                <PosterCardV2
-                  key={`${d.type}-${d.id}`}
-                  id={d.id}
-                  type={d.type}
-                  title={d.title}
-                  posterPath={d.posterPath}
-                  year={d.year}
-                  meta={d.meta}
-                  voteAverage={d.voteAverage}
-                  media={d.media}
-                  selectable={isSelectionMode}
-                  selected={isSelectionMode && selectedIds.has(d.id)}
-                  onSelect={isSelectionMode ? (e) => handleSelect(d.id, e) : undefined}
+          {/* States — the 跳到結果 target: one container whatever is showing, so the next
+              Tab after the jump is the first card / row (or the state's own button). */}
+          <section
+            ref={resultsRef}
+            id="library-results"
+            tabIndex={-1}
+            aria-label="媒體庫結果"
+            data-testid="library-results"
+            className="outline-none"
+          >
+            {isError ? (
+              <LibraryErrorV2 code={(error as { code?: string })?.code} onRetry={() => refetch()} />
+            ) : isLoading ? (
+              loadingSkeleton
+            ) : isEmpty ? (
+              hasActiveFilters ? (
+                <LibraryNoResultV2
+                  onClearFilters={clearFilters}
+                  mediaType={currentType}
+                  activeFilters={activeFilterLabels}
                 />
-              ))}
-            </div>
-          ) : (
-            <LibraryListV2
-              rows={display.map(
-                ({ id, type, title, posterPath, listMeta, voteAverage, media }) => ({
-                  id,
-                  type,
-                  title,
-                  posterPath,
-                  meta: listMeta,
-                  voteAverage,
-                  media,
-                })
-              )}
-              selectable={isSelectionMode}
-              selectedIds={isSelectionMode ? selectedIds : undefined}
-              onSelect={isSelectionMode ? handleSelect : undefined}
-            />
-          )}
+              ) : (
+                (() => {
+                  const state = classifyEmptyState({
+                    qbtConfigured: qbtConfig.data?.configured,
+                    mediaLibrariesCount: mediaLibraries.data?.libraries?.length ?? 0,
+                    itemsCount: 0,
+                    isLoading: qbtConfig.isLoading || mediaLibraries.isLoading,
+                  });
+                  if (state === 'loading') return loadingSkeleton;
+                  if (state === 'no-qbt') return <EmptyNoQBT />;
+                  if (state === 'no-folder') return <EmptyNoFolder />;
+                  return <EmptyReadyForScan />;
+                })()
+              )
+            ) : view === 'grid' ? (
+              <div
+                data-testid="library-grid-v2"
+                className={`grid ${LIBRARY_GRID_COLS.gap} ${gridColsClass}`}
+              >
+                {display.map((d) => (
+                  <PosterCardV2
+                    key={`${d.type}-${d.id}`}
+                    id={d.id}
+                    type={d.type}
+                    title={d.title}
+                    posterPath={d.posterPath}
+                    year={d.year}
+                    meta={d.meta}
+                    voteAverage={d.voteAverage}
+                    media={d.media}
+                    selectable={isSelectionMode}
+                    selected={isSelectionMode && selectedIds.has(d.id)}
+                    onSelect={isSelectionMode ? (e) => handleSelect(d.id, e) : undefined}
+                  />
+                ))}
+              </div>
+            ) : (
+              <LibraryListV2
+                rows={display.map(
+                  ({ id, type, title, posterPath, listMeta, voteAverage, media }) => ({
+                    id,
+                    type,
+                    title,
+                    posterPath,
+                    meta: listMeta,
+                    voteAverage,
+                    media,
+                  })
+                )}
+                selectable={isSelectionMode}
+                selectedIds={isSelectionMode ? selectedIds : undefined}
+                onSelect={isSelectionMode ? handleSelect : undefined}
+              />
+            )}
 
-          {/* Continuous-scroll sentinel */}
-          {!isEmpty && hasNextPage && (
-            <div ref={sentinelRef} className="h-10" aria-hidden="true">
-              {isFetchingNextPage && (
-                <p className="py-3 text-center text-xs text-[var(--text-muted)]">載入更多…</p>
-              )}
-            </div>
-          )}
+            {/* Continuous-scroll sentinel */}
+            {!isEmpty && hasNextPage && (
+              <div ref={sentinelRef} className="h-10" aria-hidden="true">
+                {isFetchingNextPage && (
+                  <p className="py-3 text-center text-xs text-[var(--text-muted)]">載入更多…</p>
+                )}
+              </div>
+            )}
+          </section>
         </div>
       </div>
 

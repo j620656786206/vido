@@ -28,6 +28,10 @@ const h = vi.hoisted(() => ({
     currentTitle: string;
   },
   batchExport: undefined as unknown as ReturnType<typeof vi.fn>,
+  // b2 AC #3: what a 1-row `chinese_subtitle=missing` count query answers (undefined =
+  // still loading), and every params object useLibraryList was asked with.
+  missingZh: undefined as undefined | { totalItems?: number; isError?: boolean },
+  listCalls: [] as { params: Record<string, unknown>; enabled?: boolean }[],
 }));
 
 vi.mock('../../hooks/useLibraryInfinite', () => ({
@@ -47,7 +51,19 @@ vi.mock('../../hooks/useLibrary', () => ({
   useSeriesStats: () => ({ data: { unmatchedCount: 0 } }),
   useLibraryGenres: () => ({ data: [] }),
   // dsr-1b-b: the sort+filter sheet's 「套用篩選 · N 部」 preview query.
-  useLibraryList: () => ({ data: undefined, isPending: false, isError: false }),
+  // b2: also the header's 「· N 部缺中文」 — answers only the missing-Chinese count query.
+  useLibraryList: (params: Record<string, unknown>, opts: { enabled?: boolean } = {}) => {
+    h.listCalls.push({ params, enabled: opts.enabled });
+    const isMissingCount = params.pageSize === 1 && params.chineseSubtitle === 'missing';
+    if (!isMissingCount || opts.enabled === false || !h.missingZh) {
+      return { data: undefined, isPending: true, isError: false };
+    }
+    // A failed refetch keeps the last good data on a react-query result — the error flag
+    // has to win over the stale number.
+    if (h.missingZh.isError)
+      return { data: { totalItems: h.missingZh.totalItems }, isPending: false, isError: true };
+    return { data: { totalItems: h.missingZh.totalItems }, isPending: false, isError: false };
+  },
   // ux3-cutover-2: selection-mode batch mutations (spies live in `h` so tests
   // can assert the ids/type each batch call receives)
   useBatchDelete: () => ({ mutateAsync: h.batchDelete, isPending: false }),
@@ -125,6 +141,8 @@ function renderBrowse(initial = '/library', type?: 'all' | 'movie' | 'tv') {
 
 describe('LibraryBrowseV2', () => {
   beforeEach(() => {
+    h.missingZh = undefined;
+    h.listCalls = [];
     h.infinite = infinite();
     h.batchDelete = vi.fn().mockResolvedValue({ successCount: 0, errors: [] });
     h.batchReparse = vi.fn().mockResolvedValue({ successCount: 0, errors: [] });
@@ -588,5 +606,188 @@ describe('LibraryBrowseV2 — phone screens (dsr-1b-c)', () => {
     renderBrowse();
     const h1 = await screen.findByTestId('library-page-title');
     expect(tokens(h1)).toEqual(expect.arrayContaining(['max-sm:text-lg', 'text-xl']));
+  });
+});
+
+// disc-2026-10-library-list-triage-b2 AC #3 — A4p-D / A4p-M 「· 37 部缺中文」 beside the count.
+describe('LibraryBrowseV2 — 「N 部缺中文」 header link (b2)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('a', '電影甲'), movie('b', '電影乙')], totalItems: 2 });
+    h.missingZh = { totalItems: 37 };
+    h.listCalls = [];
+    localStorage.clear();
+  });
+
+  it('[P0] shows 「· 37 部缺中文」 next to the count, which still reads exactly 「2 部」', async () => {
+    renderBrowse();
+    const link = await screen.findByTestId('library-missing-zh-link');
+    expect(link).toHaveTextContent('· 37 部缺中文');
+    expect(link).toHaveAccessibleName('37 部缺中文，只看缺中文字幕的片');
+    expect(link.querySelector('[aria-hidden="true"]')).toHaveTextContent('·');
+    // a separate element — the e2e matches the count's text exactly
+    expect(screen.getByTestId('library-result-count').textContent).toBe('2 部');
+    expect(screen.getByTestId('library-result-count')).not.toContainElement(link);
+    expect(link.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['font-mono', 'text-xs', 'tabular-nums', 'text-[var(--accent-text)]'])
+    );
+  });
+
+  it('[P0] N is the SAME 1-row query the sheet makes: current filters + chineseSubtitle=missing', async () => {
+    renderBrowse('/library?genres=%E5%8B%95%E4%BD%9C&yearMin=2010&yearMax=2019', 'movie');
+    await screen.findByTestId('library-missing-zh-link');
+    const call = h.listCalls.find((c) => c.params.chineseSubtitle === 'missing');
+    expect(call?.params).toEqual({
+      page: 1,
+      pageSize: 1,
+      type: 'movie',
+      sortBy: 'created_at',
+      sortOrder: 'desc',
+      genres: '動作',
+      yearMin: 2010,
+      yearMax: 2019,
+      unmatched: undefined,
+      chineseSubtitle: 'missing',
+    });
+  });
+
+  it('[P0] pressing it applies 缺中文字幕, keeps the other filters, and the link goes away', async () => {
+    const user = userEvent.setup();
+    renderBrowse('/library?genres=%E5%8B%95%E4%BD%9C');
+    await user.click(await screen.findByTestId('library-missing-zh-link'));
+    await waitFor(() => expect(h.lastArgs?.chineseSubtitle).toBe('missing'));
+    expect(h.lastArgs?.genres).toBe('動作');
+    expect(screen.getByRole('button', { name: '移除缺中文字幕篩選' })).toBeInTheDocument();
+    expect(screen.queryByTestId('library-missing-zh-link')).not.toBeInTheDocument();
+    // focus does not fall to <body> with the unmounted link
+    expect(document.activeElement).toBe(screen.getByTestId('library-page-title'));
+  });
+
+  it('[P0] hidden when N is 0', async () => {
+    h.missingZh = { totalItems: 0 };
+    renderBrowse();
+    await screen.findByTestId('library-result-count');
+    expect(screen.queryByTestId('library-missing-zh-link')).not.toBeInTheDocument();
+  });
+
+  it('[P0] hidden while its count loads, and when the count query fails', async () => {
+    h.missingZh = undefined;
+    const { unmount } = renderBrowse();
+    await screen.findByTestId('library-result-count');
+    expect(screen.queryByTestId('library-missing-zh-link')).not.toBeInTheDocument();
+    unmount();
+
+    h.missingZh = { totalItems: 37, isError: true };
+    renderBrowse();
+    await screen.findByTestId('library-result-count');
+    expect(screen.queryByTestId('library-missing-zh-link')).not.toBeInTheDocument();
+  });
+
+  it('[P0] hidden while the list itself loads or fails (no number to sit beside)', async () => {
+    h.infinite = infinite({ isLoading: true });
+    const { unmount } = renderBrowse();
+    await screen.findByTestId('library-page-title');
+    expect(screen.queryByTestId('library-missing-zh-link')).not.toBeInTheDocument();
+    unmount();
+
+    h.infinite = infinite({ isError: true, error: { code: 'DB_QUERY_FAILED' } });
+    renderBrowse();
+    await screen.findByTestId('library-error');
+    expect(screen.queryByTestId('library-missing-zh-link')).not.toBeInTheDocument();
+  });
+
+  it.each(['missing', 'has', 'unknown'])(
+    '[P0] hidden — and not even asked — while a 字幕 filter (%s) is on',
+    async (group) => {
+      renderBrowse(`/library?chineseSubtitle=${group}`);
+      await screen.findByTestId('library-result-count');
+      expect(screen.queryByTestId('library-missing-zh-link')).not.toBeInTheDocument();
+      const call = h.listCalls.find((c) => c.params.chineseSubtitle === 'missing');
+      expect(call?.enabled).toBe(false);
+    }
+  );
+});
+
+// b2 AC #1 — the 字幕狀態 sort survives a reload (localStorage whitelist).
+describe('LibraryBrowseV2 — 字幕狀態 sort (b2)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('a', '電影甲')], totalItems: 1 });
+    localStorage.clear();
+  });
+
+  it('[P0] picking 字幕狀態 queries sort_by=subtitle_status ascending, and a reload keeps it', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderBrowse();
+    await user.click(await screen.findByTestId('sort-selector-button'));
+    await user.click(screen.getByTestId('sort-option-subtitle_status'));
+    await waitFor(() => expect(h.lastArgs?.sortBy).toBe('subtitle_status'));
+    expect(h.lastArgs?.sortOrder).toBe('asc');
+    unmount();
+
+    // A fresh mount with no ?sortBy= reads localStorage — the whitelist must know the field.
+    renderBrowse();
+    await screen.findByTestId('library-grid-v2');
+    expect(h.lastArgs?.sortBy).toBe('subtitle_status');
+    expect(h.lastArgs?.sortOrder).toBe('asc');
+    expect(screen.getByTestId('sort-selector-button')).toHaveTextContent('字幕狀態');
+  });
+
+  it('[P1] the default sort is still 新增日期, newest first', async () => {
+    renderBrowse();
+    await screen.findByTestId('library-grid-v2');
+    expect(h.lastArgs?.sortBy).toBe('created_at');
+    expect(h.lastArgs?.sortOrder).toBe('desc');
+  });
+});
+
+// b2 AC #4 / #6 — 跳到結果, and the list view's own loading skeleton.
+describe('LibraryBrowseV2 — skip link + list skeleton (b2)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('a', '電影甲'), movie('b', '電影乙')], totalItems: 2 });
+    localStorage.clear();
+  });
+
+  it('[P0] 跳到結果 is the first focus stop; pressing it focuses the results, the next Tab is the first card', async () => {
+    const user = userEvent.setup();
+    const { container } = renderBrowse();
+    await screen.findByTestId('library-grid-v2');
+    const skip = screen.getByTestId('library-skip-to-results');
+    expect(skip).toHaveTextContent('跳到結果');
+    // first focusable thing on the page
+    expect(container.querySelector('a[href], button, [tabindex="0"]')).toBe(skip);
+    await user.tab();
+    expect(skip).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+    const results = screen.getByTestId('library-results');
+    expect(results).toHaveFocus();
+    expect(results).toHaveAttribute('tabindex', '-1');
+    expect(results).toHaveAccessibleName('媒體庫結果');
+    // no #hash in the URL — the router is not asked to navigate
+    expect(window.location.hash).toBe('');
+
+    await user.tab();
+    expect(screen.getByTestId('poster-v2-a')).toHaveFocus();
+  });
+
+  it('[P0] in the list view the next Tab after the jump is the first row', async () => {
+    const user = userEvent.setup();
+    renderBrowse('/library?view=list');
+    await screen.findByTestId('library-list-v2');
+    screen.getByTestId('library-skip-to-results').focus();
+    await user.keyboard('{Enter}');
+    await user.tab();
+    expect(screen.getByTestId('list-row-v2-a')).toHaveFocus();
+  });
+
+  it('[P0] the list view loads under the list skeleton; the grid view keeps the grid one', async () => {
+    h.infinite = infinite({ isLoading: true });
+    const { unmount } = renderBrowse('/library?view=list');
+    expect(await screen.findByTestId('library-list-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('library-grid-skeleton')).not.toBeInTheDocument();
+    unmount();
+
+    renderBrowse('/library');
+    expect(await screen.findByTestId('library-grid-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('library-list-skeleton')).not.toBeInTheDocument();
   });
 });

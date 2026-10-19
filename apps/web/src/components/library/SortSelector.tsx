@@ -13,13 +13,17 @@ export interface SortOption {
 
 /**
  * The one list of sort options. Exported (dsr-1b-b) so the phone sheet renders the
- * SAME four, in the same words — it never keeps a copy of its own.
+ * SAME five, in the same words — it never keeps a copy of its own.
+ *
+ * 字幕狀態 (disc-2026-10-library-list-triage-b2, ⚖️ Sally 6) starts ascending: 缺中文 →
+ * 無字幕源／未翻譯／已略過 → 不知道 → 簡中 → 中文 → 繁中, i.e. the work still to do first.
  */
 export const SORT_OPTIONS: SortOption[] = [
   { field: 'created_at', label: '新增日期', defaultOrder: 'desc' },
   { field: 'title', label: '標題', defaultOrder: 'asc' },
   { field: 'release_date', label: '年份', defaultOrder: 'desc' },
   { field: 'rating', label: '評分', defaultOrder: 'desc' },
+  { field: 'subtitle_status', label: '字幕狀態', defaultOrder: 'asc' },
 ];
 
 interface SortSelectorProps {
