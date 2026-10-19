@@ -2,6 +2,14 @@
 // Label · input · optional hint, 8px apart. The value is set in the mono face
 // because everything typed into these fields is machine text — a URL, a user
 // name, an API key — and the design sets all five of them in JetBrains Mono.
+// An optional link sits under the hint (N4-D: 怎麼申請 … 金鑰 ↗). It opens a new
+// tab: the ↗ says so visually, the sr-only text says it to screen readers.
+interface WizardTextFieldLink {
+  href: string;
+  label: string;
+  testId: string;
+}
+
 interface WizardTextFieldProps {
   id: string;
   label: string;
@@ -11,6 +19,7 @@ interface WizardTextFieldProps {
   type?: 'text' | 'password';
   placeholder?: string;
   hint?: string;
+  link?: WizardTextFieldLink;
 }
 
 export function WizardTextField({
@@ -22,6 +31,7 @@ export function WizardTextField({
   type = 'text',
   placeholder,
   hint,
+  link,
 }: WizardTextFieldProps) {
   // Machine text, so no autocomplete / auto-capitalise / spell-check. A text
   // field followed by a password field otherwise reads to Chrome as a login
@@ -51,6 +61,19 @@ export function WizardTextField({
         <p id={hintId} className="text-xs text-[var(--text-muted)]">
           {hint}
         </p>
+      )}
+      {link && (
+        <a
+          href={link.href}
+          target="_blank"
+          rel="noreferrer"
+          className="self-start text-xs text-[var(--accent-text)] hover:underline"
+          data-testid={link.testId}
+        >
+          {link.label}
+          <span aria-hidden="true"> ↗</span>
+          <span className="sr-only">（開新分頁）</span>
+        </a>
       )}
     </div>
   );

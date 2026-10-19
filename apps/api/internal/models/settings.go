@@ -40,9 +40,11 @@ type SetupConfig struct {
 	MediaFolderPath string              `json:"media_folder_path,omitempty"` // Deprecated: use Libraries
 	Libraries       []SetupLibraryEntry `json:"libraries,omitempty"`
 	TMDbApiKey      string              `json:"tmdb_api_key,omitempty"`
-	// ClaudeApiKey is the only AI key the wizard collects — the only text-AI key
-	// KeyResolver can read back from the secret store (Gemini is env-only).
+	// ClaudeApiKey and GeminiApiKey are stored under the secret names KeyResolver
+	// reads, so translation picks them up without a restart (dsr-13,
+	// setup-wizard-byok). A Gemini-only install translates on Gemini.
 	ClaudeApiKey string `json:"claude_api_key,omitempty"`
+	GeminiApiKey string `json:"gemini_api_key,omitempty"`
 	// UsageReportEnabled is the wizard's opt-in answer for the anonymous
 	// weekly usage report (infra-optin-usage-report-a2, P1-040-2). Absent or
 	// false = off — the default.
