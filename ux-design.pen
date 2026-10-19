@@ -140606,11 +140606,11 @@
                                   "width": "fill_container",
                                   "descendants": {
                                     "bSNmA": {
-                                      "content": "特技玩家"
+                                      "content": "和平使者 S01E01"
                                     },
                                     "lUZol": {
-                                      "content": "轉錄失敗，已略過並繼續（計入失敗數）",
-                                      "fill": "$error-text"
+                                      "content": "影片所在的資料夾寫不進字幕",
+                                      "fill": "$text-secondary"
                                     },
                                     "IcPTo": {
                                       "fill": "$error-tint"
@@ -140853,6 +140853,103 @@
                                       "name": "evt-sp",
                                       "width": "fill_container",
                                       "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "mHyTb",
+                                  "name": "evt-fail",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/none",
+                                  "padding": [
+                                    "$Space/sm",
+                                    "$Space/md-plus"
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "HFoHK",
+                                      "name": "evt-line",
+                                      "width": "fill_container",
+                                      "gap": "$Space/sm",
+                                      "padding": "$Space/none",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "p0tNqg",
+                                          "name": "evt-ic",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "triangle-alert",
+                                          "library": "lucide",
+                                          "fill": "$error-text"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "asWzz",
+                                          "name": "evt-stage",
+                                          "fill": "$error-text",
+                                          "content": "失敗",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "TTm96",
+                                          "name": "evt-dot",
+                                          "fill": "$text-muted",
+                                          "content": "·",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "PQyHf",
+                                          "name": "evt-item",
+                                          "fill": "$text-secondary",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "和平使者 S01E01",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "gsHKM",
+                                      "name": "evt-reason-row",
+                                      "width": "fill_container",
+                                      "padding": [
+                                        "$Space/none",
+                                        "$Space/none",
+                                        "$Space/none",
+                                        "$Space/xl"
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "IEnY2",
+                                          "name": "evt-item",
+                                          "fill": "$text-secondary",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "影片所在的資料夾寫不進字幕",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        }
+                                      ]
                                     }
                                   ]
                                 },
@@ -171597,11 +171694,11 @@
                       "width": "fill_container",
                       "descendants": {
                         "bSNmA": {
-                          "content": "特技玩家"
+                          "content": "和平使者 S01E01"
                         },
                         "lUZol": {
-                          "content": "這部正在別處處理",
-                          "fill": "$error-text"
+                          "content": "影片所在的資料夾寫不進字幕",
+                          "fill": "$text-secondary"
                         },
                         "IcPTo": {
                           "fill": "$error-tint"
@@ -180830,7 +180927,7 @@
                   "fill": "$text-secondary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "右欄「即時活動」只會出現下面十三種列。每一列＝圖示 16 · 階段字（Body 600）· 「·」· 項目（Body 次要色）· 撐開 · 尾端（Mono，可選）。同一部片同一個階段只佔一列，翻譯百分比原地更新；批次裡每一部的結果只看批次事件（changed_item），不看單部的轉錄事件。",
+                  "content": "右欄「即時活動」只會出現下面十三種列。每一列＝圖示 16 · 階段字（Body 600）· 「·」· 項目（Body 次要色）· 撐開 · 尾端（Mono，可選）。④⑤⑤b 是「某一部片＋原因」：原因換到第二行，左緣對齊階段字，前面不加「·」，永遠完整顯示；片名在所有列都可以折成兩行，超過兩行才在結尾加「…」。圖示對齊第一行。同一部片同一個階段只佔一列，翻譯百分比原地更新；批次裡每一部的結果只看批次事件（changed_item），不看單部的轉錄事件。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
@@ -181276,84 +181373,95 @@
                           "id": "stf9c",
                           "name": "evt",
                           "width": "fill_container",
-                          "gap": "$Space/sm",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
                           "padding": [
                             "$Space/sm",
                             "$Space/md-plus"
                           ],
-                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "r38GQ",
-                              "name": "evt-ic",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "triangle-alert",
-                              "library": "lucide",
-                              "fill": "$error-text"
-                            },
-                            {
-                              "type": "text",
-                              "id": "q3gyb",
-                              "name": "evt-stage",
-                              "fill": "$error-text",
-                              "content": "失敗",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "SXR7z",
-                              "name": "evt-dot",
-                              "fill": "$text-muted",
-                              "content": "·",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "ft0Nk",
-                              "name": "evt-item",
-                              "fill": "$text-secondary",
-                              "content": "花月殺手",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "xpUlw",
-                              "name": "evt-dot",
-                              "fill": "$text-muted",
-                              "content": "·",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "Ti6lM",
-                              "name": "evt-item",
-                              "fill": "$text-secondary",
-                              "content": "這部正在別處處理",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
+                              "type": "frame",
+                              "id": "uKUxw",
+                              "name": "evt-line",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "padding": "$Space/none",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "r38GQ",
+                                  "name": "evt-ic",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "triangle-alert",
+                                  "library": "lucide",
+                                  "fill": "$error-text"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "q3gyb",
+                                  "name": "evt-stage",
+                                  "fill": "$error-text",
+                                  "content": "失敗",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "SXR7z",
+                                  "name": "evt-dot",
+                                  "fill": "$text-muted",
+                                  "content": "·",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ft0Nk",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "和平使者 S01E01",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             },
                             {
                               "type": "frame",
-                              "id": "b8nqiD",
-                              "name": "evt-sp",
+                              "id": "OhVvu",
+                              "name": "evt-reason-row",
                               "width": "fill_container",
-                              "height": 1
+                              "padding": [
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/xl"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Ti6lM",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "影片所在的資料夾寫不進字幕",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             }
                           ]
                         }
@@ -181366,7 +181474,141 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "④ 失敗｜批次成員：changed_item = failed，原因來自 reason；單部：transcription_failed，原因轉成中文。後端原字串不上畫面。帳號沒錢不算失敗，見⑤b。",
+                      "content": "④ 失敗｜批次成員：changed_item = failed，原因來自 failure_reason（reason 是 error 時）或 reason；單部：transcription_failed 的 failure_reason。文字跟活動記錄同一份。原因放第二行，片名先完整顯示。後端原字串不上畫面。帳號沒錢不算失敗，見⑤b。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "T6WrrI",
+                  "name": "spec-entry-m",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "NLuNQ",
+                      "name": "row-box-m",
+                      "width": 358,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "EsfaH",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "UBu51",
+                              "name": "evt-line",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "padding": "$Space/none",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "Q3w3MY",
+                                  "name": "evt-ic",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "triangle-alert",
+                                  "library": "lucide",
+                                  "fill": "$error-text"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Rbgxl",
+                                  "name": "evt-stage",
+                                  "fill": "$error-text",
+                                  "content": "失敗",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "zMlpi",
+                                  "name": "evt-dot",
+                                  "fill": "$text-muted",
+                                  "content": "·",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "q963M",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "和平使者 S01E01",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "AIz4H",
+                              "name": "evt-reason-row",
+                              "width": "fill_container",
+                              "padding": [
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/xl"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "C9F9X",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "影片所在的資料夾寫不進字幕",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "ozPIC",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "④ 手機｜390 寬的螢幕上清單只有 358 寬。片名那一行扣掉圖示、「失敗」與「·」還有約 240px（約 17 個中文字）；最長的原因「影片所在的資料夾寫不進字幕」約 182px，放在第二行有約 300px。改版前兩者擠同一行，片名只剩 34px，會變成「和…」。",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Label/Size",
@@ -181399,84 +181641,95 @@
                           "id": "cu3CY",
                           "name": "evt",
                           "width": "fill_container",
-                          "gap": "$Space/sm",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
                           "padding": [
                             "$Space/sm",
                             "$Space/md-plus"
                           ],
-                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "CL367",
-                              "name": "evt-ic",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "circle-alert",
-                              "library": "lucide",
-                              "fill": "$warning-text"
-                            },
-                            {
-                              "type": "text",
-                              "id": "Z8vfp",
-                              "name": "evt-stage",
-                              "fill": "$warning-text",
-                              "content": "已停止",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "qlPCe",
-                              "name": "evt-dot",
-                              "fill": "$text-muted",
-                              "content": "·",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "bVg7L",
-                              "name": "evt-item",
-                              "fill": "$text-secondary",
-                              "content": "芭比",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "eMGG9",
-                              "name": "evt-dot",
-                              "fill": "$text-muted",
-                              "content": "·",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "XCzdu",
-                              "name": "evt-item",
-                              "fill": "$text-secondary",
-                              "content": "已達預算上限",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
+                              "type": "frame",
+                              "id": "CX6zN",
+                              "name": "evt-line",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "padding": "$Space/none",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "CL367",
+                                  "name": "evt-ic",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "circle-alert",
+                                  "library": "lucide",
+                                  "fill": "$warning-text"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Z8vfp",
+                                  "name": "evt-stage",
+                                  "fill": "$warning-text",
+                                  "content": "已停止",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "qlPCe",
+                                  "name": "evt-dot",
+                                  "fill": "$text-muted",
+                                  "content": "·",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "bVg7L",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "芭比",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             },
                             {
                               "type": "frame",
-                              "id": "tmAst",
-                              "name": "evt-sp",
+                              "id": "ACm2s",
+                              "name": "evt-reason-row",
                               "width": "fill_container",
-                              "height": 1
+                              "padding": [
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/xl"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "XCzdu",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "已達預算上限",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             }
                           ]
                         }
@@ -181489,7 +181742,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "⑤ 已停止（單部）｜詳情頁單獨生成時碰到預算上限：你要求了但沒發生，赭色，不算失敗。",
+                      "content": "⑤ 已停止（單部）｜詳情頁單獨生成時碰到預算上限：你要求了但沒發生，赭色，不算失敗。原因放第二行，同④。",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Label/Size",
@@ -181522,84 +181775,95 @@
                           "id": "c5WP3",
                           "name": "evt",
                           "width": "fill_container",
-                          "gap": "$Space/sm",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
                           "padding": [
                             "$Space/sm",
                             "$Space/md-plus"
                           ],
-                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "LyqLI",
-                              "name": "evt-ic",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "circle-alert",
-                              "library": "lucide",
-                              "fill": "$warning-text"
-                            },
-                            {
-                              "type": "text",
-                              "id": "aqtme",
-                              "name": "evt-stage",
-                              "fill": "$warning-text",
-                              "content": "已停止",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "ArrvU",
-                              "name": "evt-dot",
-                              "fill": "$text-muted",
-                              "content": "·",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "oZ6xi",
-                              "name": "evt-item",
-                              "fill": "$text-secondary",
-                              "content": "奧本海默",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "iz5kl",
-                              "name": "evt-dot",
-                              "fill": "$text-muted",
-                              "content": "·",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
-                            },
-                            {
-                              "type": "text",
-                              "id": "r2yv5",
-                              "name": "evt-item",
-                              "fill": "$text-secondary",
-                              "content": "AI 帳號沒有額度",
-                              "lineHeight": "$Type/Body/Line",
-                              "fontFamily": "$Type/Family/Primary",
-                              "fontSize": "$Type/Body/Size",
-                              "fontWeight": "$Type/Body/Weight"
+                              "type": "frame",
+                              "id": "G1lNlp",
+                              "name": "evt-line",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "padding": "$Space/none",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "LyqLI",
+                                  "name": "evt-ic",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "circle-alert",
+                                  "library": "lucide",
+                                  "fill": "$warning-text"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "aqtme",
+                                  "name": "evt-stage",
+                                  "fill": "$warning-text",
+                                  "content": "已停止",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ArrvU",
+                                  "name": "evt-dot",
+                                  "fill": "$text-muted",
+                                  "content": "·",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "oZ6xi",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "奧本海默",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             },
                             {
                               "type": "frame",
-                              "id": "U88mXO",
-                              "name": "evt-sp",
+                              "id": "i8fP8y",
+                              "name": "evt-reason-row",
                               "width": "fill_container",
-                              "height": 1
+                              "padding": [
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/xl"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "r2yv5",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "AI 帳號沒有額度",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             }
                           ]
                         }
@@ -181612,7 +181876,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "⑤b 已停止・帳號沒錢（單部）｜OpenAI 或 Anthropic 帳號沒有額度了。跟預算上限一樣用赭色：片子沒壞，儲值後再按一次。後端原字串不上畫面。",
+                      "content": "⑤b 已停止・帳號沒錢（單部）｜OpenAI 或 Anthropic 帳號沒有額度了。跟預算上限一樣用赭色：片子沒壞，儲值後再按一次。後端原字串不上畫面。原因放第二行，同④。",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Label/Size",
