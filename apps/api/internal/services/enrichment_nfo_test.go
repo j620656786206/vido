@@ -168,6 +168,9 @@ func (m *mockMovieRepoForNFO) Create(ctx context.Context, movie *models.Movie) e
 func (m *mockMovieRepoForNFO) FindByID(ctx context.Context, id string) (*models.Movie, error) {
 	return nil, nil
 }
+func (m *mockMovieRepoForNFO) FindByIDs(ctx context.Context, ids []string) ([]models.Movie, error) {
+	return nil, nil
+}
 func (m *mockMovieRepoForNFO) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error) {
 	return nil, nil
 }

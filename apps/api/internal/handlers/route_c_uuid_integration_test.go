@@ -94,7 +94,7 @@ func TestRouteC_UUIDMovie_FlowsThroughWholeChain(t *testing.T) {
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
-	libSvc := services.NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+	libSvc := services.NewLibraryService(movieRepo, seriesRepo, episodeRepo, repository.NewLibraryRepository(db))
 	ctx := context.Background()
 
 	// A real media file on disk — the transcribe handler os.Stats it.

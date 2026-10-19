@@ -78,6 +78,9 @@ func (m *mockPQMovieRepo) Create(_ context.Context, movie *models.Movie) error {
 func (m *mockPQMovieRepo) FindByID(_ context.Context, id string) (*models.Movie, error) {
 	return nil, nil
 }
+func (m *mockPQMovieRepo) FindByIDs(_ context.Context, _ []string) ([]models.Movie, error) {
+	return nil, nil
+}
 func (m *mockPQMovieRepo) FindByTMDbID(_ context.Context, _ int64) (*models.Movie, error) {
 	return nil, nil
 }
@@ -183,6 +186,15 @@ func (m *mockPQSeriesRepo) FindByID(_ context.Context, id string) (*models.Serie
 		return s, nil
 	}
 	return nil, fmt.Errorf("series with id %s not found", id)
+}
+func (m *mockPQSeriesRepo) FindByIDs(_ context.Context, ids []string) ([]models.Series, error) {
+	out := []models.Series{}
+	for _, id := range ids {
+		if s, ok := m.series[id]; ok {
+			out = append(out, *s)
+		}
+	}
+	return out, nil
 }
 
 func (m *mockPQSeriesRepo) FindByTMDbID(_ context.Context, tmdbID int64) (*models.Series, error) {

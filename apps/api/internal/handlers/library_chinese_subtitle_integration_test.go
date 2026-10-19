@@ -39,7 +39,7 @@ func TestLibraryChineseSubtitleFilter_RealHandlerPath(t *testing.T) {
 	ctx := context.Background()
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
-	libSvc := services.NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db))
+	libSvc := services.NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db), repository.NewLibraryRepository(db))
 	router := setupLibraryTestRouter(NewLibraryHandler(libSvc))
 
 	set := func(table, id string, status string, lang, tracks interface{}) {

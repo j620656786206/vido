@@ -1,10 +1,11 @@
 package services
 
-// Story disc-2026-10-library-list-triage-a AC #4: the "全部" view merges the
-// movie and series pages in Go (listAll → compareLibraryItems). For
-// sort_by=subtitle_status it must use the same rank and the same tie-breakers
-// as the SQL ORDER BY, so pages joined end to end equal one big fetch — no row
-// repeated, none skipped — and match the per-type order.
+// Story disc-2026-10-library-list-triage-a AC #4: for sort_by=subtitle_status
+// the "全部" view must use the same rank and the same tie-breakers as the
+// single-type lists, so pages joined end to end equal one big fetch — no row
+// repeated, none skipped — and match the per-type order. Since
+// disc-2026-10-library-all-view-past-100 the order is one SQL query
+// (LibraryRepository.ListKeys); this stays as its regression test.
 
 import (
 	"context"
@@ -42,7 +43,7 @@ func TestLibraryService_ListAll_SortBySubtitleStatus(t *testing.T) {
 	db := setupTestDB(t)
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
-	service := NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db))
+	service := NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db), repository.NewLibraryRepository(db))
 	ctx := context.Background()
 
 	const (
@@ -97,7 +98,7 @@ func TestLibraryService_ListAll_SortBySubtitleStatus(t *testing.T) {
 			assert.Equal(t, want, libraryItemIDs(one.Items))
 			assert.Equal(t, 7, one.Pagination.TotalResults)
 
-			// page_size=2 → 4 pages; pages 2–4 exercise listAll's page×pageSize over-fetch.
+			// page_size=2 → 4 pages; joined end to end they must equal one fetch.
 			var joined []string
 			for page := 1; page <= 4; page++ {
 				r := list(order, page, 2)

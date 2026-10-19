@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -637,7 +638,10 @@ func TestMovieListEmpty(t *testing.T) {
 	}
 }
 
-// TestMovieListWithSorting verifies list sorting
+// TestMovieListWithSorting: 「評分」(sort_by=rating) orders by vote_average — the
+// score the list shows — not the legacy rating column, which the scan/match
+// paths never write (NULL for every title on the real library).
+// disc-2026-10-library-all-view-past-100 AC #3.
 func TestMovieListWithSorting(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
@@ -645,28 +649,28 @@ func TestMovieListWithSorting(t *testing.T) {
 	repo := NewMovieRepository(db)
 	ctx := context.Background()
 
-	// Create movies with different ratings
+	// Different vote_average, legacy rating left NULL (the production shape)
 	movies := []*models.Movie{
 		{
 			ID:          "movie-1",
 			Title:       "Movie A",
 			ReleaseDate: "2020-01-01",
 			Genres:      []string{},
-			Rating:      models.NewNullFloat64(7.5),
+			VoteAverage: models.NewNullFloat64(7.5),
 		},
 		{
 			ID:          "movie-2",
 			Title:       "Movie B",
 			ReleaseDate: "2020-01-01",
 			Genres:      []string{},
-			Rating:      models.NewNullFloat64(9.0),
+			VoteAverage: models.NewNullFloat64(9.0),
 		},
 		{
 			ID:          "movie-3",
 			Title:       "Movie C",
 			ReleaseDate: "2020-01-01",
 			Genres:      []string{},
-			Rating:      models.NewNullFloat64(8.0),
+			VoteAverage: models.NewNullFloat64(8.0),
 		},
 	}
 
@@ -691,9 +695,28 @@ func TestMovieListWithSorting(t *testing.T) {
 		t.Fatalf("Expected 3 movies, got %d", len(result))
 	}
 
-	// Verify sort order
-	if result[0].Rating.Float64 != 9.0 {
-		t.Errorf("Expected first movie rating 9.0, got %f", result[0].Rating.Float64)
+	// Verify sort order: highest vote_average first
+	var got []float64
+	for _, r := range result {
+		if r.Rating.Valid {
+			t.Errorf("legacy rating must stay NULL in this fixture, got %v", r.Rating)
+		}
+		got = append(got, r.VoteAverage.Float64)
+	}
+	if want := []float64{9.0, 8.0, 7.5}; !slices.Equal(got, want) {
+		t.Errorf("Expected movie vote_average order %v, got %v", want, got)
+	}
+
+	// vote_average is also accepted as the sort key, with the same result.
+	params.SortBy = "vote_average"
+	result2, _, err := repo.List(ctx, params)
+	if err != nil {
+		t.Fatalf("Failed to list movie: %v", err)
+	}
+	for i := range result {
+		if result2[i].ID != result[i].ID {
+			t.Errorf("sort_by=vote_average position %d: got %s, want %s", i, result2[i].ID, result[i].ID)
+		}
 	}
 }
 
@@ -2057,6 +2080,17 @@ func TestEveryReadPathReturnsEveryColumn(t *testing.T) {
 			t.Fatalf("Expected 1 movie, got %d", len(movies))
 		}
 		assertFullyPopulated(t, "List", &movies[0])
+	})
+
+	t.Run("FindByIDs", func(t *testing.T) {
+		movies, err := repo.FindByIDs(ctx, []string{"movie-full"})
+		if err != nil {
+			t.Fatalf("FindByIDs failed: %v", err)
+		}
+		if len(movies) != 1 {
+			t.Fatalf("Expected 1 movie, got %d", len(movies))
+		}
+		assertFullyPopulated(t, "FindByIDs", &movies[0])
 	})
 
 	t.Run("FullTextSearch", func(t *testing.T) {

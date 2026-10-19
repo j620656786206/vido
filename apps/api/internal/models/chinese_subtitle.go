@@ -406,8 +406,8 @@ const (
 //
 // It differs from chineseSubtitleNeed, which reads the verdict alone and cannot
 // tell 無字幕源／未翻譯／已略過 apart from 缺中文. An unreadable verdict ranks as
-// unknown. Registered as the SQL function vido_subtitle_triage_rank so the
-// SQL ORDER BY and the "全部" view's Go merge use this one implementation.
+// unknown. Registered as the SQL function vido_subtitle_triage_rank, which
+// every library list's ORDER BY uses (movies, series and 「全部」 alike).
 func SubtitleTriageRank(verdict ChineseSubtitle, status SubtitleStatus) int {
 	switch verdict {
 	case ChineseSubtitleZhHant:
