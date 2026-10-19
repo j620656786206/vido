@@ -78,13 +78,16 @@ func (s *SetupService) keysWritable() bool {
 
 // setupKeyUpdates collects the keys the wizard was given. Blank values are left
 // out rather than sent as "": to KeySettingsService an empty string means DELETE.
-func setupKeyUpdates(tmdbKey, claudeKey string) map[KeyName]string {
+func setupKeyUpdates(tmdbKey, claudeKey, geminiKey string) map[KeyName]string {
 	updates := map[KeyName]string{}
 	if strings.TrimSpace(tmdbKey) != "" {
 		updates[KeyTMDb] = tmdbKey
 	}
 	if strings.TrimSpace(claudeKey) != "" {
 		updates[KeyClaude] = claudeKey
+	}
+	if strings.TrimSpace(geminiKey) != "" {
+		updates[KeyGemini] = geminiKey
 	}
 	return updates
 }
@@ -120,7 +123,7 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 
 	// Refuse keys BEFORE writing anything: failing after the libraries were
 	// created would make the user's retry create them a second time.
-	keyUpdates := setupKeyUpdates(config.TMDbApiKey, config.ClaudeApiKey)
+	keyUpdates := setupKeyUpdates(config.TMDbApiKey, config.ClaudeApiKey, config.GeminiApiKey)
 	if len(keyUpdates) > 0 && !s.keysWritable() {
 		return ErrKeysNotWritable
 	}
@@ -222,6 +225,7 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 		"has_qbt", config.QBTUrl != "",
 		"has_tmdb_key", config.TMDbApiKey != "",
 		"has_claude_key", config.ClaudeApiKey != "",
+		"has_gemini_key", config.GeminiApiKey != "",
 		"usage_report_opt_in", config.UsageReportEnabled,
 	)
 
@@ -384,6 +388,7 @@ func (s *SetupService) containerFolderExamples() []string {
 func (s *SetupService) validateApiKeysStep(data map[string]interface{}) error {
 	tmdbKey, _ := data["tmdb_api_key"].(string)
 	claudeKey, _ := data["claude_api_key"].(string)
+	geminiKey, _ := data["gemini_api_key"].(string)
 	if tmdbKey != "" {
 		// TMDb API keys are 32 character hex strings
 		if len(tmdbKey) < 16 {
@@ -391,7 +396,7 @@ func (s *SetupService) validateApiKeysStep(data map[string]interface{}) error {
 		}
 	}
 	// Say it on the step where the key was typed, not after 完成設定.
-	if len(setupKeyUpdates(tmdbKey, claudeKey)) > 0 && !s.keysWritable() {
+	if len(setupKeyUpdates(tmdbKey, claudeKey, geminiKey)) > 0 && !s.keysWritable() {
 		return ErrKeysNotWritable
 	}
 	// API keys are optional - skip is allowed

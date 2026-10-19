@@ -82,8 +82,8 @@ describe('CompleteStep', () => {
 
   it('shows "未設定" for every missing optional field', () => {
     render(<CompleteStep {...makeProps({ data: { language: 'en' } })} />);
-    // 媒體資料夾 · qBittorrent · TMDb 金鑰 · Claude 金鑰
-    expect(screen.getAllByText('未設定')).toHaveLength(4);
+    // 媒體資料夾 · qBittorrent · TMDb 金鑰 · Claude 金鑰 · Gemini 金鑰
+    expect(screen.getAllByText('未設定')).toHaveLength(5);
   });
 
   it('says 已設定 for qBittorrent instead of echoing the URL', () => {
@@ -102,6 +102,12 @@ describe('CompleteStep', () => {
   it('shows "已設定" for the Claude key when one was entered', () => {
     render(<CompleteStep {...makeProps({ data: { language: 'en', claudeApiKey: 'sk-ant-1' } })} />);
     expect(screen.getByText('Claude 金鑰')).toBeInTheDocument();
+    expect(screen.getByText('已設定')).toBeInTheDocument();
+  });
+
+  it('shows "已設定" for the Gemini key when one was entered (setup-wizard-byok)', () => {
+    render(<CompleteStep {...makeProps({ data: { language: 'en', geminiApiKey: 'AIza-1' } })} />);
+    expect(screen.getByText('Gemini 金鑰')).toBeInTheDocument();
     expect(screen.getByText('已設定')).toBeInTheDocument();
   });
 

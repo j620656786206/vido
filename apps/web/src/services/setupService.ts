@@ -24,6 +24,8 @@ export interface SetupConfig {
   tmdbApiKey?: string;
   /** Stored as the `claude.api_key` secret — the name KeyResolver reads (dsr-13). */
   claudeApiKey?: string;
+  /** Stored as the Gemini secret; translation reads it through KeyResolver (setup-wizard-byok). */
+  geminiApiKey?: string;
   /** Opt-in anonymous weekly usage report (infra-optin-usage-report-b2). Absent = off. */
   usageReportEnabled?: boolean;
 }

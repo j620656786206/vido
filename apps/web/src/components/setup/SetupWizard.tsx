@@ -47,7 +47,7 @@ const WIZARD_STEPS: WizardStep[] = [
     title: 'API 金鑰',
     component: ApiKeysStep,
     optional: true,
-    clearOnSkip: ['tmdbApiKey', 'claudeApiKey'],
+    clearOnSkip: ['tmdbApiKey', 'claudeApiKey', 'geminiApiKey'],
   },
   // infra-optin-usage-report-b2: asked before the summary, off by default.
   { id: 'usage-report', title: '匿名回報', component: UsageReportStep },
@@ -86,6 +86,7 @@ export function SetupWizard() {
         // Sent so the server can refuse a key it cannot store (no ENCRYPTION_KEY)
         // here, on this step, instead of after 完成設定.
         stepData.claudeApiKey = formData.claudeApiKey || '';
+        stepData.geminiApiKey = formData.geminiApiKey || '';
       }
       if (step.id === 'usage-report')
         stepData.usageReportEnabled = formData.usageReportEnabled === true;
@@ -137,6 +138,7 @@ export function SetupWizard() {
         libraries: formData.libraries as SetupConfig['libraries'],
         tmdbApiKey: formData.tmdbApiKey,
         claudeApiKey: formData.claudeApiKey,
+        geminiApiKey: formData.geminiApiKey,
         usageReportEnabled: formData.usageReportEnabled === true,
       });
 

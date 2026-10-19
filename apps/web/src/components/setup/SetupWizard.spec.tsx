@@ -343,10 +343,39 @@ describe('SetupWizard', () => {
     expect(setupService.validateStep).toHaveBeenCalledWith('api-keys', {
       tmdbApiKey: '',
       claudeApiKey: 'sk-ant-test',
+      geminiApiKey: '',
     });
     await waitFor(() => {
       expect(setupService.completeSetup).toHaveBeenCalledWith(
         expect.objectContaining({ claudeApiKey: 'sk-ant-test' })
+      );
+    });
+  });
+
+  it('sends a Gemini key on its own — no Claude key needed (setup-wizard-byok)', async () => {
+    const { setupService } = await import('../../services/setupService');
+    renderWithProviders();
+
+    fireEvent.click(await screen.findByTestId('next-button')); // → qbt
+    fireEvent.click(await screen.findByTestId('skip-button')); // → media library
+    fireEvent.change(await screen.findByTestId('library-path-0'), { target: { value: '/media' } });
+    fireEvent.click(screen.getByTestId('next-button')); // → api-keys
+    fireEvent.change(await screen.findByTestId('gemini-key-input'), {
+      target: { value: 'AIza-test' },
+    });
+    fireEvent.click(screen.getByTestId('next-button')); // → usage-report
+    await screen.findByTestId('usage-report-step');
+    fireEvent.click(screen.getByTestId('next-button')); // usage-report → complete
+    fireEvent.click(await screen.findByTestId('finish-button'));
+
+    expect(setupService.validateStep).toHaveBeenCalledWith('api-keys', {
+      tmdbApiKey: '',
+      claudeApiKey: '',
+      geminiApiKey: 'AIza-test',
+    });
+    await waitFor(() => {
+      expect(setupService.completeSetup).toHaveBeenCalledWith(
+        expect.objectContaining({ geminiApiKey: 'AIza-test', claudeApiKey: undefined })
       );
     });
   });
@@ -367,7 +396,7 @@ describe('SetupWizard', () => {
     fireEvent.click(screen.getByTestId('next-button')); // usage-report → complete
 
     expect(await screen.findByTestId('complete-step')).toBeInTheDocument();
-    expect(screen.getAllByText('未設定')).toHaveLength(3); // qBittorrent · TMDb · Claude
+    expect(screen.getAllByText('未設定')).toHaveLength(4); // qBittorrent · TMDb · Claude · Gemini
     fireEvent.click(screen.getByTestId('finish-button'));
     await waitFor(() => {
       expect(setupService.completeSetup).toHaveBeenCalledWith(
