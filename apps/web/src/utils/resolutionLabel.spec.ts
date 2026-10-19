@@ -1,5 +1,40 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { resolutionTier, audioChannelLabel, formatResolutionBadge } from './resolutionLabel';
+
+/**
+ * The table Go's `TestResolveResolution_SharedTable` walks too
+ * (disc-2026-10-resolution-tier-scope-encodes AC #3): one frame size, one tier, on both
+ * sides. Change the rule on one side only and that side goes red.
+ */
+const SHARED_TABLE = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'api',
+  'internal',
+  'services',
+  'testdata',
+  'resolution_tiers.json'
+);
+const SHARED_ROWS: { width: number; height: number; tier: string; why: string }[] = JSON.parse(
+  readFileSync(SHARED_TABLE, 'utf8')
+);
+
+describe('resolutionTier — shared table with Go resolveResolution', () => {
+  it('reads the whole shared table', () => {
+    expect(SHARED_ROWS.length).toBeGreaterThanOrEqual(55);
+  });
+
+  it.each(SHARED_ROWS.map((r) => [`${r.width}x${r.height}`, r.tier, r.why]))(
+    '%s → %s (%s)',
+    (raw, want) => {
+      expect(resolutionTier(raw)).toBe(want);
+    }
+  );
+});
 
 describe('resolutionTier', () => {
   it.each([
@@ -7,6 +42,8 @@ describe('resolutionTier', () => {
     ['3840x2160', '4K'],
     ['3840x2076', '4K'],
     ['3840x1608', '4K'],
+    // ⚖️ Alexyu 2026-10-19: a scope 4K with a few pixels off the sides is still 4K.
+    ['3828x1588', '4K'],
     ['2560x1440', '1440p'],
     ['2560x1080', '1440p'],
     ['1920x1080', '1080p'],
@@ -55,8 +92,8 @@ describe('formatResolutionBadge', () => {
     ['3840x2160', '4K', '3840×2160', '4K · 3840×2160'],
     ['3840x2076', '4K', '3840×2076', '4K · 3840×2076'],
     ['2880x2160', '4K', '2880×2160', '4K · 2880×2160'],
-    // Same tier as Go resolveResolution today (width < 3840, height ≥ 1440).
-    ['3828x1588', '1440p', '3828×1588', '1440p · 3828×1588'],
+    // disc-2026-10-resolution-tier-scope-encodes: was 1440p until the scope rule.
+    ['3828x1588', '4K', '3828×1588', '4K · 3828×1588'],
     ['1920x804', '1080p', '1920×804', '1080p · 1920×804'],
     ['1280x720', '720p', '1280×720', '720p · 1280×720'],
   ])('writes the frame size %s as tier %s and dims %s', (raw, tier, dims, full) => {
