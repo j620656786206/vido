@@ -174,6 +174,7 @@ import { ExploreBlock } from '../../components/homepage/ExploreBlock';
 import { ExploreBlocksList } from '../../components/homepage/ExploreBlocksList';
 import { FilterPanel } from '../../components/library/FilterPanel';
 import { LibraryGridSkeletonV2 } from '../../components/library/LibraryStatesV2';
+import { LibraryListV2 } from '../../components/library/LibraryListV2';
 import {
   LibraryFilterSheetV2,
   sheetCountParams,
@@ -331,6 +332,73 @@ function SettingsLayoutStrip() {
   );
 }
 const asyncNoop = () => Promise.resolve();
+
+// disc-2026-10-library-list-triage-b1 — the A4p-D / A4p-M rows (the 修字幕清單). posterPath
+// null on purpose: no network in the visual run, so matched rows draw the gradient tile.
+const listFxRow = (
+  id: string,
+  title: string,
+  meta: string,
+  vote: number | undefined,
+  media: Record<string, unknown>
+) => ({
+  id,
+  type: 'movie' as const,
+  title,
+  posterPath: null,
+  meta,
+  voteAverage: vote,
+  media: {
+    id,
+    title,
+    releaseDate: '2025-01-01',
+    genres: [],
+    parseStatus: 'success',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    ...media,
+  },
+});
+const UHD_HEVC = { videoResolution: '3840x2160', videoCodec: 'H.265' };
+const LIST_FX_ROWS = [
+  listFxRow('lr1', '執法記錄', '2026 · 恐怖', 6.0, {
+    chineseSubtitle: 'none',
+    ...UHD_HEVC,
+    audioCodec: 'DTS',
+  }),
+  listFxRow('lr2', '鏢人：風起大漠', '2026 · 126 分 · 動作', 8.1, { chineseSubtitle: 'unknown' }),
+  listFxRow('lr3', '[ItachiUchiha] Chainsaw Man – The Movie – Reze-hen', '', undefined, {
+    parseStatus: 'failed',
+    chineseSubtitle: 'unknown',
+    filePath: '/media/movies/[ItachiUchiha] Chainsaw Man – The Movie – Reze-hen.mkv',
+  }),
+  listFxRow('lr4', '牧師的最後誘惑', '2018 · 劇情', 7.0, {
+    chineseSubtitle: 'zh',
+    ...UHD_HEVC,
+    audioCodec: 'DTS',
+  }),
+  listFxRow('lr5', '阿凡達：火與燼', '2025 · 科幻', 7.6, {
+    chineseSubtitle: 'zh_hant',
+    ...UHD_HEVC,
+    audioCodec: 'E-AC-3',
+  }),
+  listFxRow('lr6', '捍衛任務：復仇芭蕾', '2025 · 動作', 7.3, {
+    chineseSubtitle: 'zh_hant',
+    ...UHD_HEVC,
+    audioCodec: 'AAC',
+  }),
+  listFxRow('lr7', 'F1電影', '2025 · 動作', 7.8, {
+    chineseSubtitle: 'zh_hant',
+    videoResolution: '1920x1080',
+    videoCodec: 'H.265',
+    audioCodec: 'AAC',
+  }),
+  listFxRow('lr8', '四海好傢伙', '1990 · 劇情', 8.5, {
+    chineseSubtitle: 'zh_hant',
+    ...UHD_HEVC,
+    audioCodec: 'AC-3',
+  }),
+];
 
 // disc-2026-09-instant-search-tmdb-outage-silent: the dropdown floats (absolute,
 // top-full) under the search input. A 0-height relative anchor inside a fixed
@@ -3620,6 +3688,38 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         data: { items: [], page: 1, pageSize: 1, totalItems: 128, totalPages: 128 },
       },
     ],
+  },
+  {
+    // disc-2026-10-library-list-triage-b1 AC #13 — A4p-D: the full table (≥ 672 list width).
+    id: 'library-list',
+    label: 'library/LibraryListV2 (A4p-D — 修字幕清單，完整表格)',
+    component: LibraryListV2,
+    props: { rows: LIST_FX_ROWS },
+    penNode: 'b1H71g', // Screen A4p-D
+    statesOnly: ['default'],
+    width: 1200,
+  },
+  {
+    // AC #13 — the 576–671 tier the design did not draw (⚖️ Sally 2026-10-19): no 規格 column.
+    id: 'library-list-narrow',
+    label: 'library/LibraryListV2 (A4p-D — 列表寬 576–671，不顯示規格)',
+    component: LibraryListV2,
+    props: { rows: LIST_FX_ROWS },
+    penNode: 'b1H71g', // Screen A4p-D
+    statesOnly: ['default'],
+    width: 640,
+  },
+  {
+    // AC #13 — A4p-M: three-line rows, subtitle state on every row. A real 390 viewport;
+    // the gallery's own p-8 makes the box 326 here (the app's 16px gutter gives 358 —
+    // that width is pinned by tests/e2e/library-list.spec.ts).
+    id: 'library-mobile-screens/list',
+    label: 'library/LibraryListV2 (A4p-M — 手機 390 寬，三行列)',
+    component: LibraryListV2,
+    props: { rows: LIST_FX_ROWS.slice(0, 7) },
+    penNode: 'EkB8g', // Screen A4p-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
   {
     // dsr-1b-c — A2p-D: the desktop skeleton had no baseline; it now shares the grid's

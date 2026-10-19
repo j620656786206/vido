@@ -1,37 +1,51 @@
 import { describe, it, expect } from 'vitest';
-import { resolutionLabel, audioChannelLabel } from './resolutionLabel';
+import { resolutionTier, audioChannelLabel } from './resolutionLabel';
 
-describe('resolutionLabel', () => {
-  it('maps 3840x2160 to 4K', () => {
-    expect(resolutionLabel('3840x2160')).toBe('4K');
+describe('resolutionTier', () => {
+  it.each([
+    // ffprobe frame sizes — the ones the old exact-match table could not read
+    ['3840x2160', '4K'],
+    ['3840x2076', '4K'],
+    ['3840x1608', '4K'],
+    ['2560x1440', '1440p'],
+    ['2560x1080', '1440p'],
+    ['1920x1080', '1080p'],
+    ['1920x800', '1080p'],
+    ['1920x804', '1080p'],
+    ['1920x1036', '1080p'],
+    ['1280x720', '720p'],
+    ['1280x536', '720p'],
+    ['720x576', '480p'],
+    ['720x480', '480p'],
+    ['640x360', '360p'],
+  ])('turns the frame size %s into %s', (raw, want) => {
+    expect(resolutionTier(raw)).toBe(want);
   });
 
-  it('maps 2560x1440 to 2K', () => {
-    expect(resolutionLabel('2560x1440')).toBe('2K');
+  it.each([
+    ['4K', '4K'],
+    ['1440p', '1440p'],
+    ['1080p', '1080p'],
+    ['720p', '720p'],
+    ['SD', 'SD'],
+  ])('leaves the NFO label %s as %s', (raw, want) => {
+    expect(resolutionTier(raw)).toBe(want);
   });
 
-  it('maps 1920x1080 to 1080p', () => {
-    expect(resolutionLabel('1920x1080')).toBe('1080p');
+  it('calls 2160p 4K', () => {
+    expect(resolutionTier('2160p')).toBe('4K');
   });
 
-  it('maps 1280x720 to 720p', () => {
-    expect(resolutionLabel('1280x720')).toBe('720p');
+  it('reads a × sign and spaces as a frame size', () => {
+    expect(resolutionTier('3840 × 2160')).toBe('4K');
   });
 
-  it('returns raw value for unknown resolution', () => {
-    expect(resolutionLabel('800x600')).toBe('800x600');
-  });
-
-  it('returns empty string for empty string input', () => {
-    expect(resolutionLabel('')).toBe('');
-  });
-
-  it('maps 3840x1600 to 4K UW (ultrawide)', () => {
-    expect(resolutionLabel('3840x1600')).toBe('4K UW');
-  });
-
-  it('maps 720x480 to 480p (SD)', () => {
-    expect(resolutionLabel('720x480')).toBe('480p');
+  it('returns an empty string when there is nothing to read', () => {
+    expect(resolutionTier('')).toBe('');
+    expect(resolutionTier('   ')).toBe('');
+    expect(resolutionTier(undefined)).toBe('');
+    expect(resolutionTier(null)).toBe('');
+    expect(resolutionTier('0x0')).toBe('');
   });
 });
 
@@ -48,15 +62,12 @@ describe('audioChannelLabel', () => {
     expect(audioChannelLabel(8)).toBe('7.1');
   });
 
-  it('returns raw number for unknown channels', () => {
-    expect(audioChannelLabel(4)).toBe('4');
-  });
-
   it('maps 1 to Mono', () => {
     expect(audioChannelLabel(1)).toBe('Mono');
   });
 
-  it('returns string fallback for zero channels', () => {
+  it('returns the raw number for unknown channel counts', () => {
+    expect(audioChannelLabel(4)).toBe('4');
     expect(audioChannelLabel(0)).toBe('0');
   });
 });

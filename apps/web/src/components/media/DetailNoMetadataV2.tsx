@@ -16,6 +16,7 @@
  * state down.
  */
 import { Loader2, RefreshCw, Search } from 'lucide-react';
+import { noMetadataHeading } from '../../utils/noMetadataHeading';
 
 export type NoMetadataVariant = 'failed' | 'pending';
 
@@ -59,7 +60,6 @@ export function DetailNoMetadataV2({
   rematchError,
 }: DetailNoMetadataV2Props) {
   const failed = variant === 'failed';
-  const noun = mediaType === 'series' ? '影集' : '電影';
   const errorCopy = rematchError ? rematchErrorCopy(rematchError) : null;
 
   const rematchButton = (
@@ -88,7 +88,7 @@ export function DetailNoMetadataV2({
       className="rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] p-4 sm:p-6"
     >
       <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-        {failed ? `沒有找到這部${noun}的資料` : '這部片的資料還在整理'}
+        {failed ? noMetadataHeading(mediaType) : '這部片的資料還在整理'}
       </h2>
       <p className="mt-1 text-[var(--text-secondary)]">
         {failed

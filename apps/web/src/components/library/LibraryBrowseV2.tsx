@@ -9,7 +9,7 @@
  * (all / movie / tv) off the `?type=` param — a shared grid + shared filter/sort/
  * scroll state that survives movies↔tv switches (AC #1 intent + F5). Integrated
  * toolbar, four states (empty/loading/no-result/error), grid (PosterCardV2) and
- * list (LibraryListRowV2), continuous scroll (infinite query, AC #11), and a
+ * list (LibraryListV2), continuous scroll (infinite query, AC #11), and a
  * merged mobile sort+filter sheet. Reads URL state via the /library route api.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -36,7 +36,7 @@ import { SortSelector } from './SortSelector';
 import { FilterChips } from './FilterChips';
 import { ViewToggle, type ViewMode } from './ViewToggle';
 import { PosterCardV2 } from './PosterCardV2';
-import { LibraryListRowV2 } from './LibraryListRowV2';
+import { LibraryListV2 } from './LibraryListV2';
 import { LibraryFilterSheetV2 } from './LibraryFilterSheetV2';
 import { LibraryFilterRail } from './LibraryFilterRail';
 import { LibraryGridSkeletonV2, LibraryNoResultV2, LibraryErrorV2 } from './LibraryStatesV2';
@@ -822,23 +822,22 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
               ))}
             </div>
           ) : (
-            <div data-testid="library-list-v2" className="flex flex-col gap-0.5">
-              {display.map((d) => (
-                <LibraryListRowV2
-                  key={`${d.type}-${d.id}`}
-                  id={d.id}
-                  type={d.type}
-                  title={d.title}
-                  posterPath={d.posterPath}
-                  meta={d.listMeta}
-                  voteAverage={d.voteAverage}
-                  media={d.media}
-                  selectable={isSelectionMode}
-                  selected={isSelectionMode && selectedIds.has(d.id)}
-                  onSelect={isSelectionMode ? (e) => handleSelect(d.id, e) : undefined}
-                />
-              ))}
-            </div>
+            <LibraryListV2
+              rows={display.map(
+                ({ id, type, title, posterPath, listMeta, voteAverage, media }) => ({
+                  id,
+                  type,
+                  title,
+                  posterPath,
+                  meta: listMeta,
+                  voteAverage,
+                  media,
+                })
+              )}
+              selectable={isSelectionMode}
+              selectedIds={isSelectionMode ? selectedIds : undefined}
+              onSelect={isSelectionMode ? handleSelect : undefined}
+            />
           )}
 
           {/* Continuous-scroll sentinel */}
