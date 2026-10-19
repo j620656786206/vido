@@ -164,6 +164,7 @@ Claude Opus 5.5（dev agent，/ship 流程）
   - 寬度檢查改成 `expect.soft`、訊息帶寬度：一個寬度壞了，其他寬度照樣回報，才看得出「四個寬度全紅」。
 - **夾具**：`media-detail-hero-v2-long-title-mobile`（390×844，`H2MRl`），「失敗」徽章直接呼叫 `deriveLifecycleStatus({ parseStatus: 'failed' })`，不手抄 class——頁面上的顏色改了，這張基準圖會跟著變。已知限制：390×844 的畫廊頁裡 hero 下緣被 app 的手機底部分頁列蓋住，「管理字幕」「修改資訊」只露出上半（同 `settings-service-status-dashboard/mobile` 夾具註解說的限制；phone 夾具規定 844 高）。這張要守的是片名換行，片名完整可見。
 - **畫面比對（Step 9）**：本機 dev server＋真 API，片名用正式機那串 `[bitsearch.to] Predator.Badlands…mkv`、`parse_status=failed`。320／390／768／1440 四張 `scrollWidth == clientWidth`、`h1` 文字等於完整片名；320 六行、390 五行、768 六行（有側欄，片名欄窄）、1440 兩行。對 B10p-M：片名整段換行、沒有省略號、字級不變（手機 24px／`sm` 以上 30px），比對失敗區塊與按鈕都在畫面內。B10p-M 手機稿沒有海報縮圖、按鈕排法也不同——那是已立案的 `disc-2026-10-detail-mobile-hero-thumb-vs-design`，本單不動。截圖在 session scratchpad `long-title-ux/`。
+- **PR**：#847；`-linux` 基準由 CI bootstrap PR #849 補上（只加 1 張 `-linux.png`＋audit 檔）。
 - **Sally 追認**：開工前已追認「沒有空格時在字中間斷、不用省略號」（見文末），PR 不用再等。
 
 ### Discovery Triage
