@@ -716,3 +716,5 @@ Linux baselines incrementally bootstrapped 2026-10-19 via runner ubuntu-24.04 (I
 Linux baselines incrementally bootstrapped 2026-10-19 via runner ubuntu-24.04 (ImageVersion: 20261012.334.1) — 6 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/setup-api-keys-step/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/setup-api-keys-step/hover-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/setup-api-keys-step/focus-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/setup-complete-step/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/setup-complete-step/hover-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/setup-complete-step/focus-visual-linux.png
 
 Linux baselines bootstrapped 2026-10-19 via runner ubuntu-24.04 (ImageVersion: 20261012.334.1)
+
+Linux baselines incrementally bootstrapped 2026-10-19 via runner ubuntu-24.04 (ImageVersion: 20261012.334.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/media-detail-hero-v2-long-title-mobile/default-visual-linux.png
