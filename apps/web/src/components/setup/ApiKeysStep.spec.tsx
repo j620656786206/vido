@@ -81,10 +81,13 @@ describe('ApiKeysStep', () => {
     render(<ApiKeysStep {...makeProps()} />);
     const claude = screen.getByTestId('claude-key-link');
     expect(claude).toHaveTextContent('怎麼申請 Claude 金鑰 ↗');
+    // The ↗ is decoration; screen readers hear that it opens a new tab instead.
+    expect(claude).toHaveAccessibleName(/^怎麼申請 Claude 金鑰\s*（開新分頁）$/);
     expect(claude).toHaveAttribute('href', 'https://console.anthropic.com/settings/keys');
     expect(claude).toHaveAttribute('target', '_blank');
     const gemini = screen.getByTestId('gemini-key-link');
     expect(gemini).toHaveTextContent('怎麼申請 Gemini 金鑰 ↗');
+    expect(gemini).toHaveAccessibleName(/^怎麼申請 Gemini 金鑰\s*（開新分頁）$/);
     expect(gemini).toHaveAttribute('href', 'https://aistudio.google.com/apikey');
     expect(gemini).toHaveAttribute('rel', 'noreferrer');
   });
@@ -99,7 +102,7 @@ describe('ApiKeysStep', () => {
     );
     // Never 「免費」 on its own — it is the user's own free quota.
     expect(screen.getByTestId('gemini-key-input')).toHaveAccessibleDescription(
-      '沒有 Claude 金鑰？用你自己的 Gemini 免費額度也能翻；每分鐘 5 次，Vido 會自動放慢。'
+      '沒有 Claude 金鑰？用你自己的 Gemini 免費額度也能翻；免費方案有速率限制，Vido 會自動放慢。'
     );
   });
 
@@ -127,7 +130,9 @@ describe('ApiKeysStep', () => {
   it('shows skip warning when no keys entered', () => {
     render(<ApiKeysStep {...makeProps()} />);
     expect(screen.getByTestId('skip-warning')).toBeInTheDocument();
-    expect(screen.getByText(/Claude 和 Gemini 金鑰都沒填的話/)).toBeInTheDocument();
+    expect(screen.getByTestId('skip-warning')).toHaveTextContent(
+      '沒填金鑰的話，就不能做 AI 字幕翻譯，也不能自動取得電影和影集的元資料。'
+    );
   });
 
   it('hides skip warning when TMDb key is entered', () => {
@@ -175,7 +180,12 @@ describe('ApiKeysStep — bundled TMDb key (sub-7-7b)', () => {
       '可留空，使用內建金鑰'
     );
     const warning = screen.getByTestId('skip-warning');
-    expect(warning).toHaveTextContent('電影和影集的元資料會使用內建的 TMDb 金鑰');
+    expect(warning).toHaveTextContent(
+      'Claude 和 Gemini 金鑰都沒填的話，就不能做 AI 字幕翻譯；電影和影集的元資料會使用內建的 TMDb 金鑰。'
+    );
+    // AI filename parsing reads env keys only — a wizard key never enables it, so
+    // the warning must not imply it does (setup-wizard-byok CR M2).
+    expect(warning).not.toHaveTextContent('檔名解析');
     expect(warning).not.toHaveTextContent('自動取得元資料');
   });
 

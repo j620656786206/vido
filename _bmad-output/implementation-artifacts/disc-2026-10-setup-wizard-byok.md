@@ -1,6 +1,6 @@
 # Disc：首次設定精靈講清楚「AI 費用付給誰」，沒有 Claude 金鑰的人也能填 Gemini 試
 
-Status: ready-for-dev（⛔ 先等 Sally 改設計稿 N4-D，見「設計」）
+Status: review
 
 **Source:** 2026-10-19 party mode（founder-pm／founder-growth／John／Mary／Sally／Bob）。⚖️ **Alexyu 2026-10-19 選 B：先改精靈，改完再在 FB 招募文底下公開邀請**（不選 A「先發文、精靈之後再說」）。
 **為什麼：** v0.2.0（10-14）發版五天，查不到任何外人裝起來（GitHub 14 天 13 個不同訪客、`0.2.0` 映像 6 次下載、外人 issue 0）。FB 招募文 42 則留言裡：黃柏銘把「報價」讀成「付給測試者的工資」；Edward Fang「直接用 NAS 的 whisper，完全不燒 Claude API」；林琮耀問「是走 OpenAI API 嗎」。大部分 NAS 玩家**沒有 Claude 金鑰**，而精靈的金鑰那一步只給 Claude 一個欄位、只寫「用於字幕翻譯與 AI 檔名解析」，沒說錢付給誰、一集多少、沒金鑰怎麼辦。Gemini 的免費額度這條路，只有進「設定 → 金鑰設定」或設環境變數才看得到。
@@ -60,4 +60,15 @@ Status: ready-for-dev（⛔ 先等 Sally 改設計稿 N4-D，見「設計」）
 
 ### Completion Notes
 
-（dev 填）
+- **設計**：N4-D 由 Alexyu 的 Pencil inline agent 依 Sally 提示詞改完並 commit（3c94192a，`n4-d.png`）；Sally 用 MCP 唯讀逐字比對文案、`ctx.problems` 全空。CR 後兩句文案再改（Gemini 提示拿掉「每分鐘 5 次」、警告拿掉「和檔名解析」），連同 N5-D 新增「Gemini 金鑰」一列，第二輪提示詞交給 inline agent。
+- **實作**：前端 `ApiKeysStep`（說明、Claude 提示＋申請連結、Gemini 欄位＋申請連結、跳過提示兩種句子）、`WizardTextField` 加選填 `link`（新分頁、`↗` aria-hidden＋sr-only「（開新分頁）」）、`SetupWizard`（clearOnSkip、validate-step、complete 都帶 `geminiApiKey`）、`setupService` 型別、`CompleteStep` 摘要多「Gemini 金鑰」一列。後端 `models.SetupConfig.GeminiApiKey`、`setupKeyUpdates` 第三參數寫 `KeyGemini`、`validateApiKeysStep` 讀 `gemini_api_key`、完成 log 多 `has_gemini_key`；兩處過期註解改正。
+- **未查證 #3 結果**：AI 檔名解析（`services.NewAIService`）只讀環境變數（`config/api_keys.go` 的 `GetGeminiAPIKey`／`GetClaudeAPIKey`），精靈或設定頁存的金鑰都用不到 → 精靈文案不提檔名解析；設定頁兩列 hint 仍寫「也用於 AI 檔名解析」，開 backlog（見下）。
+- **AC #3 偏離**：E2E 用 stub 的 API（開發機的實例早就完成設定，`/setup` 進不去），只證明瀏覽器送出 `gemini_api_key`；「存進去、翻譯用得到」由 Go 整合測試 `TestSetupWizard_GeminiOnlyKeyReachesTranslation` 以真的 AES-256-GCM 金鑰庫＋`TranslationDispatcher` 證明（只填 Gemini → 預設 provider 是 Gemini）。NAS 整集實測沿用 `gemini-translation-dispatch` AC #9（10-14，568 句全成功）。
+- **測試**：`go test ./...` 全綠、vet、staticcheck 乾淨；`nx test web` 297 檔 4,721 測試全綠（CR 修正後重跑 setup 範圍）；typecheck、format:check、`lint:all` 0 errors；新 E2E `tests/e2e/setup-wizard-gemini.spec.ts` chromium＋mobile-chrome 通過；本機截圖 N4（桌機 1440、手機 390）與 N5 跟設計稿並排比對一致。
+- **CR（Fable，跨模型）**：H1 `setup-api-keys-step`／`setup-complete-step` 視覺基準過期 → 刪 darwin 重產、`git rm` `-linux` 等 CI bootstrap；M2 警告寫「檔名解析」→ 拿掉；M3「每分鐘 5 次」過期（10-14 重量後是 5 秒一批＝每分鐘 12 次）→ 精靈改「免費方案有速率限制」；M4 本節；L5 E2E 只驗線路 → 如上說明；L6 `↗` 無障礙 → sr-only；L7 其他 handler 錯誤訊息只提 Claude → backlog；L8 只填 TMDb 時警告會消失 → 既有條件，不改（來源建置那句提到元資料，改條件會說錯話）。
+
+### Discovery（Rule 24 lane ③，已寫進 sprint-status backlog）
+
+- `backlog-ai-parse-reads-env-keys-only`：AI 檔名解析只讀環境變數；設定頁 Claude／Gemini 兩列 hint 說「也用於 AI 檔名解析」是錯的；設定頁 Gemini hint「每分鐘 5 次」過期。
+- `backlog-claude-only-error-copy`：`subtitle_pipeline_handler.go:112`、`nfo_localizer_handler.go:136/183/228`、`key_settings_handler.go:222` 的錯誤訊息只叫人設定 Claude，沒提 Gemini（閘門本身已用 `translationDispatcher.IsConfigured`，行為正確）。
+- `backlog-unraid-template-main-tag`：`unraid-template/vido.xml` 指向 `:main`（每次合併都變的開發版）；上架 Community Apps 前要改 `:latest`，並補 `ca_profile.xml`。

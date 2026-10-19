@@ -57,7 +57,7 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
         hint="預設的翻譯模型。一集影集（約一小時、有英文字幕）大約 US$0.15～0.3。"
         link={{
           href: CLAUDE_KEYS_URL,
-          label: '怎麼申請 Claude 金鑰 ↗',
+          label: '怎麼申請 Claude 金鑰',
           testId: 'claude-key-link',
         }}
         testId="claude-key-input"
@@ -71,10 +71,10 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
         value={data.geminiApiKey || ''}
         onChange={(geminiApiKey) => onUpdate({ geminiApiKey })}
         placeholder="輸入 Gemini API 金鑰..."
-        hint="沒有 Claude 金鑰？用你自己的 Gemini 免費額度也能翻；每分鐘 5 次，Vido 會自動放慢。"
+        hint="沒有 Claude 金鑰？用你自己的 Gemini 免費額度也能翻；免費方案有速率限制，Vido 會自動放慢。"
         link={{
           href: GEMINI_KEYS_URL,
-          label: '怎麼申請 Gemini 金鑰 ↗',
+          label: '怎麼申請 Gemini 金鑰',
           testId: 'gemini-key-link',
         }}
         testId="gemini-key-input"
@@ -94,8 +94,8 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
           />
           <p className="text-xs text-[var(--text-primary)]">
             {tmdbBundled
-              ? 'Claude 和 Gemini 金鑰都沒填的話，就不能做 AI 字幕翻譯和檔名解析；電影和影集的元資料會使用內建的 TMDb 金鑰。'
-              : 'Claude 和 Gemini 金鑰都沒填的話，就不能做 AI 字幕翻譯和檔名解析；也不能自動取得電影和影集的元資料。'}
+              ? 'Claude 和 Gemini 金鑰都沒填的話，就不能做 AI 字幕翻譯；電影和影集的元資料會使用內建的 TMDb 金鑰。'
+              : '沒填金鑰的話，就不能做 AI 字幕翻譯，也不能自動取得電影和影集的元資料。'}
           </p>
         </div>
       )}

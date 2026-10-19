@@ -2,7 +2,8 @@
 // Label · input · optional hint, 8px apart. The value is set in the mono face
 // because everything typed into these fields is machine text — a URL, a user
 // name, an API key — and the design sets all five of them in JetBrains Mono.
-// An optional link sits under the hint (N4-D: 怎麼申請 … 金鑰 ↗).
+// An optional link sits under the hint (N4-D: 怎麼申請 … 金鑰 ↗). It opens a new
+// tab: the ↗ says so visually, the sr-only text says it to screen readers.
 interface WizardTextFieldLink {
   href: string;
   label: string;
@@ -70,6 +71,8 @@ export function WizardTextField({
           data-testid={link.testId}
         >
           {link.label}
+          <span aria-hidden="true"> ↗</span>
+          <span className="sr-only">（開新分頁）</span>
         </a>
       )}
     </div>

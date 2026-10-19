@@ -248573,7 +248573,7 @@
                               "fill": "$text-muted",
                               "textGrowth": "fixed-width",
                               "width": 448,
-                              "content": "沒有 Claude 金鑰？用你自己的 Gemini 免費額度也能翻；每分鐘 5 次，Vido 會自動放慢。",
+                              "content": "沒有 Claude 金鑰？用你自己的 Gemini 免費額度也能翻；免費方案有速率限制，Vido 會自動放慢。",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
@@ -248619,7 +248619,7 @@
                               "fill": "$text-primary",
                               "textGrowth": "fixed-width",
                               "width": 392,
-                              "content": "Claude 和 Gemini 金鑰都沒填的話，就不能做 AI 字幕翻譯和檔名解析；電影和影集的元資料會使用內建的 TMDb 金鑰。",
+                              "content": "Claude 和 Gemini 金鑰都沒填的話，就不能做 AI 字幕翻譯；電影和影集的元資料會使用內建的 TMDb 金鑰。",
                               "lineHeight": "$Type/Label/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Label/Size",
@@ -249218,6 +249218,58 @@
                                     {
                                       "type": "text",
                                       "id": "DtyUA",
+                                      "name": "t",
+                                      "fill": "$text-muted",
+                                      "content": "未設定",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "t0Pxo1",
+                              "name": "row-Gemini 金鑰",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "padding": [
+                                "$Space/md",
+                                "$Space/lg"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "W5WpKV",
+                                  "name": "k",
+                                  "width": 160,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "m9QcyC",
+                                      "name": "t",
+                                      "fill": "$text-secondary",
+                                      "content": "Gemini 金鑰",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "XZgd4",
+                                  "name": "v",
+                                  "width": "fill_container",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "a6ho1",
                                       "name": "t",
                                       "fill": "$text-muted",
                                       "content": "未設定",
