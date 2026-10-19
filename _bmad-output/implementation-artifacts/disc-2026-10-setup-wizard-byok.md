@@ -17,8 +17,8 @@ Status: ready-for-dev（⛔ 先等 Sally 改設計稿 N4-D，見「設計」）
 
 ## ⚠️ 未查證（dev 開工第一件事，結果寫進 Completion Notes）
 
-1. **只填 Gemini、不填 Claude 時，一集真的翻得完嗎？** 用一把全新的 Gemini 免費金鑰，在 NAS 測試機翻一集約一小時、有英文字幕的影集：記下用的模型、花多久、有沒有撞到每日額度。**翻不完的話停下來回報**——AC #2 的文案就不能寫「沒有 Claude 金鑰也能翻」，要請 Sally 改說法。
-2. **只填 Gemini 時，預設翻譯模型是不是 Gemini？** 精靈完成後直接按「產生字幕」，不進任何設定，看同意框顯示的模型。
+1. ~~只填 Gemini 時一集翻得完嗎？~~ **已查證（建單後同日）：** `gemini-translation-dispatch` AC #9 正式機驗證（2026-10-14 15:08，sprint-status）——See S01E02 整集 568 句、`gemini-3.5-flash-lite`、13 秒一批共 13.7 分鐘、59 次請求全部成功、帳記 US$0.08（目錄價）。免費方案 5 RPM；3.8-flash 每天 20 次會不夠，但只有 Gemini 金鑰時預設是 flash-lite。dev 只需在 AC #3 的 E2E 後於 NAS 再跑一次「精靈只填 Gemini → 直接產生字幕」確認走得通。
+2. ~~只填 Gemini 時預設翻譯模型是不是 Gemini？~~ **已查證：** 同一張單的實作紀錄——「只有 Gemini 金鑰的安裝預設 `gemini-3.5-flash-lite`」（`gemini-translation-dispatch.md:65`）。
 3. **AI 檔名解析**：`ai/factory.go:47` 讀的是 env 的 `GEMINI_API_KEY`。只在精靈填 Gemini 時，檔名解析會不會用到？不會的話 Gemini 欄位的 hint 就**不能**寫「也用於 AI 檔名解析」。
 
 ## Story
@@ -29,12 +29,12 @@ Status: ready-for-dev（⛔ 先等 Sally 改設計稿 N4-D，見「設計」）
 
 ## 設計（⛔ 先做，Sally）
 
-改 `ux-design.pen` 的 N4-D（`D990CP`），照 `CLAUDE.md` 的流程重產 `n4-d.png`、刷新 `pen-node-ids.json`，**只 commit 真的變了的那張**。文案以 Sally 定稿為準，下面是 party mode 的初稿：
+改 `ux-design.pen` 的 N4-D（`D990CP`），照 `CLAUDE.md` 的流程重產 `n4-d.png`、刷新 `pen-node-ids.json`，**只 commit 真的變了的那張**。Sally 2026-10-19 定稿（交給 Pencil inline agent 的提示詞就是這幾句；畫完以 `.pen` 為準）：
 
-- **步驟說明（取代「設定 API 金鑰以啟用進階功能…」）：** 「Vido 不收錢，也不經手你的錢。AI 字幕用你自己的金鑰，費用直接記在你的 Claude 或 Gemini 帳號；每次按下去之前，Vido 會先告訴你這次大約花多少。兩個都可以先空著，之後到設定頁再填。」
-- **Claude 欄位 hint：** 「預設的翻譯模型。一集影集（約一小時、有英文字幕）大約 US$0.15～0.3。」＋「怎麼申請」連結（新分頁開 Anthropic Console）。
-- **新的 Gemini 欄位（選填）：** 標籤「Gemini（選填）」，hint「沒有 Claude 金鑰？用你自己的 Gemini 免費額度也能翻；每分鐘 5 次，Vido 會自動放慢。」＋「怎麼申請」連結（Google AI Studio）。措辭受「未查證 #1、#3」約束。
-- **跳過提示：** 兩把都沒填時才出現，講「沒有 Claude 或 Gemini 金鑰，就不能做 AI 字幕翻譯」。
+- **步驟說明 `nsDeY`：** 「Vido 不收錢。AI 字幕用你自己的金鑰，費用直接記在你的 Claude 或 Gemini 帳號，不經過 Vido；每次按下去之前，Vido 會先告訴你大約花多少。兩把都可以先空著，之後到設定頁再填。」
+- **Claude 欄位 hint `w6DvG8`：** 「預設的翻譯模型。一集影集（約一小時、有英文字幕）大約 US$0.15～0.3。」下面一行連結「怎麼申請 Claude 金鑰 ↗」（`$accent-text`，新分頁開 Anthropic Console）。
+- **新的 Gemini 欄位（複製 `SBCDC`）：** 標籤「Gemini 金鑰（選填）」、placeholder「輸入 Gemini API 金鑰...」、hint「沒有 Claude 金鑰？用你自己的 Gemini 免費額度也能翻；每分鐘 5 次，Vido 會自動放慢。」、連結「怎麼申請 Gemini 金鑰 ↗」（Google AI Studio）。**不寫**「也用於 AI 檔名解析」（未查證 #3）。
+- **跳過提示 `lidJ4`：** 「Claude 和 Gemini 金鑰都沒填的話，就不能做 AI 字幕翻譯和檔名解析；電影和影集的元資料會使用內建的 TMDb 金鑰。」（`tmdbBundled` 為 false 時的那句，dev 照同樣句型改：把 TMDb 那半句換成既有的「自動取得元資料」。）
 - 不加新的顏色或元件；連結用既有的文字連結樣式。
 
 ## Acceptance Criteria
