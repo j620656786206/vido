@@ -13,7 +13,13 @@
         "command": "vitest {args._.join(' ')}; EXIT_CODE=$?; cd ../.. && bash scripts/cleanup-test-processes.sh --all 2>/dev/null; exit $EXIT_CODE"
       },
       "cache": true,
-      "inputs": ["default", "^default", { "externalDependencies": ["vitest"] }, { "env": "CI" }],
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/apps/api/internal/services/testdata/resolution_tiers.json",
+        { "externalDependencies": ["vitest"] },
+        { "env": "CI" }
+      ],
       "outputs": ["{workspaceRoot}/coverage/apps/web"]
     }
   }

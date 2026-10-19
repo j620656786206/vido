@@ -77,5 +77,11 @@
     "why": "width unknown: the height is read as the short side"
   },
   { "width": 3840, "height": 0, "tier": "4K", "why": "height unknown: the width alone reaches 4K" },
+  {
+    "width": 640,
+    "height": 0,
+    "tier": "",
+    "why": "height unknown and below every tier: no badge, not 0p"
+  },
   { "width": 0, "height": 0, "tier": "", "why": "nothing to read" }
 ]

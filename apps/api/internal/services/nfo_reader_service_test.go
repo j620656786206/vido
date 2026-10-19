@@ -403,7 +403,7 @@ func TestResolveResolution_SharedTable(t *testing.T) {
 		Why    string `json:"why"`
 	}
 	require.NoError(t, json.Unmarshal(raw, &rows))
-	require.GreaterOrEqual(t, len(rows), 40, "the shared table looks truncated")
+	require.GreaterOrEqual(t, len(rows), 55, "the shared table looks truncated")
 
 	for _, row := range rows {
 		name := fmt.Sprintf("%dx%d", row.Width, row.Height)

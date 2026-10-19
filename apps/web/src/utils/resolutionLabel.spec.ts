@@ -25,7 +25,7 @@ const SHARED_ROWS: { width: number; height: number; tier: string; why: string }[
 
 describe('resolutionTier — shared table with Go resolveResolution', () => {
   it('reads the whole shared table', () => {
-    expect(SHARED_ROWS.length).toBeGreaterThanOrEqual(40);
+    expect(SHARED_ROWS.length).toBeGreaterThanOrEqual(55);
   });
 
   it.each(SHARED_ROWS.map((r) => [`${r.width}x${r.height}`, r.tier, r.why]))(

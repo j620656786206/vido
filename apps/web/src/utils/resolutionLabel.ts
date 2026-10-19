@@ -35,7 +35,8 @@ export function resolutionTier(raw: string | null | undefined): string {
  * long side OR the short side is at least 90% of that tier's 16:9 frame, checked from
  * 4K down — so a 4K film with its black bars cropped (`3840x1608`, `3828x1588`) is 4K
  * (⚖️ Alexyu 2026-10-19), a 4:3 one (`2880x2160`) is 4K, and a 21:9 monitor capture
- * (`3440x1440`) stays 1440p. Below 480p the short side is written as `${n}p`.
+ * (`3440x1440` — the case the 4K long-side line was set against) stays 1440p. Below
+ * 480p the short side is written as `${n}p`; with no short side, nothing.
  *
  * The lines are whole pixels, not `× 0.9`, so this and Go's `resolutionTiers` cannot
  * round them differently. Change both, and the shared table, together.
@@ -56,7 +57,9 @@ function tierFromSize(width: number, height: number): string {
   const long = portrait ? height : width;
   const short = portrait ? width : height;
   const tier = RESOLUTION_TIERS.find((t) => long >= t.minLong || short >= t.minShort);
-  return tier ? tier.label : `${short}p`;
+  if (tier) return tier.label;
+  // `640x0`: nothing real to name — leave the badge out rather than write `0p`.
+  return short > 0 ? `${short}p` : '';
 }
 
 /**

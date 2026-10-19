@@ -161,11 +161,29 @@ Claude Opus 5.5（SM＋dev agent，2026-10-19）
 ### Debug Log References
 
 - 正式機唯讀（2026-10-19）：`select video_resolution, count(*) from movies group by 1`；`series` 同；非 `3840x2160`／`1920x1080` 的逐片列出片名（表見上）。
+- 故意改壞（AC #4）：前端把 4K `minLong` 3456→3840 → `resolutionLabel.spec.ts` 4 個失敗（共用表 `3828x1588`、`3456x1440` 兩列＋舊表與徽章表的 `3828x1588`）；Go 同樣改 → `TestResolveResolution_SharedTable/3828x1588`、`/3456x1440` 失敗。改回後全綠。
+- 本機畫面（AC #6）：`serve-test-env.sh` 種子 DB 把 沙丘:第二部 寫成 `3828x1588`、星際效應 `3840x1608`、全面啟動 `1920x800`；截圖在 scratchpad `res-tier-ux/`。列表 1440：`4K · H.265 · DTS`／`4K · H.265`／`1080p · H.264`；詳細頁 1440 徽章 `4K · 3828×1588`、390 只寫 `4K`。手機列表本來就不顯示規格行（A4p-M），無變化。
 
 ### Completion Notes List
+
+- T1：共用表 55 列（`apps/api/internal/services/testdata/resolution_tiers.json`）：正式機每一種寬高、每級門檻「剛好到／差 1」兩側、直式、DCI、寬或高未知。
+- T2：Go `resolveResolution` 改成表驅動（`resolutionTiers`），舊的 6 列測試併入共用表；另加一個 NFO 解析測試（3828×1588 的 NFO 存成 `4K`）。
+- T3：前端 `tierFromSize` 同一張表（`RESOLUTION_TIERS`），整數門檻；spec 讀共用表；`3828x1588` 的舊表與徽章表改成 4K；拿掉「One step past Go」說明。
+- 對抗式自我審查（就地修）：①`640x0` 會寫出 `0p` → 兩邊改成空字串（不出徽章），表加一列；②前端 spec 讀 Go 的 testdata，但 `nx test web` 的快取輸入只看 `apps/web` → `apps/web/project.json` 的 test inputs 加上那個 JSON；③Go 註解講清楚寬高為 0 的分支只為了跟前端答同一張表（NFO 呼叫端本來就要求兩邊 >0）；④共用表筆數下限 40→55。未修（記在 PR）：已經從 NFO 存成標籤的舊列不會重算（正式機 0 筆）、字幕評分（另立案）、正方形畫面（`1440x1440`→1440p）沒有特別規則。
+- 測試：web vitest 4,771 pass；`go test ./...` 42 個套件 ok；staticcheck、go vet、eslint（0 errors）、typecheck、`prettier --check .` 綠。
+- ⚠️ 過程中另一個 session（setup-wizard-byok）把本分支的未提交修改 stash 起來切走 working tree，約 25 分鐘後還原；期間的檢查改在 scratchpad 的 `git archive` 匯出副本上跑（不是 git worktree），還原後逐檔 `cmp` 確認與副本相同才 commit。
 
 ### Discovery Triage
 
 - **③ backlog** — `disc-2026-10-subtitle-score-frame-size`（P3）：字幕搜尋送 `3840x2160` 這種原始寬高給 Go 評分，`normalizeResolution` 認不得 → 有標解析度的字幕一律 0.2 分、低於沒標的 0.5，排序被反過來。修法候選：評分端先把寬高換成等級（要用同一套規則，Go 的 `resolveResolution` 在 `services` 套件、評分在 `subtitle` 套件，得先搬到共用處）。
 
 ### File List
+
+- _bmad-output/implementation-artifacts/disc-2026-10-resolution-tier-scope-encodes.md（新增）
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- apps/api/internal/services/nfo_reader_service.go
+- apps/api/internal/services/nfo_reader_service_test.go
+- apps/api/internal/services/testdata/resolution_tiers.json（新增）
+- apps/web/src/utils/resolutionLabel.ts
+- apps/web/src/utils/resolutionLabel.spec.ts
+- apps/web/project.json

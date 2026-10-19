@@ -314,7 +314,8 @@ func extractStreamDetails(fi *nfoXMLFileInfo, data *NFOData) {
 // The frame is turned sideways first (long side = width). A tier is reached when the
 // long side OR the short side is at least 90% of that tier's 16:9 frame — so a 4K film
 // with its black bars cropped (3840x1608, 3828x1588) is 4K, a 4:3 one (2880x2160) is
-// 4K, and a 21:9 monitor capture (3440x1440) stays 1440p. The lines are written out
+// 4K, and a 21:9 monitor capture (3440x1440, the case the 4K long-side line was set
+// against) stays 1440p. The lines are written out
 // as whole pixels, not as `× 0.9`, so Go and TypeScript cannot round them differently.
 var resolutionTiers = []struct {
 	label    string
@@ -329,13 +330,15 @@ var resolutionTiers = []struct {
 }
 
 // resolveResolution converts width×height to a resolution label (4K, 1440p, 1080p,
-// 720p, 480p, or `<short side>p` below them all). See resolutionTiers for the rule.
+// 720p, 480p, `<short side>p` below them all, or "" with no short side). See
+// resolutionTiers for the rule.
 func resolveResolution(width, height int) string {
 	if width <= 0 && height <= 0 {
 		return ""
 	}
-	// Only a frame with both sides known can be turned sideways; 0x1080 keeps its
-	// 1080 as the short side, as it read before the rule change.
+	// Only a frame with both sides known can be turned sideways (0x1080 keeps 1080 as
+	// the short side). The NFO caller already requires both sides > 0; the zero cases
+	// are here so this and the frontend's tierFromSize answer the shared table alike.
 	long, short := width, height
 	if width > 0 && height > width {
 		long, short = height, width
@@ -344,6 +347,9 @@ func resolveResolution(width, height int) string {
 		if long >= tier.minLong || short >= tier.minShort {
 			return tier.label
 		}
+	}
+	if short <= 0 {
+		return "" // 640x0: nothing real to name
 	}
 	return strconv.Itoa(short) + "p"
 }
