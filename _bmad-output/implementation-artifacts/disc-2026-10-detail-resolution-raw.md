@@ -1,6 +1,6 @@
 # Disc：詳細頁「檔案資訊」的解析度寫成「4K · 3840×2160」，聲道寫成「7.1」，跟設計稿一樣
 
-Status: ready-for-dev
+Status: done
 
 **Blocked-by:** `disc-2026-10-library-list-triage-b1`（b1 的 T1 把 `utils/resolutionLabel.ts` 改寫成 `resolutionTier(raw)`；本單直接用它）。
 
@@ -55,10 +55,10 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 小工具（AC #1、#3）**：b1 合併後，在 `utils/resolutionLabel.ts` 加 `formatResolutionBadge(raw): { tier: string; dims: string | null } | null`（或回字串＋另一個回尺寸的函式，擇一，元件要能把尺寸包成另一個 span）；`audioChannelLabel` 的對照改成數字配置。**若 b1 已經把 `audioChannelLabel` 刪掉**，在同檔加回來（同名、同簽名）。spec 照 AC #5。
-- [ ] **T2 元件（AC #1–#4、#7）**：`DetailTechInfoV2.tsx` 解析度徽章改用 T1（兩個 span＋`title`）、聲道改用 `audioChannelLabel`；`Badge` 的 `key` 改用穩定字串（今天用內容當 key，`4K · …` 帶 JSX 後不能再當 key——用 `'res'`／`'vcodec'`／`'audio'`／`'hdr'`）；檔頭照 AC #7。
-- [ ] **T3 測試＋基準圖（AC #5、#6、#8）**：改兩個 spec；改夾具 props、加手機夾具；`AI_PROVIDER=claude CLAUDE_API_KEY=sk-ant-local-visual-dummy pnpm run test:visual --reporter=line -g media-detail-tech-info-v2`（或刪掉舊 darwin 再跑 `test:visual:update-missing`）；`git rm` 舊 `-linux.png`。
-- [ ] **T4 Step 9 設計比對**：截圖對 `b3p-d.png`（桌機）與 `b3p-m.png`（手機）的「檔案資訊」徽章列。
+- [x] **T1 小工具（AC #1、#3）**：b1 合併後，在 `utils/resolutionLabel.ts` 加 `formatResolutionBadge(raw): { tier: string; dims: string | null } | null`（或回字串＋另一個回尺寸的函式，擇一，元件要能把尺寸包成另一個 span）；`audioChannelLabel` 的對照改成數字配置。**若 b1 已經把 `audioChannelLabel` 刪掉**，在同檔加回來（同名、同簽名）。spec 照 AC #5。
+- [x] **T2 元件（AC #1–#4、#7）**：`DetailTechInfoV2.tsx` 解析度徽章改用 T1（兩個 span＋`title`）、聲道改用 `audioChannelLabel`；`Badge` 的 `key` 改用穩定字串（今天用內容當 key，`4K · …` 帶 JSX 後不能再當 key——用 `'res'`／`'vcodec'`／`'audio'`／`'hdr'`）；檔頭照 AC #7。
+- [x] **T3 測試＋基準圖（AC #5、#6、#8）**：改兩個 spec；改夾具 props、加手機夾具；`AI_PROVIDER=claude CLAUDE_API_KEY=sk-ant-local-visual-dummy pnpm run test:visual --reporter=line -g media-detail-tech-info-v2`（或刪掉舊 darwin 再跑 `test:visual:update-missing`）；`git rm` 舊 `-linux.png`。
+- [x] **T4 Step 9 設計比對**：截圖對 `b3p-d.png`（桌機）與 `b3p-m.png`（手機）的「檔案資訊」徽章列。
 
 ## Dev Notes
 
@@ -104,9 +104,20 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（dev agent，2026-10-19）
+
 ### Debug Log References
 
+- 正式機唯讀核對（`sqlite3 -readonly`，2026-10-19）：電影 `video_resolution` 全是 ffprobe 形狀、聲道只有 2／6／8。逐一換算：`3840x2160`／`2076`／`1608`／`1606`／`1604`／`1600`、`2880x2160` → `4K · …`；`3828x1588` → `1440p · 3828×1588`（照本單 AC #1，下一張 `disc-2026-10-resolution-tier-scope-encodes` 會改成 4K）；`1920x1080`／`1036`／`804`／`802`／`800`／`780` → `1080p · …`；空值 → 不出徽章。
+- 本機 visual：刪 darwin＋`git rm` linux 後 `test:visual:update-missing` 產兩張 darwin（只有這兩張進 test-results），再跑一次 `test:visual` 全綠（1 passed）。
+
 ### Completion Notes List
+
+- T1：`formatResolutionBadge(raw)` 回 `{ tier, dims, full } | null`；等級直接用 `resolutionTier`（不重寫門檻），所以下一張改 `resolutionTier` 時徽章會跟著變，只要改 spec 表上 `3828x1588` 那一行。`dims` 只在兩邊都 >0 的尺寸才有，`×` 前後無空格。`FRAME_SIZE` 正規式抽成共用常數。`audioChannelLabel` 改成 1.0／2.0／5.1／7.1，其他數字 `${n}ch`；拿掉 b1 留的「Not used yet」註解。
+- T2：解析度徽章兩個 span（尺寸那個 `hidden sm:inline`）；`key` 改 `res`／`vcodec`／`audio`／`hdr`；檔頭補 B3p-M。
+- 對抗式自我審查（就地修）：純標籤（`1080p`）的徽章原本也帶 `title="1080p"`，滑過去跳出一模一樣的字——改成只有帶尺寸時才放 `title`，補測試。
+- T4 設計比對：本機 `serve-test-env.sh` 把兩部種子片的本機 DB 寫成正式機形狀，截詳細頁 1440／390：桌機徽章列 `4K · 3840×2160`／`H.265`／`TrueHD 7.1`／`HDR10` 與 B3p-D 一致；手機 `4K`／`H.265`／`TrueHD 7.1` 與 B3p-M 一致，多一顆 `HDR10`＝已立案的 `disc-2026-10-detail-techinfo-mobile-vs-design`。
+- 測試：`nx test web` 4,715 pass；`lint:all` 0 errors；typecheck、format:check、`check-design-refs.py` 綠。
 
 ### Discovery Triage
 
@@ -114,3 +125,12 @@ Status: ready-for-dev
 - **③ backlog-with-carry-forward-link** — `disc-2026-10-detail-techinfo-mobile-vs-design`（Bob 建單時發現；**需要 parent 在 sprint-status 新增這一行**）：手機稿 B3p-M／B10p-M 的「檔案資訊」只有三顆徽章（沒有 HDR10、沒有檔案大小／字幕軌／路徑三列），程式碼在手機上全部顯示（`DetailTechInfoV2.tsx` 沒有任何斷點）。要 Sally 判斷：是手機稿省略沒畫，還是手機真的要精簡。P3。
 
 ### File List
+
+- apps/web/src/utils/resolutionLabel.ts
+- apps/web/src/utils/resolutionLabel.spec.ts
+- apps/web/src/components/media/DetailTechInfoV2.tsx
+- apps/web/src/components/media/DetailTechInfoV2.spec.tsx
+- apps/web/src/routes/test/-gallery.fixtures.tsx
+- tests/visual/components.visual.spec.ts-snapshots/components/media-detail-tech-info-v2/default-visual-darwin.png（重產）
+- tests/visual/components.visual.spec.ts-snapshots/components/media-detail-tech-info-v2/default-visual-linux.png（git rm，等 CI bootstrap）
+- tests/visual/components.visual.spec.ts-snapshots/components/media-detail-tech-info-v2-mobile/default-visual-darwin.png（新增）

@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen B3p-D (uRGu2)
+// Design ref: ux-design.pen Screen B3p-D (uRGu2) · B3p-M (SzNRb)
 /**
  * v2 "檔案資訊" tech-truth block (UX Redesign Phase 2 — UX2-3, AC #4). The hybrid
  * differentiator — codec/resolution/audio/HDR at a glance on a consumption-grade
@@ -11,8 +11,14 @@
  * TechBadge a removable data mark). The subtitle STATUS already lives in the hero
  * badge; here the tracks are stated as a fact row instead of a second, differently
  * coloured status pill.
+ *
+ * disc-2026-10-detail-resolution-raw: the resolution badge reads `4K · 3840×2160`
+ * (B3p-D) and only `4K` on a phone (B3p-M) — the frame size sits in its own span that
+ * is hidden below `sm`, and the badge's `title` carries the whole string. The audio
+ * badge writes the speaker layout (`TrueHD 7.1`), not the raw count (`8ch`).
  */
 import { subtitleLangLabel, trackLangs } from '../../utils/libraryStatus';
+import { audioChannelLabel, formatResolutionBadge } from '../../utils/resolutionLabel';
 
 interface DetailTechInfoV2Props {
   videoResolution?: string;
@@ -48,10 +54,11 @@ function subtitleTrackSummary(subtitleTracks?: string): string | null {
   return [...new Set(langs.map(trackLabel))].join(' · ');
 }
 
-function Badge({ children }: { children: React.ReactNode }) {
+function Badge({ children, title }: { children: React.ReactNode; title?: string }) {
   return (
     <span
       data-testid="detail-tech-badge"
+      title={title}
       className="rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 font-mono text-xs text-[var(--text-secondary)]"
     >
       {children}
@@ -88,12 +95,28 @@ export function DetailTechInfoV2({
 }: DetailTechInfoV2Props) {
   const tracks = subtitleTrackSummary(subtitleTracks);
   const size = formatSize(fileSize);
-  const badges = [
-    videoResolution,
-    videoCodec,
-    audioCodec ? `${audioCodec}${audioChannels ? ` ${audioChannels}ch` : ''}` : null,
-    hdrFormat,
-  ].filter(Boolean) as string[];
+  const resolution = formatResolutionBadge(videoResolution);
+  const audio = audioCodec
+    ? `${audioCodec}${audioChannels ? ` ${audioChannelLabel(audioChannels)}` : ''}`
+    : null;
+  // Stable keys: the resolution badge's content is JSX, so content can no longer key it.
+  const badges: { key: string; title?: string; content: React.ReactNode }[] = [];
+  if (resolution) {
+    badges.push({
+      key: 'res',
+      // Only when it adds something: a bare label (`1080p`) needs no tooltip repeating it.
+      title: resolution.dims ? resolution.full : undefined,
+      content: (
+        <>
+          <span>{resolution.tier}</span>
+          {resolution.dims && <span className="hidden sm:inline">{` · ${resolution.dims}`}</span>}
+        </>
+      ),
+    });
+  }
+  if (videoCodec) badges.push({ key: 'vcodec', content: videoCodec });
+  if (audio) badges.push({ key: 'audio', content: audio });
+  if (hdrFormat) badges.push({ key: 'hdr', content: hdrFormat });
 
   if (badges.length === 0 && !tracks && !size && !filePath) return null;
 
@@ -103,7 +126,9 @@ export function DetailTechInfoV2({
       {badges.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           {badges.map((b) => (
-            <Badge key={b}>{b}</Badge>
+            <Badge key={b.key} title={b.title}>
+              {b.content}
+            </Badge>
           ))}
         </div>
       )}

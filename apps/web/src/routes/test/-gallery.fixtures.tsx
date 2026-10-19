@@ -365,6 +365,17 @@ const listFxRow = (
   },
 });
 const UHD_HEVC = { videoResolution: '3840x2160', videoCodec: 'H.265' };
+/** disc-2026-10-detail-resolution-raw: one file in the NAS's real shape, desktop + phone. */
+const DETAIL_TECH_INFO_PROPS = {
+  videoResolution: '3840x2160',
+  videoCodec: 'H.265',
+  audioCodec: 'TrueHD',
+  audioChannels: 8,
+  hdrFormat: 'HDR10',
+  subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }, { language: 'eng' }]),
+  fileSize: 9_040_000_000,
+  filePath: '/media/movies/你的名字 (2016)/your.name.2016.2160p.mkv',
+};
 const LIST_FX_ROWS = [
   listFxRow('lr1', '執法記錄', '2026 · 恐怖', 6.0, {
     chineseSubtitle: 'none',
@@ -1787,22 +1798,26 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     width: 960,
   },
   {
+    // disc-2026-10-detail-resolution-raw AC #6: props in the shape the NAS really stores
+    // (ffprobe `寬x高`, codec `H.265`) — the badge row reads 4K · 3840×2160／H.265／
+    // TrueHD 7.1／HDR10, as B3p-D draws it.
     id: 'media-detail-tech-info-v2',
     label: 'media/DetailTechInfoV2 (B3p-D · 檔案資訊)',
     component: DetailTechInfoV2,
-    props: {
-      videoResolution: '2160p',
-      videoCodec: 'HEVC',
-      audioCodec: 'TrueHD',
-      audioChannels: 8,
-      hdrFormat: 'HDR10',
-      subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }, { language: 'eng' }]),
-      fileSize: 9_040_000_000,
-      filePath: '/media/movies/你的名字 (2016)/your.name.2016.2160p.mkv',
-    },
+    props: DETAIL_TECH_INFO_PROPS,
     penNode: 'screen-section',
     statesOnly: ['default'],
     width: 720,
+  },
+  {
+    // AC #6 — the phone (B3p-M) shows the tier alone: 4K／H.265／TrueHD 7.1／HDR10.
+    id: 'media-detail-tech-info-v2-mobile',
+    label: 'media/DetailTechInfoV2 (B3p-M — 手機 390 寬，解析度只寫等級)',
+    component: DetailTechInfoV2,
+    props: DETAIL_TECH_INFO_PROPS,
+    penNode: 'SzNRb', // Screen B3p-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
   {
     id: 'media-detail-not-found-v2',
