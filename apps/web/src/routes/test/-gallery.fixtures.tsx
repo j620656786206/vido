@@ -212,6 +212,8 @@ import { addUsd } from '../../lib/currency';
 import type { GenerationCandidate, SubtitleInventory } from '../../services/subtitleService';
 import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
 import { SpendCard } from '../../components/activity/SpendSection';
+import { RecentSection } from '../../components/activity/RecentSection';
+import type { RecentSection as RecentSectionData } from '../../services/activityService';
 import { GenerationWorkspaceV2 } from '../../components/subtitle/GenerationWorkspaceV2';
 import { glossaryKeys } from '../../hooks/useGlossary';
 import { transcriptionEstimateKeys } from '../../hooks/useTranscriptionEstimate';
@@ -978,6 +980,47 @@ const SPEND_FX_MONTH_START = {
   cacheSavedUsdEstimate: null,
   byModel: [{ modelId: 'claude-sonnet-5', runs: 1, usd: 0.29 }],
 };
+
+/**
+ * disc-2026-10-activity-subtitle-run-time-b 活動記錄 (K1-D-v2 kMeWS / K1-M-v2 QIwY1).
+ * Clock-injected (Rule 23 (ii)): RecentSection counts its relative times from
+ * the `now` prop, so these fixtures pin it and need no page clock. Newest
+ * first, as the backend sorts; the two subtitle rows are the design's words.
+ */
+const RECENT_FX_NOW = Date.parse('2026-10-19T12:00:00Z');
+const recentFxAgo = (minutes: number) => new Date(RECENT_FX_NOW - minutes * 60_000).toISOString();
+const RECENT_FX_SUBTITLE_RUNS = {
+  status: 'ok' as const,
+  events: [
+    {
+      kind: 'subtitle',
+      result: 'completed',
+      at: recentFxAgo(2),
+      mediaType: 'episode',
+      mediaTitle: '末日光明',
+      seasonNumber: 1,
+      episodeNumber: 2,
+      route: 'translate',
+      cueCount: 568,
+      durationSeconds: 180,
+      spentUsd: 0.27,
+    },
+    { kind: 'parse', result: 'failed', detail: 'The.Movie.2024.mkv', at: recentFxAgo(60) },
+    {
+      kind: 'subtitle',
+      result: 'failed',
+      at: recentFxAgo(180),
+      mediaType: 'episode',
+      mediaTitle: '末日光明',
+      seasonNumber: 1,
+      episodeNumber: 1,
+      route: 'translate',
+      durationSeconds: 4,
+      spentUsd: 0,
+      failureReason: 'target_not_writable',
+    },
+  ],
+} satisfies RecentSectionData;
 
 // sub-6-8b model-picker fixture data. Grades are the MEASURED eval-1 ones —
 // a fixture must not invent a grade the product would never show.
@@ -6993,6 +7036,44 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: SpendCard,
     props: { summary: SPEND_FX_MONTH_END },
     penNode: 'screen-section', // Screen K5-M-v2 (ptNai) — sec-本月AI花費
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  // --- disc-2026-10-activity-subtitle-run-time-b 活動記錄 (Screen K1-D-v2 kMeWS / K1-M-v2 QIwY1) ---
+  {
+    id: 'activity-recent/subtitle-runs',
+    label: 'activity/RecentSection (活動記錄 — 字幕完成／解析失敗／字幕沒做成，右側兩行)',
+    component: RecentSection,
+    props: { section: RECENT_FX_SUBTITLE_RUNS, onRetry: noop, now: RECENT_FX_NOW },
+    penNode: 'screen-section', // Screen K1-D-v2 (kMeWS) — LndN2 / EVrLx
+    statesOnly: ['default'],
+    width: 896,
+  },
+  {
+    // K1-M: meta moves under the description; a real 390 viewport so sm: flips.
+    id: 'activity-recent/subtitle-runs-mobile',
+    label:
+      'activity/RecentSection (活動記錄 — 手機 viewport 390×844，花多久・花多少錢在說明下一行)',
+    component: RecentSection,
+    props: { section: RECENT_FX_SUBTITLE_RUNS, onRetry: noop, now: RECENT_FX_NOW },
+    penNode: 'screen-section', // Screen K1-M-v2 (QIwY1) — JLTBV / akt4i
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    // The three-row phone fixture above ends at y≈833, under the gallery's fixed
+    // 底部分頁列 (top 760) — its 字幕沒做成 row is half hidden in the baseline. The
+    // row that most needs a phone check (a failure reason that wraps, meta on its
+    // own line) gets a fixture of its own that clears the bar.
+    id: 'activity-recent/subtitle-failed-mobile',
+    label: 'activity/RecentSection (活動記錄 — 手機：字幕沒做成，說明換行)',
+    component: RecentSection,
+    props: {
+      section: { status: 'ok', events: [RECENT_FX_SUBTITLE_RUNS.events[2]] },
+      onRetry: noop,
+      now: RECENT_FX_NOW,
+    },
+    penNode: 'screen-section', // Screen K1-M-v2 (QIwY1) — akt4i
     statesOnly: ['default'],
     viewport: { width: 390, height: 844 },
   },

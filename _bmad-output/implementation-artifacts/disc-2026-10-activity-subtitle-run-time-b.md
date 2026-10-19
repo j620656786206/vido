@@ -1,6 +1,6 @@
 # Disc：活動記錄寫出字幕花多久 B（前端）——字幕列後面寫「花多久 · 花多少錢」，手機移到說明下一行
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 同 A 單。2026-10-19 Alexyu：「目前生成出來的字幕只有在活動會看到本月 AI 花費，但是字幕生成花了多少時間有地方紀錄嗎？」⚖️ **Alexyu 裁定：紀錄放在活動頁的每一筆紀錄後面。** Bob 依 Story Splitting Rule 拆出（見 A 單的 SM 裁定）。
 設計稿：K1-D-v2 `kMeWS`（字幕完成列 `LndN2`、字幕沒做成列 `EVrLx`）、K1-M-v2 `QIwY1`（`JLTBV`、`akt4i`，說明下多一行 `rowMeta`）、元件 `Component/ActivityRow-v2`（`fF8nX`，沒改元件本身）、規格說明 `spec-note-k-run-time`（`XYUmV`）。桌機截圖 `_bmad-output/screenshots/flow-k-activity-v2/k1-d.png`；手機這一段在 `k1-m.png` 畫面外（被裁切），要看節點。
@@ -57,12 +57,12 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 型別（AC #1）**：`activityService.ts` 的 `RecentEvent`。
-- [ ] **T2 文字（AC #3、#4、#6）**：`generationEventCopy.ts` 的 `RunFailureReason`＋`FAILURE_COPY_BY_REASON`、`TABLE` 改引用；新檔 `recentEventCopy.ts`（`formatRunDuration`、`formatRunSpend`、`recentSubtitleDetail`、`recentSubtitleMeta`）＋ spec。
-- [ ] **T3 列元件（AC #5、#7）**：`ActivityRow` 加 `meta`／說明換行；grid area 讓同一個 meta 節點桌機在右上、手機在說明下。
-- [ ] **T4 活動記錄（AC #2、#7、#8）**：新檔 `RecentSection.tsx`（從 `ActivityHub.tsx:301-332` 搬出、加字幕分支、`now` 注入）；`ActivityHub` 改用；spec。
-- [ ] **T5 夾具＋基準（AC #10）**：兩個夾具、本機 `-darwin` 基準。
-- [ ] **T6 收尾（AC #11、#12、#13）**：stub 鍵名、lint／typecheck／format／design-refs、UX 驗收與量測。
+- [x] **T1 型別（AC #1）**：`activityService.ts` 的 `RecentEvent`。
+- [x] **T2 文字（AC #3、#4、#6）**：`generationEventCopy.ts` 的 `RunFailureReason`＋`FAILURE_COPY_BY_REASON`、`TABLE` 改引用；新檔 `recentEventCopy.ts`（`formatRunDuration`、`formatRunSpend`、`recentSubtitleDetail`、`recentSubtitleMeta`）＋ spec。
+- [x] **T3 列元件（AC #5、#7）**：`ActivityRow` 加 `meta`／說明換行；grid area 讓同一個 meta 節點桌機在右上、手機在說明下。
+- [x] **T4 活動記錄（AC #2、#7、#8）**：新檔 `RecentSection.tsx`（從 `ActivityHub.tsx:301-332` 搬出、加字幕分支、`now` 注入）；`ActivityHub` 改用；spec。
+- [x] **T5 夾具＋基準（AC #10）**：兩個夾具、本機 `-darwin` 基準。
+- [x] **T6 收尾（AC #11、#12、#13）**：stub 鍵名、lint／typecheck／format／design-refs、UX 驗收與量測。
 
 ## Dev Notes
 
@@ -120,12 +120,45 @@ Sally 追認理由：1–3 都沿用畫面上已經在用的說法，不新造�
 
 ### Agent Model Used
 
+Claude Opus 5.5（dev agent，2026-10-19）
+
 ### Debug Log References
 
+- 本機 `nx` daemon 卡住（`pnpm nx run web:typecheck`／`nx serve` 停在 project graph），改用 `NX_DAEMON=false` 與直接 `tsc --noEmit -p tsconfig.app.json`。
+
 ### Completion Notes List
+
+- AC #1–#9、#11、#12 照單完成。`failureCopy()` 對既有輸入的回傳不變（既有 40 個 generationEventCopy 測試照綠，另加「TABLE 引用的是同一個物件」測試）；`FAILURE_COPY_BY_REASON` 的物件 `Object.freeze`。
+- `ActivityRow`：傳 `meta`（有內容才算）時走 CSS grid，同一個 meta 節點桌機在右上、手機在說明下；沒傳時 DOM 與 class 跟今天一樣（`RecentSection.spec` 斷言解析列 class 逐字不變）。meta／時間格用 flex，避免繼承 body 24px 行高把字幕列撐高（自我審查抓到：原本字幕列比解析列高約 10px，修後 77／75／77px）。
+- **偏離 1（檔頭）：** AC #7 給的「Clock-injected: RecentSection accepts a `now` prop」不符合 `local/time-dependent-fixture-stability` 的 regex（要「component accepts `clock` prop」）。元件本身不讀現在時間所以今天不會觸發，但為了以後有人加 `Date.now()` 時規則認得，改寫成「Clock-injected: component accepts `clock` prop (named `now`); no fixture-side mock needed」。
+- **偏離 2（多一個夾具）：** 畫廊的手機底部分頁列固定在 y=760，三列的 `subtitle-runs-mobile`（照 AC #10，三列）底部到 y≈833，第三列「字幕沒做成」有一半被分頁列蓋住（既有的 `library-mobile-screens/list` 等手機基準也是這樣，屬畫廊既有限制）。另加 `activity-recent/subtitle-failed-mobile`（只有失敗列）讓換行的失敗原因與說明下的 meta 有完整的基準。三張都只產 `-darwin`。
+- **AC #13 UX 驗收：** 本機起 Go API（`AI_PROVIDER=claude`）＋ Vite，用 Playwright 攔 `/api/v1/activity` 回 K1 的資料（A 單還沒合併），截 1440 與 390 的活動頁（`…/scratchpad/activity-b-ux/activity-1440.png`、`activity-390.png`）：
+  - 桌機：字幕兩列文字與 `k1-d.png` 逐字相同；右側上行 meta 14px `--text-secondary`、下行時間 12px `--text-muted`，兩行都靠右（right=1311）；解析列只有一行時間。
+  - 手機 390：說明欄寬 214–215px（≥ 200，與設計稿 214px 相同）；meta 在說明正下方（說明底 318 → meta 頂 322）；右側只有時間；失敗原因換成兩行。
+  - 畫廊手機夾具的說明欄寬是 182px：畫廊外框左右各留 32px（卡片 326 寬，真頁面 358），不是元件問題。
+  - `JLTBV`／`akt4i` 用 Pencil MCP 唯讀讀過：`textCol` 裡 rowTitle → rowSubtitle → rowMeta（Mono、Label 字級、`$text-secondary`），`rowRight` 只剩 rowRightTime——與實作一致。
+- 對抗式自我審查（`review-adversarial-general.xml`，獨立 subagent）修掉：路線查表撞 `constructor`／`__proto__`、句數 NaN／小數、季集負數／小數、片名前後空白、片名空白時不再接 SxxExx、「不到 US$0.01」改問 `usd()` 本身、字幕列被撐高、`failureCopy` 註解宣稱前後端比對規則相同（其實後端多兩條）、夾具加 `satisfies`、共用文字物件 freeze；補「失敗但有花錢」（和平使者）、無 meta 的字幕列仍可換行、解析列 class 不變等測試。
+- 範圍外（寫進 PR「沒做的事」）：生成工作區即時紀錄的 `failureCopy` TABLE 沒有「寫不進資料夾」「中途停止」兩條（AC #6 要求既有輸入回傳不變）；讀螢幕軟體連唸「3 分鐘 US$0.27 2 分鐘前」可加 sr-only 前綴（需要文字裁定）；`result` 不是 completed／failed 時目前當成功畫；`spent_usd` 若改成字串上線（backlog-money-string-on-the-wire）要放寬判斷；畫廊手機分頁列遮住高夾具。
 
 ### Discovery Triage
 
 - **① expand-scope-in-place** — `generation-workspace-stubs.ts:67` 的 stub 鍵名寫成 `items`（應為 `events`）→ AC #11。
 
 ### File List
+
+- apps/web/src/services/activityService.ts
+- apps/web/src/services/activityService.spec.ts（新）
+- apps/web/src/components/subtitle/generationEventCopy.ts
+- apps/web/src/components/subtitle/generationEventCopy.spec.ts
+- apps/web/src/components/activity/recentEventCopy.ts（新）
+- apps/web/src/components/activity/recentEventCopy.spec.ts（新）
+- apps/web/src/components/activity/RecentSection.tsx（新）
+- apps/web/src/components/activity/RecentSection.spec.tsx（新）
+- apps/web/src/components/activity/ActivityRow.tsx
+- apps/web/src/components/activity/ActivityHub.tsx
+- apps/web/src/routes/test/-gallery.fixtures.tsx
+- tests/support/helpers/generation-workspace-stubs.ts
+- tests/visual/components.visual.spec.ts-snapshots/components/activity-recent/subtitle-runs/default-visual-darwin.png（新）
+- tests/visual/components.visual.spec.ts-snapshots/components/activity-recent/subtitle-runs-mobile/default-visual-darwin.png（新）
+- tests/visual/components.visual.spec.ts-snapshots/components/activity-recent/subtitle-failed-mobile/default-visual-darwin.png（新）
+- _bmad-output/implementation-artifacts/sprint-status.yaml

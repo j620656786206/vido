@@ -35,32 +35,82 @@ export interface FailureCopy {
   stopped: boolean;
 }
 
+/**
+ * The reason codes a finished subtitle run carries on GET /api/v1/activity
+ * (`failure_reason`, disc-2026-10-activity-subtitle-run-time-a AC #1
+ * `[@contract-v1]`). The backend classifies the raw error itself
+ * (`models.SubtitleRunFailureReason`); its rules are a SUPERSET of TABLE below —
+ * it also knows `cancelled` and `target_not_writable`, and checks them in its
+ * own order. The WORDS are shared; the matching is not (yet). The live log
+ * therefore still says 生成失敗 for a write failure the activity record names.
+ */
+export type RunFailureReason =
+  | 'cancelled'
+  | 'budget_exceeded'
+  | 'credit_exhausted'
+  | 'target_not_writable'
+  | 'no_audio_track'
+  | 'ffmpeg_missing'
+  | 'asr_unconfigured'
+  | 'unauthorized'
+  | 'timeout'
+  | 'other';
+
+/**
+ * One sentence per reason — the single copy of the failure words. TABLE (the
+ * raw-string matcher for the live log) points at these same frozen objects, so
+ * the two surfaces never word the same reason two ways.
+ */
+export const FAILURE_COPY_BY_REASON: Readonly<Record<RunFailureReason, FailureCopy>> = {
+  // ⚖️ Sally 2026-10-19: a user cancel or a container restart mid-run.
+  cancelled: Object.freeze({ text: '中途停止', stopped: false }),
+  budget_exceeded: Object.freeze({ text: '已達預算上限', stopped: true }),
+  // An empty provider account (disc-2026-09-asr-quota-429-treated-as-transient):
+  // not a failure — the film is fine, the account needs a top-up (F11-SPEC-LOG ⑤b).
+  credit_exhausted: Object.freeze({ text: 'AI 帳號沒有額度', stopped: true }),
+  // The first half of the 409 sentence (transcription_handler.go). Never the
+  // second half 「這次沒有花到錢」: a run can fail to write AFTER translating
+  // (正式機 和平使者 S01E01 spent $0.196).
+  target_not_writable: Object.freeze({ text: '影片所在的資料夾寫不進字幕', stopped: false }),
+  no_audio_track: Object.freeze({ text: '找不到可用的音軌', stopped: false }),
+  ffmpeg_missing: Object.freeze({ text: '伺服器缺少 ffmpeg', stopped: false }),
+  asr_unconfigured: Object.freeze({ text: '語音辨識未設定', stopped: false }),
+  unauthorized: Object.freeze({ text: 'API 金鑰無效', stopped: false }),
+  timeout: Object.freeze({ text: '處理逾時', stopped: false }),
+  other: Object.freeze({ text: '生成失敗', stopped: false }),
+};
+
+/** Copy for a wire reason code; an unknown or missing code says 生成失敗. */
+export function failureCopyForReason(reason: string | null | undefined): FailureCopy {
+  return Object.prototype.hasOwnProperty.call(FAILURE_COPY_BY_REASON, reason ?? '')
+    ? FAILURE_COPY_BY_REASON[reason as RunFailureReason]
+    : FAILURE_COPY_BY_REASON.other;
+}
+
 /** First match wins; order matters (a budget stop can mention a timeout). */
 const TABLE: ReadonlyArray<{ match: readonly string[]; copy: FailureCopy }> = [
-  { match: ['AI_BUDGET_EXCEEDED'], copy: { text: '已達預算上限', stopped: true } },
-  { match: ['no audio track found'], copy: { text: '找不到可用的音軌', stopped: false } },
-  { match: ['ffmpeg not available'], copy: { text: '伺服器缺少 ffmpeg', stopped: false } },
+  { match: ['AI_BUDGET_EXCEEDED'], copy: FAILURE_COPY_BY_REASON.budget_exceeded },
+  { match: ['no audio track found'], copy: FAILURE_COPY_BY_REASON.no_audio_track },
+  { match: ['ffmpeg not available'], copy: FAILURE_COPY_BY_REASON.ffmpeg_missing },
   {
     match: ['transcription unavailable', 'API key not configured'],
-    copy: { text: '語音辨識未設定', stopped: false },
+    copy: FAILURE_COPY_BY_REASON.asr_unconfigured,
   },
-  // An empty provider account (disc-2026-09-asr-quota-429-treated-as-transient):
-  // the solo runner's sentence says 帳號沒有額度, the legacy path keeps the
-  // AI_CREDIT_EXHAUSTED code in its raw error. Not a failure — the film is
-  // fine, the account needs a top-up (F11-SPEC-LOG ⑤b).
+  // The solo runner's sentence says 帳號沒有額度, the legacy path keeps the
+  // AI_CREDIT_EXHAUSTED code in its raw error.
   {
     match: ['AI_CREDIT_EXHAUSTED', '帳號沒有額度'],
-    copy: { text: 'AI 帳號沒有額度', stopped: true },
+    copy: FAILURE_COPY_BY_REASON.credit_exhausted,
   },
   // The LLM side says AI_UNAUTHORIZED; the Whisper side says `status 401`.
-  { match: ['AI_UNAUTHORIZED', 'status 401'], copy: { text: 'API 金鑰無效', stopped: false } },
+  { match: ['AI_UNAUTHORIZED', 'status 401'], copy: FAILURE_COPY_BY_REASON.unauthorized },
   {
     match: ['AI_TIMEOUT', 'timed out', 'deadline exceeded'],
-    copy: { text: '處理逾時', stopped: false },
+    copy: FAILURE_COPY_BY_REASON.timeout,
   },
 ];
 
-const FALLBACK: FailureCopy = { text: '生成失敗', stopped: false };
+const FALLBACK: FailureCopy = FAILURE_COPY_BY_REASON.other;
 
 export function failureCopy(error: string | null | undefined): FailureCopy {
   if (!error) return FALLBACK;

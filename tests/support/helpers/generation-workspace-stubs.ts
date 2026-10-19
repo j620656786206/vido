@@ -64,7 +64,7 @@ export async function stubCommon(page: Page) {
         activeJobs: { status: 'ok', jobs: [] },
         pending: { status: 'ok', parseCount: 0 },
         downloads: { status: 'ok', downloading: 0, queued: 0, errored: 0 },
-        recent: { status: 'ok', items: [] },
+        recent: { status: 'ok', events: [] },
       })
     )
   );
