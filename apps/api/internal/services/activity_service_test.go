@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -41,8 +42,16 @@ func (f fakeParse) ListAll(ctx context.Context, limit int) ([]*models.ParseJob, 
 	return f.all, f.allErr
 }
 
+// pjSeq makes each pj() a second OLDER than the one before, so a fixture list
+// reads newest first — the order ParseJobRepository.ListAll returns
+// (created_at DESC). The activity record sorts by time since it merges in
+// subtitle runs (disc-2026-10-activity-subtitle-run-time-a AC #3), so a
+// fixture whose times ran the other way would be reordered.
+var pjSeq atomic.Int64
+
 func pj(status models.ParseJobStatus, name string) *models.ParseJob {
-	return &models.ParseJob{Status: status, FileName: name, UpdatedAt: time.Now()}
+	age := time.Duration(pjSeq.Add(1)) * time.Second
+	return &models.ParseJob{Status: status, FileName: name, UpdatedAt: time.Now().Add(-age)}
 }
 
 func TestActivity_AllOK(t *testing.T) {

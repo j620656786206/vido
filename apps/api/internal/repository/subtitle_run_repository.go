@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,6 +54,22 @@ type SubtitleRunRepositoryInterface interface {
 	// completed runs with triggered_by=auto whose completed_at is in
 	// [from, to) — grouped by source (infra-optin-usage-report-a1).
 	AutoProducedBetween(ctx context.Context, from, to time.Time) (AutoProducedCounts, error)
+	// RecentTerminalRuns returns the latest `limit` completed or failed runs
+	// that have a completed_at, newest first, each with the title (and, for an
+	// episode, season/episode numbers) of what it ran on — the activity
+	// record's subtitle source (disc-2026-10-activity-subtitle-run-time-a).
+	RecentTerminalRuns(ctx context.Context, limit int) ([]RecentSubtitleRun, error)
+}
+
+// RecentSubtitleRun is one finished run plus the library names it needs to be
+// read by a person. MediaTitle is the movie's title, or the series title for
+// an episode or series run; "" when the item has left the library. Season /
+// episode numbers are set only for an episode run whose episode still exists.
+type RecentSubtitleRun struct {
+	Run           models.SubtitleRun
+	MediaTitle    string
+	SeasonNumber  *int
+	EpisodeNumber *int
 }
 
 // AutoProducedCounts is the opt-in usage report's figure, by source (PRD
@@ -102,6 +119,17 @@ const subtitleRunColumns = `id, media_id, media_type, tmdb_id, metadata_hash, gl
 	`prompt_version, model_id, status, source_language, output_path, cue_count, ` +
 	`cache_enabled, error_message, started_at, completed_at, spent_usd, budget_usd, stubborn_count, transient_count, ` +
 	`route, cache_hit_cues, batch_id, triggered_by`
+
+// subtitleRunColumnsAs is subtitleRunColumns with every column qualified by a
+// table alias — derived, never hand-copied, so a joined SELECT can never drift
+// from scanSubtitleRun's order (Rule 15).
+func subtitleRunColumnsAs(alias string) string {
+	cols := strings.Split(subtitleRunColumns, ",")
+	for i, c := range cols {
+		cols[i] = alias + "." + strings.TrimSpace(c)
+	}
+	return strings.Join(cols, ", ")
+}
 
 // subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (24 values).
 const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
@@ -434,4 +462,74 @@ func (r *SubtitleRunRepository) AutoProducedBetween(ctx context.Context, from, t
 		return AutoProducedCounts{}, fmt.Errorf("error iterating auto-produced subtitle run counts: %w", err)
 	}
 	return counts, nil
+}
+
+// recentTerminalRunsQuery is RecentTerminalRuns' SQL (a var so the
+// query-plan test EXPLAINs the very text the method runs). The unary `+` on
+// r.status keeps SQLite off idx_subtitle_runs_status — that plan reads every
+// completed and failed run and sorts them all. Walking
+// idx_subtitle_runs_completed_at backwards instead stops once LIMIT rows
+// match; the trade-off is that it steps over every newer non-terminal row
+// that has a completed_at (skipped runs: deferred-paid / skip) on the way.
+// Cheap at today's sizes (正式機 34 runs); a partial index on
+// completed_at WHERE status IN ('completed','failed') is the fix if a large
+// auto pass ever writes thousands of skips.
+var recentTerminalRunsQuery = `SELECT ` + subtitleRunColumnsAs("r") + `,
+		COALESCE(m.title, s.title, sd.title, ''), e.season_number, e.episode_number
+	FROM subtitle_runs r
+	LEFT JOIN movies m ON r.media_type = 'movie' AND m.id = r.media_id
+	LEFT JOIN episodes e ON r.media_type = 'episode' AND e.id = r.media_id
+	LEFT JOIN series s ON s.id = e.series_id
+	LEFT JOIN series sd ON r.media_type = 'series' AND sd.id = r.media_id
+	WHERE +r.status IN (?, ?) AND r.completed_at IS NOT NULL
+	ORDER BY r.completed_at DESC, r.id ASC
+	LIMIT ?`
+
+// RecentTerminalRuns is one query, joins included: the activity page polls
+// every 15 s, so no per-row title lookup. ORDER BY completed_at DESC rides
+// idx_subtitle_runs_completed_at (migration 032); completed_at is UTC text
+// (subtitleRunValues), so the text order is time order. r.id breaks ties so
+// the order is stable across polls. LEFT JOINs keep a run whose item was
+// deleted — its title comes back "".
+func (r *SubtitleRunRepository) RecentTerminalRuns(ctx context.Context, limit int) ([]RecentSubtitleRun, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	query := recentTerminalRunsQuery
+	rows, err := r.db.QueryContext(ctx, query, models.SubtitleRunCompleted, models.SubtitleRunFailed, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query recent terminal subtitle runs: %w", err)
+	}
+	defer rows.Close()
+
+	var out []RecentSubtitleRun
+	for rows.Next() {
+		var rec RecentSubtitleRun
+		var season, episode sql.NullInt64
+		run, err := scanSubtitleRun(appendScan{rows, []any{&rec.MediaTitle, &season, &episode}})
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan recent terminal subtitle run: %w", err)
+		}
+		rec.Run = run
+		if season.Valid && episode.Valid {
+			sn, en := int(season.Int64), int(episode.Int64)
+			rec.SeasonNumber, rec.EpisodeNumber = &sn, &en
+		}
+		out = append(out, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating recent terminal subtitle runs: %w", err)
+	}
+	return out, nil
+}
+
+// appendScan lets scanSubtitleRun read a row that carries extra trailing
+// columns: the run's 24 destinations come first, then `extra`.
+type appendScan struct {
+	scanner interface{ Scan(dest ...any) error }
+	extra   []any
+}
+
+func (a appendScan) Scan(dest ...any) error {
+	return a.scanner.Scan(append(dest, a.extra...)...)
 }

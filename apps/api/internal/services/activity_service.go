@@ -3,10 +3,14 @@ package services
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"math"
+	"sort"
 	"time"
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/qbittorrent"
+	"github.com/vido/api/internal/repository"
 )
 
 // sectionNotConfigured marks the downloads section when qBittorrent has not
@@ -22,12 +26,13 @@ const sectionNotConfigured = "not_configured"
 // "unavailable" and never fails the whole endpoint (the web client renders an empty/stale
 // section, never a fail page — N1/N4).
 //
-// v1 aggregates the sources that exist today: live scan + batch-subtitle progress
-// (進行中), pending-parse count (待處理), download counts (下載), and recent terminal
-// parse events (活動記錄). The design's AI-correction active jobs and a fully-persisted
-// activity log are GREENFIELD (Rule 24 — honour backend capability, don't fabricate):
-// AI active-jobs are omitted until job-tracking exists, and the recent feed is parse
-// events only until an activity-log table lands. The web client renders what's present.
+// It aggregates the sources that exist today: live scan + batch-subtitle progress
+// (進行中), pending-parse count (待處理), download counts (下載), and the activity
+// record (活動記錄) — finished parse jobs merged with finished subtitle-generation
+// runs (disc-2026-10-activity-subtitle-run-time-a). The design's AI-correction active
+// jobs and a scan-finished event are GREENFIELD (Rule 24 — honour backend capability,
+// don't fabricate): nothing persists them yet, so they are omitted. The web client
+// renders what's present.
 type ActivityService struct {
 	scan          scanStateSource     // reused from status_summary_service.go
 	batch         batchJobSource      // subtitle.BatchProcessor (primitives only — no import)
@@ -36,7 +41,18 @@ type ActivityService struct {
 	downloads     downloadCountSource // reused from status_summary_service.go
 	parse         parseJobSource      // repository.ParseJobRepository (existing interface)
 	steps         GenerationStepReader
+	runs          recentRunSource // repository.SubtitleRunRepository; nil = parse events only
 }
+
+// recentRunSource is the activity record's subtitle source
+// (repository.SubtitleRunRepository.RecentTerminalRuns).
+type recentRunSource interface {
+	RecentTerminalRuns(ctx context.Context, limit int) ([]repository.RecentSubtitleRun, error)
+}
+
+// SetRecentRuns wires finished subtitle-generation runs into the activity
+// record. nil (the default) keeps the record as it was: parse events only.
+func (s *ActivityService) SetRecentRuns(src recentRunSource) { s.runs = src }
 
 // SetStepReader wires the per-item progress the generating rows show. nil (the
 // default) keeps the rows as they were: no step.
@@ -170,13 +186,39 @@ type RecentSection struct {
 	Error  string        `json:"error,omitempty"`
 }
 
-// RecentEvent is one recently-finished job. v1 sources parse jobs only (scan/subtitle/AI
-// completion is not persisted yet). Kind/Result drive the client's icon + copy.
+// RecentEvent is one recently-finished job: a parse job (kind "parse") or a
+// subtitle-generation run (kind "subtitle"). Kind/Result drive the client's
+// icon + copy; the backend stays copy-free.
+//
+// A parse event carries Detail (the file name) and none of the subtitle keys —
+// its JSON is unchanged from v0. A subtitle event never carries Detail (that
+// would be the raw Go error, with NAS paths); its keys are
+// disc-2026-10-activity-subtitle-run-time-a AC #1 [@contract-v1].
 type RecentEvent struct {
-	Kind   string    `json:"kind"`   // "parse"
+	Kind   string    `json:"kind"`   // "parse" | "subtitle"
 	Result string    `json:"result"` // "completed" | "failed"
 	Detail string    `json:"detail,omitempty"`
 	At     time.Time `json:"at"`
+
+	// Subtitle only. MediaTitle is a pointer so a subtitle event always sends
+	// the key ("" = the item left the library) while a parse event sends none.
+	MediaType     string  `json:"media_type,omitempty"` // "movie" | "episode" | "series"
+	MediaTitle    *string `json:"media_title,omitempty"`
+	SeasonNumber  *int    `json:"season_number,omitempty"`  // episode runs whose episode still exists
+	EpisodeNumber *int    `json:"episode_number,omitempty"` // same
+	Route         string  `json:"route,omitempty"`          // models.SubtitleRunRoute*; absent before migration 041
+	CueCount      int     `json:"cue_count,omitempty"`      // completed runs with cues
+	// DurationSeconds is completed_at − started_at rounded to the second —
+	// the item from start of processing to the end, including any wait for an
+	// extraction slot. Absent when the clock went backwards.
+	DurationSeconds *int `json:"duration_seconds,omitempty"`
+	// SpentUSD is the raw recorded spend, never pre-rounded (the client rounds
+	// with decimal.js). 0 is sent as 0 (沒花錢); absent = not recorded.
+	SpentUSD      *float64 `json:"spent_usd,omitempty"`
+	FailureReason string   `json:"failure_reason,omitempty"` // models.SubtitleRunFailure*; failed only
+
+	// id breaks ties in the merge order; never on the wire.
+	id string
 }
 
 // GetActivity composes all four sections. It NEVER returns an error — each section
@@ -291,15 +333,83 @@ func (s *ActivityService) downloadsSection(ctx context.Context) DownloadsSection
 	}
 }
 
+// recentSection merges the two finished-job sources newest first and keeps
+// the latest recentEventsMax — one cap for both; the newest win. Each source
+// degrades on its own: one failing leaves the other's events (status ok, the
+// failure logged). The section is unavailable when both are missing or
+// failing — and also when one failed and the other has nothing to show: an
+// "ok" empty record renders as nothing at all, which would hide the failure
+// (正式機 has no parse jobs, so a broken subtitle source would otherwise just
+// make the section vanish, with no error and no retry).
+//
+// The wire `error` stays what it was when only the parse source existed (its
+// own message); any case involving the subtitle source sends a fixed message
+// and keeps the repository error in the log.
 func (s *ActivityService) recentSection(ctx context.Context) RecentSection {
+	parseEvents, parseErr := s.recentParseEvents(ctx)
+	runEvents, runErr := s.recentRunEvents(ctx)
+	parseFailed := parseErr != nil && !errors.Is(parseErr, errSourceNotWired)
+	runFailed := runErr != nil && !errors.Is(runErr, errSourceNotWired)
+
+	if parseFailed {
+		slog.Warn("activity: recent parse source failed", "error", parseErr)
+	}
+	if runFailed {
+		slog.Warn("activity: recent subtitle-run source failed", "error", runErr)
+	}
+
+	if parseErr != nil && runErr != nil {
+		if errors.Is(runErr, errSourceNotWired) {
+			// Subtitle source not wired: exactly the parse-only behaviour.
+			return RecentSection{Status: sectionUnavailable, Error: parseErr.Error()}
+		}
+		return RecentSection{Status: sectionUnavailable, Error: errSourceNotWired.Error()}
+	}
+	if (parseFailed || runFailed) && len(parseEvents)+len(runEvents) == 0 {
+		return RecentSection{Status: sectionUnavailable, Error: errSourceNotWired.Error()}
+	}
+
+	events := append(parseEvents, runEvents...)
+	sort.SliceStable(events, func(i, j int) bool { return recentEventBefore(events[i], events[j]) })
+	if len(events) > recentEventsMax {
+		events = events[:recentEventsMax]
+	}
+	if events == nil {
+		events = []RecentEvent{}
+	}
+	return RecentSection{Status: sectionOK, Events: events}
+}
+
+// recentEventBefore is the record's fixed order: newest first; at the same
+// instant a subtitle run before a parse job; then by id.
+func recentEventBefore(a, b RecentEvent) bool {
+	if !a.At.Equal(b.At) {
+		return a.At.After(b.At)
+	}
+	if a.Kind != b.Kind {
+		return a.Kind == recentKindSubtitle
+	}
+	return a.id < b.id
+}
+
+const (
+	recentKindParse    = "parse"
+	recentKindSubtitle = "subtitle"
+)
+
+// errSourceNotWired marks a nil source — "not there", which is not worth a
+// warning, unlike a source that errored.
+var errSourceNotWired = errors.New("service unavailable")
+
+func (s *ActivityService) recentParseEvents(ctx context.Context) ([]RecentEvent, error) {
 	if s.parse == nil {
-		return RecentSection{Status: sectionUnavailable, Error: "service unavailable"}
+		return nil, errSourceNotWired
 	}
 	jobs, err := s.parse.ListAll(ctx, recentScanWindow)
 	if err != nil {
-		return RecentSection{Status: sectionUnavailable, Error: err.Error()}
+		return nil, err
 	}
-	events := []RecentEvent{}
+	var events []RecentEvent
 	for _, j := range jobs {
 		if j.Status != models.ParseJobCompleted && j.Status != models.ParseJobFailed {
 			continue
@@ -309,14 +419,76 @@ func (s *ActivityService) recentSection(ctx context.Context) RecentSection {
 			at = *j.CompletedAt
 		}
 		events = append(events, RecentEvent{
-			Kind:   "parse",
+			Kind:   recentKindParse,
 			Result: string(j.Status),
 			Detail: j.FileName,
 			At:     at,
+			id:     j.ID,
 		})
 		if len(events) >= recentEventsMax {
 			break
 		}
 	}
-	return RecentSection{Status: sectionOK, Events: events}
+	return events, nil
+}
+
+func (s *ActivityService) recentRunEvents(ctx context.Context) ([]RecentEvent, error) {
+	if s.runs == nil {
+		return nil, errSourceNotWired
+	}
+	runs, err := s.runs.RecentTerminalRuns(ctx, recentEventsMax)
+	if err != nil {
+		return nil, err
+	}
+	var events []RecentEvent
+	for _, r := range runs {
+		if ev, ok := subtitleRunEvent(r); ok {
+			events = append(events, ev)
+		}
+	}
+	return events, nil
+}
+
+// subtitleRunEvent turns one finished run into its [@contract-v1] event. ok is
+// false for a row the record must not show (the repository already filters
+// these; this is the second lock).
+func subtitleRunEvent(r repository.RecentSubtitleRun) (RecentEvent, bool) {
+	run := r.Run
+	if run.CompletedAt == nil ||
+		(run.Status != models.SubtitleRunCompleted && run.Status != models.SubtitleRunFailed) {
+		return RecentEvent{}, false
+	}
+	title := r.MediaTitle
+	ev := RecentEvent{
+		Kind:       recentKindSubtitle,
+		Result:     string(run.Status),
+		At:         run.CompletedAt.UTC(),
+		MediaType:  run.MediaType,
+		MediaTitle: &title,
+		Route:      run.Route,
+		id:         run.ID,
+	}
+	// Numbers only travel with a title: an episode whose series row is gone
+	// is "an item that left the library", not "S01E04 of nothing".
+	if run.MediaType == models.SubtitleRunMediaEpisode && title != "" && r.SeasonNumber != nil && r.EpisodeNumber != nil {
+		sn, en := *r.SeasonNumber, *r.EpisodeNumber
+		ev.SeasonNumber, ev.EpisodeNumber = &sn, &en
+	}
+	if run.Status == models.SubtitleRunCompleted && run.CueCount > 0 {
+		ev.CueCount = run.CueCount
+	}
+	if !run.StartedAt.IsZero() {
+		if d := run.CompletedAt.Sub(run.StartedAt); d >= 0 {
+			secs := int(math.Round(d.Seconds()))
+			ev.DurationSeconds = &secs
+		}
+	}
+	if run.SpentUSD != nil {
+		spent := *run.SpentUSD
+		ev.SpentUSD = &spent
+	}
+	if run.Status == models.SubtitleRunFailed {
+		ev.FailureReason = models.SubtitleRunFailureReason(run.ErrorMessage)
+	}
+	return ev, true
 }

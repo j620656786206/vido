@@ -716,7 +716,10 @@ const DeferredPaidRunPrefix = "deferred-paid: "
 // AutoGenerator.excludedMediaIDs does not count it toward
 // autoFailureAttemptLimit. A deadline (DeadlineExceeded) is deliberately NOT
 // marked: that one is about the file.
-const CancelledRunPrefix = "cancelled: "
+//
+// The value lives in models (models.SubtitleRunCancelledPrefix) so the
+// activity record's failure classifier reads the same prefix this writes.
+const CancelledRunPrefix = models.SubtitleRunCancelledPrefix
 
 // deferPaidItem is the FreeOnly brake (9R-10b AC #3): the run stops at the
 // threshold of a paid call, having spent nothing.

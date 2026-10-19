@@ -1,6 +1,6 @@
 # Disc：活動記錄寫出字幕花多久 A（後端）——每次字幕生成都進活動記錄，帶「花多久、花多少錢、為什麼沒做成」
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 2026-10-19 Alexyu：「目前生成出來的字幕只有在活動會看到本月 AI 花費，但是字幕生成花了多少時間有地方紀錄嗎？」
 ⚖️ **2026-10-19 Alexyu 裁定：紀錄放在活動頁的每一筆紀錄後面。** 設計定稿：`disc-2026-10-activity-subtitle-run-time-design`（done，PR #819；Sally 裁定 1–6，6 在複審改判：手機右側只留相對時間）。
@@ -88,18 +88,18 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 models（AC #4）**：新檔 `internal/models/subtitle_run_failure.go`：十個具名常數（`SubtitleRunFailureCancelled = "cancelled"` …）＋ `SubtitleRunFailureReason`；表格測試 `subtitle_run_failure_test.go`（正式機原字串逐字）。
-- [ ] **T2 repository（AC #2、#3、#5、#7）**
-  - [ ] `SubtitleRunRepositoryInterface` 加 `RecentTerminalRuns(ctx, limit int) ([]RecentSubtitleRun, error)`；型別 `RecentSubtitleRun{ Run models.SubtitleRun; MediaTitle string; SeasonNumber, EpisodeNumber *int }` 放 repository（`AutoProducedCounts` 的先例）。
-  - [ ] SQL：`SELECT <subtitleRunColumns 加 r. 前綴>, COALESCE(m.title, s.title, sd.title, ''), e.season_number, e.episode_number FROM subtitle_runs r LEFT JOIN movies m ON r.media_type='movie' AND m.id=r.media_id LEFT JOIN episodes e ON r.media_type='episode' AND e.id=r.media_id LEFT JOIN series s ON s.id=e.series_id LEFT JOIN series sd ON r.media_type='series' AND sd.id=r.media_id WHERE r.status IN (?,?) AND r.completed_at IS NOT NULL ORDER BY r.completed_at DESC, r.id ASC LIMIT ?`。`subtitleRunColumns` 是無前綴字串（`:101-104`），要嘛另寫一個帶 `r.` 的常數、要嘛用子查詢包一層——**不要**手抄 24 個欄位（Rule 15 DB Column Sync，`:94-100` 的 bugfix-20-1 警告）。掃描沿用 `scanSubtitleRun` 的欄位順序。
-  - [ ] 真遷移鏈測試（AC #7 的資料）。
-- [ ] **T3 service（AC #1、#3、#6、#8、#9）**
-  - [ ] `RecentEvent` 加 AC #1 的欄位（指標＋omitempty：`SpentUSD *float64`、`DurationSeconds *int`、`SeasonNumber`／`EpisodeNumber *int`；`CueCount int`、`Route`、`MediaType`、`MediaTitle`、`FailureReason string` 用 omitempty）。`MediaTitle` 不加 omitempty（一定送，`""` 也送）。
-  - [ ] 窄介面 `recentRunSource interface{ RecentTerminalRuns(ctx, limit int) ([]repository.RecentSubtitleRun, error) }`＋ setter `SetRecentRuns(src)`（不改 `NewActivityService` 簽名，免動 10 個既有測試呼叫）。
-  - [ ] `recentSection` 改成兩來源各自取、合併、排序（AC #3）、截 8、各自降級（AC #6）。
-  - [ ] 測試：混排順序、上限 8、skipped／running 不出現、一個來源出錯、JSON 鍵名。
-- [ ] **T4 接線**：`cmd/api/main.go:1389` 旁加 `activityService.SetRecentRuns(repos.SubtitleRuns)`。
-- [ ] **T5 驗證（AC #10）**：go test／vet／staticcheck；本機 smoke。
+- [x] **T1 models（AC #4）**：新檔 `internal/models/subtitle_run_failure.go`：十個具名常數（`SubtitleRunFailureCancelled = "cancelled"` …）＋ `SubtitleRunFailureReason`；表格測試 `subtitle_run_failure_test.go`（正式機原字串逐字）。
+- [x] **T2 repository（AC #2、#3、#5、#7）**
+  - [x] `SubtitleRunRepositoryInterface` 加 `RecentTerminalRuns(ctx, limit int) ([]RecentSubtitleRun, error)`；型別 `RecentSubtitleRun{ Run models.SubtitleRun; MediaTitle string; SeasonNumber, EpisodeNumber *int }` 放 repository（`AutoProducedCounts` 的先例）。
+  - [x] SQL：`SELECT <subtitleRunColumns 加 r. 前綴>, COALESCE(m.title, s.title, sd.title, ''), e.season_number, e.episode_number FROM subtitle_runs r LEFT JOIN movies m ON r.media_type='movie' AND m.id=r.media_id LEFT JOIN episodes e ON r.media_type='episode' AND e.id=r.media_id LEFT JOIN series s ON s.id=e.series_id LEFT JOIN series sd ON r.media_type='series' AND sd.id=r.media_id WHERE r.status IN (?,?) AND r.completed_at IS NOT NULL ORDER BY r.completed_at DESC, r.id ASC LIMIT ?`。`subtitleRunColumns` 是無前綴字串（`:101-104`），要嘛另寫一個帶 `r.` 的常數、要嘛用子查詢包一層——**不要**手抄 24 個欄位（Rule 15 DB Column Sync，`:94-100` 的 bugfix-20-1 警告）。掃描沿用 `scanSubtitleRun` 的欄位順序。
+  - [x] 真遷移鏈測試（AC #7 的資料）。
+- [x] **T3 service（AC #1、#3、#6、#8、#9）**
+  - [x] `RecentEvent` 加 AC #1 的欄位（指標＋omitempty：`SpentUSD *float64`、`DurationSeconds *int`、`SeasonNumber`／`EpisodeNumber *int`；`CueCount int`、`Route`、`MediaType`、`MediaTitle`、`FailureReason string` 用 omitempty）。`MediaTitle` 不加 omitempty（一定送，`""` 也送）。
+  - [x] 窄介面 `recentRunSource interface{ RecentTerminalRuns(ctx, limit int) ([]repository.RecentSubtitleRun, error) }`＋ setter `SetRecentRuns(src)`（不改 `NewActivityService` 簽名，免動 10 個既有測試呼叫）。
+  - [x] `recentSection` 改成兩來源各自取、合併、排序（AC #3）、截 8、各自降級（AC #6）。
+  - [x] 測試：混排順序、上限 8、skipped／running 不出現、一個來源出錯、JSON 鍵名。
+- [x] **T4 接線**：`cmd/api/main.go:1389` 旁加 `activityService.SetRecentRuns(repos.SubtitleRuns)`。
+- [x] **T5 驗證（AC #10）**：go test／vet／staticcheck；本機 smoke。
 
 ## Dev Notes
 
@@ -155,12 +155,47 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（dev agent，2026-10-19）
+
 ### Debug Log References
+
+- 查詢計畫：照 T2 的 SQL 原樣寫，SQLite 選 `idx_subtitle_runs_status`、再整批排序（`USE TEMP B-TREE FOR ORDER BY`）——completed＋failed 幾乎是全表，這個索引沒用。`r.status` 前加一元 `+` 讓它改走 `idx_subtitle_runs_completed_at` 倒著讀、湊滿 8 筆就停（只剩同一時間的 id 排序 `LAST TERM`）。測試 `RecentTerminalRuns_UsesCompletedAtIndex` 直接 EXPLAIN 方法本身的 SQL。
 
 ### Completion Notes List
 
+- AC #1–#10 完成。`go test ./...`、`go vet ./...`、`staticcheck ./...` 綠；`lint:all` 0 errors。
+- **`media_title` 用 `*string`＋omitempty**：字幕事件一定送（`""` 也送），解析事件不送——同一個 struct 兩種形狀，解析事件 JSON 逐字不變（測試比對整串）。
+- **`CancelledRunPrefix` 搬到 models**（`models.SubtitleRunCancelledPrefix`，`subtitle.CancelledRunPrefix` 改成引用它）：分類器跟寫入方讀同一個值，不是兩份字串。`process_item.go` 只動這一行。
+- **`subtitleRunColumnsAs("r")`** 從 `subtitleRunColumns` 推出帶前綴的欄位，不手抄；`appendScan` 讓 `scanSubtitleRun` 讀後面多三欄（片名、季、集）。
+- **偏離 AC #6（自我審查 #1）**：一個來源出錯、另一個來源剛好沒有任何事件時，回 `unavailable`（不是 `ok`＋空清單）。正式機 `parse_jobs` 是空的，照 AC 原文的話字幕查詢壞掉時這一段會直接消失（前端空清單 `return null`），沒有錯誤也沒有重試鈕。兩個來源都正常、只是都沒事件時照舊 `ok`＋空。
+- **偏離（自我審查 #5）**：牽涉字幕來源的 `unavailable`，`error` 送固定的 `service unavailable`，原始錯誤只寫 log；只有解析來源（字幕沒接）時照今天送解析的錯誤訊息。
+- **單集但影集已被刪**：片名 `""` 時不送季、集（前端本來也不顯示），避免「S01E04」掛在空白片名上。
+- **解析事件的順序**：今天照 `ListAll` 的 `created_at DESC`；現在跟字幕一起依 `at`（`completed_at`，沒有就 `updated_at`）排序——AC #3 要的。既有 `pj()` 夾具的時間是「越後面越新」（跟 `ListAll` 相反），改成越後面越舊才反映真資料；斷言沒改。
+- **花多久含排隊等抽軌**：查證過——run 列在 `ProcessItem` 第 2 步建（`StartedAt`），抽軌名額（`ExtractGate.Acquire`，`extractor.go:339`）在第 3 步 route 裡才拿，所以 `duration_seconds` 是「這一集從開始處理到結束」，含等名額的時間。
+- **本機 smoke（AC #10，Rule 28）**：`cmd/seed` 起一個本機 DB，塞正式機最新 8 筆 completed／failed run 的原值（同樣的 id、時間、句數、金額、錯誤原文、末日光明／神祕關卡的季集），`AI_PROVIDER=claude` 起 API：
+  ```
+  {"status":"ok","events":[{"kind":"subtitle","result":"completed","at":"2026-10-19T01:25:01.473263247Z","media_type":"episode","media_title":"末日光明","season_number":1,"episode_number":2,"route":"translate","cue_count":568,"duration_seconds":211,"spent_usd":0.197439},{"kind":"subtitle","result":"completed","at":"2026-10-19T00:15:50.371355117Z","media_type":"episode","media_title":"末日光明","season_number":1,"episode_number":1,"route":"translate","cue_count":487,"duration_seconds":178,"spent_usd":0.16473}, …6 筆…]}
+  ```
+  末日光明 S01E04 失敗那筆 `failure_reason: "other"`、`spent_usd: 0.126108`、沒有 `cue_count`。再加一筆和平使者 S01E01（正式機原錯誤、$0.196393、時間挪到 2 分鐘前）＋一筆解析失敗：依時間混排、`failure_reason: "target_not_writable"`。
+- **UX 驗收**：前端（已合併的 #828）＋本機 API，Playwright 截活動頁 1440 與 390（日巡、夜行各一）。桌機：字幕列右側兩行（上 `4 分鐘 · US$0.20` 14px、下 `4 小時前` 12px，兩行都靠右 right=1311），解析列一行時間；每列只有一個 `activity-recent-meta`。手機 390：右側只剩相對時間，meta 在說明正下方（x=83 跟說明對齊），失敗原因換兩行。跟 `k1-d.png` 的列結構、文案寫法一致。截圖在 scratchpad `activity-a-ux/`。
+- **對抗式自我審查**（`review-adversarial-general.xml`，獨立 subagent，13 項）修掉：#1 一邊壞另一邊空時改 unavailable、#4 兩邊都壞也記 log、#5 錯誤訊息不外洩＋補測試、#7 分類器註解寫明「訊息被截斷／含 ffmpeg stderr」的限制、#8 沒片名不送季集、#9 欄位前綴改成逗號切再 trim、#10 查詢計畫測試改斷言第一行走 completed_at 索引、#11 補 log、奈秒時間、孤兒單集測試、#12 `ux3-2-2-activity-api.md` 來源表補字幕列、#2 #6 記在本節。
+- 範圍外（寫進 PR「沒做的事」）：#3 大量 skipped 列時倒著讀索引會多掃——要 partial index（新遷移），現在 34 列不需要；#4 持續失敗時每 15 秒一條 warn（沒做節流）；#7 改成寫入時就分類存代碼；#11 兩份測試種子資料重複；#13 排隊等抽軌時逾時被標成「cancelled:」→ 活動記錄寫「中途停止」，是否要分開需 Sally 決定。
+
 ### Discovery Triage
 
-- N/A — 建單時沒有發現本單範圍外的新工作。（設計稿 K1 的「掃描完成」列在活動記錄裡一直沒有後端來源——ux3-2-2 起就記為 greenfield（`ux3-2-2-activity-api.md` Real vs. greenfield 表、sprint-status `ux3-activity-hub`），不是新發現。）
+- **① expand-scope-in-place** — `ux3-2-2-activity-api.md` 的來源表寫「parse events only」，跟著改。
+- **③ backlog candidates（PR「沒做的事」）** — 上面範圍外 #3、#13；沒有另開單，等 Alexyu 決定要不要追。
 
 ### File List
+
+- apps/api/internal/models/subtitle_run_failure.go（新）
+- apps/api/internal/models/subtitle_run_failure_test.go（新）
+- apps/api/internal/repository/subtitle_run_repository.go
+- apps/api/internal/repository/subtitle_run_recent_test.go（新）
+- apps/api/internal/services/activity_service.go
+- apps/api/internal/services/activity_service_test.go
+- apps/api/internal/services/activity_recent_test.go（新）
+- apps/api/internal/subtitle/process_item.go
+- apps/api/cmd/api/main.go
+- _bmad-output/implementation-artifacts/ux3-2-2-activity-api.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
