@@ -1,6 +1,6 @@
 # Disc：修字幕清單 B1（前端・列表版面）——字幕狀態緊貼片名、中間不再空一大片，手機也看得到字幕狀態
 
-Status: review
+Status: done
 
 **Source:** 2026-10-19 `/impeccable critique 媒體庫 列表`（21／40，P0 手機看不到字幕狀態、P1 重點擺反、P1 失敗列死路、P2 繁中／中文、P3）＋ Alexyu 看正式機：「左邊有片名、年份跟類別，右手邊是評比星號跟字幕訊息，中間一大片空白，看起來很奇怪」「要不要每張卡片加 border，比較看得懂邊界」。⚖️ **1A**：列表＝修字幕清單；⚖️ **2B**：critique 全部一起處理；ASCII 草圖（表格欄位＋外框一道＋列間細線）Alexyu 回「可以」。
 設計稿（定稿，`disc-2026-10-library-list-triage-design` done）：桌機 **A4p-D `b1H71g`**（`_bmad-output/screenshots/flow-a-browse-v2/a4p-d.png`）、手機 **A4p-M `EkB8g`**（`a4p-m.png`）、規則 `spec-note-a4p`、失敗詳情 **B10p-D `p3qEc`**（`flow-b-detail-v2/b10p-d.png`）。
