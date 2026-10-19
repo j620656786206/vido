@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/database/dbtime"
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
@@ -53,7 +54,7 @@ func setupTestService(t *testing.T) (*LibraryService, context.Context) {
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo, repository.NewLibraryRepository(db))
 	return service, context.Background()
 }
 
@@ -906,7 +907,7 @@ func TestLibraryService_GetSeriesByID(t *testing.T) {
 func TestLibraryService_BatchReparse_UsesNarrowParseStatusWriter(t *testing.T) {
 	movieRepo := new(testutil.MockMovieRepository)
 	seriesRepo := new(testutil.MockSeriesRepository)
-	service := NewLibraryService(movieRepo, seriesRepo, nil)
+	service := NewLibraryService(movieRepo, seriesRepo, nil, nil)
 
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", ParseStatus: models.ParseStatusSuccess}, nil)
 	movieRepo.On("UpdateParseStatus", mock.Anything, "m1", models.ParseStatusPending).Return(nil)
@@ -926,14 +927,14 @@ func TestLibraryService_BatchReparse_UsesNarrowParseStatusWriter(t *testing.T) {
 	seriesRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
 }
 
-// dsr-1b-a AC #3: `type=all` fans the same Filters out to both repos (listAll
-// over-fetches page×pageSize from each and merges), so the subtitle_status
+// dsr-1b-a AC #3: `type=all` applies the same Filters to both halves (since
+// disc-2026-10-library-all-view-past-100 one UNION ALL query), so the subtitle_status
 // condition must bite on BOTH sides and TotalResults must be the sum.
 func TestLibraryService_SubtitleStatusFilter_AllTypes(t *testing.T) {
 	db := setupTestDB(t)
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
-	service := NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db))
+	service := NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db), repository.NewLibraryRepository(db))
 	ctx := context.Background()
 	posterPath := "/poster.jpg"
 
@@ -982,7 +983,7 @@ func TestLibraryService_SubtitleStatusFilter_AllTypes(t *testing.T) {
 		assert.Equal(t, 4, result.Pagination.TotalResults)
 	})
 
-	t.Run("all: page 2 of 2 exercises listAll's page×pageSize over-fetch", func(t *testing.T) {
+	t.Run("all: page 2 of 2 continues the same order", func(t *testing.T) {
 		params := repository.NewListParams()
 		params.Filters["subtitle_status"] = []string{"not_found", "not_searched"}
 		params.Page = 2
@@ -1019,7 +1020,7 @@ func TestLibraryService_SearchLibrary_AppliesFilters(t *testing.T) {
 	db := setupTestDB(t)
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
-	service := NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db))
+	service := NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db), repository.NewLibraryRepository(db))
 	ctx := context.Background()
 	posterPath := "/poster.jpg"
 
@@ -1087,7 +1088,7 @@ func TestLibraryService_SearchLibrary_AppliesFilters(t *testing.T) {
 func TestLibraryService_BatchErrors_CarryTitle(t *testing.T) {
 	t.Run("reparse: the write failed → title from the row already read", func(t *testing.T) {
 		movieRepo := new(testutil.MockMovieRepository)
-		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil)
+		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil, nil)
 		movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", Title: "寄生上流"}, nil)
 		movieRepo.On("UpdateParseStatus", mock.Anything, "m1", models.ParseStatusPending).Return(errors.New("database is locked"))
 
@@ -1099,7 +1100,7 @@ func TestLibraryService_BatchErrors_CarryTitle(t *testing.T) {
 
 	t.Run("reparse: the row is gone → no title, id stays", func(t *testing.T) {
 		seriesRepo := new(testutil.MockSeriesRepository)
-		service := NewLibraryService(new(testutil.MockMovieRepository), seriesRepo, nil)
+		service := NewLibraryService(new(testutil.MockMovieRepository), seriesRepo, nil, nil)
 		seriesRepo.On("FindByID", mock.Anything, "ghost").Return(nil, errors.New("series not found"))
 
 		res, err := service.BatchReparse(context.Background(), []string{"ghost"}, "series")
@@ -1111,7 +1112,7 @@ func TestLibraryService_BatchErrors_CarryTitle(t *testing.T) {
 
 	t.Run("delete: the delete failed → title looked up for the entry", func(t *testing.T) {
 		movieRepo := new(testutil.MockMovieRepository)
-		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil)
+		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil, nil)
 		movieRepo.On("Delete", mock.Anything, "m1").Return(errors.New("database is locked"))
 		movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", Title: "瀑布"}, nil)
 
@@ -1123,7 +1124,7 @@ func TestLibraryService_BatchErrors_CarryTitle(t *testing.T) {
 
 	t.Run("delete: success does not read the row at all", func(t *testing.T) {
 		movieRepo := new(testutil.MockMovieRepository)
-		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil)
+		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil, nil)
 		movieRepo.On("Delete", mock.Anything, "m1").Return(nil)
 
 		res, err := service.BatchDelete(context.Background(), []string{"m1"}, "movie")
@@ -1131,4 +1132,143 @@ func TestLibraryService_BatchErrors_CarryTitle(t *testing.T) {
 		assert.Equal(t, 1, res.SuccessCount)
 		movieRepo.AssertNotCalled(t, "FindByID", mock.Anything, mock.Anything)
 	})
+}
+
+// stubLibraryKeys is a LibraryRepositoryInterface returning fixed keys.
+type stubLibraryKeys struct {
+	keys []repository.LibraryKey
+}
+
+func (s stubLibraryKeys) ListKeys(_ context.Context, p repository.ListParams) ([]repository.LibraryKey, *repository.PaginationResult, error) {
+	return s.keys, repository.NewPaginationResult(p, len(s.keys)), nil
+}
+
+// disc-2026-10-library-all-view-past-100 AC #1/#5 (service leg): with more
+// than 100 movies, paging the "全部" list at 36 a page returns every title
+// exactly once, fully loaded, and in ListKeys order — i.e. the service puts
+// the fetched rows back in the SQL order (whether that order is right is the
+// repository oracle test's job: TestLibraryList_PagingIsCompleteAndOrdered).
+// The old page×pageSize over-fetch (capped at 100) lost everything past the
+// 100th. Ids interleave movies and series so ties cross kinds.
+func TestLibraryService_ListAll_PagesPast100(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	libraryRepo := repository.NewLibraryRepository(db)
+	service := NewLibraryService(movieRepo, seriesRepo, repository.NewEpisodeRepository(db), libraryRepo)
+
+	const movies, series = 130, 12
+	votes := []interface{}{6.0, 7.7, 9.5, nil} // ties + NULLs; legacy rating stays NULL
+	base := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
+	for i := 0; i < movies; i++ {
+		id := fmt.Sprintf("%03d-m", (i*37)%movies)
+		require.NoError(t, movieRepo.Create(ctx, &models.Movie{ID: id, Title: fmt.Sprintf("Movie %02d", i%20), ReleaseDate: "2020-01-01"}))
+		_, err := db.Exec(`UPDATE movies SET vote_average = ?, created_at = ? WHERE id = ?`,
+			votes[i%len(votes)], dbtime.Format(base.Add(time.Duration(i%5)*time.Hour)), id)
+		require.NoError(t, err)
+	}
+	for i := 0; i < series; i++ {
+		id := fmt.Sprintf("%03d-s", i*11)
+		require.NoError(t, seriesRepo.Create(ctx, &models.Series{ID: id, Title: fmt.Sprintf("Movie %02d", i), FirstAirDate: "2020-01-01"}))
+		_, err := db.Exec(`UPDATE series SET vote_average = ?, created_at = ? WHERE id = ?`,
+			votes[i%len(votes)], dbtime.Format(base.Add(time.Duration(i%5)*time.Hour)), id)
+		require.NoError(t, err)
+	}
+
+	for _, sortBy := range []string{"rating", "title", "created_at", "subtitle_status", "release_date"} {
+		for _, order := range []string{"asc", "desc"} {
+			t.Run(sortBy+"/"+order, func(t *testing.T) {
+				// The reference: ListKeys in one page of everything there is.
+				var want []string
+				for page := 1; ; page++ {
+					p := repository.NewListParams()
+					p.SortBy, p.SortOrder, p.Page, p.PageSize = sortBy, order, page, 100
+					keys, _, err := libraryRepo.ListKeys(ctx, p)
+					require.NoError(t, err)
+					if len(keys) == 0 {
+						break
+					}
+					for _, k := range keys {
+						want = append(want, k.Type+":"+k.ID)
+					}
+				}
+				require.Len(t, want, movies+series)
+
+				var got []string
+				seen := map[string]bool{}
+				for page := 1; ; page++ {
+					p := repository.NewListParams()
+					p.SortBy, p.SortOrder, p.Page, p.PageSize = sortBy, order, page, 36
+					r, err := service.ListLibrary(ctx, p, "all")
+					require.NoError(t, err)
+					require.Equal(t, movies+series, r.Pagination.TotalResults)
+					require.Equal(t, 4, r.Pagination.TotalPages)
+					if page > r.Pagination.TotalPages {
+						require.Empty(t, r.Items)
+						break
+					}
+					for _, it := range r.Items {
+						var key string
+						switch it.Type {
+						case "movie":
+							require.NotNil(t, it.Movie)
+							require.NotEmpty(t, it.Movie.Title)
+							key = "movie:" + it.Movie.ID
+						case "series":
+							require.NotNil(t, it.Series)
+							require.NotEmpty(t, it.Series.Title)
+							key = "series:" + it.Series.ID
+						}
+						require.False(t, seen[key], "page %d repeats %s", page, key)
+						seen[key] = true
+						got = append(got, key)
+					}
+				}
+				assert.Equal(t, want, got)
+			})
+		}
+	}
+
+	t.Run("rating desc: the 9.5s come first, no-score titles last", func(t *testing.T) {
+		p := repository.NewListParams()
+		p.SortBy, p.SortOrder, p.PageSize = "rating", "desc", 36
+		r, err := service.ListLibrary(ctx, p, "all")
+		require.NoError(t, err)
+		score := func(it LibraryItem) models.NullFloat64 {
+			if it.Series != nil {
+				return it.Series.VoteAverage
+			}
+			require.NotNil(t, it.Movie)
+			return it.Movie.VoteAverage
+		}
+		for _, it := range r.Items[:5] {
+			assert.Equal(t, 9.5, score(it).Float64)
+		}
+		p.Page = 4
+		last, err := service.ListLibrary(ctx, p, "all")
+		require.NoError(t, err)
+		assert.False(t, score(last.Items[len(last.Items)-1]).Valid)
+	})
+}
+
+// AC #6: an id deleted between the ordering query and the fetch is left out
+// of the page, not an error; the rest keep their order.
+func TestLibraryService_ListAll_SkipsRowsDeletedMidPage(t *testing.T) {
+	db := setupTestDB(t)
+	ctx := context.Background()
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	require.NoError(t, movieRepo.Create(ctx, &models.Movie{ID: "m-1", Title: "A", ReleaseDate: "2020-01-01"}))
+	require.NoError(t, seriesRepo.Create(ctx, &models.Series{ID: "s-1", Title: "B", FirstAirDate: "2020-01-01"}))
+	stub := stubLibraryKeys{keys: []repository.LibraryKey{
+		{Type: repository.LibraryKindSeries, ID: "s-1"},
+		{Type: repository.LibraryKindMovie, ID: "m-gone"},
+		{Type: repository.LibraryKindMovie, ID: "m-1"},
+	}}
+	service := NewLibraryService(movieRepo, seriesRepo, nil, stub)
+
+	r, err := service.ListLibrary(ctx, repository.NewListParams(), "all")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"s-1", "m-1"}, libraryItemIDs(r.Items))
 }

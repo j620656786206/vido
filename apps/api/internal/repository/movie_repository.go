@@ -117,6 +117,45 @@ func (r *MovieRepository) FindByID(ctx context.Context, id string) (*models.Movi
 	return &movie, nil
 }
 
+// FindByIDs retrieves the live (not soft-deleted) movies with the given ids in
+// one query. Ids that do not exist or were removed are skipped, not an error —
+// a title removed by a scan between the "全部" ordering query and this fetch
+// must not show up. The result is in database order —
+// a caller that needs a particular order must reorder it (the "全部" list
+// does, from LibraryRepository.ListKeys). An empty id list returns an empty
+// slice without querying. Callers pass at most one page (MaxPageSize) of ids,
+// far below SQLite's bound-parameter limit.
+func (r *MovieRepository) FindByIDs(ctx context.Context, ids []string) ([]models.Movie, error) {
+	out := []models.Movie{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(ids)), ", ")
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	query := fmt.Sprintf(`SELECT %s FROM movies WHERE id IN (%s) AND %s`, movieSelectColumns, placeholders, notRemoved)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find movies by ids: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		item, err := scanMovie(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		out = append(out, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies: %w", err)
+	}
+	return out, nil
+}
+
 // FindByTMDbID retrieves a movie by its TMDb ID
 func (r *MovieRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error) {
 	query := fmt.Sprintf(`SELECT %s FROM movies WHERE tmdb_id = ?`, movieSelectColumns)
@@ -332,41 +371,7 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 	// Validate parameters
 	params.Validate()
 
-	// Default sort column
-	sortBy := "created_at"
-	if params.SortBy != "" {
-		// Map frontend sort fields to actual movie table columns
-		sortColumnMap := map[string]string{
-			"id":           "id",
-			"title":        "title",
-			"release_date": "release_date",
-			"rating":       "rating",
-			"vote_average": "vote_average",
-			"created_at":   "created_at",
-			"updated_at":   "updated_at",
-		}
-		if col, ok := sortColumnMap[params.SortBy]; ok {
-			sortBy = col
-		}
-	}
-
-	// Build WHERE clause from filters. Soft-deleted movies are never listed.
-	conditions := []string{notRemoved}
-	args := []interface{}{}
-
-	if searchTerm, ok := params.Filters["search"].(string); ok && searchTerm != "" {
-		conditions = append(conditions, "title LIKE ?")
-		args = append(args, "%"+searchTerm+"%")
-	}
-
-	filterConds, filterArgs := movieListFilterConditions(params, "")
-	conditions = append(conditions, filterConds...)
-	args = append(args, filterArgs...)
-
-	whereClause := "WHERE " + conditions[0]
-	for _, c := range conditions[1:] {
-		whereClause += " AND " + c
-	}
+	whereClause, args := movieListWhere(params)
 
 	// Get total count
 	countQuery := "SELECT COUNT(*) FROM movies " + whereClause
@@ -376,20 +381,16 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 		return nil, nil, fmt.Errorf("failed to count movies: %w", err)
 	}
 
-	// Build and execute list query. sort_by=subtitle_status is NOT a column
-	// sort (alphabetical subtitle_status is not the badge order) — see
-	// subtitleTriageOrderBy (disc-2026-10-library-list-triage-a).
-	orderBy := sortBy + " " + params.SortOrder
-	if params.SortBy == "subtitle_status" {
-		orderBy = subtitleTriageOrderBy(fmt.Sprintf("%s(subtitle_status, subtitle_language, subtitle_tracks)", chineseSubtitleSQLFunc), params.SortOrder)
-	}
+	// The ORDER BY comes from the one library sort rule (libraryOrderBy), shared
+	// with the "全部" list (LibraryRepository.ListKeys) —
+	// disc-2026-10-library-all-view-past-100.
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM movies
 		%s
 		ORDER BY %s
 		LIMIT ? OFFSET ?
-	`, movieSelectColumns, whereClause, orderBy)
+	`, movieSelectColumns, whereClause, libraryOrderBy(librarySortKey(LibraryKindMovie, params.SortBy), params.SortOrder))
 
 	// Add limit and offset to args
 	args = append(args, params.Limit(), params.Offset())
@@ -620,6 +621,28 @@ const notRemoved = "(is_removed = 0 OR is_removed IS NULL)"
 // notRemovedQualified is notRemoved for queries that need a table alias.
 func notRemovedQualified(alias string) string {
 	return fmt.Sprintf("(%s.is_removed = 0 OR %s.is_removed IS NULL)", alias, alias)
+}
+
+// movieListWhere is the WHERE clause (with its bound args) of the movie library
+// list: not soft-deleted, the `search` title LIKE, and movieListFilterConditions.
+// MovieRepository.List and LibraryRepository.ListKeys (the "全部" list) both use
+// it, so the combined list counts and returns exactly the rows the single-type
+// list does (disc-2026-10-library-all-view-past-100). Column names are bare:
+// the query must read the un-aliased table.
+func movieListWhere(params ListParams) (string, []interface{}) {
+	conditions := []string{notRemoved}
+	args := []interface{}{}
+
+	if searchTerm, ok := params.Filters["search"].(string); ok && searchTerm != "" {
+		conditions = append(conditions, "title LIKE ?")
+		args = append(args, "%"+searchTerm+"%")
+	}
+
+	filterConds, filterArgs := movieListFilterConditions(params, "")
+	conditions = append(conditions, filterConds...)
+	args = append(args, filterArgs...)
+
+	return "WHERE " + strings.Join(conditions, " AND "), args
 }
 
 // movieListFilterConditions turns the library filter params (genres / year_min / year_max /

@@ -118,6 +118,45 @@ func (r *SeriesRepository) FindByID(ctx context.Context, id string) (*models.Ser
 	return &series, nil
 }
 
+// FindByIDs retrieves the live (not soft-deleted) series with the given ids in
+// one query. Ids that do not exist or were removed are skipped, not an error —
+// a title removed by a scan between the "全部" ordering query and this fetch
+// must not show up. The result is in database order —
+// a caller that needs a particular order must reorder it (the "全部" list
+// does, from LibraryRepository.ListKeys). An empty id list returns an empty
+// slice without querying. Callers pass at most one page (MaxPageSize) of ids,
+// far below SQLite's bound-parameter limit.
+func (r *SeriesRepository) FindByIDs(ctx context.Context, ids []string) ([]models.Series, error) {
+	out := []models.Series{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(ids)), ", ")
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	query := fmt.Sprintf(`SELECT %s FROM series WHERE id IN (%s) AND %s`, seriesSelectColumns, placeholders, notRemovedSeries)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find series by ids: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		item, err := scanSeries(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan series: %w", err)
+		}
+		out = append(out, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating series: %w", err)
+	}
+	return out, nil
+}
+
 // FindByTMDbID retrieves a series by its TMDb ID
 func (r *SeriesRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
 	query := fmt.Sprintf(`SELECT %s FROM series WHERE tmdb_id = ?`, seriesSelectColumns)
@@ -325,42 +364,7 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 	// Validate parameters
 	params.Validate()
 
-	// Default sort column
-	sortBy := "created_at"
-	if params.SortBy != "" {
-		// Map frontend sort fields to actual series table columns
-		sortColumnMap := map[string]string{
-			"id":             "id",
-			"title":          "title",
-			"first_air_date": "first_air_date",
-			"release_date":   "first_air_date", // alias: frontend uses release_date for both movie/series
-			"rating":         "rating",
-			"vote_average":   "vote_average",
-			"created_at":     "created_at",
-			"updated_at":     "updated_at",
-		}
-		if col, ok := sortColumnMap[params.SortBy]; ok {
-			sortBy = col
-		}
-	}
-
-	// Build WHERE clause from filters. Soft-deleted series are never listed.
-	conditions := []string{notRemovedSeries}
-	args := []interface{}{}
-
-	if searchTerm, ok := params.Filters["search"].(string); ok && searchTerm != "" {
-		conditions = append(conditions, "title LIKE ?")
-		args = append(args, "%"+searchTerm+"%")
-	}
-
-	filterConds, filterArgs := seriesListFilterConditions(params, "")
-	conditions = append(conditions, filterConds...)
-	args = append(args, filterArgs...)
-
-	whereClause := "WHERE " + conditions[0]
-	for _, c := range conditions[1:] {
-		whereClause += " AND " + c
-	}
+	whereClause, args := seriesListWhere(params)
 
 	// Get total count
 	countQuery := "SELECT COUNT(*) FROM series " + whereClause
@@ -370,20 +374,16 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 		return nil, nil, fmt.Errorf("failed to count series: %w", err)
 	}
 
-	// Build and execute list query. sort_by=subtitle_status is NOT a column
-	// sort (alphabetical subtitle_status is not the badge order) — see
-	// subtitleTriageOrderBy (disc-2026-10-library-list-triage-a).
-	orderBy := sortBy + " " + params.SortOrder
-	if params.SortBy == "subtitle_status" {
-		orderBy = subtitleTriageOrderBy("chinese_subtitle_rollup", params.SortOrder)
-	}
+	// The ORDER BY comes from the one library sort rule (libraryOrderBy), shared
+	// with the "全部" list (LibraryRepository.ListKeys) —
+	// disc-2026-10-library-all-view-past-100.
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM series
 		%s
 		ORDER BY %s
 		LIMIT ? OFFSET ?
-	`, seriesSelectColumns, whereClause, orderBy)
+	`, seriesSelectColumns, whereClause, libraryOrderBy(seriesListSortKey(params.SortBy), params.SortOrder))
 
 	// Add limit and offset to args
 	args = append(args, params.Limit(), params.Offset())
@@ -644,6 +644,39 @@ func seriesSelectColumnsQualified(alias string) string {
 		cols[i] = alias + "." + strings.TrimSpace(c)
 	}
 	return strings.Join(cols, ", ") + ", " + seriesChineseSubtitleSQL(alias) + " AS chinese_subtitle_rollup"
+}
+
+// seriesListSortKey is librarySortKey for SeriesRepository.List, except that
+// the subtitle rank reads the chinese_subtitle_rollup column the query
+// already selects instead of re-running the episode rollup for the ORDER BY.
+// Same rank, same order.
+func seriesListSortKey(sortBy string) string {
+	if sortBy == "subtitle_status" {
+		return subtitleRankKey("chinese_subtitle_rollup")
+	}
+	return librarySortKey(LibraryKindSeries, sortBy)
+}
+
+// seriesListWhere is the WHERE clause (with its bound args) of the series library
+// list: not soft-deleted, the `search` title LIKE, and seriesListFilterConditions.
+// SeriesRepository.List and LibraryRepository.ListKeys (the "全部" list) both use
+// it, so the combined list counts and returns exactly the rows the single-type
+// list does (disc-2026-10-library-all-view-past-100). Column names are bare:
+// the query must read the un-aliased table.
+func seriesListWhere(params ListParams) (string, []interface{}) {
+	conditions := []string{notRemovedSeries}
+	args := []interface{}{}
+
+	if searchTerm, ok := params.Filters["search"].(string); ok && searchTerm != "" {
+		conditions = append(conditions, "title LIKE ?")
+		args = append(args, "%"+searchTerm+"%")
+	}
+
+	filterConds, filterArgs := seriesListFilterConditions(params, "")
+	conditions = append(conditions, filterConds...)
+	args = append(args, filterArgs...)
+
+	return "WHERE " + strings.Join(conditions, " AND "), args
 }
 
 // seriesListFilterConditions turns the library filter params (genres / year_min / year_max /

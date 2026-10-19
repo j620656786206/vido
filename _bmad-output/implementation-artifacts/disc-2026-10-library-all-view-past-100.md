@@ -1,6 +1,6 @@
 # Disc：媒體庫「全部」頁往下捲不再漏片、不再重複，「評分」排序真的照評分排
 
-Status: ready-for-dev
+Status: review
 
 **Blocked-by:** `disc-2026-10-library-list-triage-a`（同樣改 `MovieRepository.List`／`SeriesRepository.List` 的 ORDER BY 與 `listAll`；A 先合，本單把 A 加進去的 Go 端比較分支一起換掉，見「與 A 的分工」）。
 
@@ -65,12 +65,12 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 共用排序產生器（AC #3、#4）**
-  - [ ] `repository/` 新增 `librarySortKey(kind, sortBy string) string`（kind＝`movie`／`series`）：`title`→`title`；`release_date`→`release_date`／`first_air_date`（影集另認 `first_air_date`）；`rating`、`vote_average`→`vote_average`；`subtitle_status`→ A 的排名運算式（電影用 `vido_chinese_subtitle(...)`、影集用 `seriesChineseSubtitleSQL("series")`）；`id`、`updated_at`→同名欄位；其餘→`created_at`。
-  - [ ] `libraryOrderBy(kind, sortBy, order string) string` 產生完整 ORDER BY（含次序鍵規則）。
-  - [ ] `MovieRepository.List`、`SeriesRepository.List` 拿掉各自的 `sortColumnMap` 與 A 的特例分支，改用它。
-- [ ] **T2 「全部」的排序查詢（AC #1、#5）**
-  - [ ] 新增 `repository/library_repository.go`：`LibraryRepository{db}`、`LibraryKey{Type, ID string}`、`ListKeys(ctx, params) ([]LibraryKey, *PaginationResult, error)`。查詢形狀：
+- [x] **T1 共用排序產生器（AC #3、#4）**
+  - [x] `repository/` 新增 `librarySortKey(kind, sortBy string) string`（kind＝`movie`／`series`）：`title`→`title`；`release_date`→`release_date`／`first_air_date`（影集另認 `first_air_date`）；`rating`、`vote_average`→`vote_average`；`subtitle_status`→ A 的排名運算式（電影用 `vido_chinese_subtitle(...)`、影集用 `seriesChineseSubtitleSQL("series")`）；`id`、`updated_at`→同名欄位；其餘→`created_at`。
+  - [x] `libraryOrderBy(kind, sortBy, order string) string` 產生完整 ORDER BY（含次序鍵規則）。
+  - [x] `MovieRepository.List`、`SeriesRepository.List` 拿掉各自的 `sortColumnMap` 與 A 的特例分支，改用它。
+- [x] **T2 「全部」的排序查詢（AC #1、#5）**
+  - [x] 新增 `repository/library_repository.go`：`LibraryRepository{db}`、`LibraryKey{Type, ID string}`、`ListKeys(ctx, params) ([]LibraryKey, *PaginationResult, error)`。查詢形狀：
     ```sql
     SELECT kind, id FROM (
       SELECT 'movie' AS kind, id, <movie 鍵> AS sort_key, created_at FROM movies WHERE <電影 WHERE>
@@ -80,15 +80,15 @@ Status: ready-for-dev
     LIMIT ? OFFSET ?
     ```
     （SQLite 的複合查詢 ORDER BY 只能用結果欄名，所以包一層子查詢。）計數＝兩個 `COUNT(*)` 相加。
-  - [ ] 把 `List` 裡組 WHERE 的那段抽成 `movieListWhere(params)`／`seriesListWhere(params)`（含 `notRemoved`、`search`、篩選），`List` 與 `ListKeys` 共用——不要複製一份。
-  - [ ] `interfaces.go` 加 `LibraryRepositoryInterface`；`registry.go` 加 `Library` 欄位並在 `NewRepositories`／`NewRepositoriesWithCache` 建立。
-- [ ] **T3 批次取資料（AC #5）**：`MovieRepository.FindByIDs(ctx, ids []string) ([]models.Movie, error)`、`SeriesRepository.FindByIDs`（`WHERE id IN (...)`，用 `movieSelectColumns`／`seriesSelectColumns`＋`scanMovie`／`scanSeries`；空清單直接回空）；兩個介面與 `testutil/mocks.go` 的 mock 補上。
-- [ ] **T4 service（AC #5、#6）**：`NewLibraryService` 加第 4 個參數 `libraryRepo repository.LibraryRepositoryInterface`（**刻意用位置參數**：編譯器會逼 11 個呼叫點全部接線，不會有 nil 的「全部」頁）；`main.go:1070` 傳 `repos.Library`；測試裡有真 DB 的傳 `repository.NewLibraryRepository(db)`，用 mock 的傳 `nil`（那些測試不走 `listAll`）。`listAll` 改成 `ListKeys` → 依類型分組 `FindByIDs`（兩邊平行）→ 照 keys 順序組回；刪掉 `compareLibraryItems` 與 getter。
-- [ ] **T5 測試（AC #1–#3、#6、#7）**
-  - [ ] 新 `repository/library_repository_test.go`：AC #1 的資料產生器（放成測試小工具，`services` 測試也要用的話就各自寫一份小的，不要為測試開 export）＋ AC #1、#2 的表格測試（5 鍵 × 2 方向 × 3 類型）。
-  - [ ] 改 `TestMovieListWithSorting`、`TestSeriesListWithSorting`（AC #3）。
-  - [ ] `services/library_service_test.go` 加一個走 `ListLibrary(…, "all")` 的跨頁測試（>100 部電影、page_size 36），證明 service 這層組回去的順序與 `ListKeys` 一致、沒有重複。
-  - [ ] AC #7 本機實測；跑 AC #8。
+  - [x] 把 `List` 裡組 WHERE 的那段抽成 `movieListWhere(params)`／`seriesListWhere(params)`（含 `notRemoved`、`search`、篩選），`List` 與 `ListKeys` 共用——不要複製一份。
+  - [x] `interfaces.go` 加 `LibraryRepositoryInterface`；`registry.go` 加 `Library` 欄位並在 `NewRepositories`／`NewRepositoriesWithCache` 建立。
+- [x] **T3 批次取資料（AC #5）**：`MovieRepository.FindByIDs(ctx, ids []string) ([]models.Movie, error)`、`SeriesRepository.FindByIDs`（`WHERE id IN (...)`，用 `movieSelectColumns`／`seriesSelectColumns`＋`scanMovie`／`scanSeries`；空清單直接回空）；兩個介面與 `testutil/mocks.go` 的 mock 補上。
+- [x] **T4 service（AC #5、#6）**：`NewLibraryService` 加第 4 個參數 `libraryRepo repository.LibraryRepositoryInterface`（**刻意用位置參數**：編譯器會逼 11 個呼叫點全部接線，不會有 nil 的「全部」頁）；`main.go:1070` 傳 `repos.Library`；測試裡有真 DB 的傳 `repository.NewLibraryRepository(db)`，用 mock 的傳 `nil`（那些測試不走 `listAll`）。`listAll` 改成 `ListKeys` → 依類型分組 `FindByIDs`（兩邊平行）→ 照 keys 順序組回；刪掉 `compareLibraryItems` 與 getter。
+- [x] **T5 測試（AC #1–#3、#6、#7）**
+  - [x] 新 `repository/library_repository_test.go`：AC #1 的資料產生器（放成測試小工具，`services` 測試也要用的話就各自寫一份小的，不要為測試開 export）＋ AC #1、#2 的表格測試（5 鍵 × 2 方向 × 3 類型）。
+  - [x] 改 `TestMovieListWithSorting`、`TestSeriesListWithSorting`（AC #3）。
+  - [x] `services/library_service_test.go` 加一個走 `ListLibrary(…, "all")` 的跨頁測試（>100 部電影、page_size 36），證明 service 這層組回去的順序與 `ListKeys` 一致、沒有重複。
+  - [x] AC #7 本機實測；跑 AC #8。
 
 ## Dev Notes
 
@@ -139,9 +139,40 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia，BMAD dev-story），2026-10-19
+
 ### Debug Log References
 
+- 先讀 -a 實際合進來的程式（#820）：`MovieRepository.List`／`SeriesRepository.List` 的 `subtitleTriageOrderBy` 特例、`compareLibraryItems` 的 `subtitle_status` 分支、`vido_subtitle_triage_rank`。影集那邊 ORDER BY 用的是已選出的 `chinese_subtitle_rollup` 欄。
+- 第一次跑既有測試：只有 `TestMovieListWithSorting`／`TestSeriesListWithSorting` 紅（寫死舊欄位 `rating`，AC #3 預期要改）；-a 的測試、handler 整合測試全綠。
+- 變異測試（改完再改回）：拿掉次序鍵 → AC #1 表格測試 26 格紅；`rating` 改回排舊欄位 → rating 的 6 格全紅。測試抓得到。
+
 ### Completion Notes List
+
+- **做法 B 照單實作。** `repository/library_repository.go`：`librarySortKey`（5 個 UI 鍵＋`vote_average`／`first_air_date`／`id`／`updated_at`）、`libraryOrderBy`（`<鍵> <方向>, created_at DESC, id ASC`；鍵是 `created_at` 時 `created_at <方向>, id ASC`）、`LibraryRepository.ListKeys`（`UNION ALL` 包一層子查詢，`ORDER BY sort_key …, kind ASC`；計數＝兩個 COUNT 相加）。`movieListWhere`／`seriesListWhere` 抽出來給 `List` 與 `ListKeys` 共用。`FindByIDs` 兩個 repo 各一個。`listAll` 改成 ListKeys → 兩邊平行 FindByIDs → 照 keys 順序組回。`compareLibraryItems` 與 7 個 getter（含 -a 的 `getTriageRank`、`getID`）、-a 的 `subtitleTriageOrderBy` 都刪掉（`grep -rn` 全 `apps/api` 確認無其他使用者）。
+- **-a 的合約沒動**（confirmed against [@contract-v1] (Story disc-2026-10-library-list-triage-a AC #1)，版本一致）：排名照方向、同級 created_at DESC、再 id ASC；-a 的 `TestMovieList_SortBySubtitleStatus` 等與 `TestLibraryService_ListAll_SortBySubtitleStatus` 全綠。
+- 📎 Contract Stamps: FOUND（上游 -a AC #1 [@contract-v1]；本單只引用、不 bump）。
+- **AC #1／#2 測試**：`TestLibraryList_PagingIsCompleteAndOrdered`——130 電影＋120 影集（2＋1 軟刪除 → 128／119／247）、`rating` 全 NULL、`vote_average` 5 種＋NULL、日期 6 種（含空字串）、`created_at` 10 種（`dbtime.Format`，與正式機同寬度）、重複標題（含中文）、6 級字幕排名（含 12 部影集用集數彙總翻成缺中文）、id 打散且電影影集交錯。7 個鍵 × 2 方向 × 3 類型 ＝ **42 格，每格 page_size 36／7／100 各翻一次**：筆數、total_items、total_pages、無重複、集合正確、逐對順序（獨立寫的 Go 判準，字幕排名用 `models.SubtitleTriageRank`）、三種頁大小序列完全相同。另有 `TestLibraryListKeys_AgreesWithSingleTypeLists`（全部裡的電影／影集子序列＝單一類型列表）、`TestLibraryListKeys_FiltersMatchSingleTypeLists`（search／年份／字幕篩選，兩邊參數綁定對得上）。
+- **AC #3**：`TestMovieListWithSorting`／`TestSeriesListWithSorting` 改種 `VoteAverage`、`Rating` 留 NULL，斷言 9.0→8.0→7.5，且 `sort_by=vote_average` 同序。
+- **AC #6**：`TestLibraryService_ListAll_SkipsRowsDeletedMidPage`（id 在兩次查詢之間消失 → 略過不報錯）；`FindByIDs` 也略過軟刪除的列（CR 修正，見下）。回應形狀、handler、前端都沒動。
+- **AC #7 本機實測**（`go test ./internal/handlers -run TestLibraryAllView_RatingSortPagesThrough -v`，走真 handler → service → repo、真遷移鏈、247 筆）：
+  ```
+  AC #7: total_pages=7 rows=247 unique=247 first5=[9.5 9.5 9.5 9.5 9.5] last3=[null null null]
+  ```
+  總筆數 247、不重複 247、第 1 頁前 5 個 `vote_average` 都是 9.5、最後一頁最後 3 個是沒有評分（null）；整串分數不會往上跳、沒評分的全部在最後。
+- **正式機唯讀核對**（2026-10-19，`sqlite3 -readonly /mnt/cache/appdata/vido/vido.db`）：電影 55、影集 81、`rating` 不是 NULL 的 0 筆（136 部全 NULL，跟建單時一樣）。用新查詢的形狀排「全部／評分」前 5 名：枕刀歌 9.5、良陳美錦 9.4、滄元圖 9.2、第一序列 9.17、There's No Way Out 9.0——修好後第 1 頁會從片庫最高的 9.5 開始（舊的第 1 頁最高只到 9.17）。
+- **AC #8**：`go test ./...` 8,235 pass／0 fail／2 skip；`go vet` 乾淨；`staticcheck ./...` 乾淨；`pnpm run lint:all` ✖ 170 problems (0 errors, 170 warnings)；`format:check` 通過。前端沒改，沒跑 `nx test web`。
+- **對抗式 CR**（獨立子代理、只看 diff）12 項，修 10、立案 1、記錄 1：
+  - ✅ Resolved review finding [MED]：電影送 `sort_by=first_air_date` 會退回 `created_at`，「全部」就變成拿電影的加入時間比影集的首播日（電影全排前面）——改成兩邊都當「日期」鍵；表格測試加入 `first_air_date`、`vote_average` 兩個別名。
+  - ✅ Resolved review finding [MED]：影集列表依字幕排序時，集數彙總子查詢會被算兩次（SELECT 一次、ORDER BY 一次）——`seriesListSortKey` 改讀已選出的 `chinese_subtitle_rollup` 欄，同一個排名函式。
+  - ✅ Resolved review finding [LOW]：`FindByIDs` 不濾軟刪除——掃描在兩次查詢之間把片標成移除時，那部會出現在這一頁。現在一起濾掉，加測試。
+  - ✅ Resolved review finding [LOW]：建構子註解說「位置參數會逼呼叫點接線」不精確（nil 仍可編譯）——改寫註解，`listAll` 遇到 nil 回錯誤而不是 panic。
+  - ✅ Resolved review finding [LOW]：service 跨頁測試的 id 讓電影永遠排在影集前、註解講過頭——id 改成交錯、註解寫清楚它驗的是「照 SQL 順序組回」，順序本身由 repo 判準測試負責；`score()` 取值不再靠運氣避開 nil。
+  - ✅ Resolved review finding [LOW]：`TestLibrarySortKey` 把上面那個 bug 寫死——改斷言。
+  - ✅ Resolved review finding [LOW]：`ListKeys` 參數綁定依賴佔位符順序、「每頁成本固定」講過頭、三次讀取不在同一交易——補註解（交易化不做：舊程式也一樣、只會讓總數差一筆，不值得為此引入唯讀交易）。
+  - ✅ Resolved review finding [LOW]：service 組 item 用字串常值 `"movie"`／`"series"`——改用 `repository.LibraryKind*`。
+  - 📝 立案（lane ③）：`scanner_service.go:1052` 用 `PageSize: 10000` 取「所有影集」重算檔案大小，被 `MaxPageSize` 壓成 100 → 第 101 部之後的影集不會更新 `file_size`。同型 bug、不在本單範圍 → `disc-2026-10-scanner-series-size-past-100`。
+  - 📝 記錄不立案：`FullTextSearch` 依 FTS `rank` 排序、同分沒有次序鍵且忽略 `sort_by`；但 `/library/search` 前端沒有在用，本單也明令不動 `SearchLibrary`。
 
 ### Discovery Triage
 
@@ -149,3 +180,32 @@ Status: ready-for-dev
 - **① expand-scope-in-place** — 匯出、字幕探勘（`miner.go:274` 依 `title`）也用同一個沒有次序鍵的 `List` → AC #4 一起修，不另開單。
 
 ### File List
+
+- `apps/api/internal/repository/library_repository.go`（新）
+- `apps/api/internal/repository/library_repository_test.go`（新）
+- `apps/api/internal/handlers/library_all_view_paging_integration_test.go`（新）
+- `apps/api/internal/repository/movie_repository.go`
+- `apps/api/internal/repository/series_repository.go`
+- `apps/api/internal/repository/chinese_subtitle_sql.go`
+- `apps/api/internal/repository/interfaces.go`
+- `apps/api/internal/repository/registry.go`
+- `apps/api/internal/repository/movie_repository_test.go`
+- `apps/api/internal/repository/series_repository_test.go`
+- `apps/api/internal/models/chinese_subtitle.go`（只改註解）
+- `apps/api/internal/services/library_service.go`
+- `apps/api/internal/services/library_service_test.go`
+- `apps/api/internal/services/library_service_triage_sort_test.go`
+- `apps/api/internal/services/shared_repo_mocks_test.go`
+- `apps/api/internal/services/enrichment_nfo_test.go`
+- `apps/api/internal/testutil/mocks.go`
+- `apps/api/internal/handlers/route_c_uuid_integration_test.go`
+- `apps/api/internal/handlers/library_chinese_subtitle_integration_test.go`
+- `apps/api/cmd/api/main.go`
+- `_bmad-output/implementation-artifacts/disc-2026-10-library-all-view-past-100.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-10-19 | dev-story（Amelia）：做法 B——共用排序產生器（所有排序加 created_at DESC, id ASC 次序鍵；rating→vote_average）、「全部」改成一條 UNION ALL 排序查詢＋FindByIDs，刪掉 Go 端比較函式；-a 的 subtitle_status 排序搬進共用產生器（[@contract-v1] 不變）。對抗式 CR 修 10 項、立案 1 項。Status → review。 |

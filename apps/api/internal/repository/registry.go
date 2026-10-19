@@ -10,6 +10,7 @@ import (
 type Repositories struct {
 	Movies            MovieRepositoryInterface
 	Series            SeriesRepositoryInterface
+	Library           LibraryRepositoryInterface
 	Seasons           SeasonRepositoryInterface
 	Episodes          EpisodeRepositoryInterface
 	Settings          SettingsRepositoryInterface
@@ -41,6 +42,7 @@ func NewRepositories(db *sql.DB) *Repositories {
 	return &Repositories{
 		Movies:   NewMovieRepository(db),
 		Series:   NewSeriesRepository(db),
+		Library:  NewLibraryRepository(db),
 		Seasons:  NewSeasonRepository(db),
 		Episodes: NewEpisodeRepository(db),
 		Settings: NewSettingsRepository(db),
@@ -74,6 +76,7 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 	return &Repositories{
 		Movies:            NewMovieRepository(db),
 		Series:            NewSeriesRepository(db),
+		Library:           NewLibraryRepository(db),
 		Seasons:           NewSeasonRepository(db),
 		Episodes:          NewEpisodeRepository(db),
 		Settings:          NewSettingsRepository(db),

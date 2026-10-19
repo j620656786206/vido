@@ -1067,7 +1067,7 @@ func main() {
 	downloadHandler := handlers.NewDownloadHandler(downloadService)
 	// dl-import-1: finished downloads report whether Sonarr/Radarr imported them and Vido has them.
 	downloadHandler.SetImportStatusService(services.NewImportStatusService(pluginManager, repos.Movies, repos.Series, repos.Episodes))
-	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
+	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, repos.Library, services.WithTMDbVideos(tmdbService.VideosProvider()))
 	// Unified search takes the library service as its local leg — owned items
 	// stay searchable when TMDb is unreachable (testsprite-round1 TC092).
 	searchService := services.NewSearchService(searchClient, libraryService)

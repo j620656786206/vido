@@ -16,6 +16,8 @@ type MovieRepositoryInterface interface {
 
 	// FindByID retrieves a movie by its primary key
 	FindByID(ctx context.Context, id string) (*models.Movie, error)
+	// FindByIDs returns the live rows with these ids in database order; missing or soft-deleted ids are skipped.
+	FindByIDs(ctx context.Context, ids []string) ([]models.Movie, error)
 
 	// FindByTMDbID retrieves a movie by its TMDb ID
 	FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error)
@@ -138,6 +140,8 @@ type SeriesRepositoryInterface interface {
 
 	// FindByID retrieves a series by its primary key
 	FindByID(ctx context.Context, id string) (*models.Series, error)
+	// FindByIDs returns the live rows with these ids in database order; missing or soft-deleted ids are skipped.
+	FindByIDs(ctx context.Context, ids []string) ([]models.Series, error)
 
 	// FindByTMDbID retrieves a series by its TMDb ID
 	FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error)
@@ -519,6 +523,7 @@ type BackupRepositoryInterface interface {
 var (
 	_ MovieRepositoryInterface    = (*MovieRepository)(nil)
 	_ SeriesRepositoryInterface   = (*SeriesRepository)(nil)
+	_ LibraryRepositoryInterface  = (*LibraryRepository)(nil)
 	_ SeasonRepositoryInterface   = (*SeasonRepository)(nil)
 	_ EpisodeRepositoryInterface  = (*EpisodeRepository)(nil)
 	_ SettingsRepositoryInterface = (*SettingsRepository)(nil)
@@ -529,3 +534,11 @@ var (
 	_ LogRepositoryInterface      = (*LogRepository)(nil)
 	_ BackupRepositoryInterface   = (*BackupRepository)(nil)
 )
+
+// LibraryRepositoryInterface reads the movies + series library as one list
+// (disc-2026-10-library-all-view-past-100).
+type LibraryRepositoryInterface interface {
+	// ListKeys returns one page of the combined list as (kind, id) keys in
+	// display order, with the combined pagination.
+	ListKeys(ctx context.Context, params ListParams) ([]LibraryKey, *PaginationResult, error)
+}

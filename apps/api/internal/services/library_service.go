@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/vido/api/internal/models"
@@ -115,21 +114,28 @@ type LibraryService struct {
 	movieRepo   repository.MovieRepositoryInterface
 	seriesRepo  repository.SeriesRepositoryInterface
 	episodeRepo repository.EpisodeRepositoryInterface
+	libraryRepo repository.LibraryRepositoryInterface
 	tmdbVideos  TMDbVideosProvider
 	logger      *slog.Logger
 }
 
-// NewLibraryService creates a new LibraryService
+// NewLibraryService creates a new LibraryService. libraryRepo orders the
+// "全部" list (ListLibrary with mediaType "all", also GetRecentlyAdded); it
+// is a positional argument so every caller has to decide on it. Passing nil
+// is only for tests that never list "all" — such a service answers those
+// calls with an error.
 func NewLibraryService(
 	movieRepo repository.MovieRepositoryInterface,
 	seriesRepo repository.SeriesRepositoryInterface,
 	episodeRepo repository.EpisodeRepositoryInterface,
+	libraryRepo repository.LibraryRepositoryInterface,
 	opts ...LibraryServiceOption,
 ) *LibraryService {
 	s := &LibraryService{
 		movieRepo:   movieRepo,
 		seriesRepo:  seriesRepo,
 		episodeRepo: episodeRepo,
+		libraryRepo: libraryRepo,
 		logger:      slog.Default().With("service", "library"),
 	}
 	for _, opt := range opts {
@@ -373,91 +379,89 @@ func (s *LibraryService) listSeriesOnly(ctx context.Context, params repository.L
 	return &LibraryListResult{Items: items, Pagination: pagination}, nil
 }
 
+// listAll lists movies and series as one list. The order comes from ONE
+// SQL query (LibraryRepository.ListKeys: a UNION ALL under the same ORDER BY
+// as the single-type lists); this method only loads the page's rows by id and
+// puts them back in that order. There is deliberately no Go-side sort here —
+// a second copy of the ordering rule is what once made 「評分」 sort by
+// different columns in SQL and in Go, and over-fetching page×pageSize rows per
+// type (capped at 100) dropped every title past the 100th
+// (disc-2026-10-library-all-view-past-100).
 func (s *LibraryService) listAll(ctx context.Context, params repository.ListParams) (*LibraryListResult, error) {
-	// To correctly interleave movies+series across pages, we must fetch enough
-	// items from both repos to cover the requested page window after merging.
-	// Override each repo query to fetch page=1 with limit=page*pageSize.
-	fetchParams := params
-	fetchParams.Page = 1
-	fetchParams.PageSize = params.Page * params.PageSize
+	if s.libraryRepo == nil {
+		return nil, errors.New("library repository not configured")
+	}
+	keys, pagination, err := s.libraryRepo.ListKeys(ctx, params)
+	if err != nil {
+		s.logger.Error("Failed to list library", "error", err)
+		return nil, fmt.Errorf("failed to list library: %w", err)
+	}
+
+	var movieIDs, seriesIDs []string
+	for _, k := range keys {
+		switch k.Type {
+		case repository.LibraryKindMovie:
+			movieIDs = append(movieIDs, k.ID)
+		case repository.LibraryKindSeries:
+			seriesIDs = append(seriesIDs, k.ID)
+		}
+	}
 
 	var wg sync.WaitGroup
 	var moviesErr, seriesErr error
 	var movies []models.Movie
 	var series []models.Series
-	var moviesPagination, seriesPagination *repository.PaginationResult
-
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		movies, moviesPagination, moviesErr = s.movieRepo.List(ctx, fetchParams)
-	}()
-
-	go func() {
-		defer wg.Done()
-		series, seriesPagination, seriesErr = s.seriesRepo.List(ctx, fetchParams)
-	}()
-
+	if len(movieIDs) > 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			movies, moviesErr = s.movieRepo.FindByIDs(ctx, movieIDs)
+		}()
+	}
+	if len(seriesIDs) > 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			series, seriesErr = s.seriesRepo.FindByIDs(ctx, seriesIDs)
+		}()
+	}
 	wg.Wait()
 
 	if moviesErr != nil {
-		s.logger.Error("Failed to list movies", "error", moviesErr)
+		s.logger.Error("Failed to load movies", "error", moviesErr)
 		return nil, fmt.Errorf("failed to list movies: %w", moviesErr)
 	}
 	if seriesErr != nil {
-		s.logger.Error("Failed to list series", "error", seriesErr)
+		s.logger.Error("Failed to load series", "error", seriesErr)
 		return nil, fmt.Errorf("failed to list series: %w", seriesErr)
 	}
 
-	// Combine items and sort to interleave correctly
-	allItems := make([]LibraryItem, 0, len(movies)+len(series))
+	movieByID := make(map[string]*models.Movie, len(movies))
 	for i := range movies {
-		allItems = append(allItems, LibraryItem{Type: "movie", Movie: &movies[i]})
+		movieByID[movies[i].ID] = &movies[i]
 	}
+	seriesByID := make(map[string]*models.Series, len(series))
 	for i := range series {
-		allItems = append(allItems, LibraryItem{Type: "series", Series: &series[i]})
+		seriesByID[series[i].ID] = &series[i]
 	}
 
-	// Sort combined items by the requested field to ensure correct interleaved ordering
-	sort.Slice(allItems, func(i, j int) bool {
-		return compareLibraryItems(allItems[i], allItems[j], params.SortBy, params.SortOrder)
-	})
-
-	// Slice to the correct page window from the merged result
-	start := (params.Page - 1) * params.PageSize
-	end := start + params.PageSize
-	if start > len(allItems) {
-		start = len(allItems)
-	}
-	if end > len(allItems) {
-		end = len(allItems)
-	}
-	items := allItems[start:end]
-
-	// Compute combined pagination from total counts
-	totalResults := 0
-	if moviesPagination != nil {
-		totalResults += moviesPagination.TotalResults
-	}
-	if seriesPagination != nil {
-		totalResults += seriesPagination.TotalResults
+	// Rebuild the page in ListKeys order. An id deleted between the two
+	// queries is left out (AC #6) — not an error.
+	items := make([]LibraryItem, 0, len(keys))
+	for _, k := range keys {
+		switch k.Type {
+		case repository.LibraryKindMovie:
+			if m, ok := movieByID[k.ID]; ok {
+				items = append(items, LibraryItem{Type: repository.LibraryKindMovie, Movie: m})
+			}
+		case repository.LibraryKindSeries:
+			if sr, ok := seriesByID[k.ID]; ok {
+				items = append(items, LibraryItem{Type: repository.LibraryKindSeries, Series: sr})
+			}
+		}
 	}
 
-	totalPages := 0
-	if params.PageSize > 0 {
-		totalPages = (totalResults + params.PageSize - 1) / params.PageSize
-	}
-
-	return &LibraryListResult{
-		Items: items,
-		Pagination: &repository.PaginationResult{
-			Page:         params.Page,
-			PageSize:     params.PageSize,
-			TotalResults: totalResults,
-			TotalPages:   totalPages,
-		},
-	}, nil
+	return &LibraryListResult{Items: items, Pagination: pagination}, nil
 }
 
 // GetRecentlyAdded returns the most recently added media items sorted by created_at DESC.
@@ -498,131 +502,6 @@ func (s *LibraryService) DeleteSeries(ctx context.Context, id string) error {
 	}
 	s.logger.Info("Series deleted", "id", id)
 	return nil
-}
-
-// compareLibraryItems compares two library items by the given sort field and order.
-func compareLibraryItems(a, b LibraryItem, sortBy, sortOrder string) bool {
-	asc := sortOrder == "asc"
-
-	switch sortBy {
-	case "title":
-		at := getTitle(a)
-		bt := getTitle(b)
-		if asc {
-			return at < bt
-		}
-		return at > bt
-
-	case "release_date":
-		at := getReleaseDate(a)
-		bt := getReleaseDate(b)
-		if asc {
-			return at < bt
-		}
-		return at > bt
-
-	case "rating", "vote_average":
-		ar := getVoteAverage(a)
-		br := getVoteAverage(b)
-		if asc {
-			return ar < br
-		}
-		return ar > br
-
-	case "subtitle_status":
-		// Same keys as the SQL ORDER BY (repository.subtitleTriageOrderBy): the
-		// badge rank in the requested order, then created_at newest first, then
-		// id ascending — the tie-breakers do not flip with sortOrder
-		// (disc-2026-10-library-list-triage-a AC #4).
-		ar, br := getTriageRank(a), getTriageRank(b)
-		if ar != br {
-			if asc {
-				return ar < br
-			}
-			return ar > br
-		}
-		at, bt := getCreatedAt(a), getCreatedAt(b)
-		if !at.Equal(bt) {
-			return at.After(bt)
-		}
-		return getID(a) < getID(b)
-
-	default: // created_at
-		at := getCreatedAt(a)
-		bt := getCreatedAt(b)
-		if asc {
-			return at.Before(bt)
-		}
-		return at.After(bt)
-	}
-}
-
-// getCreatedAt extracts the created_at timestamp from a LibraryItem.
-func getCreatedAt(item LibraryItem) time.Time {
-	if item.Movie != nil {
-		return item.Movie.CreatedAt
-	}
-	if item.Series != nil {
-		return item.Series.CreatedAt
-	}
-	return time.Time{}
-}
-
-// getTriageRank is the rank of the subtitle badge the list shows for the item
-// (models.SubtitleTriageRank over its verdict and subtitle_status; a series'
-// verdict is already its episode rollup). An empty item ranks as unknown.
-func getTriageRank(item LibraryItem) int {
-	if item.Movie != nil {
-		return models.SubtitleTriageRank(item.Movie.ChineseSubtitle, item.Movie.SubtitleStatus)
-	}
-	if item.Series != nil {
-		return models.SubtitleTriageRank(item.Series.ChineseSubtitle, item.Series.SubtitleStatus)
-	}
-	return models.SubtitleRankUnknown
-}
-
-// getID extracts the id from a LibraryItem.
-func getID(item LibraryItem) string {
-	if item.Movie != nil {
-		return item.Movie.ID
-	}
-	if item.Series != nil {
-		return item.Series.ID
-	}
-	return ""
-}
-
-// getTitle extracts the title from a LibraryItem.
-func getTitle(item LibraryItem) string {
-	if item.Movie != nil {
-		return item.Movie.Title
-	}
-	if item.Series != nil {
-		return item.Series.Title
-	}
-	return ""
-}
-
-// getReleaseDate extracts the release date string from a LibraryItem.
-func getReleaseDate(item LibraryItem) string {
-	if item.Movie != nil {
-		return item.Movie.ReleaseDate
-	}
-	if item.Series != nil {
-		return item.Series.FirstAirDate
-	}
-	return ""
-}
-
-// getVoteAverage extracts the vote average from a LibraryItem.
-func getVoteAverage(item LibraryItem) float64 {
-	if item.Movie != nil && item.Movie.VoteAverage.Valid {
-		return item.Movie.VoteAverage.Float64
-	}
-	if item.Series != nil && item.Series.VoteAverage.Valid {
-		return item.Series.VoteAverage.Float64
-	}
-	return 0
 }
 
 // LibraryStats contains library statistics

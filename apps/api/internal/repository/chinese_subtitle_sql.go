@@ -67,16 +67,6 @@ func subtitleTriageRankSQL(_ *sqlite.FunctionContext, args []driver.Value) (driv
 	return int64(models.SubtitleTriageRank(models.ChineseSubtitle(sqlText(args[0])), models.SubtitleStatus(sqlText(args[1])))), nil
 }
 
-// subtitleTriageOrderBy is the ORDER BY for sort_by=subtitle_status: the badge
-// rank in `order` ("asc"/"desc"), then created_at newest first, then id — the
-// tie-breakers do NOT flip with the order, and the "全部" view's Go merge
-// (services.compareLibraryItems) uses the same three keys. With only six ranks
-// most rows tie, so without the tie-breakers OFFSET paging would repeat or
-// skip rows. `verdict` is the SQL expression of the row's verdict.
-func subtitleTriageOrderBy(verdict, order string) string {
-	return fmt.Sprintf("%s(%s, subtitle_status) %s, created_at DESC, id ASC", subtitleTriageRankSQLFunc, verdict, order)
-}
-
 // sqlText turns a SQLite argument into the verdict's string form; NULL is "".
 func sqlText(v driver.Value) string {
 	switch x := v.(type) {
