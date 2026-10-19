@@ -1,6 +1,6 @@
 # Disc：媒體庫「全部」頁往下捲不再漏片、不再重複，「評分」排序真的照評分排
 
-Status: review
+Status: done
 
 **Blocked-by:** `disc-2026-10-library-list-triage-a`（同樣改 `MovieRepository.List`／`SeriesRepository.List` 的 ORDER BY 與 `listAll`；A 先合，本單把 A 加進去的 Go 端比較分支一起換掉，見「與 A 的分工」）。
 
@@ -209,3 +209,4 @@ Claude Opus 5.5（Amelia，BMAD dev-story），2026-10-19
 | Date | Change |
 |---|---|
 | 2026-10-19 | dev-story（Amelia）：做法 B——共用排序產生器（所有排序加 created_at DESC, id ASC 次序鍵；rating→vote_average）、「全部」改成一條 UNION ALL 排序查詢＋FindByIDs，刪掉 Go 端比較函式；-a 的 subtitle_status 排序搬進共用產生器（[@contract-v1] 不變）。對抗式 CR 修 10 項、立案 1 項。Status → review。 |
+| 2026-10-19 | /ship：PR #825 CI 全綠（13 pass／4 skipping）。Status → done。 |
