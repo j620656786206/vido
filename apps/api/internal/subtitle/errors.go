@@ -43,8 +43,10 @@ var (
 	// ErrSubtitleExtractWaitAborted — the item's ctx ended while it was QUEUED
 	// behind another extraction on the ExtractGate (sub-6-3), before its own
 	// ffmpeg ever started. Chained with the ctx error (Rule 13). It says
-	// nothing about the file — the item flow treats it like a cancellation
-	// (CancelledRunPrefix) so it never counts toward the free lane's
-	// three-strikes parking; a deadline that fires INSIDE ffmpeg still does.
+	// nothing about the file: failItem records a deadline one as
+	// QueueTimeoutRunPrefix (a cancelled one stays CancelledRunPrefix), and
+	// neither counts toward the free lane's three-strikes parking; a deadline
+	// that fires INSIDE ffmpeg still does. The text "SUBTITLE_EXTRACT_WAIT_ABORTED"
+	// is also spelled out in models' failure classifier — change both.
 	ErrSubtitleExtractWaitAborted = errors.New("SUBTITLE_EXTRACT_WAIT_ABORTED: gave up waiting for the extraction slot")
 )

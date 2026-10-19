@@ -217,6 +217,39 @@ func TestActivity_RecentSubtitleRuns_ProdShapes(t *testing.T) {
 	assert.Equal(t, "", title)
 }
 
+// disc-2026-10-run-timeout-not-cancel AC #5: a queue timeout reads
+// queue_timeout and a real cancel reads cancelled, on the real migration chain;
+// neither leaks the raw error (sentinel, NAS path) onto the wire.
+func TestActivity_RecentSubtitleRuns_QueueTimeoutIsNotCancelled(t *testing.T) {
+	db := activityLibraryDB(t)
+	ctx := context.Background()
+	require.NoError(t, repository.NewMovieRepository(db).Create(ctx, &models.Movie{ID: "big", Title: "大片", ReleaseDate: "2024-01-01"}))
+	runs := repository.NewSubtitleRunRepository(db)
+	mk := func(id, started, completed, errMsg string) {
+		c := at(completed)
+		require.NoError(t, runs.Create(ctx, &models.SubtitleRun{
+			ID: id, MediaID: "big", MediaType: models.SubtitleRunMediaMovie, Status: models.SubtitleRunFailed,
+			StartedAt: at(started), CompletedAt: &c, ErrorMessage: errMsg,
+		}))
+	}
+	const extract = "subtitle pipeline: movie big: route: subtitle route: extract /media/movies/Big (2024)/Big.2160p.mkv: SUBTITLE_EXTRACT_WAIT_ABORTED: gave up waiting for the extraction slot: Big.2160p.mkv"
+	mk("queued-out", "2026-10-19T02:00:00Z", "2026-10-19T02:15:00Z",
+		models.SubtitleRunQueueTimeoutPrefix+extract+" (queued behind 1 for 15m0s): context deadline exceeded")
+	mk("stopped", "2026-10-19T01:00:00Z", "2026-10-19T01:03:00Z",
+		models.SubtitleRunCancelledPrefix+extract+" (queued behind 1 for 3m0s): context canceled")
+
+	svc := newRecentOnlyService(fakeParse{}, runs)
+	events := recentWire(t, svc)
+	require.Len(t, events, 2)
+	assert.Equal(t, "queue_timeout", events[0]["failure_reason"], "waiting too long is 處理逾時, not 中途停止")
+	assert.Equal(t, "cancelled", events[1]["failure_reason"])
+
+	blob, err := json.Marshal(svc.GetActivity(ctx).Recent)
+	require.NoError(t, err)
+	assert.NotContains(t, string(blob), "SUBTITLE_EXTRACT_WAIT_ABORTED")
+	assert.NotContains(t, string(blob), "/media/")
+}
+
 // The raw JSON text, for the two keys whose presence is the whole point.
 func TestActivity_RecentSubtitleRuns_SpentZeroAndNullOnTheWire(t *testing.T) {
 	completed := at("2026-10-19T01:00:00Z")

@@ -146,6 +146,20 @@ func cancelledRun(mediaID string) models.SubtitleRun {
 	}
 }
 
+// queueTimeoutRun is a `failed` row written by failItem when the item's
+// deadline ran out while it was queued for the extraction slot
+// (disc-2026-10-run-timeout-not-cancel) — real message shape, and it must NOT
+// count toward autoFailureAttemptLimit either.
+func queueTimeoutRun(mediaID string) models.SubtitleRun {
+	return models.SubtitleRun{
+		MediaID: mediaID,
+		Status:  models.SubtitleRunFailed,
+		ErrorMessage: QueueTimeoutRunPrefix + "subtitle pipeline: movie " + mediaID +
+			": route: subtitle route: extract /media/movies/Big (2024)/Big.2160p.mkv: SUBTITLE_EXTRACT_WAIT_ABORTED: gave up waiting for the extraction slot: Big.2160p.mkv (queued behind 1 for 15m0s): context deadline exceeded",
+		StartedAt: autoNow,
+	}
+}
+
 func failedRuns(mediaID string, n int) []models.SubtitleRun {
 	out := make([]models.SubtitleRun, 0, n)
 	for i := 0; i < n; i++ {
@@ -1106,6 +1120,34 @@ func TestAutoGenerator_CancelledRowsDoNotRescueAParkedItem(t *testing.T) {
 	assert.Empty(t, h.item.refIDs(), "genuine failures at the limit still park, whatever else is in the history")
 }
 
+// disc-2026-10-run-timeout-not-cancel AC #4: queue timeouts moved off the
+// cancelled prefix but must stay out of the count. Same boundary as above.
+func TestAutoGenerator_QueueTimeoutFailuresDoNotCountTowardParking(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+	h.runs.runs = append(failedRuns("m1", autoFailureAttemptLimit-1), queueTimeoutRun("m1"), queueTimeoutRun("m1"))
+
+	h.gen.Run(context.Background())
+
+	assert.Equal(t, []string{"m1"}, h.item.refIDs(),
+		"waiting too long behind someone else's extraction says nothing about this file — it must not park it")
+}
+
+// The other direction. It passes whether or not queue-timeout rows count (the
+// limit is already reached either way); what it pins is that failures are
+// COUNTED, so the newest rows — exempt ones — never win and un-park the item.
+func TestAutoGenerator_QueueTimeoutRowsDoNotRescueAParkedItem(t *testing.T) {
+	h := newAutoHarness(t)
+	h.policy.enabled = autoEnabledSet("lib-a")
+	h.movies.movies = []models.Movie{autoMovieIn("m1", "lib-a", models.SubtitleStatusNotSearched)}
+	h.runs.runs = append(failedRuns("m1", autoFailureAttemptLimit), queueTimeoutRun("m1"), queueTimeoutRun("m1"))
+
+	h.gen.Run(context.Background())
+
+	assert.Empty(t, h.item.refIDs(), "genuine failures at the limit still park, whatever else is in the history")
+}
+
 // ─── bugfix-auto-exclusion-never-expires ───────────────────────────────────
 
 func exclusionHarness(t *testing.T) *autoHarness {
@@ -1330,8 +1372,8 @@ func TestAutoGenerator_CollectCarriesTheFilePath(t *testing.T) {
 func TestAutoGenerator_QueueTimeoutIsNotCountedAsAFileFailure(t *testing.T) {
 	// sub-6-3 CR H1/L8: an item that ran out of budget waiting for the
 	// extraction slot says nothing about the FILE — failItem records it
-	// cancelled-class, so the round counters must agree and the round must
-	// keep going.
+	// QueueTimeoutRunPrefix (not counted toward parking), so the round
+	// counters must agree and the round must keep going.
 	h := newAutoHarness(t)
 	h.movies.movies = []models.Movie{
 		autoMovieIn("m1", "lib-1", models.SubtitleStatusNotSearched),

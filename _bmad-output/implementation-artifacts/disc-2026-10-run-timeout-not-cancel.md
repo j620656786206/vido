@@ -1,6 +1,6 @@
 # Disc：排隊等抽軌逾時不再記成「取消」——活動記錄改寫「處理逾時」，不再像是使用者自己按了停止
 
-Status: ready-for-dev
+Status: done
 
 **Source:** `disc-2026-10-activity-subtitle-run-time-a`（PR #831）合併後，dev 在 Completion Notes 範圍外 #13 回報：字幕排隊等抽軌時逾時，紀錄被寫成取消（`error_message` 前面加 `cancelled: `），活動記錄因此寫「中途停止」，看起來像使用者自己按了停止。
 ⚖️ **Alexyu 2026-10-19 裁定 2A：** 逾時跟取消分開，寫成「處理逾時」，用一個新的失敗原因代碼。
@@ -73,11 +73,11 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 models（AC #1、#2、#7 分類表格）**：`subtitle_run_failure.go` 加 `SubtitleRunFailureQueueTimeout = "queue_timeout"`、`SubtitleRunQueueTimeoutPrefix = "queue-timeout: "`、第一條規則；表格測試、合約清單測試。
-- [ ] **T2 寫紀錄（AC #3、#7 寫紀錄＋跨套件）**：`process_item.go` 加 `QueueTimeoutRunPrefix`，`failItem` 改成 AC #3 的三段判斷；改名／新增 `process_item_test.go` 兩支；跨套件防呆測試。
-- [ ] **T3 三次規則＋活動服務測試（AC #4、#5、#7）**：`auto_generation.go` 抽 `notAboutTheFile`、`:800` 改用它；`auto_generation_test.go` 夾具＋兩支；`activity_recent_test.go` 一支。
-- [ ] **T4 前端（AC #6、#7 前端）**：`generationEventCopy.ts` 型別＋文字；兩個 spec；`activityService.ts:90` 註解。
-- [ ] **T5 合約與文件（AC #1、#8、Rule 20）**：
+- [x] **T1 models（AC #1、#2、#7 分類表格）**：`subtitle_run_failure.go` 加 `SubtitleRunFailureQueueTimeout = "queue_timeout"`、`SubtitleRunQueueTimeoutPrefix = "queue-timeout: "`、第一條規則；表格測試、合約清單測試。
+- [x] **T2 寫紀錄（AC #3、#7 寫紀錄＋跨套件）**：`process_item.go` 加 `QueueTimeoutRunPrefix`，`failItem` 改成 AC #3 的三段判斷；改名／新增 `process_item_test.go` 兩支；跨套件防呆測試。
+- [x] **T3 三次規則＋活動服務測試（AC #4、#5、#7）**：`auto_generation.go` 抽 `notAboutTheFile`、`:800` 改用它；`auto_generation_test.go` 夾具＋兩支；`activity_recent_test.go` 一支。
+- [x] **T4 前端（AC #6、#7 前端）**：`generationEventCopy.ts` 型別＋文字；兩個 spec；`activityService.ts:90` 註解。
+- [x] **T5 合約與文件（AC #1、#8、Rule 20）**：
   - `disc-2026-10-activity-subtitle-run-time-a.md` AC #1 的戳改 `[@contract-v2]`，Change Log 加一列：`| 2026-10-?? | [@contract-v1→v2] AC #1: failure_reason 多一個值 queue_timeout（排隊等抽軌逾時，原本記成 cancelled）；下游：前端 RunFailureReason／FAILURE_COPY_BY_REASON 要多一個鍵，舊前端會把它顯示成「生成失敗」 |`。
   - 下游掃描（Rule 20 🔁）：`disc-2026-10-activity-subtitle-run-time-b`（done → 不動）；`disc-2026-10-live-activity-failure-reasons-a`、`-b`（ready-for-dev → **stale-mark**：兩張的 Dev Notes 與 sprint-status 條目各加 `⚠️ STALE [@contract-v1→v2]: upstream disc-2026-10-activity-subtitle-run-time-a AC #1 bumped 2026-10-??; re-confirm against v2 before dev — see disc-2026-10-run-timeout-not-cancel`），並在兩張的 Dev Notes 補下面「跟即時活動兩張單的關係」列的要點。
   - AC #8 的註解；AC #9 的驗證。
@@ -154,16 +154,55 @@ Status: ready-for-dev
 | 日期 | 變更 |
 |---|---|
 | 2026-10-19 | 建單（Bob）。⚖️ Alexyu 2A：排隊逾時與取消分開。本單把 `disc-2026-10-activity-subtitle-run-time-a` AC #1 升 `[@contract-v1→v2]`（`failure_reason` 加 `queue_timeout`），實際改戳與下游 stale-mark 在 T5。 |
+| 2026-10-19 | Dev 完成（T1–T5）＋對抗式自我審查修 8 項；status → done。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（dev agent，/ship 流程）
+
 ### Debug Log References
+
+- 「故意改壞」①–⑥ 全部逐一做過，每一條都讓對應測試變紅後再還原；另加兩條：把分類函式的前綴判斷拿掉 → 兩支截斷測試紅；把 `failItem` 第 1 條改成 `ctx.Err() != nil` → 兩支 queue-timeout 寫紀錄測試紅；把 models 裡寫死的哨兵字串改掉 → 跨套件防呆紅。
 
 ### Completion Notes List
 
+- 照 AC 實作：`queue_timeout` 第十一個代碼（分類函式第一條規則）、`failItem` 三段判斷（取消 → `cancelled: `；其餘 wait-abort → `queue-timeout: `；其他不加）、`notAboutTheFile` 兩種前綴都不算進三次、前端「處理逾時」（⚖️ Sally 追認：文字同 `timeout`、紅色失敗）。
+- 「失敗三次就不再試」確認：舊 `cancelled: …`（含本單以前被記成取消的排隊逾時）與新 `queue-timeout: …` 都不算；真失敗照算（parking 兩支＋既有 cancelled 兩支＋`TestAutoExclusion_CancelledRowsStayExemptAfterReplacement` 全綠）。
+- 對抗式自我審查（獨立 subagent，15 項）修了 8 項範圍內＋3 項 nit：
+  1. 補「前綴單獨決定」測試：models 表格一條、`process_item_test` 一支（ffmpeg stderr 很長、存進去被截到沒有 `deadline exceeded`，仍是 `queue_timeout`）——原本拿掉前綴判斷所有測試仍綠。
+  2. 寫紀錄測試改用「已經過期的 ctx」（正式機的實際狀態），原本用 `context.Background()` 抓不到「ctx 結束就當取消」的錯改。
+  3. 上游 -a story 的 AC #2、AC #4 補 v2 第 0 條規則。
+  4. 註解：分類函式「即時活動看不到」只對 `queue_timeout` 成立；`SubtitleRunFailureReason` 說明寫時決定的兩個前綴不怕截斷；`extractor.go`、`extractor_gate_test.go` 的「cancelled-class」改成 queue timeout；`recentEventCopy.ts`、`activityService.ts` 合約戳改 v2；JSDoc 折行。
+  5. live-a／-b 的說明改成「合併順序在前」，並提醒 live-a「查到的事」的行號與順序是 v1。
+  6. `notAboutTheFile` 註解寫明為什麼只看前綴；`…RowsDoNotRescue…` 註解寫明它釘的是「累計不是最新那筆說了算」。
+- 範圍外（寫進 PR「沒做的事」，未立案）：
+  - 分類函式的備援規則用「含」`deadline exceeded`，審查建議改成「結尾是」更嚴；照 AC #2 原文保留「含」。
+  - `extractor.go:394`：排隊只等了一瞬間（`waited > 0`）也會把之後 ffmpeg 被期限打斷記成排隊逾時、不算進三次（sub-6-3 CR H1 既有行為，不是本單引入）。
+  - 音軌抽取（`audio_extractor_service.go:212-215`）也排同一個名額，但放棄時沒包 `ErrSubtitleExtractWaitAborted`；今天沒有期限所以不會逾時，若日後加期限要一起處理。
+
 ### File List
+
+- apps/api/internal/models/subtitle_run_failure.go
+- apps/api/internal/models/subtitle_run_failure_test.go
+- apps/api/internal/subtitle/process_item.go
+- apps/api/internal/subtitle/process_item_test.go
+- apps/api/internal/subtitle/auto_generation.go
+- apps/api/internal/subtitle/auto_generation_test.go
+- apps/api/internal/subtitle/errors.go
+- apps/api/internal/subtitle/extractor.go（註解）
+- apps/api/internal/subtitle/extractor_gate_test.go（斷言訊息）
+- apps/api/internal/services/activity_recent_test.go
+- apps/web/src/components/subtitle/generationEventCopy.ts
+- apps/web/src/components/subtitle/generationEventCopy.spec.ts
+- apps/web/src/components/activity/recentEventCopy.spec.ts
+- apps/web/src/components/activity/recentEventCopy.ts（註解）
+- apps/web/src/services/activityService.ts（註解）
+- _bmad-output/implementation-artifacts/disc-2026-10-activity-subtitle-run-time-a.md
+- _bmad-output/implementation-artifacts/disc-2026-10-live-activity-failure-reasons-a.md
+- _bmad-output/implementation-artifacts/disc-2026-10-live-activity-failure-reasons-b.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
 
 ## ⚖️ Sally 追認（2026-10-19）
 

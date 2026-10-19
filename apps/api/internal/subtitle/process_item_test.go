@@ -862,6 +862,8 @@ func TestProcessItem_DeadlineExceededIsNotMarkedCancelled(t *testing.T) {
 	assert.Equal(t, models.SubtitleRunFailed, last.Status)
 	assert.False(t, strings.HasPrefix(last.ErrorMessage, CancelledRunPrefix),
 		"a timeout is a verdict on the file, not on the caller: %q", last.ErrorMessage)
+	assert.False(t, strings.HasPrefix(last.ErrorMessage, QueueTimeoutRunPrefix),
+		"a deadline outside the extraction queue is not a queue timeout: %q", last.ErrorMessage)
 }
 
 // ─── AC #1.6 + #8: progress hook ───────────────────────────────────────────
@@ -1236,10 +1238,59 @@ func TestProcessItem_NarratesTheExtractionQueueOnTheProgressStream(t *testing.T)
 	}, messages)
 }
 
-func TestProcessItem_WaitAbortIsRecordedAsCancelledNotAsAFileFailure(t *testing.T) {
+// disc-2026-10-run-timeout-not-cancel AC #3: a deadline that fired while
+// queued is recorded as a queue timeout — not counted toward parking (it says
+// nothing about the file), but not a cancel either (nobody stopped it).
+func TestProcessItem_WaitAbortIsRecordedAsQueueTimeoutNotAsAFileFailure(t *testing.T) {
 	h := newItemHarness(t, RouteDecision{})
 	h.router.err = fmt.Errorf("subtitle route: extract x: %w: m.mkv (queued behind 2): %w",
 		ErrSubtitleExtractWaitAborted, context.DeadlineExceeded)
+	// The item ctx has ENDED, as in production (the free lane's per-item
+	// deadline fired) — so "any ended ctx is a cancel" would turn this red.
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	_, err := h.pipeline.ProcessItem(ctx, h.ref, ProcessItemOptions{})
+	require.Error(t, err)
+
+	run := h.runs.updated[len(h.runs.updated)-1]
+	assert.Equal(t, models.SubtitleRunFailed, run.Status)
+	assert.True(t, strings.HasPrefix(run.ErrorMessage, QueueTimeoutRunPrefix),
+		"a deadline that fired while queued is a queue timeout: %q", run.ErrorMessage)
+	assert.False(t, strings.HasPrefix(run.ErrorMessage, CancelledRunPrefix),
+		"nobody stopped it — the activity record must not say 中途停止: %q", run.ErrorMessage)
+	assert.Contains(t, run.ErrorMessage, "SUBTITLE_EXTRACT_WAIT_ABORTED")
+	assert.Equal(t, models.SubtitleRunFailureQueueTimeout, models.SubtitleRunFailureReason(run.ErrorMessage))
+	assert.True(t, notAboutTheFile(run.ErrorMessage), "a queue timeout must not count toward parking")
+}
+
+// The prefix is decided from the error type, not the words: a long ffmpeg
+// stderr pushes the trailing "context deadline exceeded" past the stored
+// ~1000 bytes, and the row must still read as a queue timeout.
+func TestProcessItem_TruncatedQueueTimeoutStillClassifiesFromItsPrefix(t *testing.T) {
+	h := newItemHarness(t, RouteDecision{})
+	stderr := strings.Repeat("size=      34kB time=00:28:10.85 bitrate=   0.2kbits/s speed=2.85x    ", 40)
+	h.router.err = fmt.Errorf("subtitle route: extract x: %w: %w", ErrSubtitleExtractWaitAborted,
+		fmt.Errorf("%w: ffmpeg stopped by the caller's deadline after 3m0s on m.mkv (ffmpeg stderr: %s): %w",
+			ErrSubtitleExtractFailed, stderr, context.DeadlineExceeded))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	_, err := h.pipeline.ProcessItem(ctx, h.ref, ProcessItemOptions{})
+	require.Error(t, err)
+
+	run := h.runs.updated[len(h.runs.updated)-1]
+	require.NotContains(t, run.ErrorMessage, "deadline exceeded", "precondition: the stored row is cut before the ctx error")
+	assert.True(t, strings.HasPrefix(run.ErrorMessage, QueueTimeoutRunPrefix), "%q", run.ErrorMessage)
+	assert.Equal(t, models.SubtitleRunFailureQueueTimeout, models.SubtitleRunFailureReason(run.ErrorMessage))
+}
+
+// The cancel check runs first: a cancel that reached the item while it was
+// queued (WAIT_ABORTED wrapping context.Canceled) is still 中途停止.
+func TestProcessItem_WaitAbortUnderCancellationIsStillCancelled(t *testing.T) {
+	h := newItemHarness(t, RouteDecision{})
+	h.router.err = fmt.Errorf("subtitle route: extract x: %w: m.mkv (queued behind 1 for 3m0s): %w",
+		ErrSubtitleExtractWaitAborted, context.Canceled)
 
 	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
 	require.Error(t, err)
@@ -1247,8 +1298,16 @@ func TestProcessItem_WaitAbortIsRecordedAsCancelledNotAsAFileFailure(t *testing.
 	run := h.runs.updated[len(h.runs.updated)-1]
 	assert.Equal(t, models.SubtitleRunFailed, run.Status)
 	assert.True(t, strings.HasPrefix(run.ErrorMessage, CancelledRunPrefix),
-		"a deadline that fired while queued says nothing about the file — it must not count toward parking: %q", run.ErrorMessage)
-	assert.Contains(t, run.ErrorMessage, "SUBTITLE_EXTRACT_WAIT_ABORTED")
+		"a cancel while queued is a cancel: %q", run.ErrorMessage)
+	assert.Equal(t, models.SubtitleRunFailureCancelled, models.SubtitleRunFailureReason(run.ErrorMessage))
+}
+
+// models cannot import subtitle, so its queue_timeout rule spells the
+// WAIT_ABORTED sentinel out as a string. If the sentinel's text changes, the
+// in-memory (unprefixed) shape stops classifying — this catches it.
+func TestQueueTimeoutClassifierTracksTheWaitAbortedSentinel(t *testing.T) {
+	err := fmt.Errorf("x: %w: m.mkv (queued behind 1 for 15m0s): %w", ErrSubtitleExtractWaitAborted, context.DeadlineExceeded)
+	assert.Equal(t, models.SubtitleRunFailureQueueTimeout, models.SubtitleRunFailureReason(err.Error()))
 }
 
 // ─── sub-6-8a AC #4/#6: the per-run model reaches the row and the cache ────

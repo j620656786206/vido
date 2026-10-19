@@ -62,7 +62,7 @@ export interface DownloadsSection {
  * A recently-finished job. Two sources, merged newest first by the backend:
  * parse jobs (`kind: "parse"` — `detail` only) and subtitle-generation runs
  * (`kind: "subtitle"` — disc-2026-10-activity-subtitle-run-time-a AC #1
- * `[@contract-v1]`). A subtitle event never carries `detail` (that would be the
+ * `[@contract-v2]`). A subtitle event never carries `detail` (that would be the
  * raw Go error with a server path); its copy is built on the client from the
  * fields below. Every subtitle-only field is optional: an absent `spentUsd`
  * means "not recorded", NOT $0 — the backend sends `0` for a free run.
@@ -87,7 +87,7 @@ export interface RecentEvent {
   durationSeconds?: number;
   /** Raw spend (not pre-rounded); absent = not recorded. */
   spentUsd?: number;
-  /** One of the ten `RunFailureReason` codes; failed runs only. */
+  /** One of the eleven `RunFailureReason` codes; failed runs only. */
   failureReason?: string;
 }
 export interface RecentSection {

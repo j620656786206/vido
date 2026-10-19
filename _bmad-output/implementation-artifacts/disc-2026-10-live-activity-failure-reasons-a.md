@@ -75,6 +75,17 @@ Status: ready-for-dev
 
 ## Dev Notes
 
+> ⚠️ STALE [@contract-v1→v2]: upstream disc-2026-10-activity-subtitle-run-time-a AC #1 bumped 2026-10-19; re-confirm against v2 before dev — see disc-2026-10-run-timeout-not-cancel
+
+### 上游合約已變（`disc-2026-10-run-timeout-not-cancel`，合併順序在本單之前，2026-10-19）
+
+- `failure_reason` 值域變成**十一個**代碼：多了 `queue_timeout`（排隊等抽軌逾時，活動記錄寫「處理逾時」）。AC #1 的「十個代碼」→ 十一個。
+- `failItem` 的取消判斷已經拆成兩段：①`errors.Is(cause, context.Canceled) || errors.Is(ctx.Err(), context.Canceled)` → `cancelled: `；②否則 `errors.Is(cause, ErrSubtitleExtractWaitAborted)` → `queue-timeout: `（`QueueTimeoutRunPrefix`）。**T1 抽出的 `isCallerCancellation(cause, ctxErr)` 只能包第 ① 段，不能再含 `ErrSubtitleExtractWaitAborted`**；第 ② 段可另抽 `isQueueTimeout(cause)`。
+- AC #2 單次生成的判斷：第 1 步讀 `run.ErrorMessage` 已經會得到 `queue_timeout`。第 2 步「取消類」之後加一步「`errors.Is(runErr, ErrSubtitleExtractWaitAborted)` → `queue_timeout`」（單次生成沒有期限，實際上不會發生，但規則要跟紀錄一致）。
+- AC #3 一致性測試的「`ErrSubtitleExtractWaitAborted` → `cancelled`」改成兩條：包 `context.Canceled` → `cancelled`；包 `context.DeadlineExceeded` → `queue_timeout`。
+- 「查到的事」第一條的行號、「十個代碼」與規則順序（cancelled 開頭）是 v1 時的樣子，開工時以 `origin/main` 為準。
+- 分類函式的第一條規則現在是 `queue_timeout`（排在 `cancelled` 前面，接住舊的 `cancelled: …WAIT_ABORTED…deadline exceeded` 紀錄）；本單「不要改規則或順序」指的是這個 v2 版本。
+
 ### 不要做的事
 
 - 不要拿掉或改寫 `error`、`message`：詳情對話框還在用（`GenerationProgressV2.tsx:94`）。

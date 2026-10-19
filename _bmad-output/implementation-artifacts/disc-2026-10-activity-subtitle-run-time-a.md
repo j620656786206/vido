@@ -41,7 +41,7 @@ Status: done
 
 ## Acceptance Criteria
 
-1. **AC #1 [@contract-v1]：** `GET /api/v1/activity` 的 `recent.events[]` 多一種 `kind: "subtitle"`（既有 `kind: "parse"` 的形狀、鍵名、意義完全不變）。字幕事件的鍵：
+1. **AC #1 [@contract-v2]：** `GET /api/v1/activity` 的 `recent.events[]` 多一種 `kind: "subtitle"`（既有 `kind: "parse"` 的形狀、鍵名、意義完全不變）。字幕事件的鍵：
 
    | 鍵 | 型別 | 何時出現 |
    |---|---|---|
@@ -57,10 +57,11 @@ Status: done
    | `spent_usd` | number（原值，不先四捨五入） | `spent_usd` 不是 NULL 時；**0 也要送 `0`**（「沒花錢」）；NULL 就不送（沒記錄 ≠ $0） |
    | `failure_reason` | 下表的代碼之一 | 只有 `result = "failed"` |
 
-   `failure_reason` 代碼（不帶任何中文，文字在前端）：`cancelled`、`budget_exceeded`、`credit_exhausted`、`target_not_writable`、`no_audio_track`、`ffmpeg_missing`、`asr_unconfigured`、`unauthorized`、`timeout`、`other`。字幕事件**不送** `detail`（裡面會是含伺服器路徑的原始錯誤）。
-2. **哪些 run 會出現：** `status IN ('completed','failed') AND completed_at IS NOT NULL`。`skipped`（含延後付費 `deferred-paid:`、skip、no_text_source）、`pending`、`running` 都**不出現**（running 已經在「進行中」）。取消的 run（`error_message` 以 `cancelled: ` 開頭）照樣出現，`failure_reason = "cancelled"`。
+   `failure_reason` 代碼（不帶任何中文，文字在前端）：`queue_timeout`（v2 新增：排隊等抽軌逾時，見 `disc-2026-10-run-timeout-not-cancel`）、`cancelled`、`budget_exceeded`、`credit_exhausted`、`target_not_writable`、`no_audio_track`、`ffmpeg_missing`、`asr_unconfigured`、`unauthorized`、`timeout`、`other`。字幕事件**不送** `detail`（裡面會是含伺服器路徑的原始錯誤）。
+2. **哪些 run 會出現：** `status IN ('completed','failed') AND completed_at IS NOT NULL`。`skipped`（含延後付費 `deferred-paid:`、skip、no_text_source）、`pending`、`running` 都**不出現**（running 已經在「進行中」）。取消的 run（`error_message` 以 `cancelled: ` 開頭）照樣出現，`failure_reason = "cancelled"`。（v2：以 `queue-timeout: ` 開頭的 run，以及舊的 `cancelled: …SUBTITLE_EXTRACT_WAIT_ABORTED…deadline exceeded` 排隊逾時紀錄，`failure_reason = "queue_timeout"`，見 AC #4 第 0 條。）
 3. **跟解析事件按時間混排：** 兩個來源合併後依 `at` 由新到舊；同一時間先比 `kind`（`subtitle` 在前）再比各自的 id，順序固定。總數上限維持 `recentEventsMax = 8`。字幕來源只需查最新 8 筆（`LIMIT 8`、`ORDER BY completed_at DESC`，走 `idx_subtitle_runs_completed_at`）。
 4. **失敗原因分類是一個純函式：** `models.SubtitleRunFailureReason(errorMessage string) string`，依序比對（第一個命中就回傳）：
+   0. （v2 新增，`disc-2026-10-run-timeout-not-cancel`）前綴 `queue-timeout: `，或同時含 `SUBTITLE_EXTRACT_WAIT_ABORTED` 與 `deadline exceeded` → `queue_timeout`（排在取消前面，接住舊的「逾時被記成取消」紀錄）
    1. 前綴 `cancelled: `，或含 `context canceled` → `cancelled`
    2. `AI_BUDGET_EXCEEDED` → `budget_exceeded`
    3. `AI_CREDIT_EXHAUSTED` 或 `帳號沒有額度` → `credit_exhausted`
@@ -150,6 +151,7 @@ Status: done
 | 日期 | 變更 |
 |---|---|
 | 2026-10-19 | 建單（Bob）。AC #1 首次蓋 `[@contract-v1]`；既有 `parse` 事件為隱含 v0、不變（純增欄位）。 |
+| 2026-10-19 | [@contract-v1→v2] AC #1: failure_reason 多一個值 queue_timeout（排隊等抽軌逾時，原本記成 cancelled）；下游：前端 RunFailureReason／FAILURE_COPY_BY_REASON 要多一個鍵，舊前端會把它顯示成「生成失敗」（`disc-2026-10-run-timeout-not-cancel`，前後端同一個 PR）。 |
 
 ## Dev Agent Record
 

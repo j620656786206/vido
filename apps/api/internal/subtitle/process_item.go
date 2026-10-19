@@ -714,12 +714,25 @@ const DeferredPaidRunPrefix = "deferred-paid: "
 // AC #5). The row is still written — failItem's cleanup is what keeps
 // the media row out of a stranded in-flight status — but
 // AutoGenerator.excludedMediaIDs does not count it toward
-// autoFailureAttemptLimit. A deadline (DeadlineExceeded) is deliberately NOT
-// marked: that one is about the file.
+// autoFailureAttemptLimit (see notAboutTheFile). A deadline (DeadlineExceeded)
+// is deliberately NOT marked: that one is about the file — unless it ran out
+// while the item was queued for the extraction slot, which is
+// QueueTimeoutRunPrefix, not this.
 //
 // The value lives in models (models.SubtitleRunCancelledPrefix) so the
 // activity record's failure classifier reads the same prefix this writes.
 const CancelledRunPrefix = models.SubtitleRunCancelledPrefix
+
+// QueueTimeoutRunPrefix marks a `failed` run whose deadline ran out while it
+// was QUEUED behind another extraction on the ExtractGate, or lost so much of
+// its budget there that its ffmpeg was stopped by the caller's deadline
+// (ErrSubtitleExtractWaitAborted wrapping context.DeadlineExceeded, sub-6-3).
+// Like a cancel it says nothing about the file, so excludedMediaIDs does not
+// count it toward autoFailureAttemptLimit (notAboutTheFile); unlike a cancel
+// nobody stopped it, so the activity record says 處理逾時 rather than 中途停止
+// (disc-2026-10-run-timeout-not-cancel). Only the free lane sets a per-item
+// deadline, so only AutoGenerator rows ever carry it.
+const QueueTimeoutRunPrefix = models.SubtitleRunQueueTimeoutPrefix
 
 // deferPaidItem is the FreeOnly brake (9R-10b AC #3): the run stops at the
 // threshold of a paid call, having spent nothing.
@@ -853,13 +866,23 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 		// The item ctx itself tells the two apart (Canceled on shutdown,
 		// DeadlineExceeded on the per-item timeout).
 		//
-		// A deadline that fired while the item was still QUEUED for the
-		// extraction slot (sub-6-3) is cancelled-class too: the file was never
-		// touched, so it must not count toward the free lane's three-strikes
-		// parking the way a deadline inside ffmpeg legitimately does.
-		if errors.Is(cause, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) ||
-			errors.Is(cause, ErrSubtitleExtractWaitAborted) {
+		// Order matters (disc-2026-10-run-timeout-not-cancel AC #3):
+		//  1. a cancel wins, even one that arrived while the item was queued
+		//     for the extraction slot (WAIT_ABORTED wrapping Canceled) — that
+		//     is still 中途停止;
+		//  2. otherwise a WAIT_ABORTED is a deadline that ran out in (or
+		//     because of) the queue: the file was never given its budget, so
+		//     it must not count toward the free lane's three-strikes parking
+		//     the way a deadline inside ffmpeg legitimately does — but it is a
+		//     timeout, not a cancel. It is decided HERE, from the real error
+		//     type, because the stored message is truncated and long ffmpeg
+		//     stderr can cut off the trailing "deadline exceeded";
+		//  3. anything else, an ordinary deadline included, is unmarked.
+		switch {
+		case errors.Is(cause, context.Canceled) || errors.Is(ctx.Err(), context.Canceled):
 			msg = CancelledRunPrefix + msg
+		case errors.Is(cause, ErrSubtitleExtractWaitAborted):
+			msg = QueueTimeoutRunPrefix + msg
 		}
 		run.ErrorMessage = truncateErrorMessage(msg)
 		run.CompletedAt = &completedAt

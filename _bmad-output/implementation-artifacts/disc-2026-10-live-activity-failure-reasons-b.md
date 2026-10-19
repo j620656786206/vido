@@ -74,6 +74,14 @@ Status: ready-for-dev
 
 ## Dev Notes
 
+> ⚠️ STALE [@contract-v1→v2]: upstream disc-2026-10-activity-subtitle-run-time-a AC #1 bumped 2026-10-19; re-confirm against v2 before dev — see disc-2026-10-run-timeout-not-cancel
+
+### 上游合約已變（`disc-2026-10-run-timeout-not-cancel`，合併順序在本單之前，2026-10-19）
+
+- `failure_reason` 值域變成**十一個**代碼：多了 `queue_timeout`，`FAILURE_COPY_BY_REASON.queue_timeout = { text: '處理逾時', stopped: false }` 已經在（⚖️ Sally 2026-10-19 追認：文字跟 `timeout` 相同、紅色失敗）。
+- AC #5「對十個代碼逐一」→ 改成對 `Object.keys(FAILURE_COPY_BY_REASON)` 逐一，以後再加代碼就不用改測試。
+- `TABLE`／`failureCopy()` 上一張沒動（即時活動實際收不到 `queue_timeout`：自動生成不送 `transcription_failed`），本單照原計畫刪掉。
+
 ### 不要做的事
 
 - 不要在前端保留任何「英文錯誤字串 → 原因」的比對當備援（那正是兩邊說法不一致的來源）。沒有代碼就是「生成失敗」。

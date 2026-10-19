@@ -400,8 +400,8 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 					// bound would have fired FIRST if the budget had been whole,
 					// so reaching here after a wait says nothing about THIS file
 					// (CR H1) — chain the wait-abort sentinel so the item flow
-					// records the run cancelled-class and the free lane never
-					// parks the file over it.
+					// records the run QueueTimeoutRunPrefix and the free lane
+					// never parks the file over it.
 					return nil, fmt.Errorf("%w: %w", ErrSubtitleExtractWaitAborted, failure)
 				}
 				return nil, failure
