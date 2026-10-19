@@ -521,9 +521,10 @@ func (g *AutoGenerator) Run(ctx context.Context) {
 			// The item ran out of budget while QUEUED behind another
 			// extraction, or lost so much of it there that its own ffmpeg
 			// bound never got to fire (sub-6-3 CR H1/L8). failItem already
-			// marked the row cancelled-class so it cannot park the file, and
-			// this counter must agree — it is not a failure of the FILE. The
-			// round continues: the next item may be small enough to finish.
+			// marked the row QueueTimeoutRunPrefix, which notAboutTheFile
+			// keeps out of parking, and this counter must agree — it is not a
+			// failure of the FILE. The round continues: the next item may be
+			// small enough to finish.
 			queued++
 			g.logger.Info("subtitle auto-generation: item gave up waiting for the extraction slot",
 				"media_id", ref.ID, "media_type", ref.MediaType, "error", err)
@@ -794,10 +795,13 @@ func (g *AutoGenerator) excludedMediaIDs(ctx context.Context) (map[string]parked
 	// anything about the file, and counting them would let three restarts park
 	// an innocent item for good. (Flip side, review M3: the same long item can
 	// be re-selected first after every restart and never count.)
+	// Likewise a row that ran out of time QUEUED for the extraction slot
+	// (QueueTimeoutRunPrefix, sub-6-3 CR H1) — the file never got its budget.
+	// Both exemptions live in notAboutTheFile.
 	// A per-item DeadlineExceeded is NOT exempt — a file that takes longer than
 	// AutoGenerationItemTimeout is exactly what the limit is for.
 	for _, r := range failed {
-		if strings.HasPrefix(r.ErrorMessage, CancelledRunPrefix) || !r.StartedAt.After(freeLaneEpoch) {
+		if notAboutTheFile(r.ErrorMessage) || !r.StartedAt.After(freeLaneEpoch) {
 			continue
 		}
 		rec := records[r.MediaID]
@@ -815,6 +819,23 @@ func (g *AutoGenerator) excludedMediaIDs(ctx context.Context) (map[string]parked
 		}
 	}
 	return out, nil
+}
+
+// notAboutTheFile reports whether a `failed` run row says nothing about the
+// media file itself, so it must not count toward autoFailureAttemptLimit:
+//   - CancelledRunPrefix — the CALLER stopped it (shutdown, pool stop, a user
+//     cancelling a consent batch mid-item);
+//   - QueueTimeoutRunPrefix — its deadline ran out while it was queued for the
+//     extraction slot (disc-2026-10-run-timeout-not-cancel; before that story
+//     these rows were written under CancelledRunPrefix, so old rows stay
+//     exempt either way).
+//
+// Prefixes only, unlike models.SubtitleRunFailureReason, which also reads the
+// words: every row failItem writes for these two cases carries its prefix, so
+// an unprefixed row never needs the exemption.
+func notAboutTheFile(errorMessage string) bool {
+	return strings.HasPrefix(errorMessage, CancelledRunPrefix) ||
+		strings.HasPrefix(errorMessage, QueueTimeoutRunPrefix)
 }
 
 // isDeferredOutcome reports whether one ProcessItem call ended at the paid

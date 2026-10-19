@@ -30,6 +30,11 @@ func TestSubtitleRunFailureReason(t *testing.T) {
 		{"prod: placer permission denied after translating (和平使者 S01E01)", prodPlacerDenied, SubtitleRunFailureTargetNotWritable},
 
 		// One per code.
+		{
+			"queue-timeout prefix",
+			"queue-timeout: subtitle pipeline: movie x: route: subtitle route: extract /media/movies/x.mkv: SUBTITLE_EXTRACT_WAIT_ABORTED: gave up waiting for the extraction slot: x.mkv (queued behind 1 for 15m0s): context deadline exceeded",
+			SubtitleRunFailureQueueTimeout,
+		},
 		{"cancelled prefix", "cancelled: subtitle pipeline: episode x: translate: context canceled", SubtitleRunFailureCancelled},
 		{"bare context canceled", "subtitle pipeline: movie x: extract: context canceled", SubtitleRunFailureCancelled},
 		{"budget", "subtitle pipeline: episode x: translate: AI_BUDGET_EXCEEDED: per-run AI budget ceiling reached", SubtitleRunFailureBudgetExceeded},
@@ -76,17 +81,69 @@ func TestSubtitleRunFailureReason(t *testing.T) {
 	}
 }
 
-// Every code the function can return is one of the ten the contract names —
+// disc-2026-10-run-timeout-not-cancel: a deadline that ran out while the item
+// was QUEUED for the extraction slot is queue_timeout, whether the row carries
+// the new prefix, the pre-v2 `cancelled: ` prefix, or no prefix at all — and a
+// real cancel while queued stays cancelled.
+func TestSubtitleRunFailureReason_QueueTimeout(t *testing.T) {
+	const waitAborted = "subtitle pipeline: movie 1f0c: route: subtitle route: extract /media/movies/Big (2024)/Big.2160p.mkv: SUBTITLE_EXTRACT_WAIT_ABORTED: gave up waiting for the extraction slot: Big.2160p.mkv"
+	cases := []struct {
+		name string
+		msg  string
+		want string
+	}{
+		{"new prefix", "queue-timeout: " + waitAborted + " (queued behind 1 for 15m0s): context deadline exceeded", SubtitleRunFailureQueueTimeout},
+		{
+			// Written before this story: the queue timeout was recorded under
+			// the cancelled prefix. The rule must sit ABOVE cancelled for this.
+			"pre-v2 row: cancelled prefix + deadline words",
+			"cancelled: " + waitAborted + " (queued behind 2 for 15m0s): context deadline exceeded",
+			SubtitleRunFailureQueueTimeout,
+		},
+		{
+			// The prefix alone decides: the stored row was cut (~1000 bytes)
+			// before the trailing ctx error.
+			"new prefix, truncated before the deadline words",
+			"queue-timeout: " + waitAborted + ": SUBTITLE_EXTRACT_FAILED: ffmpeg subtitle extraction failed: ffmpeg stopped by the caller's deadline after 3m0s on Big.2160p.mkv (ffmpeg stderr: size=      34kB time=00:28:10.85…",
+			SubtitleRunFailureQueueTimeout,
+		},
+		{"cancelled while queued stays cancelled", "cancelled: " + waitAborted + " (queued behind 1 for 3m0s): context canceled", SubtitleRunFailureCancelled},
+		{"in-memory shape (no prefix)", waitAborted + " (queued behind 1 for 15m0s): context deadline exceeded", SubtitleRunFailureQueueTimeout},
+		{
+			// extractor.go: queued, then ffmpeg ran out of the caller's budget.
+			"ffmpeg stopped by the caller's deadline after a wait",
+			"subtitle pipeline: movie x: route: subtitle route: extract /media/movies/x.mkv: SUBTITLE_EXTRACT_WAIT_ABORTED: gave up waiting for the extraction slot: SUBTITLE_EXTRACT_FAILED: ffmpeg subtitle extraction failed: ffmpeg stopped by the caller's deadline after 3m0s on x.mkv (file 61.2 GB; 12m0s of that budget went to waiting for the extraction slot): context deadline exceeded",
+			SubtitleRunFailureQueueTimeout,
+		},
+		// The deadline words alone are an ordinary per-item timeout.
+		{"prod AI_TIMEOUT stays timeout", prodAITimeout, SubtitleRunFailureTimeout},
+		{"prod ffmpeg timeout stays timeout", prodFFmpegTimeout, SubtitleRunFailureTimeout},
+		{
+			// Known limit: a pre-v2 row cut off (~1000 bytes) before its
+			// trailing "deadline exceeded" cannot be told from a cancel.
+			"pre-v2 row truncated before the deadline words stays cancelled",
+			"cancelled: " + waitAborted + ": SUBTITLE_EXTRACT_FAILED: ffmpeg subtitle extraction failed: ffmpeg stopped by the caller's deadline after 3m0s on Big.2160p.mkv (file 61.2 GB; 12m0s of that budget went to waiting for the extraction slot) (ffmpeg stderr: size=      34kB time=00:28:10.85 bitrate=   0.2kbits/s speed=2.85x",
+			SubtitleRunFailureCancelled,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, SubtitleRunFailureReason(tc.msg))
+		})
+	}
+}
+
+// Every code the function can return is one of the eleven the contract names —
 // the web client's FAILURE_COPY_BY_REASON has exactly these keys.
 func TestSubtitleRunFailureReason_CodesAreTheContract(t *testing.T) {
 	contract := map[string]bool{
-		"cancelled": true, "budget_exceeded": true, "credit_exhausted": true,
+		"queue_timeout": true, "cancelled": true, "budget_exceeded": true, "credit_exhausted": true,
 		"target_not_writable": true, "no_audio_track": true, "ffmpeg_missing": true,
 		"asr_unconfigured": true, "unauthorized": true, "timeout": true, "other": true,
 	}
 	seen := map[string]bool{SubtitleRunFailureOther: true}
 	for _, r := range subtitleRunFailureRules {
-		assert.Truef(t, contract[r.reason], "rule code %q is not in the [@contract-v1] list", r.reason)
+		assert.Truef(t, contract[r.reason], "rule code %q is not in the [@contract-v2] list", r.reason)
 		assert.Falsef(t, seen[r.reason], "code %q has two rules — merge them so the order stays readable", r.reason)
 		seen[r.reason] = true
 	}

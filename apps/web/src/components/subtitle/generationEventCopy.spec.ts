@@ -352,7 +352,7 @@ describe('FAILURE_COPY_BY_REASON', () => {
     expect(failureCopy(raw)).toBe(FAILURE_COPY_BY_REASON[reason]);
   });
 
-  it('has exactly the ten contract codes', () => {
+  it('has exactly the eleven contract codes', () => {
     expect(Object.keys(FAILURE_COPY_BY_REASON).sort()).toEqual(
       [
         'asr_unconfigured',
@@ -362,6 +362,7 @@ describe('FAILURE_COPY_BY_REASON', () => {
         'ffmpeg_missing',
         'no_audio_track',
         'other',
+        'queue_timeout',
         'target_not_writable',
         'timeout',
         'unauthorized',
@@ -375,5 +376,6 @@ describe('FAILURE_COPY_BY_REASON', () => {
     expect(failureCopyForReason('constructor').text).toBe('生成失敗');
     expect(failureCopyForReason('target_not_writable').text).toBe('影片所在的資料夾寫不進字幕');
     expect(failureCopyForReason('cancelled').text).toBe('中途停止');
+    expect(failureCopyForReason('queue_timeout').text).toBe('處理逾時');
   });
 });

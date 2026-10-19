@@ -3,7 +3,7 @@
  * Words for a subtitle-generation row in the activity record
  * (disc-2026-10-activity-subtitle-run-time-b; ⚖️ Sally 2026-10-19 rulings 2–4,
  * spec note `spec-note-k-run-time` XYUmV). The backend sends copy-free fields
- * (`[@contract-v1]`, the -a story's AC #1); every Chinese word is built here.
+ * (`[@contract-v2]`, the -a story's AC #1); every Chinese word is built here.
  *
  *   detail: 「末日光明 S01E02 · 翻譯 568 句」 / 「末日光明 S01E01 · 影片所在的資料夾寫不進字幕」
  *   meta:   「3 分鐘 · US$0.27」 / 「4 秒 · 沒花錢」

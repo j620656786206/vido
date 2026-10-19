@@ -224,7 +224,7 @@ func TestExtractor_CallerDeadlineAfterQueueingIsAWaitAbort(t *testing.T) {
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrSubtitleExtractWaitAborted,
-		"a starved budget is cancelled-class, not a file failure (CR H1)")
+		"a starved budget is a queue timeout, not a file failure (CR H1)")
 	assert.ErrorIs(t, err, ErrSubtitleExtractFailed, "the extraction did fail, and the chain says both")
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
 	assert.Contains(t, err.Error(), "went to waiting for the extraction slot")

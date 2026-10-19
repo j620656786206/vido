@@ -38,13 +38,17 @@ export interface FailureCopy {
 /**
  * The reason codes a finished subtitle run carries on GET /api/v1/activity
  * (`failure_reason`, disc-2026-10-activity-subtitle-run-time-a AC #1
- * `[@contract-v1]`). The backend classifies the raw error itself
- * (`models.SubtitleRunFailureReason`); its rules are a SUPERSET of TABLE below —
- * it also knows `cancelled` and `target_not_writable`, and checks them in its
- * own order. The WORDS are shared; the matching is not (yet). The live log
- * therefore still says 生成失敗 for a write failure the activity record names.
+ * `[@contract-v2]`; v2 added `queue_timeout`). The backend classifies the raw
+ * error itself (`models.SubtitleRunFailureReason`); its rules are a SUPERSET of
+ * TABLE below — it also knows `queue_timeout`, `cancelled` and
+ * `target_not_writable`, and checks them in its own order. (`queue_timeout`
+ * never reaches the live log: only the automatic free lane can time out in the
+ * extraction queue, and it does not send transcription_failed.) The WORDS are
+ * shared; the matching is not (yet). The live log therefore still says 生成失敗
+ * for a write failure the activity record names.
  */
 export type RunFailureReason =
+  | 'queue_timeout'
   | 'cancelled'
   | 'budget_exceeded'
   | 'credit_exhausted'
@@ -62,6 +66,10 @@ export type RunFailureReason =
  * the two surfaces never word the same reason two ways.
  */
 export const FAILURE_COPY_BY_REASON: Readonly<Record<RunFailureReason, FailureCopy>> = {
+  // disc-2026-10-run-timeout-not-cancel (⚖️ Sally 2026-10-19): waited too long
+  // for the extraction slot. Same words and colour as `timeout` — nobody
+  // stopped it, so never 中途停止.
+  queue_timeout: Object.freeze({ text: '處理逾時', stopped: false }),
   // ⚖️ Sally 2026-10-19: a user cancel or a container restart mid-run.
   cancelled: Object.freeze({ text: '中途停止', stopped: false }),
   budget_exceeded: Object.freeze({ text: '已達預算上限', stopped: true }),
