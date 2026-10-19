@@ -242516,15 +242516,99 @@
                               "fill": "$success"
                             },
                             "xWxRJ": {
-                              "content": "字幕已下載"
+                              "content": "字幕完成"
                             },
                             "ko2Lf": {
-                              "content": "蒼鷺 · 繁體中文"
+                              "content": "末日光明 S01E02 · 翻譯 568 句"
                             },
-                            "uCkPx": {
-                              "content": "2 分鐘前",
-                              "fill": "$text-muted",
-                              "fontFamily": "Noto Sans TC"
+                            "tLXCT": {
+                              "type": "frame",
+                              "id": "U4fAlE",
+                              "name": "rowRight",
+                              "layout": "vertical",
+                              "gap": "$Space/2xs",
+                              "alignItems": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mniBu",
+                                  "name": "rowRightMeta",
+                                  "fill": "$text-secondary",
+                                  "content": "3 分鐘 · US$0.27",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Mono",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "KMF4v",
+                                  "name": "rowRightTime",
+                                  "fill": "$text-muted",
+                                  "content": "2 分鐘前",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            },
+                            "Yhrjo": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "EVrLx",
+                          "type": "ref",
+                          "ref": "fF8nX",
+                          "name": "row-字幕沒做成",
+                          "width": "fill_container",
+                          "descendants": {
+                            "EtPLt": {
+                              "fill": "$error-tint"
+                            },
+                            "B5edWI": {
+                              "icon": "triangle-alert",
+                              "fill": "$error"
+                            },
+                            "xWxRJ": {
+                              "content": "字幕沒做成"
+                            },
+                            "ko2Lf": {
+                              "content": "末日光明 S01E01 · 影片所在的資料夾寫不進字幕"
+                            },
+                            "tLXCT": {
+                              "type": "frame",
+                              "id": "SWSZr",
+                              "name": "rowRight",
+                              "layout": "vertical",
+                              "gap": "$Space/2xs",
+                              "alignItems": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "sRSTo",
+                                  "name": "rowRightMeta",
+                                  "fill": "$text-secondary",
+                                  "content": "4 秒 · 沒花錢",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Mono",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "zcDo0",
+                                  "name": "rowRightTime",
+                                  "fill": "$text-muted",
+                                  "content": "3 小時前",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             },
                             "Yhrjo": {
                               "enabled": false
@@ -244597,6 +244681,21 @@
               "fontFamily": "$Type/Family/Primary",
               "fontSize": "$Type/H3/Size",
               "fontWeight": "$Type/H3/Weight"
+            },
+            {
+              "type": "text",
+              "id": "XYUmV",
+              "x": 24740,
+              "y": 52844,
+              "name": "spec-note-k-run-time",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": 300,
+              "content": "K1（活動記錄，2026-10-19）：每次字幕生成（成功或失敗）都是一列，跟解析事件按時間混排。標題：成功「字幕完成」、失敗「字幕沒做成」。說明：「片名 S01E02 · 翻譯 N 句」（電影不寫集數；有用語音辨識寫「聽寫＋翻譯 N 句」），失敗時寫原因，用管理字幕視窗同一句。右側兩行：上行「花多久 · 花多少錢」（等寬），下行相對時間。花多久：不到 1 分鐘寫「N 秒」，不到 1 小時寫「N 分鐘」，以上寫「1 小時 5 分」；沒有完成時間就不寫。花多少錢：US$0.27；0 元寫「沒花錢」。只有字幕列有右側兩行，掃描、解析列維持一行時間。手機：右側只留相對時間，「花多久 · 花多少錢」移到說明下面一行（右側兩行會把說明擠到太窄）。",
+              "lineHeight": "$Type/Label/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Label/Size",
+              "fontWeight": "normal"
             }
           ]
         },
@@ -245060,16 +245159,164 @@
                               "icon": "circle-check",
                               "fill": "$success"
                             },
-                            "xWxRJ": {
-                              "content": "字幕已下載"
+                            "VonSw": {
+                              "type": "frame",
+                              "id": "DK5ib",
+                              "name": "textCol",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": "$Space/xs",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "nOWl1",
+                                  "name": "rowTitle",
+                                  "fill": "$text-primary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "字幕完成",
+                                  "lineHeight": "$Type/BodyLg/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/BodyLg/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Ynkp2",
+                                  "name": "rowSubtitle",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "末日光明 S01E02 · 翻譯 568 句",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "s8BAn5",
+                                  "name": "rowMeta",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "3 分鐘 · US$0.27",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Mono",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             },
-                            "ko2Lf": {
-                              "content": "蒼鷺 · 繁體中文"
+                            "tLXCT": {
+                              "type": "frame",
+                              "id": "SewFT",
+                              "name": "rowRight",
+                              "layout": "vertical",
+                              "gap": "$Space/2xs",
+                              "alignItems": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pN0mC",
+                                  "name": "rowRightTime",
+                                  "fill": "$text-muted",
+                                  "content": "2 分鐘前",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             },
-                            "uCkPx": {
-                              "content": "2 分鐘前",
-                              "fill": "$text-muted",
-                              "fontFamily": "Noto Sans TC"
+                            "Yhrjo": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "id": "akt4i",
+                          "type": "ref",
+                          "ref": "fF8nX",
+                          "name": "mrow-字幕沒做成",
+                          "width": "fill_container",
+                          "descendants": {
+                            "EtPLt": {
+                              "fill": "$error-tint"
+                            },
+                            "B5edWI": {
+                              "icon": "triangle-alert",
+                              "fill": "$error"
+                            },
+                            "VonSw": {
+                              "type": "frame",
+                              "id": "Wp8Ve",
+                              "name": "textCol",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": "$Space/xs",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "aWFqQ",
+                                  "name": "rowTitle",
+                                  "fill": "$text-primary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "字幕沒做成",
+                                  "lineHeight": "$Type/BodyLg/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/BodyLg/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "nKrEr",
+                                  "name": "rowSubtitle",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "末日光明 S01E01 · 影片所在的資料夾寫不進字幕",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "aVb4L",
+                                  "name": "rowMeta",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "4 秒 · 沒花錢",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Mono",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            },
+                            "tLXCT": {
+                              "type": "frame",
+                              "id": "u8aCwS",
+                              "name": "rowRight",
+                              "layout": "vertical",
+                              "gap": "$Space/2xs",
+                              "alignItems": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "NnYdF",
+                                  "name": "rowRightTime",
+                                  "fill": "$text-muted",
+                                  "content": "3 小時前",
+                                  "lineHeight": "$Type/Label/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Label/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
                             },
                             "Yhrjo": {
                               "enabled": false
