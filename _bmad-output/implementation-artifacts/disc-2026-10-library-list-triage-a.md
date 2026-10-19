@@ -1,6 +1,6 @@
 # Disc：修字幕清單 A（後端）——媒體庫可以「依字幕狀態」排序，缺中文的排最前面
 
-Status: review
+Status: done
 
 **Source:** 2026-10-19 `/impeccable critique 媒體庫 列表`（21／40；快照 `.impeccable/critique/2026-10-19T00-18-51Z__ps-web-src-components-library-librarylistrowv2-tsx.md`，Persona「Alex: no 缺中文-first sort」「NAS self-hoster: can't answer how many of 136 still lack 繁中」）＋ Alexyu 看正式機列表：「中間一大片空白，看起來很奇怪」。
 ⚖️ **2026-10-19 Alexyu 裁定 1A**：列表的工作是「修字幕清單」——字幕狀態緊跟片名、**可以依字幕狀態排序**、失敗列有出路。⚖️ **2B**：critique 的問題全部一起處理。設計定稿：`disc-2026-10-library-list-triage-design`（done；Sally 裁定 6「排序多一個『字幕狀態』：缺中文 → 無字幕源／未翻譯／已略過 → 不知道 → 簡中 → 中文 → 繁中」）。
@@ -146,3 +146,4 @@ Claude Opus 5.5（Amelia，dev-story，2026-10-19）
 | Date | Change |
 | --- | --- |
 | 2026-10-19 | dev-story（Amelia）：新增 `sort_by=subtitle_status`（AC #1 [@contract-v1] 首次定義）——排名＝列表徽章，同級 created_at DESC、id ASC；電影／影集／「全部」三條路徑同一份排名與次序鍵。Status → review。 |
+| 2026-10-19 | /ship：PR #820 CI 全綠（12 pass／5 skipping），對抗式自我審查補 handler 傳遞測試；Status → done。 |
