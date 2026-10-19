@@ -104,6 +104,33 @@ describe('DetailHeroV2', () => {
     );
     expect(screen.getByTestId('detail-poster-fallback')).toHaveTextContent(/^F$/);
   });
+
+  // disc-2026-10-detail-mobile-long-title-overflow: an unmatched item's title is a
+  // file name with no spaces; it must wrap mid-word instead of widening the page.
+  // jsdom does no layout — this only guards the classes; the real proof is the
+  // Playwright `long unbreakable title` block in tests/e2e/media-detail.spec.ts.
+  it('title and original title wrap mid-word inside a min-w-0 column', () => {
+    const title = '[bitsearch.to] Predator.Badlands.2025.2160p.MA.WEB-DL.DV.HDR.TYMBLER.mkv';
+    const originalTitle = 'Home.Video.Collection.Vol1.Remastered';
+    render(
+      <DetailHeroV2
+        title={title}
+        originalTitle={originalTitle}
+        posterPath={null}
+        backdropPath={null}
+        onBack={() => {}}
+      />
+    );
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1).toHaveTextContent(title);
+    expect(h1).toHaveClass('break-words');
+    expect(h1.className).not.toMatch(/\b(truncate|line-clamp-\d|break-all)\b/);
+    const original = screen.getByText(originalTitle);
+    expect(original.tagName).toBe('P');
+    expect(original).toHaveClass('break-words');
+    expect(h1.parentElement).toBe(original.parentElement);
+    expect(h1.parentElement).toHaveClass('min-w-0');
+  });
 });
 
 // disc-2026-10-icon-only-controls-tooltip-a — icon-only controls name themselves in the shared tooltip.

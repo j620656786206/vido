@@ -32,6 +32,8 @@ function uniqueTitle(prefix: string): string {
 
 export interface SeedMovieOptions {
   title?: string;
+  /** `original_title` — the detail hero shows it under the title only when it differs. */
+  originalTitle?: string;
   releaseDate?: string;
   /** Omit (or 0) for a movie with no TMDb id. Its parse_status is '' (no no-metadata block); use api.reparseMovie to reach failed, or `parseStatus` below (dsr-2b-b). */
   tmdbId?: number;
@@ -67,6 +69,7 @@ export async function seedMovie(api: ApiHelpers, opts: SeedMovieOptions = {}): P
     title: opts.title ?? uniqueTitle('E2E Seed Movie'),
     release_date: opts.releaseDate ?? '2020-01-01',
   };
+  if (opts.originalTitle) body.original_title = opts.originalTitle;
   if (opts.tmdbId) body.tmdb_id = opts.tmdbId;
   if (opts.posterPath) body.poster_path = opts.posterPath;
   if (opts.genres) body.genres = opts.genres;

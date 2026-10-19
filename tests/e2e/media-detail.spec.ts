@@ -19,6 +19,7 @@
  * @tags @e2e @media-detail @regression
  */
 
+import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../support/fixtures';
 import { seedMovie, seedSeries, deleteMovies, deleteSeries } from '../support/helpers/seed-helpers';
 
@@ -266,6 +267,102 @@ test.describe('Media Detail - no metadata @e2e @media-detail @dsr-2b-b', () => {
     await expect(dialog).toBeHidden({ timeout: 15000 });
     await expect(page.getByTestId('detail-no-metadata')).toHaveCount(0, { timeout: 15000 });
     await expect(page.getByTestId('detail-hero-v2')).not.toContainText('zzqx');
+  });
+
+  // disc-2026-10-detail-mobile-long-title-overflow: an unmatched movie's title IS its
+  // file name — 10 of 55 movies on the NAS on 2026-10-19 — and a run with no spaces
+  // (`Predator.Badlands.2025.2160p…`) pushed the hero to 604px at 320 and 1051px at
+  // 768, so the whole page scrolled sideways. B10p-M: wrap, never truncate.
+  test.describe('long unbreakable title', () => {
+    const VIEWPORTS = [
+      { width: 320, height: 844 },
+      { width: 360, height: 800 },
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+    ];
+
+    // Soft: one width failing still reports the others, so a regression shows which
+    // widths it hits (the hero's text size changes at `sm`, 640).
+
+    /** The page must not scroll sideways. Measured against clientWidth, not the viewport, so a classic scrollbar (Linux CI) does not move the goalposts. */
+    async function expectNoSideScroll(page: Page, label: string) {
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
+      expect.soft(overflow, `${label}: the page scrolls sideways`).toBe(0);
+    }
+
+    /** Measures the TEXT, not the element: `min-w-0` keeps the h1's own box inside the column even while its unbroken text spills out of it. */
+    async function expectInsideViewport(page: Page, locator: Locator, label: string) {
+      const [right, cw] = await Promise.all([
+        locator.evaluate((el) => {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          return range.getBoundingClientRect().right;
+        }),
+        page.evaluate(() => document.documentElement.clientWidth),
+      ]);
+      expect.soft(right, `${label}: the text runs past the right edge`).toBeLessThanOrEqual(cw);
+    }
+
+    /** More than one line tall — it wrapped, rather than shrinking or being clipped. */
+    async function expectWrapped(locator: Locator) {
+      const { height, lineHeight } = await locator.evaluate((el) => ({
+        height: el.getBoundingClientRect().height,
+        lineHeight: parseFloat(window.getComputedStyle(el).lineHeight),
+      }));
+      expect(height).toBeGreaterThan(1.5 * lineHeight);
+    }
+
+    test('[P1] a failed movie titled with its whole file name wraps instead of widening the page', async ({
+      page,
+      api,
+    }) => {
+      const title = `[bitsearch.to] Predator.Badlands.2025.2160p.MA.WEB-DL.DV.HDR.TYMBLER.${Date.now()}.mkv`;
+      const movie = await seedMovie(api, { title, parseStatus: 'failed' });
+      movieIds.push(movie.id);
+
+      for (const viewport of VIEWPORTS) {
+        await test.step(`${viewport.width}×${viewport.height}`, async () => {
+          await page.setViewportSize(viewport);
+          await page.goto(`/media/movie/${movie.id}`);
+          const h1 = page.getByTestId('detail-hero-v2').getByRole('heading', { level: 1 });
+          await expect(h1).toHaveText(title, { timeout: 15000 });
+          const label = `${viewport.width} wide`;
+          await expectNoSideScroll(page, label);
+          await expectInsideViewport(page, h1, label);
+          if (viewport.width === 320) await expectWrapped(h1);
+        });
+      }
+    });
+
+    test('[P1] an original title with no spaces wraps instead of widening the page', async ({
+      page,
+      api,
+    }) => {
+      const stamp = Date.now();
+      const title = `E2E 長原文片名 ${stamp}`;
+      const originalTitle = `Home.Video.Collection.Vol1.Remastered.${stamp}`;
+      const movie = await seedMovie(api, { title, originalTitle });
+      movieIds.push(movie.id);
+
+      for (const viewport of VIEWPORTS) {
+        await test.step(`${viewport.width}×${viewport.height}`, async () => {
+          await page.setViewportSize(viewport);
+          await page.goto(`/media/movie/${movie.id}`);
+          const hero = page.getByTestId('detail-hero-v2');
+          await expect(hero.getByRole('heading', { level: 1 })).toHaveText(title, {
+            timeout: 15000,
+          });
+          const original = hero.getByText(originalTitle, { exact: true });
+          await expect(original).toBeVisible();
+          const label = `${viewport.width} wide`;
+          await expectNoSideScroll(page, label);
+          await expectInsideViewport(page, original, label);
+          if (viewport.width === 320) await expectWrapped(original);
+        });
+      }
+    });
   });
 });
 

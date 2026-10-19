@@ -27,6 +27,7 @@
  */
 import type { ComponentType } from 'react';
 
+import { deriveLifecycleStatus } from '../../utils/libraryStatus';
 import { Button } from '../../components/ui/Button';
 import { ButtonCost } from '../../components/ui/ButtonCost';
 import { Badge } from '../../components/ui/Badge';
@@ -1796,6 +1797,43 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'screen-section',
     statesOnly: ['default'],
     width: 960,
+  },
+  {
+    // disc-2026-10-detail-mobile-long-title-overflow AC #5 — an unmatched movie's title
+    // is its whole file name, in the shape the NAS really stores (Rule 28): no spaces
+    // after the bracket, and no original title (the failed rows' original_title is
+    // empty). B10p-M: it wraps mid-word, full text, no ellipsis, page not widened.
+    id: 'media-detail-hero-v2-long-title-mobile',
+    label: 'media/DetailHeroV2 (B10p-M — 手機 390 寬，片名是一長串檔名)',
+    component: DetailHeroV2,
+    props: {
+      title: '[bitsearch.to] Predator.Badlands.2025.2160p.MA.WEB-DL.DV.HDR.TYMBLER.mkv',
+      backdropPath: null,
+      posterPath: null,
+      // The real failed-row badge (失敗, error tint) — read from the same helper the
+      // page uses, so a colour change there shows up in this baseline too.
+      badges: [deriveLifecycleStatus({ parseStatus: 'failed' })],
+      actions: (
+        <>
+          <button
+            type="button"
+            className="min-h-[44px] rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-medium text-[var(--text-on-accent)]"
+          >
+            管理字幕
+          </button>
+          <button
+            type="button"
+            className="min-h-[44px] rounded-[var(--radius-md)] bg-[var(--bg-secondary)] px-4 text-sm font-medium text-[var(--text-primary)]"
+          >
+            修改資訊
+          </button>
+        </>
+      ),
+      onBack: noop,
+    },
+    penNode: 'H2MRl', // Screen B10p-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
   },
   {
     // disc-2026-10-detail-resolution-raw AC #6: props in the shape the NAS really stores
