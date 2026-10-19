@@ -1,3 +1,6 @@
+/** `寬x高` as ffprobe writes it; also reads `×` and spaces around the sign. */
+const FRAME_SIZE = /^(\d+)\s*[x×X]\s*(\d+)$/;
+
 /**
  * One resolution word for a library item (disc-2026-10-library-list-triage-b1 AC #4).
  *
@@ -25,7 +28,7 @@ export function resolutionTier(raw: string | null | undefined): string {
   const value = (raw ?? '').trim();
   if (!value) return '';
 
-  const size = value.match(/^(\d+)\s*[x×X]\s*(\d+)$/);
+  const size = value.match(FRAME_SIZE);
   if (size) return tierFromSize(Number(size[1]), Number(size[2]));
 
   const label = value.match(/^(\d+)p$/i);
@@ -44,17 +47,51 @@ function tierFromSize(width: number, height: number): string {
   return `${height}p`;
 }
 
+/**
+ * The detail page's resolution badge (disc-2026-10-detail-resolution-raw AC #1–#2):
+ * the tier first, then the frame size the file really has — `4K · 3840×2160` — the
+ * way B3p-D / B10p-D draw it. The tier comes from `resolutionTier`, so the badge and
+ * the library list never disagree about what a file is.
+ *
+ * Returned in two parts because the phone screens (B3p-M / B10p-M) show the tier
+ * alone: the component hides `dims` below the `sm` breakpoint.
+ *
+ * - `dims` is `寬×高` with U+00D7 and no spaces, only when the value IS a frame size
+ *   with both sides above zero; an NFO label (`4K`, `1080p`, `SD`) has none.
+ * - `full` is what the badge's `title` carries (`4K · 3840×2160`, or the tier alone).
+ * - `null` when there is nothing to show — the badge is left out, as before.
+ */
+export interface ResolutionBadge {
+  tier: string;
+  dims: string | null;
+  full: string;
+}
+
+export function formatResolutionBadge(raw: string | null | undefined): ResolutionBadge | null {
+  const tier = resolutionTier(raw);
+  if (!tier) return null;
+
+  const size = (raw ?? '').trim().match(FRAME_SIZE);
+  const width = size ? Number(size[1]) : 0;
+  const height = size ? Number(size[2]) : 0;
+  const dims = width > 0 && height > 0 ? `${width}×${height}` : null;
+
+  return { tier, dims, full: dims ? `${tier} · ${dims}` : tier };
+}
+
+/**
+ * Channel count → the speaker layout the detail page's audio badge writes after the
+ * codec (`TrueHD 7.1`, disc-2026-10-detail-resolution-raw AC #3). Numbers, not
+ * Mono／Stereo: the design draws `7.1`, and the badges in that row are monospace
+ * read-outs. A count with no common layout stays `${n}ch`, as the page wrote before.
+ */
 const CHANNEL_MAP: Record<number, string> = {
-  1: 'Mono',
-  2: 'Stereo',
+  1: '1.0',
+  2: '2.0',
   6: '5.1',
   8: '7.1',
 };
 
-/**
- * Not used yet — kept on purpose: `disc-2026-10-detail-resolution-raw` (blocked by this
- * story) turns the detail page's `8ch` into `7.1` with it and changes the map there.
- */
 export function audioChannelLabel(channels: number): string {
-  return CHANNEL_MAP[channels] ?? String(channels);
+  return CHANNEL_MAP[channels] ?? `${channels}ch`;
 }

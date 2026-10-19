@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolutionTier, audioChannelLabel } from './resolutionLabel';
+import { resolutionTier, audioChannelLabel, formatResolutionBadge } from './resolutionLabel';
 
 describe('resolutionTier', () => {
   it.each([
@@ -49,25 +49,63 @@ describe('resolutionTier', () => {
   });
 });
 
+// disc-2026-10-detail-resolution-raw AC #1 — the detail page's resolution badge.
+describe('formatResolutionBadge', () => {
+  it.each([
+    ['3840x2160', '4K', '3840×2160', '4K · 3840×2160'],
+    ['3840x2076', '4K', '3840×2076', '4K · 3840×2076'],
+    ['2880x2160', '4K', '2880×2160', '4K · 2880×2160'],
+    // Same tier as Go resolveResolution today (width < 3840, height ≥ 1440).
+    ['3828x1588', '1440p', '3828×1588', '1440p · 3828×1588'],
+    ['1920x804', '1080p', '1920×804', '1080p · 1920×804'],
+    ['1280x720', '720p', '1280×720', '720p · 1280×720'],
+  ])('writes the frame size %s as tier %s and dims %s', (raw, tier, dims, full) => {
+    expect(formatResolutionBadge(raw)).toEqual({ tier, dims, full });
+  });
+
+  it.each([
+    ['4K', '4K'],
+    ['1080p', '1080p'],
+    ['2160p', '4K'],
+    ['abc', 'abc'],
+  ])('shows the label %s as %s with no frame size', (raw, tier) => {
+    expect(formatResolutionBadge(raw)).toEqual({ tier, dims: null, full: tier });
+  });
+
+  it('normalises an upper-case X and spaces to a bare × with no spaces', () => {
+    expect(formatResolutionBadge(' 3840 X 2160 ')).toEqual({
+      tier: '4K',
+      dims: '3840×2160',
+      full: '4K · 3840×2160',
+    });
+  });
+
+  it('leaves a side of zero out of the frame size', () => {
+    expect(formatResolutionBadge('0x1080')).toEqual({ tier: '1080p', dims: null, full: '1080p' });
+  });
+
+  it('returns null when there is nothing to show', () => {
+    expect(formatResolutionBadge('')).toBeNull();
+    expect(formatResolutionBadge('   ')).toBeNull();
+    expect(formatResolutionBadge(undefined)).toBeNull();
+    expect(formatResolutionBadge(null)).toBeNull();
+    expect(formatResolutionBadge('0x0')).toBeNull();
+  });
+});
+
+// disc-2026-10-detail-resolution-raw AC #3 — speaker layouts, not Mono／Stereo.
 describe('audioChannelLabel', () => {
-  it('maps 2 to Stereo', () => {
-    expect(audioChannelLabel(2)).toBe('Stereo');
+  it.each([
+    [1, '1.0'],
+    [2, '2.0'],
+    [6, '5.1'],
+    [8, '7.1'],
+  ])('maps %i channels to %s', (n, want) => {
+    expect(audioChannelLabel(n)).toBe(want);
   });
 
-  it('maps 6 to 5.1', () => {
-    expect(audioChannelLabel(6)).toBe('5.1');
-  });
-
-  it('maps 8 to 7.1', () => {
-    expect(audioChannelLabel(8)).toBe('7.1');
-  });
-
-  it('maps 1 to Mono', () => {
-    expect(audioChannelLabel(1)).toBe('Mono');
-  });
-
-  it('returns the raw number for unknown channel counts', () => {
-    expect(audioChannelLabel(4)).toBe('4');
-    expect(audioChannelLabel(0)).toBe('0');
+  it('keeps the raw count with "ch" for counts with no common layout', () => {
+    expect(audioChannelLabel(4)).toBe('4ch');
+    expect(audioChannelLabel(3)).toBe('3ch');
   });
 });
