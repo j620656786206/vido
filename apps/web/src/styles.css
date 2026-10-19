@@ -518,6 +518,30 @@
   --text-4xl--line-height: 1.25;
 }
 
+/* Font families — DESIGN.md §Typography. Both faces ship with Vido
+ * (@fontsource-variable, imported in main.tsx): no CDN, so an offline NAS
+ * renders the same as the design. `--font-sans` drives body text through
+ * Tailwind preflight (html { font-family: --default-font-family }), so every
+ * component picks it up without a class. Latin is drawn by Noto too — the
+ * design is drawn in Noto Sans TC end to end. PingFang TC / Microsoft JhengHei
+ * sit before `sans-serif` so the swap flash and any glyph Noto lacks land on a
+ * Traditional Chinese system face instead of a locale guess.
+ * `--font-mono` falls back to Noto before `monospace`: JetBrains Mono has no
+ * CJK, and paths like `/media/movies/你的名字 (2016)/` must still render in the
+ * design's CJK face. Ligatures off: mono shows file names and paths, where
+ * `--` or `...` drawn as a ligature would no longer read as the original text.
+ * Guarded by styles-fonts.spec.ts. */
+@theme {
+  --font-sans:
+    'Noto Sans TC Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang TC',
+    'Microsoft JhengHei', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  --font-mono:
+    'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Noto Sans TC Variable', monospace;
+  --font-mono--font-feature-settings: 'calt' 0, 'liga' 0;
+}
+
 /* Global dark theme baseline */
 @layer base {
   html,
@@ -533,20 +557,9 @@
     text-decoration: inherit;
   }
 
-  /* Font families — Tailwind v4: use class="font-primary" / class="font-mono" */
-  .font-primary {
-    font-family:
-      'Noto Sans TC',
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      'Roboto',
-      sans-serif;
-  }
-
-  .font-mono {
-    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
-  }
+  /* Font families come from @theme (--font-sans / --font-mono above), not from
+   * classes here: a `.font-mono` in this layer always loses to Tailwind's own
+   * `font-mono` utility, which is how the old JetBrains rule sat dead. */
 
   /* Focus ring (design-language-v2 §2.4 — aliased to --focus-ring for tuning) */
   :focus-visible {

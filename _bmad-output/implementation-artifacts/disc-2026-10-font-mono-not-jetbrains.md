@@ -1,6 +1,6 @@
 # Disc：把 JetBrains Mono 字型放進 Vido，數字、路徑、檔名真的用設計稿那套等寬字（離線 NAS 也一樣）
 
-Status: ready-for-dev
+Status: done
 
 **Source:** Rule 24 lane ③，2026-10-19 由 `disc-2026-10-library-list-triage-b2` 建單時發現（見 b2「查到的事」與 Discovery Triage）；critique P3「font-mono 沒吃到 JetBrains Mono」（`.impeccable/critique/2026-10-19T00-18-51Z__ps-web-src-components-library-librarylistrowv2-tsx.md`）。
 ⚖️ **Alexyu 2026-10-19 選 (a)：把字型放進 Vido**（自帶字型檔＋`@theme --font-mono`）。不選 (b)「只修 cascade 不載字型」（Mac 會從 SF Mono 變成 Monaco，更糟）、不選 (c)「改 DESIGN.md 承認用系統等寬字」。
@@ -60,13 +60,13 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 套件＋載入（AC #1）**：`pnpm add -w @fontsource-variable/jetbrains-mono@5.3.0`（確認 `package.json` 寫成精確版本，不是 `^`）；`main.tsx` import。
-- [ ] **T2 主題（AC #2、#3）**：`styles.css` 加 `@theme`、刪 `:547-549`；`nx build web` 後檢查 CSS（`grep -o '\.font-mono{[^}]*}'`、`--font-mono:`），確認 feature-settings 有沒有跟著出來，決定 AC #3 走哪條。
-- [ ] **T3 守門測試＋E2E（AC #4、#5）**。
-- [ ] **T4 授權與文件（AC #7、#8）**。
-- [ ] **T5 量大小＋Docker 實測（AC #6、#9）**：改動前先 build 一次記數字（本 session 看到的 2026-10-14 build：CSS 105,954 bytes／gzip 18,150、JS 1,518,691 bytes，**只能當參考，要自己在改動前重 build**）。
-- [ ] **T6 基準圖（AC #10）**：照 AC #10 的六步。
-- [ ] **T7 全部閘門＋E2E 全套（AC #11）**。
+- [x] **T1 套件＋載入（AC #1）**：`pnpm add -w @fontsource-variable/jetbrains-mono@5.3.0`（確認 `package.json` 寫成精確版本，不是 `^`）；`main.tsx` import。
+- [x] **T2 主題（AC #2、#3）**：`styles.css` 加 `@theme`、刪 `:547-549`；`nx build web` 後檢查 CSS（`grep -o '\.font-mono{[^}]*}'`、`--font-mono:`），確認 feature-settings 有沒有跟著出來，決定 AC #3 走哪條。
+- [x] **T3 守門測試＋E2E（AC #4、#5）**。
+- [x] **T4 授權與文件（AC #7、#8）**。
+- [x] **T5 量大小＋Docker 實測（AC #6、#9）**：改動前先 build 一次記數字（本 session 看到的 2026-10-14 build：CSS 105,954 bytes／gzip 18,150、JS 1,518,691 bytes，**只能當參考，要自己在改動前重 build**）。
+- [x] **T6 基準圖（AC #10）**：照 AC #10 的六步。
+- [x] **T7 全部閘門＋E2E 全套（AC #11）**。
 
 ## Dev Notes
 
@@ -118,12 +118,41 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（claude-opus-5-5），2026-10-19。跟 `disc-2026-10-font-sans-not-noto` 同一條分支 `feat/fonts-bundle-jetbrains-noto`、同一個 PR。
+
 ### Debug Log References
 
+- 建置後 CSS：`.font-mono{font-family:var(--font-mono);font-feature-settings:var(--font-mono--font-feature-settings)}`，整檔只剩這一條 `.font-mono`（在 utilities）。
+
 ### Completion Notes List
+
+- **AC #1**：`@fontsource-variable/jetbrains-mono` 鎖 `5.3.0`；`main.tsx` 只 import `wght.css`（不含斜體）。`dist/apps/web/assets/` 有 5 個 `jetbrains-mono-*-wght-normal-<hash>.woff2`（共 84,216 bytes）；第 6 個 `cyrillic-ext`（2,028 bytes）小於 Vite 4 KB 門檻，被內嵌進 CSS。`grep -lE 'fonts.googleapis|fonts.gstatic|cdn.jsdelivr|unpkg' *.css *.js index.html` 0 筆。
+- **AC #2／#3**：Tailwind 4.1 的 `font-mono` 工具類**會**一併輸出 `font-feature-settings: var(--font-mono--font-feature-settings)`，所以走 `@theme` 那條，沒有另加 `font-variant-ligatures`。E2E 量到 `fontFeatureSettings` = `"calt" 0, "liga" 0`。`@layer base` 的死規則已刪。
+- **AC #4**：`apps/web/src/styles-fonts.spec.ts`（跟 sans 單共用，12 項）。
+- **AC #5**：`tests/e2e/font-mono.spec.ts`（chromium）：computed `fontFamily` 以 `"JetBrains Mono Variable"` 開頭、`document.fonts` 有 status=loaded 的 JetBrains Mono Variable（不用 `check()`，那個會空洞通過）、沒有非本機的字型請求。
+  - 偏離 AC #5 字面：沒有用 `document.fonts.check(...)` 當斷言——sans 單已查到它對不存在的字族也可能回 `true`（空洞通過），改成斷言 `document.fonts` 裡有 `status === 'loaded'` 的 JetBrains Mono Variable、沒有 `status === 'error'` 的字型。
+  - 審查後補強：斷言目標改成含 `--`、`...` 的檔名那格（`list-row-filename`）；每個 JetBrains 字型回應都要 `200`＋`font/woff2`＋檔頭 `wOF2`（CI 用 `serve --single`，缺檔會回 200＋index.html，只看 bytes>0 會空洞通過）。本機 vite dev 與 `serve dist/apps/web --single`（CI 同款）兩種伺服器都跑過、都綠。
+- **AC #6（Docker 實測，`vido:font-check`，拋棄式容器 :8099）**：
+  - `curl -sI /assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2` → `HTTP/1.1 200 OK`、`Content-Type: font/woff2`、`Cache-Control: public, max-age=31536000, immutable`（Content-Length 40404）。
+  - 帶 `Accept-Encoding: gzip` 也沒有 `Content-Encoding`（sans 單 AC #6 的改動）。沒有 CSP 標頭，所以內嵌的 `data:` 字型也不會被擋。
+  - 瀏覽器打容器首頁（被導到 `/setup`）：11 個字型回應全部來自 `localhost:8099`、`font/woff2`，JetBrains Mono Variable 1 個區塊 loaded。
+- **AC #7**：`apps/web/public/licenses/JetBrainsMono-OFL.txt`（套件 LICENSE 原樣）→ 映像 `/app/public/licenses/`（容器內 `ls` 確認）；`docs/licenses/jetbrains-mono.md`。
+- **AC #8**：DESIGN.md 讀數字體那行已改（另補「路徑與檔名裡的中文落到 Noto Sans TC」，對應 sans 單 AC #3）。
+- **AC #9（同一台機器，main 372a924b 與本分支各 build 一次）**：CSS 109,129 → 227,310 bytes（gzip 18,566 → 66,165；兩張單合計，JetBrains 本身只佔 6 條 `@font-face`＋1 個內嵌區塊）；JS 1,541,792 → 1,541,792（不變）；JetBrains woff2 5 個共 84,216 bytes。一般頁面實際下載：latin 區塊 40,404 bytes，之後一年快取。
+- **AC #10**：跟 sans 單合併只重產一次——366 張 darwin 全刪重拍，354 張有變（12 張是骨架／純圖示，重拍後一模一樣）、`git rm` 354 張對應 `-linux`（兩數相等）；重拍後 `test:visual` 連跑兩次全綠。肉眼看過：`media-detail-hero-v2/default`、`library-list/default`、`media-poster-card/default`、`settings-page-header/default`、`activity-recent/subtitle-failed-mobile/default`（數字 `0` 帶點、`l` 彎尾）。`-linux` 由 PR 的 CI bootstrap 補。
+- **AC #11**：`nx test web` 298 檔 4,784 項全綠；`lint:all` ✖ 170 problems (0 errors)；`typecheck`、`format:check`、`check-design-refs.py` 過；chromium 全套 E2E 526 項：511 過、13 略過、2 失敗——都是 `batch-subtitle.spec.ts` 斷言送出的內容，本機 Go API 用 `AI_PROVIDER=claude` 起時多回一個 `model_id`，跟字型無關（沒有任何量寬度的 E2E 因字寬改變而失敗）。
+
+### File List
+
+- package.json、pnpm-lock.yaml
+- apps/web/src/main.tsx、apps/web/src/styles.css、apps/web/index.html
+- apps/web/src/styles-fonts.spec.ts（新）
+- tests/e2e/font-mono.spec.ts（新）
+- apps/web/public/licenses/JetBrainsMono-OFL.txt（新）
+- docs/licenses/jetbrains-mono.md（新）
+- DESIGN.md
+- tests/visual/components.visual.spec.ts-snapshots/**（354 張 darwin 重拍、354 張 linux 刪除，與 sans 單共用）
 
 ### Discovery Triage
 
 - **③ backlog-with-carry-forward-link** — `disc-2026-10-font-sans-not-noto`（Bob 建單時發現；**需要 parent 在 sprint-status 新增這一行**）：內文字型也一樣沒照 DESIGN.md。`DESIGN.md:336`、`:341` 寫內文與 CJK 一律 Noto Sans TC，但 `.font-primary`（`styles.css:537-545`）全站沒有任何元件使用（`grep -rn "font-primary" apps/web/src` 只命中 `styles.css` 自己），`body` 吃 Tailwind 預設 `--font-sans`（`ui-sans-serif, system-ui, …`，`node_modules/tailwindcss/index.css:5-7`），Noto Sans TC 也沒有載入。Mac 上實際是蘋方、Windows 是微軟正黑。要 Alexyu 選：(a) 自帶 Noto Sans TC（繁中子集每個字重仍是 MB 級，映像與首次載入都會明顯變大）／(b) 改 DESIGN.md 承認用系統中文字型、刪掉死規則 `.font-primary`。Bob 傾向 (b)，理由是成本差兩個數量級、而且系統中文字型在各平台都已經是為螢幕調過的字。P3。
-
-### File List

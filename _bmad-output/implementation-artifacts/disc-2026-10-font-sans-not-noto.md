@@ -1,6 +1,6 @@
 # Disc：把 Noto Sans TC 放進 Vido，畫面上的中文真的用設計稿那套字（離線 NAS 也一樣）
 
-Status: ready-for-dev
+Status: done
 
 **Source:** Rule 24 lane ③，2026-10-19 由 `disc-2026-10-font-mono-not-jetbrains` 建單時發現（見該單 Discovery Triage）。
 ⚖️ **Alexyu 2026-10-19 選 (a)：把 Noto Sans TC 放進 Vido，只放有用到的字重。** 不選 (b)「改 DESIGN.md 承認用系統中文字型、刪死規則」。
@@ -125,15 +125,15 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T0 確認順序**：分支上 mono 單的 T1–T5（程式碼、守門測試、E2E、授權、量大小）已完成；`gh pr list` 沒有別的 PR 在改 `tests/visual/**-snapshots/`。
-- [ ] **T1 套件＋載入（AC #1）**：改動前先 `nx build web` 記數字（AC #10）；`pnpm add -w @fontsource-variable/noto-sans-tc@5.3.0`（確認 `package.json` 是精確版本）；`main.tsx` import。
-- [ ] **T2 主題（AC #2、#3）**：`@theme` 加 `--font-sans`、補 `--font-mono` 尾端；刪 `.font-primary`；`nx build web` 後 `grep -o -- '--font-sans:[^;]*' dist/apps/web/assets/*.css`、`grep -c 'font-primary'`（應為 0）、數 woff2。
-- [ ] **T3 守門測試＋E2E（AC #4、#5）**。
-- [ ] **T4 Go：woff2 不 gzip（AC #6）**：改 `main.go:1413`；`go test ./...`、`staticcheck ./...`。
-- [ ] **T5 授權與文件（AC #8、#9）**。
-- [ ] **T6 量大小＋Docker 實測（AC #7、#10）**：mono 單的 Docker 實測可以在這裡一起做（同一個映像、多打一個 JetBrains 區塊），兩張單的 Completion Notes 各貼自己的那幾行。
-- [ ] **T7 基準圖（AC #11）**：兩張單合併執行一次。
-- [ ] **T8 全部閘門＋E2E 全套（AC #12）**。
+- [x] **T0 確認順序**：分支上 mono 單的 T1–T5（程式碼、守門測試、E2E、授權、量大小）已完成；`gh pr list` 沒有別的 PR 在改 `tests/visual/**-snapshots/`。
+- [x] **T1 套件＋載入（AC #1）**：改動前先 `nx build web` 記數字（AC #10）；`pnpm add -w @fontsource-variable/noto-sans-tc@5.3.0`（確認 `package.json` 是精確版本）；`main.tsx` import。
+- [x] **T2 主題（AC #2、#3）**：`@theme` 加 `--font-sans`、補 `--font-mono` 尾端；刪 `.font-primary`；`nx build web` 後 `grep -o -- '--font-sans:[^;]*' dist/apps/web/assets/*.css`、`grep -c 'font-primary'`（應為 0）、數 woff2。
+- [x] **T3 守門測試＋E2E（AC #4、#5）**。
+- [x] **T4 Go：woff2 不 gzip（AC #6）**：改 `main.go:1413`；`go test ./...`、`staticcheck ./...`。
+- [x] **T5 授權與文件（AC #8、#9）**。
+- [x] **T6 量大小＋Docker 實測（AC #7、#10）**：mono 單的 Docker 實測可以在這裡一起做（同一個映像、多打一個 JetBrains 區塊），兩張單的 Completion Notes 各貼自己的那幾行。
+- [x] **T7 基準圖（AC #11）**：兩張單合併執行一次。
+- [x] **T8 全部閘門＋E2E 全套（AC #12）**。
 
 ## Dev Notes
 
@@ -205,9 +205,43 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（claude-opus-5-5），2026-10-19。跟 `disc-2026-10-font-mono-not-jetbrains` 同一條分支 `feat/fonts-bundle-jetbrains-noto`、同一個 PR；程式碼一個 commit、基準圖一個 `chore(visual)` commit。
+
 ### Debug Log References
 
+- 建置後 CSS：`--font-sans:"Noto Sans TC Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang TC","Microsoft JhengHei",sans-serif,…`；`--font-mono:…,"Liberation Mono","Noto Sans TC Variable",monospace`；`grep -c font-primary` = 0。
+- Noto 的 `·`（U+00B7）是全形寬（14px 字級量到 14px，PingFang 是 7px，不分 `lang`）→「2026 · 恐怖」的間隔變寬。對照 `_bmad-output/screenshots/flow-a-browse-v2/a4p-m.png`：設計稿本來就是這個寬度，實作現在跟設計稿一致。
+
 ### Completion Notes List
+
+- **AC #1**：`@fontsource-variable/noto-sans-tc` 鎖 `5.3.0`（沒裝靜態版）；`main.tsx` import `wght.css`。`dist/apps/web/assets/` 有 **102** 個 `noto-sans-tc-*-wght-normal-<hash>.woff2`（共 4,186,476 bytes）＋3 個 <4 KB 的區塊被 Vite 內嵌進 CSS（Bob 的「102 不是 105」預測成立）。外部網址 grep 0 筆。
+- **AC #2／#3**：`@theme` 的 `--font-sans`、`--font-mono` 尾端補 Noto；`.font-primary` 已刪、註解改寫。
+- **AC #4**：`apps/web/src/styles-fonts.spec.ts`（12 項，跟 mono 單共用）。
+- **AC #5**：`tests/e2e/font-sans.spec.ts`（chromium，8 部中文片名的 `/library` stub）：`lang` = `zh-Hant-TW`、body computed 以 `"Noto Sans TC Variable"` 開頭、loaded 的 Noto FontFace ≥1、全部字型請求都是本機、**這次載入抓 Noto 15 個檔共 953,252 bytes**（< 2,000,000）。
+  - 審查後補強：每個 Noto 回應都要 `200`＋`font/woff2`＋檔頭 `wOF2`、沒有 `status === 'error'` 的 FontFace。vite dev 與 `serve --single`（CI 同款）都跑過、都綠。
+- **AC #6**：gzip 設定抽成 `compressionMiddleware()`（`static.go`），排除清單 `.png .gif .jpeg .jpg .woff2`（重寫四個預設）。Go 測試：woff2 不 gzip 且 `font/woff2`＋一年快取、PNG 仍不 gzip、CSS 仍 gzip、清單精確值；拿掉 `.woff2` 時 `TestCompression_Woff2NotGzipped` 會紅（已驗）。
+  - 審查後補：`init()` 明確註冊 `.woff2 → font/woff2`（alpine 沒有 `/etc/mime.types`，原本靠內容嗅探才對）；SSE `/api/v1/events` 不壓縮、一般 API JSON 照壓，各一項測試（拿掉 SSE 排除時測試會紅，已驗）。
+- **AC #7（Docker 實測，`vido:font-check`，:8099）**：
+  - `curl -sI /assets/noto-sans-tc-115-wght-normal-BzydpMOE.woff2` → `HTTP/1.1 200 OK`、`Content-Type: font/woff2`、`Cache-Control: public, max-age=31536000, immutable`、`Content-Length: 74332`。
+  - 同一檔帶 `Accept-Encoding: gzip` → **沒有** `Content-Encoding`；`/assets/index-BvGj0_wh.css` → `Content-Encoding: gzip`。
+  - 映像大小：`docker image ls` 231 MB → 240 MB；但這是 Docker Desktop 的 containerd 計法（壓縮＋解壓都算）。唯一變動的層是 `COPY /app/dist/apps/web /app/public`：**1.7 MB → 6.34 MB（+4.6 MB）**，跟預期（Noto 4.2 MB＋mono 0.1 MB＋CSS）相符。before 映像用 `git archive main | docker build -` 建，沒有動到工作目錄。
+- **AC #8**：`apps/web/public/licenses/NotoSansTC-OFL.txt`、`docs/licenses/noto-sans-tc.md`；容器內 `/app/public/licenses/` 確認兩份都在。
+- **AC #9**：DESIGN.md 內文字體那行已改。
+- **AC #10（同一台機器，main 372a924b 與本分支各 build 一次）**：
+
+  | | 改動前 | 改動後（mono＋sans） |
+  | --- | --- | --- |
+  | CSS 原始 | 109,129 B | 227,310 B |
+  | CSS gzip（-9） | 18,566 B | 66,165 B |
+  | JS | 1,541,792 B | 1,541,792 B |
+  | woff2 檔數／總大小 | 0 | 107（Noto 102＋JetBrains 5）／4,270,692 B |
+  | 媒體庫首次載入 Noto（E2E） | — | 15 檔 953,252 B |
+  | 首頁首次載入全部字型（本機測試環境，1440） | 0 | 16 檔 994,356 B |
+
+- **AC #11**：見 mono 單 AC #10（合併執行一次）：354 張 darwin 重拍、354 張 linux 刪除；重拍後連跑兩次全綠，沒有忽好忽壞，所以沒有在狀態迴圈裡加 `document.fonts.ready`。肉眼看過 5 張（含詳細頁大標 700 與海報片名 500），粗細層級看得出來。
+- **AC #13**：`index.html` 改 `<html lang="zh-Hant-TW">`；`TmdbAttribution.tsx` 的 `lang="en"` 保留。vitest（`styles-fonts.spec.ts`）與 E2E（`font-sans.spec.ts`）都斷言。
+- **AC #14**：`nx test web` 4,784 項全綠；`go test ./...`、`staticcheck ./...` 綠；`lint:all` 0 errors；`typecheck`、`format:check`、`check-design-refs.py` 過。chromium 全套 E2E 526 項：511 過、13 略過、2 失敗（`batch-subtitle.spec.ts`：本機 Go API 以 `AI_PROVIDER=claude` 起時送出的內容多一個 `model_id`，跟字型無關）。量寬度／`truncate`／390 不能橫向捲動的 E2E 全過。
+- **畫面比對（1440／390，首頁、媒體庫列表、詳細頁、活動頁，改動前後）**：截圖在 session scratchpad `fonts-ux/`（不進 repo）。所有頁面 body 都是 Noto、mono 都是 JetBrains Mono（連字關）。詳細頁 390 寬有橫向捲動，**改動前就有**（`Home.Video.Collection.Vol1` 這種沒有空格的長片名撐出 hero），不是字型造成的。
 
 ### Discovery Triage
 
@@ -215,3 +249,13 @@ Status: ready-for-dev
 - **① expand-scope-in-place** — woff2 被 gzip 一次（`main.go:1413-1415`＋`gin-contrib/gzip` 預設清單）→ 已收進 **AC #6**（並由 AC #7 驗收）。
 
 ### File List
+
+- package.json、pnpm-lock.yaml
+- apps/web/src/main.tsx、apps/web/src/styles.css、apps/web/index.html
+- apps/web/src/styles-fonts.spec.ts（新）
+- tests/e2e/font-sans.spec.ts（新）
+- apps/api/cmd/api/main.go、apps/api/cmd/api/static.go、apps/api/cmd/api/static_test.go
+- apps/web/public/licenses/NotoSansTC-OFL.txt（新）
+- docs/licenses/noto-sans-tc.md（新）
+- DESIGN.md
+- tests/visual/components.visual.spec.ts-snapshots/**（與 mono 單共用）
