@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen A2p-D (EsoIv) · A2p-M (qBWQC) · A7p-D (R3FqJc) · A8p-D (dVGIa)
+// Design ref: ux-design.pen Screen A2p-D (EsoIv) · A2p-M (qBWQC) · A4p-D (b1H71g) · A4p-M (EkB8g) · A7p-D (R3FqJc) · A8p-D (dVGIa)
 // Skeleton / no-result / error, one frame each. (Was still carrying the 19-8
 // `pending` placeholder, which Rule 21 says no components/ file should have.)
 /**
@@ -11,6 +11,7 @@
 import { SearchX, AlertTriangle } from 'lucide-react';
 import type { LibraryMediaType } from '../../types/library';
 import { LIBRARY_GRID_COLS } from './libraryGridCols';
+import { LIBRARY_LIST_COLS, LIBRARY_LIST_GAP } from './libraryListCols';
 
 /**
  * 沒有「電影」符合… — the subject of the no-result sentence.
@@ -64,6 +65,85 @@ export function LibraryGridSkeletonV2({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// No `display` utility: every bar is a flex or grid item (blockified), and a `block`
+// here would fight the 規格 bar's `hidden @2xl:block`.
+const FILL = 'bg-[var(--bg-tertiary)]';
+/** A text-line placeholder (the pill and the thumb set their own radius instead). */
+const BAR = `${FILL} rounded-[var(--radius-sm)]`;
+/** Title widths, cycled, so eight rows do not read as one stamped shape. */
+const TITLE_WIDTHS = ['w-2/5', 'w-1/2', 'w-1/3', 'w-3/5'];
+
+/**
+ * Skeleton for the LIST view (disc-2026-10-library-list-triage-b2 AC #6) — the list used
+ * to load under the GRID skeleton, so switching to 列表 showed poster tiles first.
+ *
+ * Same box as `LibraryListV2`: the `@container` wrapper outside one framed list, the
+ * header strip from `@xl`, and every row on the SAME column table (`libraryListCols.ts`)
+ * with the row's own padding — so the three tiers (three-line row < 576, table without
+ * 規格, full table ≥ 672) swap at the same widths and loading → loaded does not jump.
+ * Each row: thumb, title, meta, the 字幕 badge's pill, rating, 規格 (from `@2xl`).
+ * The bars breathe (`animate-breathe` — a load really is in flight; reduced motion
+ * stops it, via the token collapse in styles.css).
+ */
+export function LibraryListSkeletonV2({ count = 8 }: { count?: number }) {
+  return (
+    <div className="@container">
+      <div
+        data-testid="library-list-skeleton"
+        aria-busy="true"
+        aria-label="載入中"
+        className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)]"
+      >
+        <div
+          aria-hidden="true"
+          className="hidden h-9 items-center gap-4 border-b border-[var(--border-subtle)] px-3 @xl:flex"
+        >
+          <div className={`grid min-w-0 flex-1 ${LIBRARY_LIST_COLS} ${LIBRARY_LIST_GAP}`}>
+            <span className={`${BAR} col-start-2 row-start-1 h-2.5 w-8`} />
+            <span className={`${BAR} h-2.5 w-8 @xl:col-start-3 @xl:row-start-1`} />
+            <span className={`${BAR} h-2.5 w-8 @xl:col-start-4 @xl:row-start-1`} />
+            <span
+              className={`${BAR} hidden h-2.5 w-8 @2xl:col-start-5 @2xl:row-start-1 @2xl:block`}
+            />
+          </div>
+        </div>
+        <ul aria-hidden="true" className="divide-y divide-[var(--border-subtle)]">
+          {Array.from({ length: count }).map((_, i) => (
+            // The row's box model (LibraryListRowV2): px-3 py-2.5, then the column grid.
+            // Bars sit in line boxes of the real text's height, so a row is as tall as one.
+            <li key={i} className="flex items-center gap-3 px-3 py-2.5 @xl:gap-4">
+              <div
+                className={`grid min-w-0 flex-1 items-center gap-y-0.5 motion-safe:animate-breathe ${LIBRARY_LIST_COLS} ${LIBRARY_LIST_GAP}`}
+              >
+                <span
+                  className={`${FILL} col-start-1 row-span-2 row-start-1 h-[60px] w-10 rounded-[var(--radius-sm)] @xl:row-span-1 @xl:row-start-1 @xl:h-[72px] @xl:w-12 @xl:rounded-[var(--radius-md)]`}
+                />
+                <div className="col-start-2 row-start-1 flex min-w-0 flex-col gap-0.5 self-end @xl:gap-1 @xl:self-center">
+                  <div className="flex h-5 items-center @xl:h-6">
+                    <span className={`${BAR} h-3 ${TITLE_WIDTHS[i % TITLE_WIDTHS.length]}`} />
+                  </div>
+                  <div className="flex h-4 items-center @xl:h-5">
+                    <span className={`${BAR} h-2.5 w-24`} />
+                  </div>
+                </div>
+                <div className="col-start-2 row-start-2 flex min-w-0 items-center gap-2 self-start @xl:contents">
+                  <span
+                    className={`${FILL} h-6 w-14 shrink-0 rounded-full @xl:col-start-3 @xl:row-start-1`}
+                  />
+                  <span className={`${BAR} h-2.5 w-9 shrink-0 @xl:col-start-4 @xl:row-start-1`} />
+                </div>
+                <span
+                  className={`${BAR} hidden h-2.5 w-32 @2xl:col-start-5 @2xl:row-start-1 @2xl:block`}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

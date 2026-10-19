@@ -14,6 +14,10 @@ interface ViewToggleProps {
   onViewChange: (view: ViewMode) => void;
 }
 
+/**
+ * Both buttons are 44×44 (`size-11`, disc-2026-10-library-list-triage-b2 AC #5) — the
+ * touch-target floor every other toolbar control already meets; the glyph stays 18.
+ */
 export function ViewToggle({ view, onViewChange }: ViewToggleProps) {
   return (
     <div
@@ -29,7 +33,7 @@ export function ViewToggle({ view, onViewChange }: ViewToggleProps) {
           aria-label="格狀檢視"
           onClick={() => onViewChange('grid')}
           className={cn(
-            'rounded p-2 transition-colors',
+            'flex size-11 items-center justify-center rounded transition-colors',
             view === 'grid'
               ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
               : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
@@ -45,7 +49,7 @@ export function ViewToggle({ view, onViewChange }: ViewToggleProps) {
           aria-label="列表檢視"
           onClick={() => onViewChange('list')}
           className={cn(
-            'rounded p-2 transition-colors',
+            'flex size-11 items-center justify-center rounded transition-colors',
             view === 'list'
               ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
               : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'

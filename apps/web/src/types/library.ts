@@ -1,13 +1,20 @@
 import type { ProductionCountry, Credits, SpokenLanguage } from './tmdb';
 
-export type SortField = 'title' | 'release_date' | 'rating' | 'created_at';
+/**
+ * `subtitle_status` sorts by the subtitle badge the list shows — 缺中文 first under
+ * `asc` (confirmed against [@contract-v1] Story disc-2026-10-library-list-triage-a
+ * AC #1; backend rank `models.SubtitleTriageRank`).
+ */
+export type SortField = 'title' | 'release_date' | 'rating' | 'created_at' | 'subtitle_status';
 export type SortOrder = 'asc' | 'desc';
 
+/** Whitelist for a stored / URL sort — a field missing here falls back to 新增日期 on reload. */
 export const VALID_SORT_FIELDS: readonly SortField[] = [
   'title',
   'release_date',
   'rating',
   'created_at',
+  'subtitle_status',
 ] as const;
 
 export type LibraryMediaType = 'all' | 'movie' | 'tv';

@@ -1,6 +1,6 @@
 # Disc：修字幕清單 B2（前端・頁首與工具列）——標題旁寫「37 部缺中文」一點就篩，排序多一個「字幕狀態」
 
-Status: ready-for-dev
+Status: done
 
 **Blocked-by:** `disc-2026-10-library-list-triage-a`（`sort_by=subtitle_status`）、`disc-2026-10-library-list-triage-b1`（列表骨架照 B1 的表格畫；兩張都改 `LibraryBrowseV2.tsx`，B1 先合）。
 
@@ -50,13 +50,13 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 排序（AC #1、#2）**：`types/library.ts`、`SortSelector.tsx` 的 `SORT_OPTIONS`；對表測試（建議放 `utils/libraryStatus.spec.ts` 或新 `subtitleTriageOrder.spec.ts`）。
-- [ ] **T2 頁首連結（AC #3）**：`LibraryBrowseV2.tsx:571-592` 頁首加連結；重用 `sheetCountParams`＋`useLibraryList`（不要另寫參數組裝，抽屜註解說過鍵差一個欄位就打不到快取）。
-- [ ] **T3 跳到結果（AC #4）**：連結放在 `LibraryBrowseV2` 最外層 `div` 的第一個子元素；結果容器（`library-grid-v2`／B1 的 `library-list-v2` 外層）加 `ref`、`tabIndex={-1}`、`aria-label`。
-- [ ] **T4 檢視切換（AC #5）**：`ViewToggle.tsx`。
-- [ ] **T5 列表骨架（AC #6）**：`LibraryStatesV2.tsx` 加 `LibraryListSkeletonV2`（重用 B1 的 grid template 常數，不要再抄一份欄寬）；檔頭 Design ref 補 `A4p-D (b1H71g) · A4p-M (EkB8g)`；`LibraryBrowseV2.tsx:779`、`:796` 依 `view` 選骨架。
-- [ ] **T6 網址參數（AC #7）**：`routes/library.tsx:5-8`、`:37-38`。
-- [ ] **T7 測試＋基準圖（AC #8、#9）**。
+- [x] **T1 排序（AC #1、#2）**：`types/library.ts`、`SortSelector.tsx` 的 `SORT_OPTIONS`；對表測試（建議放 `utils/libraryStatus.spec.ts` 或新 `subtitleTriageOrder.spec.ts`）。
+- [x] **T2 頁首連結（AC #3）**：`LibraryBrowseV2.tsx:571-592` 頁首加連結；重用 `sheetCountParams`＋`useLibraryList`（不要另寫參數組裝，抽屜註解說過鍵差一個欄位就打不到快取）。
+- [x] **T3 跳到結果（AC #4）**：連結放在 `LibraryBrowseV2` 最外層 `div` 的第一個子元素；結果容器（`library-grid-v2`／B1 的 `library-list-v2` 外層）加 `ref`、`tabIndex={-1}`、`aria-label`。
+- [x] **T4 檢視切換（AC #5）**：`ViewToggle.tsx`。
+- [x] **T5 列表骨架（AC #6）**：`LibraryStatesV2.tsx` 加 `LibraryListSkeletonV2`（重用 B1 的 grid template 常數，不要再抄一份欄寬）；檔頭 Design ref 補 `A4p-D (b1H71g) · A4p-M (EkB8g)`；`LibraryBrowseV2.tsx:779`、`:796` 依 `view` 選骨架。
+- [x] **T6 網址參數（AC #7）**：`routes/library.tsx:5-8`、`:37-38`。
+- [x] **T7 測試＋基準圖（AC #8、#9）**。
 
 ## Dev Notes
 
@@ -102,13 +102,66 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia，dev-story）
+
 ### Debug Log References
 
+- 跳到結果連結第一版 `sr-only px-3 py-2`：`sr-only` 的 `padding:0` 被 `px-3` 蓋掉，隱藏時仍有 24px 寬（E2E 量到）→ 內距改成 `focus:px-3 focus:py-2`。
+- `routes/library.spec.tsx` 的測試路由原本只抄 `validateSearch`／`beforeLoad`／`component`，新加的 `search.middlewares` 沒進測試 → 補上 `search: LibraryRoute.options.search`。
+- UX 截圖時在 `/library/movies` 按「· N 部缺中文」，網址變成 `/library?…&type=all`——追下去是既有問題（見 Discovery Triage ①-2）。
+
 ### Completion Notes List
+
+- **AC #1／#2 排序**：`SortField`／`VALID_SORT_FIELDS` 加 `subtitle_status`，`SORT_OPTIONS` 第 5 項「字幕狀態」預設 asc；桌機下拉與手機抽屜同一份。對表測試 `utils/subtitleTriageOrder.spec.ts`：照抄 Go `TestSubtitleTriageRank_EveryCombination` 的 5 判定 × 11 狀態表，斷言 `deriveSubtitleStatus` 畫出的字落在同一級，排起來是「缺中文 → 無字幕源／未翻譯／已略過 → 不知道 → 簡中 → 中文 → 繁中」。
+- **AC #3 「· N 部缺中文」**：獨立的 `<button>`（點了是套用篩選，不是換頁），`library-result-count` 文字仍是精確的「N 部」。N＝`useLibraryList(sheetCountParams({...目前篩選, chineseSubtitle:['missing']}, 類型, 排序, 方向))`，有任何字幕篩選時 `enabled:false` 不發請求。不顯示：N＝0、計數載入中／失敗（失敗時 react-query 保留舊 data，錯誤旗標優先）、列表本身載入中／失敗、已有字幕篩選。點了焦點移到頁標題（連結會消失，不讓焦點掉到 body）。390 實測：按鈕 44×44、右緣 374、連結與計數同一列、沒被截字。
+- **AC #4 跳到結果**：頁面第一個元素，平常 `sr-only`、拿到焦點出現在左上；按下 `preventDefault` 後 `focus()` 結果區（`<section id="library-results" tabIndex={-1} aria-label="媒體庫結果">`，包住所有狀態），網址不出現 `#`；下一個 Tab 是第一張卡／第一列（vitest＋E2E 都驗）。
+- **AC #5**：檢視切換兩顆 `size-11`，圖示 18。1440 與 390 實測 44×44。
+- **AC #6**：`LibraryListSkeletonV2`——同 B1 外框、`@container`、`LIBRARY_LIST_COLS`／`LIBRARY_LIST_GAP`、`@xl` 起的欄名條、8 列，`motion-safe:animate-breathe`。1440 截圖骨架列的 y 與載入後的列對齊。
+- **AC #7**：`page`／`pageSize` 從 `LibrarySearchParams` 與 `validateSearch` 拿掉；另加一個 search middleware，舊書籤帶著的 `page=1&pageSize=20` 在下一次換排序／檢視時被丟掉。
+- **AC #8 偏差**：`library-sort-selector` 的 open 基準圖只拍到觸發按鈕（下拉面板在元件框外），重產後與原圖逐位元相同 → 保留它的 `-linux.png`，沒有 `git rm`。實際重產並 `git rm -linux` 的：`library-view-toggle`（default／hover／focus）、`library-mobile-sheets/sort-filter`；新增 `library-list-skeleton`、`library-mobile-screens/list-skeleton`（只產 darwin）。
+- **E2E**：`library-mobile.spec.ts` 原本 `toHaveCount(4)` 改 5（必須改：第五個排序就是本單）；新增 7 個（390 標題列＋44×44、按連結套篩選、在電影頁按連結仍留在 `/library/movies`、抽屜送出 `sort_by=subtitle_status`、1440 下拉＋檢視切換 44＋網址無 pageSize、跳到結果）。
+- **故障注入**：拿掉 `enabled`、白名單、焦點移動、列表骨架分支、跳到結果的 focus、錯誤旗標、middleware、預設方向、`size-11`、`to: typePath`——10 項全部轉紅。
+- **閘門**：`nx test web` 294 檔／4,619 pass；`lint:all` ✖ 168／170 problems（0 errors）；`typecheck` 綠；`format:check` 綠；`check-design-refs.py` 390 節點通過；E2E library-mobile＋library-list＋empty-library＋availability-badges＋poster-card-hover 共 47 pass；visual 全套 pass。`batch-subtitle.spec.ts` 本機 2 紅是本機 `AI_PROVIDER=claude` 讓 POST 多帶 `model_id`，與本單無關（CI 不同設定）。
+- 🔗 AC Drift Check: NONE
+- 📎 Contract Stamps: FOUND（本單 2 處 ack：`-a` AC #1 [@contract-v1]、`subtitle-filter-disagrees-with-badges` AC #2 [@contract-v1]；上游皆為 v1，一致）
+- 🎭 A11y Pre-Flight: PASS（6 個元件，觸及檔案 0 個 jsx-a11y 警告；連結的可存取名稱含可見文字「37 部缺中文」，符合 2.5.3；點後焦點不掉；跳到結果用 focus 不用 hash）
+- 🎨 UX Verification: PASS — 截圖在 scratchpad `b2-ux/`（d1440／m390 的 list、skip-focused、after-link、skeleton）
+
+| 區域 | 設計稿 | 實作 | 相符 |
+|---|---|---|---|
+| A4p-D 標題列 | 「電影 1,284 部 · 37 部缺中文」，泥金 | 同，`--accent-text`、12px 等寬 | ✅ |
+| A4p-M 標題列 | 標題、計數、連結一列，右側 44×44 篩選鈕 | 同；按鈕 44×44、右緣 374 | ✅ |
+| 排序 | 第五個「字幕狀態」 | 下拉與抽屜都有，抽屜 5 顆一列放得下 | ✅ |
+| 點連結 | 套用缺中文字幕 | chip 出現、計數變 N、連結消失 | ✅ |
+| 列表骨架 | 照 A4p 表格 | 同外框、同欄位、列高對齊 | ✅ |
+| 字型 | JetBrains Mono | 系統等寬（全站問題，另單 `disc-2026-10-font-mono-not-jetbrains`） | ⚠️ 另單 |
 
 ### Discovery Triage
 
 - **① expand-scope-in-place** — 網址 `pageSize=20` 卻一次 36 列：查到是 `/library` 路由的死參數（`routes/library.tsx:37-38`），真正的每頁筆數是 `useLibraryInfinite.ts:12` 的 36 → AC #7 拿掉死參數。
 - **③ backlog-with-carry-forward-link** — `disc-2026-10-font-mono-not-jetbrains`：`font-mono` 在 Tailwind v4 被預設 `ui-monospace` 蓋掉，而且全站沒載入 JetBrains Mono（見「查到的事」）；`DESIGN.md:337` 寫的是 JetBrains Mono。影響 72 檔／180 處、幾乎所有含數字的基準圖 → 需要 Alexyu 選：(a) 自帶 JetBrains Mono woff2（拉丁子集）＋ `@theme { --font-mono: … }`，全站等寬字變成設計稿那款，大量 `-linux` 基準要 CI 重補；(b) 只改 cascade 不載字型——Mac 會從 SF Mono 變成 Monaco，更糟；(c) 改 DESIGN.md 承認用系統等寬字、刪掉 base 那條死規則。Bob 建議 (a)。
 
+- **① expand-scope-in-place（本單發現）**：在 `/library/movies`、`/library/tv` 換排序、換檢視、套任何篩選都會**跳回「全部」**（網址變 `/library?type=all…`）——`navigate` 來自 `/library` 的 route api，沒給 `to` 就落在 `/library`。main 上就這樣（vitest 探針確認）。本單的「N 部缺中文」是在類型裡數的，跳回全部會讓點下去看到的數字跟連結不一樣，所以就地修：`patchSearch` 與 `?generate=1` 清參數都帶 `to: TYPE_PATH[currentType]`；`validateSearch` 的 `type` 不再預設 `'all'`（只會被寫回網址成 `?type=all`）。測試：`routes/library.spec.tsx` 三條路由各一例、E2E 電影頁按連結仍在 `/library/movies`。
+
 ### File List
+
+- apps/web/src/types/library.ts
+- apps/web/src/components/library/SortSelector.tsx
+- apps/web/src/components/library/SortSelector.spec.tsx
+- apps/web/src/components/library/LibraryFilterSheetV2.spec.tsx
+- apps/web/src/components/library/ViewToggle.tsx
+- apps/web/src/components/library/ViewToggle.spec.tsx
+- apps/web/src/components/library/LibraryStatesV2.tsx
+- apps/web/src/components/library/LibraryStatesV2.spec.tsx
+- apps/web/src/components/library/LibraryBrowseV2.tsx
+- apps/web/src/components/library/LibraryBrowseV2.spec.tsx
+- apps/web/src/routes/library.tsx
+- apps/web/src/routes/library.spec.tsx
+- apps/web/src/routes/test/-gallery.fixtures.tsx
+- apps/web/src/utils/subtitleTriageOrder.spec.ts（新）
+- tests/e2e/library-mobile.spec.ts
+- tests/visual/…/library-view-toggle/{default,hover,focus}-visual-darwin.png（重產；-linux 刪）
+- tests/visual/…/library-mobile-sheets/sort-filter/default-visual-darwin.png（重產；-linux 刪）
+- tests/visual/…/library-list-skeleton/default-visual-darwin.png（新）
+- tests/visual/…/library-mobile-screens/list-skeleton/default-visual-darwin.png（新）
+- _bmad-output/implementation-artifacts/sprint-status.yaml

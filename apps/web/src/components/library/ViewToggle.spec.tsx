@@ -55,6 +55,20 @@ describe('ViewToggle', () => {
     expect(onViewChange).toHaveBeenCalledWith('grid');
   });
 
+  // disc-2026-10-library-list-triage-b2 AC #5: 44×44 like the rest of the toolbar (was p-2 → 34px).
+  it('[P1] both buttons are 44×44 targets with the 18px glyph centred', () => {
+    render(<ViewToggle view="grid" onViewChange={vi.fn()} />);
+    for (const name of ['格狀檢視', '列表檢視']) {
+      const tokens = screen.getByLabelText(name).className.split(/\s+/);
+      expect(tokens).toEqual(
+        expect.arrayContaining(['size-11', 'flex', 'items-center', 'justify-center'])
+      );
+      expect(tokens).not.toContain('p-2');
+      const svg = screen.getByLabelText(name).querySelector('svg');
+      expect(svg).toHaveAttribute('width', '18');
+    }
+  });
+
   it('has data-testid for test targeting', () => {
     render(<ViewToggle view="grid" onViewChange={vi.fn()} />);
     expect(screen.getByTestId('view-toggle')).toBeInTheDocument();

@@ -173,7 +173,10 @@ import { HeroBanner } from '../../components/homepage/HeroBanner';
 import { ExploreBlock } from '../../components/homepage/ExploreBlock';
 import { ExploreBlocksList } from '../../components/homepage/ExploreBlocksList';
 import { FilterPanel } from '../../components/library/FilterPanel';
-import { LibraryGridSkeletonV2 } from '../../components/library/LibraryStatesV2';
+import {
+  LibraryGridSkeletonV2,
+  LibraryListSkeletonV2,
+} from '../../components/library/LibraryStatesV2';
 import { LibraryListV2 } from '../../components/library/LibraryListV2';
 import {
   LibraryFilterSheetV2,
@@ -3717,6 +3720,26 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'library/LibraryListV2 (A4p-M — 手機 390 寬，三行列)',
     component: LibraryListV2,
     props: { rows: LIST_FX_ROWS.slice(0, 7) },
+    penNode: 'EkB8g', // Screen A4p-M
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    // disc-2026-10-library-list-triage-b2 AC #6 — the list view's loading state: the A4p-D
+    // table's frame, header strip and columns (≥ 672 list width), eight rows.
+    id: 'library-list-skeleton',
+    label: 'library/LibraryListSkeletonV2 (A4p-D — 列表載入中，表格骨架)',
+    component: LibraryListSkeletonV2,
+    penNode: 'b1H71g', // Screen A4p-D
+    statesOnly: ['default'],
+    width: 1200,
+  },
+  {
+    // b2 AC #6 — A4p-M: the three-line row's skeleton in a real 390 viewport.
+    id: 'library-mobile-screens/list-skeleton',
+    label: 'library/LibraryListSkeletonV2 (A4p-M — 手機 390 寬，三行列骨架)',
+    component: LibraryListSkeletonV2,
+    props: { count: 7 },
     penNode: 'EkB8g', // Screen A4p-M
     statesOnly: ['default'],
     viewport: { width: 390, height: 844 },
