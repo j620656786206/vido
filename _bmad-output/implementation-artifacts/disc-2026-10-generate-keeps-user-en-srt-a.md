@@ -1,6 +1,6 @@
 # Disc（後端）：生成字幕再也不會蓋掉使用者自己放的英文字幕檔
 
-Status: ready-for-dev（⚖️ 先等 Alexyu 確認「聽寫稿存成什麼檔名」，見 AC #1）
+Status: ready-for-dev
 
 **Source:** `backlog-movie-generate-overwrites-existing-en-srt`（P1）。2026-10-19 準備 FB 新貼文截圖時在正式機重現；⚖️ Alexyu 同日「請 Bob 把 P1 開成 story」。依 Story Splitting Rule 拆兩張：
 - **本單 `-a`**：安全網——不管走哪條路，**絕不覆寫使用者原本的 `.en.srt`**（純後端、小）。
@@ -37,9 +37,9 @@ Status: ready-for-dev（⚖️ 先等 Alexyu 確認「聽寫稿存成什麼檔�
 
 ## Acceptance Criteria
 
-1. **⚖️ 聽寫稿的檔名（待 Alexyu 確認，Bob 建議 A）。** 當 `<base>.en.srt` 已存在、而且**不是**這次要續跑的 Vido 稿（`subtitle_status != untranslated`）時：
-   - **A（建議）**：聽寫稿寫成 `<base>.vido.en.srt`。Jellyfin／Kodi 會把它認成另一條英文字幕（最後一段 `en` 是語言），使用者原本的檔完全不動；Vido 的續跑也讀這個名字。
-   - B：聽寫稿不落地（只留在暫存＋chunk 快取），使用者看不到英文稿；中斷後要靠 chunk 快取續跑。
+1. **⚖️ 聽寫稿的檔名——Alexyu 2026-10-19 選 A。** 當 `<base>.en.srt` 已存在、而且**不是**這次要續跑的 Vido 稿（`subtitle_status != untranslated`）時：
+   - **✅ A（採用）**：聽寫稿寫成 `<base>.vido.en.srt`。Jellyfin／Kodi 會把它認成另一條英文字幕（最後一段 `en` 是語言），使用者原本的檔完全不動；Vido 的續跑也讀這個名字。
+   - ~~B：聽寫稿不落地（只留在暫存＋chunk 快取），使用者看不到英文稿；中斷後要靠 chunk 快取續跑。~~（不採用）
    - 不考慮：先備份成 `.bak` 再覆寫——使用者的播放器就讀不到原檔了，等於還是蓋掉。
 2. **絕不覆寫。** `runPipeline` 寫英文聽寫稿前先判斷目標檔是否存在；照 AC #1 的決定換檔名（或不落地）。寫入用「先寫暫存檔再 rename」，跟 placer 一樣原子。**`os.WriteFile` 直接寫 `<base>.en.srt` 只剩一種情況：檔案原本不存在。**
 3. **續跑不壞。** `untranslated` 續跑能找到 Vido 自己的稿子（A 案：新檔名；舊名 `<base>.en.srt` 也要相容——升級前留下來的續跑點）；使用者自己的 `<base>.en.srt` 仍然**不會**被當續跑點（`sub-2-2a` 的守則）。
