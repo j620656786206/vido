@@ -1,6 +1,6 @@
 # Disc：比對失敗、片名是一長串檔名的詳細頁，手機和平板不會再被撐寬、可以左右滑
 
-Status: ready-for-dev
+Status: done
 
 **Priority:** P3（但正式機今天有 10 部電影會中，見下）
 
@@ -76,14 +76,14 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 元件（AC #1–#3、#7）**：`DetailHeroV2.tsx` 的 `h1`、原文片名 `p` 加 `break-words`；`:121` 加一行註解說明 `min-w-0` 為什麼不能拿掉；檔頭補 B10p-M。
-- [ ] **T2 單元測試（AC #6）**：`DetailHeroV2.spec.tsx` 加一條。
-- [ ] **T3 E2E（AC #4）**：
-  - [ ] `tests/support/helpers/seed-helpers.ts`：`SeedMovieOptions`（`:33`）加 `originalTitle?: string`，`seedMovie` body（`:66-74`）加 `if (opts.originalTitle) body.original_title = opts.originalTitle;`。
-  - [ ] `media-detail.spec.ts` 加 AC #4 那組測試（每個寬度用 `page.setViewportSize`；量測寫成一個小函式 `expectNoSideScroll(page)`，寫法參考 `tests/e2e/library-list.spec.ts:93-98`）。
-  - [ ] 故意改壞三次（AC #4 a／b／c），確認都會紅，再改回來。
-- [ ] **T4 夾具＋基準圖（AC #5）**：加夾具；`AI_PROVIDER=claude CLAUDE_API_KEY=sk-ant-local-visual-dummy pnpm run test:visual:update-missing`（只會產新夾具這一張 darwin）；再跑一次 `test:visual -g media-detail-hero-v2` 綠。
-- [ ] **T5 Step 9 設計比對**：本機詳細頁截 320、390（手機）與 768（平板）三張，對 `b10p-m.png`：片名整段換行、不截斷、頁面沒有橫向捲軸。附在 PR，請 Sally 追認「沒有空格時在字中間斷」。
+- [x] **T1 元件（AC #1–#3、#7）**：`DetailHeroV2.tsx` 的 `h1`、原文片名 `p` 加 `break-words`；`:121` 加一行註解說明 `min-w-0` 為什麼不能拿掉；檔頭補 B10p-M。
+- [x] **T2 單元測試（AC #6）**：`DetailHeroV2.spec.tsx` 加一條。
+- [x] **T3 E2E（AC #4）**：
+  - [x] `tests/support/helpers/seed-helpers.ts`：`SeedMovieOptions`（`:33`）加 `originalTitle?: string`，`seedMovie` body（`:66-74`）加 `if (opts.originalTitle) body.original_title = opts.originalTitle;`。
+  - [x] `media-detail.spec.ts` 加 AC #4 那組測試（每個寬度用 `page.setViewportSize`；量測寫成一個小函式 `expectNoSideScroll(page)`，寫法參考 `tests/e2e/library-list.spec.ts:93-98`）。
+  - [x] 故意改壞三次（AC #4 a／b／c），確認都會紅，再改回來。
+- [x] **T4 夾具＋基準圖（AC #5）**：加夾具；`AI_PROVIDER=claude CLAUDE_API_KEY=sk-ant-local-visual-dummy pnpm run test:visual:update-missing`（只會產新夾具這一張 darwin）；再跑一次 `test:visual -g media-detail-hero-v2` 綠。
+- [x] **T5 Step 9 設計比對**：本機詳細頁截 320、390（手機）與 768（平板）三張，對 `b10p-m.png`：片名整段換行、不截斷、頁面沒有橫向捲軸。附在 PR，請 Sally 追認「沒有空格時在字中間斷」。
 
 ## Dev Notes
 
@@ -145,15 +145,40 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（dev agent，/ship 流程）
+
 ### Debug Log References
 
+- 本機 chromium `media-detail.spec.ts` 16/16、webkit-core 16/16；長片名兩條另在 firefox／mobile-chrome／mobile-safari 跑 6/6。
+- 本機 visual（darwin）`update-missing` 只寫出新夾具 1 張；再跑全套 1 passed，既有基準 0 張變化。
+
 ### Completion Notes List
+
+- **改法**：`DetailHeroV2` 片名 `h1` 與原文片名 `p` 加 `break-words`；`:121` 的 `min-w-0` 加註解說明它承重；檔頭補 `Screen B10p-M (H2MRl)`（`check-design-refs.py` 綠）。
+- **故意改壞（AC #4）**，三次都紅，改回後全綠：
+  - (a) 拿掉 `h1` 的 `break-words` → 第一條 320／360／390／768 **四個寬度全紅**（多出 302／262／232／305 px；文字右緣 621／621／621／1073）。第二條（原文片名）照綠，正確。
+  - (b) 拿掉父層 `min-w-0` → 兩條都紅（第一條四寬全紅；第二條 320 寬多 175 px）。
+  - (c) 拿掉原文片名的 `break-words` → 只有第二條紅（320 寬多 175 px、原文片名只有一行 22.75 px 高）。
+- **測試比 story 寫的多做的兩件事（自我審查時改）**：
+  - 「文字不超出右緣」量的是**文字本身**（`Range.getBoundingClientRect()`），不是 `h1` 的外框——`min-w-0` 讓 `h1` 的框永遠在欄內，只量外框的話 (a) 這種壞法量不出來（初版就是這樣，(a) 只靠整頁 `scrollWidth` 抓到）。
+  - 寬度檢查改成 `expect.soft`、訊息帶寬度：一個寬度壞了，其他寬度照樣回報，才看得出「四個寬度全紅」。
+- **夾具**：`media-detail-hero-v2-long-title-mobile`（390×844，`H2MRl`），「失敗」徽章直接呼叫 `deriveLifecycleStatus({ parseStatus: 'failed' })`，不手抄 class——頁面上的顏色改了，這張基準圖會跟著變。已知限制：390×844 的畫廊頁裡 hero 下緣被 app 的手機底部分頁列蓋住，「管理字幕」「修改資訊」只露出上半（同 `settings-service-status-dashboard/mobile` 夾具註解說的限制；phone 夾具規定 844 高）。這張要守的是片名換行，片名完整可見。
+- **畫面比對（Step 9）**：本機 dev server＋真 API，片名用正式機那串 `[bitsearch.to] Predator.Badlands…mkv`、`parse_status=failed`。320／390／768／1440 四張 `scrollWidth == clientWidth`、`h1` 文字等於完整片名；320 六行、390 五行、768 六行（有側欄，片名欄窄）、1440 兩行。對 B10p-M：片名整段換行、沒有省略號、字級不變（手機 24px／`sm` 以上 30px），比對失敗區塊與按鈕都在畫面內。B10p-M 手機稿沒有海報縮圖、按鈕排法也不同——那是已立案的 `disc-2026-10-detail-mobile-hero-thumb-vs-design`，本單不動。截圖在 session scratchpad `long-title-ux/`。
+- **Sally 追認**：開工前已追認「沒有空格時在字中間斷、不用省略號」（見文末），PR 不用再等。
 
 ### Discovery Triage
 
 - **③ 建議 parent 決定要不要立案（Bob 建單時發現，未查到既有條目）** — 手機 hero 版面跟設計稿不一樣：B3p-M（`SzNRb`）與 B10p-M（`H2MRl`）手機稿**沒有海報縮圖**，片名佔滿整行；程式碼在手機上有一塊 96px 寬的海報縮圖（`DetailHeroV2.tsx:92-94`，`w-24 … sm:w-40`），片名只剩右邊那一欄。320 寬時「管理字幕」「修改資訊」按鈕的字會折成兩行（scratchpad 截圖）。查過 `dsr-2-flow-b-detail-v2.md` 只處理了縮圖陰影（對照表 #8），沒有裁定手機要不要縮圖。要 Sally 判斷：手機稿省略、還是手機真的不要縮圖。P3。**本單不處理**——修了它，長片名會有更多寬度，但不能取代 AC #1（平板 640–1024 一樣會撐寬）。
 
 ### File List
+
+- `apps/web/src/components/media/DetailHeroV2.tsx`
+- `apps/web/src/components/media/DetailHeroV2.spec.tsx`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx`
+- `tests/e2e/media-detail.spec.ts`
+- `tests/support/helpers/seed-helpers.ts`
+- `tests/visual/components.visual.spec.ts-snapshots/components/media-detail-hero-v2-long-title-mobile/default-visual-darwin.png`（新增；`-linux` 由 CI bootstrap PR 補）
+- `_bmad-output/implementation-artifacts/disc-2026-10-detail-mobile-long-title-overflow.md`、`sprint-status.yaml`
 
 ## ⚖️ Sally 追認（2026-10-19，開工前）
 

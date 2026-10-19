@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen B3p-D (uRGu2) + Screen B4p-D (N2fmG6) + Screen B3p-M (SzNRb) + Screen B9-D (Tn4Gz)
+// Design ref: ux-design.pen Screen B3p-D (uRGu2) + Screen B4p-D (N2fmG6) + Screen B3p-M (SzNRb) + Screen B10p-M (H2MRl) + Screen B9-D (Tn4Gz)
 /**
  * v2 detail backdrop hero (UX Redesign Phase 2 — UX2-3, AC #1, `uRGu2`).
  * Replaces the cramped narrow-panel IA (brief hotspot #2) with a full-page
@@ -118,6 +118,10 @@ export function DetailHeroV2({
             )}
           </div>
 
+          {/* min-w-0 is load-bearing: without it this flex item's minimum width becomes
+              the width of the longest unbroken run in the title (an unmatched item's
+              title is its whole file name, e.g. `Predator.Badlands.2025.2160p…`), so
+              `break-words` below never fires and the page scrolls sideways (B10p-M). */}
           <div className="min-w-0 flex-1 pb-1">
             {shownBadges.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
@@ -132,11 +136,13 @@ export function DetailHeroV2({
                 ))}
               </div>
             )}
-            <h1 className="text-2xl font-bold leading-tight text-[var(--text-primary)] sm:text-3xl">
+            {/* break-words: a title with no spaces wraps mid-word instead of widening the
+                page — the full file name stays visible, never truncated (B10p-M). */}
+            <h1 className="break-words text-2xl font-bold leading-tight text-[var(--text-primary)] sm:text-3xl">
               {title}
             </h1>
             {originalTitle && originalTitle !== title && (
-              <p className="mt-1 text-sm text-[var(--text-secondary)] sm:text-base">
+              <p className="mt-1 break-words text-sm text-[var(--text-secondary)] sm:text-base">
                 {originalTitle}
               </p>
             )}
