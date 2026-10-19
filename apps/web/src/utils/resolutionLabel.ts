@@ -2,24 +2,17 @@
 const FRAME_SIZE = /^(\d+)\s*[x×X]\s*(\d+)$/;
 
 /**
- * One resolution word for a library item (disc-2026-10-library-list-triage-b1 AC #4).
+ * One resolution word for a library item (disc-2026-10-library-list-triage-b1 AC #4,
+ * rule from disc-2026-10-resolution-tier-scope-encodes).
  *
  * The backend stores `video_resolution` in two shapes:
  * - ffprobe writes the raw frame size `寬x高` (`ffprobe_service.go`, e.g. `3840x2076`),
- * - the NFO reader writes a label it already worked out (`4K`, `1440p`, `1080p`…).
+ * - the NFO reader writes a label it already worked out (`4K`, `1440p`, `1080p`…) with
+ *   Go `resolveResolution` (apps/api/internal/services/nfo_reader_service.go).
  *
- * This turns the first into the second with the same thresholds as the Go side
- * (`resolveResolution`, apps/api/internal/services/nfo_reader_service.go:312). Height decides; width rescues
- * the letterboxed scope encodes whose height is short of the line (`3840x1608` is a
- * 4K file, not a 1440p one).
- *
- * ⚠️ One step past Go: Go has the width rescue for 4K and 1440p only, so it calls a
- * 1080p scope encode (`1920x800`) 720p and a 720p one (`1280x536`) 480p. The story's
- * own example says `1920x800` → 1080p — and the NAS had ten such films on 2026-10-19
- * (`1920x804` ×6, `1920x802`, `1920x800`, `1920x780`, `1920x1036`) — so the same rescue is applied
- * to the two lower tiers here. Until Go does the same
- * (`disc-2026-10-resolution-tier-scope-encodes`), a scope file whose NFO the Go side
- * labelled still reads 720p — today every film on the NAS is ffprobe-shaped.
+ * This turns the first into the second with the SAME table as Go — both sides are
+ * tested against apps/api/internal/services/testdata/resolution_tiers.json, so a
+ * frame size reads the same whichever way it came in. See `RESOLUTION_TIERS`.
  *
  * Anything that is not a frame size goes through untouched (`4K`, `1080p`, `SD`),
  * except `2160p`, which is the same thing as `4K` and is shown as 4K.
@@ -37,14 +30,33 @@ export function resolutionTier(raw: string | null | undefined): string {
   return value;
 }
 
+/**
+ * The frame is turned sideways first (long side = width). A tier is reached when the
+ * long side OR the short side is at least 90% of that tier's 16:9 frame, checked from
+ * 4K down — so a 4K film with its black bars cropped (`3840x1608`, `3828x1588`) is 4K
+ * (⚖️ Alexyu 2026-10-19), a 4:3 one (`2880x2160`) is 4K, and a 21:9 monitor capture
+ * (`3440x1440`) stays 1440p. Below 480p the short side is written as `${n}p`.
+ *
+ * The lines are whole pixels, not `× 0.9`, so this and Go's `resolutionTiers` cannot
+ * round them differently. Change both, and the shared table, together.
+ */
+const RESOLUTION_TIERS: ReadonlyArray<{ label: string; minLong: number; minShort: number }> = [
+  { label: '4K', minLong: 3456, minShort: 1944 }, // 3840×2160
+  { label: '1440p', minLong: 2304, minShort: 1296 }, // 2560×1440
+  { label: '1080p', minLong: 1728, minShort: 972 }, // 1920×1080
+  { label: '720p', minLong: 1152, minShort: 648 }, // 1280×720
+  { label: '480p', minLong: 769, minShort: 432 }, // 854×480
+];
+
 function tierFromSize(width: number, height: number): string {
   if (width <= 0 && height <= 0) return '';
-  if (height >= 2160 || (width >= 3840 && height >= 1080)) return '4K';
-  if (height >= 1440 || (width >= 2560 && height >= 1080)) return '1440p';
-  if (height >= 1080 || (width >= 1920 && height >= 720)) return '1080p';
-  if (height >= 720 || (width >= 1280 && height >= 480)) return '720p';
-  if (height >= 480) return '480p';
-  return `${height}p`;
+  // Only a frame with both sides known can be turned sideways; `0x1080` keeps its
+  // 1080 as the short side, as it read before the rule change.
+  const portrait = width > 0 && height > width;
+  const long = portrait ? height : width;
+  const short = portrait ? width : height;
+  const tier = RESOLUTION_TIERS.find((t) => long >= t.minLong || short >= t.minShort);
+  return tier ? tier.label : `${short}p`;
 }
 
 /**

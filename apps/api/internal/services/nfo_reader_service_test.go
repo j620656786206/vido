@@ -1,6 +1,8 @@
 package services
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -386,25 +388,44 @@ func TestExtractIMDbID(t *testing.T) {
 
 // ─── resolveResolution ─────────────────────────────────────────────────────
 
-func TestResolveResolution(t *testing.T) {
-	tests := []struct {
-		width, height int
-		want          string
-	}{
-		{3840, 2160, "4K"},
-		{1920, 1080, "1080p"},
-		{1280, 720, "720p"},
-		{720, 480, "480p"},
-		{640, 360, "360p"},
-		{2560, 1440, "1440p"},
-	}
+// TestResolveResolution_SharedTable walks testdata/resolution_tiers.json — the SAME
+// table the frontend's resolutionLabel.spec.ts walks for `resolutionTier`
+// (disc-2026-10-resolution-tier-scope-encodes AC #3). A rule change on one side
+// without the other turns that side's test red.
+func TestResolveResolution_SharedTable(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "resolution_tiers.json"))
+	require.NoError(t, err)
 
-	for _, tt := range tests {
-		t.Run(tt.want, func(t *testing.T) {
-			got := resolveResolution(tt.width, tt.height)
-			assert.Equal(t, tt.want, got)
+	var rows []struct {
+		Width  int    `json:"width"`
+		Height int    `json:"height"`
+		Tier   string `json:"tier"`
+		Why    string `json:"why"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &rows))
+	require.GreaterOrEqual(t, len(rows), 40, "the shared table looks truncated")
+
+	for _, row := range rows {
+		name := fmt.Sprintf("%dx%d", row.Width, row.Height)
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, row.Tier, resolveResolution(row.Width, row.Height), row.Why)
 		})
 	}
+}
+
+// The NFO path stores the label, so a scope-cropped 4K NFO lands in the DB as 4K.
+func TestNFOReaderService_Parse_ScopeCrop4KIsStoredAs4K(t *testing.T) {
+	dir := t.TempDir()
+	nfoPath := filepath.Join(dir, "movie.nfo")
+	content := `<movie>
+  <title>Ballerina</title>
+  <fileinfo><streamdetails><video><codec>hevc</codec><width>3828</width><height>1588</height></video></streamdetails></fileinfo>
+</movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(content), 0o644))
+
+	data, err := NewNFOReaderService(nil).Parse(nfoPath)
+	require.NoError(t, err)
+	assert.Equal(t, "4K", data.VideoResolution)
 }
 
 // ─── XML with only IMDB ID (no TMDB) ──────────────────────────────────────

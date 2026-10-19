@@ -85,9 +85,9 @@ type nfoXMLFileInfo struct {
 
 // nfoXMLStreamDetails contains video/audio/subtitle stream info
 type nfoXMLStreamDetails struct {
-	Video    *nfoXMLVideo      `xml:"video"`
-	Audio    *nfoXMLAudio      `xml:"audio"`
-	Subtitle []nfoXMLSubtitle  `xml:"subtitle"`
+	Video    *nfoXMLVideo     `xml:"video"`
+	Audio    *nfoXMLAudio     `xml:"audio"`
+	Subtitle []nfoXMLSubtitle `xml:"subtitle"`
 }
 
 // nfoXMLVideo contains video stream properties
@@ -306,25 +306,44 @@ func extractStreamDetails(fi *nfoXMLFileInfo, data *NFOData) {
 	}
 }
 
-// resolveResolution converts width×height to a standard resolution label.
-// Uses height as the primary indicator, with width as a secondary check
-// for standard aspect ratios. This avoids misclassifying ultra-wide formats.
+// resolutionTiers is the one rule for turning a frame size into a resolution word
+// (disc-2026-10-resolution-tier-scope-encodes). The frontend's `tierFromSize`
+// (apps/web/src/utils/resolutionLabel.ts) holds the same table; both are pinned by
+// testdata/resolution_tiers.json, so neither side can drift alone.
+//
+// The frame is turned sideways first (long side = width). A tier is reached when the
+// long side OR the short side is at least 90% of that tier's 16:9 frame — so a 4K film
+// with its black bars cropped (3840x1608, 3828x1588) is 4K, a 4:3 one (2880x2160) is
+// 4K, and a 21:9 monitor capture (3440x1440) stays 1440p. The lines are written out
+// as whole pixels, not as `× 0.9`, so Go and TypeScript cannot round them differently.
+var resolutionTiers = []struct {
+	label    string
+	minLong  int
+	minShort int
+}{
+	{"4K", 3456, 1944},    // 3840×2160
+	{"1440p", 2304, 1296}, // 2560×1440
+	{"1080p", 1728, 972},  // 1920×1080
+	{"720p", 1152, 648},   // 1280×720
+	{"480p", 769, 432},    // 854×480
+}
+
+// resolveResolution converts width×height to a resolution label (4K, 1440p, 1080p,
+// 720p, 480p, or `<short side>p` below them all). See resolutionTiers for the rule.
 func resolveResolution(width, height int) string {
 	if width <= 0 && height <= 0 {
 		return ""
 	}
-	switch {
-	case height >= 2160 || (width >= 3840 && height >= 1080):
-		return "4K"
-	case height >= 1440 || (width >= 2560 && height >= 1080):
-		return "1440p"
-	case height >= 1080:
-		return "1080p"
-	case height >= 720:
-		return "720p"
-	case height >= 480:
-		return "480p"
-	default:
-		return strconv.Itoa(height) + "p"
+	// Only a frame with both sides known can be turned sideways; 0x1080 keeps its
+	// 1080 as the short side, as it read before the rule change.
+	long, short := width, height
+	if width > 0 && height > width {
+		long, short = height, width
 	}
+	for _, tier := range resolutionTiers {
+		if long >= tier.minLong || short >= tier.minShort {
+			return tier.label
+		}
+	}
+	return strconv.Itoa(short) + "p"
 }
