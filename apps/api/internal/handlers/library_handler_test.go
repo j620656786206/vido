@@ -280,6 +280,26 @@ func TestLibraryHandler_ListLibrary(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
+	// disc-2026-10-library-list-triage-a AC #1: sort_by=subtitle_status reaches
+	// the service as a SORT key, and is not mistaken for the subtitle_status
+	// filter of the same name.
+	t.Run("sort_by=subtitle_status passes through as a sort, not a filter", func(t *testing.T) {
+		expectedResult := &services.LibraryListResult{
+			Items:      []services.LibraryItem{},
+			Pagination: &repository.PaginationResult{Page: 1, PageSize: 20},
+		}
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			_, filtered := p.Filters["subtitle_status"]
+			return p.SortBy == "subtitle_status" && p.SortOrder == "asc" && !filtered
+		}), "tv").Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?type=tv&sort_by=subtitle_status&sort_order=asc", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
 	mockService.AssertExpectations(t)
 }
 

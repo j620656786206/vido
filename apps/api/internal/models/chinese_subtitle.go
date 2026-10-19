@@ -383,6 +383,52 @@ func chineseSubtitleNeed(c ChineseSubtitle) int {
 	return 4 // unknown, or anything unreadable
 }
 
+// Ranks of the library's 字幕狀態 sort (disc-2026-10-library-list-triage-a
+// AC #1 [@contract-v1]), smallest first under sort_order=asc.
+const (
+	SubtitleRankMissing           = 0 // 缺中文
+	SubtitleRankNoSourceOrStopped = 1 // 無字幕源／未翻譯／已略過
+	SubtitleRankUnknown           = 2 // 不知道 (incl. probing／extracting／translating)
+	SubtitleRankHans              = 3 // 簡中
+	SubtitleRankZh                = 4 // 中文
+	SubtitleRankHant              = 5 // 繁中
+)
+
+// SubtitleTriageRank ranks the subtitle badge the library list SHOWS for a
+// title, so sort_by=subtitle_status puts 缺中文 first and 繁中 last
+// (disc-2026-10-library-list-triage-a AC #2). It mirrors deriveSubtitleStatus
+// in apps/web/src/utils/libraryStatus.ts (:139-194) rule for rule:
+//  1. a Chinese verdict wins over every pipeline state (繁中／簡中／中文);
+//  2. else no_text_source／skipped／untranslated name the reason (rank 1);
+//  3. else probing／extracting／translating show no badge (不知道);
+//  4. else verdict none is 缺中文;
+//  5. everything else is 不知道.
+//
+// It differs from chineseSubtitleNeed, which reads the verdict alone and cannot
+// tell 無字幕源／未翻譯／已略過 apart from 缺中文. An unreadable verdict ranks as
+// unknown. Registered as the SQL function vido_subtitle_triage_rank so the
+// SQL ORDER BY and the "全部" view's Go merge use this one implementation.
+func SubtitleTriageRank(verdict ChineseSubtitle, status SubtitleStatus) int {
+	switch verdict {
+	case ChineseSubtitleZhHant:
+		return SubtitleRankHant
+	case ChineseSubtitleZhHans:
+		return SubtitleRankHans
+	case ChineseSubtitleZh:
+		return SubtitleRankZh
+	}
+	switch status {
+	case SubtitleStatusNoTextSource, SubtitleStatusSkipped, SubtitleStatusUntranslated:
+		return SubtitleRankNoSourceOrStopped
+	case SubtitleStatusProbing, SubtitleStatusExtracting, SubtitleStatusTranslating:
+		return SubtitleRankUnknown
+	}
+	if verdict == ChineseSubtitleNone {
+		return SubtitleRankMissing
+	}
+	return SubtitleRankUnknown
+}
+
 // WorstChineseSubtitle folds per-episode verdicts into the series verdict
 // (disc-2026-10-subtitle-filter-series-phase-2, SM ruling 1): the one that
 // most needs handling wins — any episode missing Chinese makes the series

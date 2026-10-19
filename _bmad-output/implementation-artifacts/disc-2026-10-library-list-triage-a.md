@@ -1,6 +1,6 @@
 # Disc：修字幕清單 A（後端）——媒體庫可以「依字幕狀態」排序，缺中文的排最前面
 
-Status: ready-for-dev
+Status: review
 
 **Source:** 2026-10-19 `/impeccable critique 媒體庫 列表`（21／40；快照 `.impeccable/critique/2026-10-19T00-18-51Z__ps-web-src-components-library-librarylistrowv2-tsx.md`，Persona「Alex: no 缺中文-first sort」「NAS self-hoster: can't answer how many of 136 still lack 繁中」）＋ Alexyu 看正式機列表：「中間一大片空白，看起來很奇怪」。
 ⚖️ **2026-10-19 Alexyu 裁定 1A**：列表的工作是「修字幕清單」——字幕狀態緊跟片名、**可以依字幕狀態排序**、失敗列有出路。⚖️ **2B**：critique 的問題全部一起處理。設計定稿：`disc-2026-10-library-list-triage-design`（done；Sally 裁定 6「排序多一個『字幕狀態』：缺中文 → 無字幕源／未翻譯／已略過 → 不知道 → 簡中 → 中文 → 繁中」）。
@@ -47,18 +47,19 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 models（AC #2）**
-  - [ ] `internal/models/chinese_subtitle.go` 加 `SubtitleTriageRank` 與六個具名常數（`SubtitleRankMissing = 0` … `SubtitleRankHant = 5`）；註解引用 `libraryStatus.ts:139-194` 並說明「排的是列表上看到的那顆徽章」。
-  - [ ] 表格測試（`chinese_subtitle_test.go` 或同目錄新檔）。
-- [ ] **T2 repository（AC #1、#3、#5）**
-  - [ ] `chinese_subtitle_sql.go` 再註冊一個 deterministic 純量函式 `vido_subtitle_triage_rank(verdict, status)`，直接呼叫 `models.SubtitleTriageRank`（同 `vido_chinese_subtitle` 的做法：一份實作；同樣只准用在查詢裡，`:20-22` 的警告照抄）。壞輸入不回錯，當 `unknown`。
-  - [ ] `MovieRepository.List`：`params.SortBy == "subtitle_status"` 時，ORDER BY 改成 `vido_subtitle_triage_rank(vido_chinese_subtitle(subtitle_status, subtitle_language, subtitle_tracks), subtitle_status) <ASC|DESC>, created_at DESC, id ASC`。
-  - [ ] `SeriesRepository.List`：同上，判定用 `seriesChineseSubtitleSQL("series")`、status 用 `series.subtitle_status`。
-- [ ] **T3 service（AC #4）**：`compareLibraryItems` 加 `case "subtitle_status"`：比 `SubtitleTriageRank(item 的 ChineseSubtitle, item 的 SubtitleStatus)`，同級比 `CreatedAt`（新的在前）再比 `ID`（小的在前）；加 `getTriageRank(item)` 小幫手，跟 `getCreatedAt` 等放一起。
-- [ ] **T4 測試（AC #1、#3、#4、#5、#6、#7）**
-  - [ ] repository 真遷移鏈測試：電影 5＋1 部的 asc／desc 順序；`page_size=2` 翻三頁接起來等於一次拿；影集 See 形狀。
-  - [ ] service 測試：`listAll` 混合電影＋影集跨頁（照 `library_service_test.go:985` 那條「page 2 of 2 exercises listAll's over-fetch」的寫法）。
-  - [ ] 跑 `go test ./...`、`go vet`、staticcheck。
+- [x] **T1 models（AC #2）**
+  - [x] `internal/models/chinese_subtitle.go` 加 `SubtitleTriageRank` 與六個具名常數（`SubtitleRankMissing = 0` … `SubtitleRankHant = 5`）；註解引用 `libraryStatus.ts:139-194` 並說明「排的是列表上看到的那顆徽章」。
+  - [x] 表格測試（`chinese_subtitle_test.go` 或同目錄新檔）。
+- [x] **T2 repository（AC #1、#3、#5）**
+  - [x] `chinese_subtitle_sql.go` 再註冊一個 deterministic 純量函式 `vido_subtitle_triage_rank(verdict, status)`，直接呼叫 `models.SubtitleTriageRank`（同 `vido_chinese_subtitle` 的做法：一份實作；同樣只准用在查詢裡，`:20-22` 的警告照抄）。壞輸入不回錯，當 `unknown`。
+  - [x] `MovieRepository.List`：`params.SortBy == "subtitle_status"` 時，ORDER BY 改成 `vido_subtitle_triage_rank(vido_chinese_subtitle(subtitle_status, subtitle_language, subtitle_tracks), subtitle_status) <ASC|DESC>, created_at DESC, id ASC`。
+  - [x] `SeriesRepository.List`：同上，判定用 `seriesChineseSubtitleSQL("series")`、status 用 `series.subtitle_status`。
+- [x] **T3 service（AC #4）**：`compareLibraryItems` 加 `case "subtitle_status"`：比 `SubtitleTriageRank(item 的 ChineseSubtitle, item 的 SubtitleStatus)`，同級比 `CreatedAt`（新的在前）再比 `ID`（小的在前）；加 `getTriageRank(item)` 小幫手，跟 `getCreatedAt` 等放一起。
+- [x] **T4 測試（AC #1、#3、#4、#5、#6、#7）**
+  - [x] repository 真遷移鏈測試：電影 5＋1 部的 asc／desc 順序；`page_size=2` 翻三頁接起來等於一次拿；影集 See 形狀。
+  - [x] service 測試：`listAll` 混合電影＋影集跨頁（照 `library_service_test.go:985` 那條「page 2 of 2 exercises listAll's over-fetch」的寫法）。
+  - [x] 跑 `go test ./...`、`go vet`、staticcheck。
+  - [x] （① 開發中吸收）handler 測試：`GET /library?type=tv&sort_by=subtitle_status&sort_order=asc` 以「排序」傳到 service，不會被當成同名的 `subtitle_status` 篩選（AC #1）。
 
 ## Dev Notes
 
@@ -102,12 +103,46 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia，dev-story，2026-10-19）
+
 ### Debug Log References
 
+- 紅燈先行：`SubtitleTriageRank` 測試（未定義→編譯失敗）、repository 排序測試（退回 `created_at`，順序錯）、service `listAll` 測試（同級電影／影集順序錯、desc 次序鍵跟著反轉）都先紅後綠。
+- 實作提示的「未查證」已確認：SQLite 的 ORDER BY 可以把 SELECT 別名 `chinese_subtitle_rollup` 放進函式參數 → 影集用別名，不重複整段子查詢（《See》形狀測試綠）。
+- `created_at` 文字順序＝時間順序：正式機經 `sqlite-utc` 驅動一律存 UTC（`+00:00`），小數秒尾零省略時 `+` < `.` < 數字，字串比較與 Go `time.Time` 比較一致。
+
 ### Completion Notes List
+
+- **排名一份實作：** `models.SubtitleTriageRank` 逐條對應 `libraryStatus.ts` 的 `deriveSubtitleStatus`；SQL 函式 `vido_subtitle_triage_rank` 直接呼叫它；「全部」頁面的 Go 合併（`compareLibraryItems`）也呼叫它。三條路徑同一組鍵：排名（照 sort_order）→ `created_at` 新的在前 → `id` 小的在前（後兩個不跟 sort_order 反轉）。
+- **沒有把 `subtitle_status` 加進 `sortColumnMap`**：用特例分支。測試資料刻意讓字母順序（not_found < not_searched < untranslated）≠ 排名順序，誤用會紅。
+- **AC 對照：** #1 repo 電影 asc／desc＋影集 asc／desc＋handler 傳遞；#2 55 組合（5 判定 × 10 status＋空字串）＋3 個壞判定字串＋未來未知 status；#3 《See》形狀影集（自身列繁中、一集英文 → 缺中文那級）；#4 `listAll` 電影＋影集混合，`page_size=2` 四頁接起來＝一次拿（asc／desc），且與單一類型順序一致；#5 設計稿 5 部＋1 部 untranslated，順序如 AC；#6 既有 sort 測試全綠＋新增「不認得的 sort_by 退回 created_at」；#7 見下方驗證。
+- **驗證：** `go test ./...` 42 個 package 全過（8,163 pass／0 fail／2 skip）；`go vet ./...` 乾淨；`~/go/bin/staticcheck-2026.1 ./...` 零輸出；`pnpm run lint:all`「✖ 170 problems (0 errors, 170 warnings)」（警告都是既有、本單沒動前端）＋ Prettier 全過；全量回歸 `pnpm nx test web` 289 檔／4,527 測試全過，無殘留 vitest 程序。
+- 🔗 AC Drift: NONE (checked: 'sortColumnMap|compareLibraryItems|sort_by=' across _bmad-output/implementation-artifacts/*.md — 6 hits（11-1、5-2、dsr-1b-b、-b2、all-view-past-100、本單），all REUSE not DRIFT；既有排序鍵與退回行為不變；tests/e2e 無 `sort_by=subtitle_status` 斷言)
+- 📎 Contract Stamps: FOUND (1 stamped AC across 2 files — 本單 AC #1 [@contract-v1] 首次定義；下游 `disc-2026-10-library-list-triage-b2` AC #1 已有 `confirmed against [@contract-v1] (Story disc-2026-10-library-list-triage-a AC #1)`，版本一致，無 bump)
+- **Discovery Triage（本次開發）：**
+  - ① handler 傳遞測試（`sort_by=subtitle_status` 不被當成同名篩選）→ 已加成 T4 的子任務。
+  - 無 ②／③ 新發現。`/library/search` 不吃排序（FTS 相關度）是既有設計、前端搜尋本來就不送 `sort_by`，Dev Notes 明定不動，不立案。
 
 ### Discovery Triage
 
 - **③ backlog-with-carry-forward-link** — `disc-2026-10-library-all-view-past-100`（Bob 建單時發現）：`listAll` 對每個 repo 要 `page × pageSize` 筆（`library_service.go:382`），但 repo 的 `params.Validate()`（`movie_repository.go:334`）把 `PageSize` 壓到 `MaxPageSize = 100`（`repository/repository.go:46`、`:68-70`）。前端一頁 36 筆（`apps/web/src/hooks/useLibraryInfinite.ts:12`），第 3 頁起要 108 筆只拿到 100 → 任一類型超過 100 部時，「全部」頁面捲到第 101 部之後會漏片／順序錯。正式機目前電影 55、影集 81，還沒踩到。同一張單順便處理：其他排序（評分等）也沒有次序鍵，同分的列翻頁會重複／漏。
 
 ### File List
+
+- `apps/api/internal/models/chinese_subtitle.go`（改：`SubtitleTriageRank`＋6 個排名常數）
+- `apps/api/internal/models/subtitle_triage_rank_test.go`（新）
+- `apps/api/internal/repository/chinese_subtitle_sql.go`（改：SQL 函式 `vido_subtitle_triage_rank`＋`subtitleTriageOrderBy`）
+- `apps/api/internal/repository/movie_repository.go`（改：`List` 的 subtitle_status 特例 ORDER BY）
+- `apps/api/internal/repository/series_repository.go`（改：同上，判定用 `chinese_subtitle_rollup`）
+- `apps/api/internal/repository/subtitle_triage_sort_test.go`（新）
+- `apps/api/internal/services/library_service.go`（改：`compareLibraryItems` 的 subtitle_status 分支、`getTriageRank`、`getID`）
+- `apps/api/internal/services/library_service_triage_sort_test.go`（新）
+- `apps/api/internal/handlers/library_handler_test.go`（改：加一個子測試）
+- `_bmad-output/implementation-artifacts/disc-2026-10-library-list-triage-a.md`（本檔）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`（本單那一行）
+
+### Change Log
+
+| Date | Change |
+| --- | --- |
+| 2026-10-19 | dev-story（Amelia）：新增 `sort_by=subtitle_status`（AC #1 [@contract-v1] 首次定義）——排名＝列表徽章，同級 created_at DESC、id ASC；電影／影集／「全部」三條路徑同一份排名與次序鍵。Status → review。 |

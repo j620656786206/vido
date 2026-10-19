@@ -529,6 +529,24 @@ func compareLibraryItems(a, b LibraryItem, sortBy, sortOrder string) bool {
 		}
 		return ar > br
 
+	case "subtitle_status":
+		// Same keys as the SQL ORDER BY (repository.subtitleTriageOrderBy): the
+		// badge rank in the requested order, then created_at newest first, then
+		// id ascending — the tie-breakers do not flip with sortOrder
+		// (disc-2026-10-library-list-triage-a AC #4).
+		ar, br := getTriageRank(a), getTriageRank(b)
+		if ar != br {
+			if asc {
+				return ar < br
+			}
+			return ar > br
+		}
+		at, bt := getCreatedAt(a), getCreatedAt(b)
+		if !at.Equal(bt) {
+			return at.After(bt)
+		}
+		return getID(a) < getID(b)
+
 	default: // created_at
 		at := getCreatedAt(a)
 		bt := getCreatedAt(b)
@@ -548,6 +566,30 @@ func getCreatedAt(item LibraryItem) time.Time {
 		return item.Series.CreatedAt
 	}
 	return time.Time{}
+}
+
+// getTriageRank is the rank of the subtitle badge the list shows for the item
+// (models.SubtitleTriageRank over its verdict and subtitle_status; a series'
+// verdict is already its episode rollup). An empty item ranks as unknown.
+func getTriageRank(item LibraryItem) int {
+	if item.Movie != nil {
+		return models.SubtitleTriageRank(item.Movie.ChineseSubtitle, item.Movie.SubtitleStatus)
+	}
+	if item.Series != nil {
+		return models.SubtitleTriageRank(item.Series.ChineseSubtitle, item.Series.SubtitleStatus)
+	}
+	return models.SubtitleRankUnknown
+}
+
+// getID extracts the id from a LibraryItem.
+func getID(item LibraryItem) string {
+	if item.Movie != nil {
+		return item.Movie.ID
+	}
+	if item.Series != nil {
+		return item.Series.ID
+	}
+	return ""
 }
 
 // getTitle extracts the title from a LibraryItem.

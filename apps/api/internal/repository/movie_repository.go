@@ -376,14 +376,20 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 		return nil, nil, fmt.Errorf("failed to count movies: %w", err)
 	}
 
-	// Build and execute list query
+	// Build and execute list query. sort_by=subtitle_status is NOT a column
+	// sort (alphabetical subtitle_status is not the badge order) — see
+	// subtitleTriageOrderBy (disc-2026-10-library-list-triage-a).
+	orderBy := sortBy + " " + params.SortOrder
+	if params.SortBy == "subtitle_status" {
+		orderBy = subtitleTriageOrderBy(fmt.Sprintf("%s(subtitle_status, subtitle_language, subtitle_tracks)", chineseSubtitleSQLFunc), params.SortOrder)
+	}
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM movies
 		%s
-		ORDER BY %s %s
+		ORDER BY %s
 		LIMIT ? OFFSET ?
-	`, movieSelectColumns, whereClause, sortBy, params.SortOrder)
+	`, movieSelectColumns, whereClause, orderBy)
 
 	// Add limit and offset to args
 	args = append(args, params.Limit(), params.Offset())

@@ -43,6 +43,40 @@ func chineseSubtitleSQL(_ *sqlite.FunctionContext, args []driver.Value) (driver.
 	return string(models.ChineseSubtitleVerdict(sqlText(args[0]), sqlText(args[1]), sqlText(args[2]))), nil
 }
 
+// subtitleTriageRankSQLFunc is the SQL name of models.SubtitleTriageRank: the
+// rank of the subtitle badge the library list shows, behind
+// sort_by=subtitle_status (disc-2026-10-library-list-triage-a AC #1
+// [@contract-v1]). Same caveat as vido_chinese_subtitle:
+//
+// ⚠️ Use it ONLY inside queries. Never in an index, view, trigger or generated
+// column: external tools (the sqlite3 CLI, backup_service's read-only restore
+// connection) do not have the function and could not open such an object.
+const subtitleTriageRankSQLFunc = "vido_subtitle_triage_rank"
+
+func init() {
+	sqlite.MustRegisterDeterministicScalarFunction(subtitleTriageRankSQLFunc, 2, subtitleTriageRankSQL)
+}
+
+// subtitleTriageRankSQL adapts vido_subtitle_triage_rank(verdict, status). Like
+// chineseSubtitleSQL it never returns an error: an unreadable verdict ranks as
+// unknown, so one broken row cannot turn the library list into a 500.
+func subtitleTriageRankSQL(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+	if len(args) != 2 {
+		return int64(models.SubtitleRankUnknown), nil
+	}
+	return int64(models.SubtitleTriageRank(models.ChineseSubtitle(sqlText(args[0])), models.SubtitleStatus(sqlText(args[1])))), nil
+}
+
+// subtitleTriageOrderBy is the ORDER BY for sort_by=subtitle_status: the badge
+// rank in `order` ("asc"/"desc"), then created_at newest first, then id — the
+// tie-breakers do NOT flip with the order, and the "全部" view's Go merge
+// (services.compareLibraryItems) uses the same three keys. With only six ranks
+// most rows tie, so without the tie-breakers OFFSET paging would repeat or
+// skip rows. `verdict` is the SQL expression of the row's verdict.
+func subtitleTriageOrderBy(verdict, order string) string {
+	return fmt.Sprintf("%s(%s, subtitle_status) %s, created_at DESC, id ASC", subtitleTriageRankSQLFunc, verdict, order)
+}
+
 // sqlText turns a SQLite argument into the verdict's string form; NULL is "".
 func sqlText(v driver.Value) string {
 	switch x := v.(type) {
