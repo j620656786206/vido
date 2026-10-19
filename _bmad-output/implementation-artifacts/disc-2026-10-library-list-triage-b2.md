@@ -1,6 +1,6 @@
 # Disc：修字幕清單 B2（前端・頁首與工具列）——標題旁寫「37 部缺中文」一點就篩，排序多一個「字幕狀態」
 
-Status: review
+Status: done
 
 **Blocked-by:** `disc-2026-10-library-list-triage-a`（`sort_by=subtitle_status`）、`disc-2026-10-library-list-triage-b1`（列表骨架照 B1 的表格畫；兩張都改 `LibraryBrowseV2.tsx`，B1 先合）。
 
