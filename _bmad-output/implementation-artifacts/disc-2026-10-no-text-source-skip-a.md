@@ -1,6 +1,6 @@
 # Disc：沒有字幕來源也沒設語音辨識 A（後端）——即時事件帶新原因代碼 `no_text_source`，不再落成「其他」
 
-Status: review
+Status: done
 
 **Source:** 傘狀單 `disc-2026-10-no-text-source-skip`（2026-10-19 party mode：founder-pm／Winston／Sally／John／Bob／Mary＋#848 的另一個 session；⚖️ Alexyu：由這邊直接做）。單次生成「片內沒有可用字幕、又沒設語音辨識」被記成 `skipped`，即時事件的 `failure_reason` 卻是 `other`，生成畫面因此寫紅色「失敗 · 生成失敗」。
 
@@ -197,6 +197,7 @@ Status: review
 |---|---|
 | 2026-10-19 | 建單（Bob）。party mode 裁定、⚖️ Alexyu 由這邊直接做；拆 -a／-b。本單把 `disc-2026-10-live-activity-failure-reasons-a` AC #1 升 `[@contract-v1→v2]`（`failure_reason` 加 `no_text_source`、批次 skipped 帶代碼），實際改戳與下游掃描在 T5。 |
 | 2026-10-20 | dev 完成（Amelia）：T1–T5 全做；live-a AC #1 已改戳 `[@contract-v2]`＋Change Log；gen-queue stale-mark。 |
+| 2026-10-20 | 合併 #855；Status → done（Bob）。 |
 
 ## Dev Agent Record
 
@@ -218,6 +219,7 @@ Claude Opus 5.5（Amelia，dev）
 - **Rule 20 下游掃描**：`grep 'confirmed against [@contract-vN]' … live-activity-failure-reasons-a AC #1` 只命中 `disc-2026-10-no-text-source-skip-b`（已照 v2 寫）。放寬成 `grep -rln live-activity-failure-reasons-a` 命中：`disc-2026-10-live-activity-failure-reasons-b`（done → 凍結不動）、`disc-2026-10-run-timeout-not-cancel`（done，上游單，不受影響）、`disc-2026-10-no-text-source-skip-b`（本單前端，已照 v2 寫）、sprint-status。`disc-2026-10-generation-queue-failure-reason` 雖沒直接引用，仍照 story 保守 stale-mark（ready-for-dev、未 done）：Dev Notes 開頭與 sprint-status 條目都加了 `⚠️ STALE [@contract-v1→v2] … see disc-2026-10-no-text-source-skip-a`；沒有碰它的分支 `feat/generation-queue-failure-reason`。
 - `disc-2026-10-generate-keeps-user-en-srt-b.md` 檔尾只附加「下游註記」一段，沒改其他內容。
 - 驗證：`go test ./...`（apps/api 全部）、`go vet ./...`、`~/go/bin/staticcheck ./...` 全綠；`pnpm run lint:all` → `✖ 170 problems (0 errors, 170 warnings)`（都是既有警告）；`pnpm run format:check` 通過。
+- ✅ 2026-10-20 合併 #855（squash 到 `main` a2dcb111）。
 - 舊前端相容已確認：`failureCopyForReason` 不認得的代碼回「生成失敗」；`useGenerationJobsFeed.ts:524` 只保留 `reason === 'error'` 的代碼。
 
 ### File List

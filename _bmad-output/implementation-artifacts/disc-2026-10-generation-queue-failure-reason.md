@@ -1,6 +1,6 @@
 # Disc：生成畫面的失敗原因——左邊佇列講出原因、右邊即時活動把原因放第二行，片名不再被擠掉
 
-Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design` 已跟本檔同一個 PR 合併，2026-10-19 解除 blocked）
+Status: in-progress（2026-10-20 重開：PR #851 為「對話框佇列列改兩行」重開，見「2026-10-20 追加」；原：Sally 稿 `disc-2026-10-live-activity-row-layout-design` 已跟本檔同一個 PR 合併，2026-10-19 解除 blocked）
 
 **Source（兩件事併一張）：**
 1. `disc-2026-10-live-activity-failure-reasons-b`（PR #846）合併時 dev 回報（範圍外）：生成字幕畫面右邊「即時活動」已經寫「影片所在的資料夾寫不進字幕」，左邊「生成佇列」同一部片還寫「生成失敗」——同一個畫面、同一次失敗，兩邊對不起來。⚖️ **Alexyu 2026-10-19 裁定 2A：** 開單補上，佇列失敗項目改用同一份失敗原因文字（`FAILURE_COPY_BY_REASON`）。
@@ -16,7 +16,7 @@ Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design`
   - **F11-D-v2 `l8FsB`**（`f11-d-v2.png`）：即時活動 `DUvwI`／清單 `dPQ9b` 第 3 列新增 `evt-fail`（和平使者 S01E01 · 影片所在的資料夾寫不進字幕）；佇列失敗列 `f14sNh`（`aw4Qr` 實例）同一部片、同一句、說明行 `$text-secondary`。
   - **F11-M-v2 `PXB0z`**（`f11-m-v2.png`）：佇列失敗列 `Ah8fN`（358 寬）同上。
 - **元件：** `Component/GenQueueRow-v2 (aw4Qr)`——片名 `bSNmA`、說明行 `lUZol`、徽章 `IcPTo`／圖示 `CQhw2`／徽章字 `OLg1J`。
-- **不在 Sally 稿範圍：** 產生字幕對話框 F8-D-v2 `i9Nun1`／F8-M-v2 `H717g`（見「預設做法」）。
+- ~~**不在 Sally 稿範圍：** 產生字幕對話框 F8-D-v2 `i9Nun1`／F8-M-v2 `H717g`（見「預設做法」）。~~ → **2026-10-20：** 對話框也有稿了——F8-D-v2 `i9Nun1`、F8-M-v2 `H717g`、新規格稿 F8-SPEC-ROW（`flow-f-subtitle-v2/f8-spec-row.png`，繪製中），見「2026-10-20 追加」。
 
 ### ⛔ 擋在哪、什麼時候解開
 
@@ -76,7 +76,7 @@ Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design`
 3. **兩個呼叫點都傳代碼：** `GenerationWorkspaceV2.tsx:293`、`GenerationBatchDialogV2.tsx:373` 的 view 加 `failureReason: item.failureReason`。對話框的退回列（`:514-520`、`:769-795`）沒代碼 → 照舊「生成失敗」。
 4. **即時活動批次列收成同一個呼叫：** `generationEventCopy.ts:225-228` 改成 `queueRowLabel({ status: 'failed', reason: row.reason, failureReason: row.failureReason }).text`，刪掉那裡自己的 `error` 分支。單次（`row.reason === null`）那條不動。
 5. **佇列說明行顏色維持次要色**（Sally 裁定 6：app 本來就對，改的是稿子）：失敗列說明行仍是 `--text-secondary`，不改成紅色；只加測試釘住（AC #12）。
-6. **佇列片名最多兩行**（Sally 裁定 2、6）：工作區 `QueueRow` 片名（`GenerationWorkspaceV2.tsx:319`）`truncate` → `line-clamp-2`（超過兩行結尾「…」，可折行）。**只改工作區**；對話框片名（`GenerationBatchDialogV2.tsx:369`）不在 Sally 稿範圍，不動。
+6. **佇列片名最多兩行**（Sally 裁定 2、6）：工作區 `QueueRow` 片名（`GenerationWorkspaceV2.tsx:319`）`truncate` → `line-clamp-2`（超過兩行結尾「…」，可折行）。**只改工作區**；對話框片名（`GenerationBatchDialogV2.tsx:369`）不在 Sally 稿範圍，不動。（⚠️ 2026-10-20 取代：對話框片名也改 `line-clamp-2`，見 AC #18。）
 
 **右邊：即時活動原因放第二行**
 
@@ -112,13 +112,47 @@ Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design`
 14. **真頁面量測**（本機、假 SSE 或狀態查詢 stub；片名用「和平使者 S01E01」「花月殺手」「魔戒首部曲：魔戒現身 加長版導演剪輯特別收藏版」，原因用最長的 `target_not_writable`「影片所在的資料夾寫不進字幕」）。數字寫進 Completion Notes：
     - 即時活動，**390 與 320**（手機展開即時活動）、**1440**（側欄）：片名那格寬度與行數、原因那行是否整句、圖示中心與第一行文字中心的差（≤1px）、原因左緣 x 與階段字左緣 x 的差（≤1px）。**合格：** 「和平使者 S01E01」「花月殺手」整個看得到；長片名最多兩行、結尾「…」；原因整句看得到（320 可折行）。
     - 佇列，390／320／1440：失敗列說明行整句（手機可折行）；長片名最多兩行。
-    - 產生字幕對話框，390（F8-M-v2 手機 sheet）／880：片名那格寬度與看得到幾個字（不改版面，只記錄）。**對話框手機片名只剩「…」或 1～2 個字 → 停下來回報 Alexyu／Sally，不合併。**
+    - 產生字幕對話框，390（F8-M-v2 手機 sheet）／880：片名那格寬度與看得到幾個字（不改版面，只記錄）。**對話框手機片名只剩「…」或 1～2 個字 → 停下來回報 Alexyu／Sally，不合併。**（⚠️ 2026-10-20 取代：對話框改用 AC #22 的量測與合格線。）
 15. **UX 驗收（必做，Sally 稿合併後）：** 1440 截圖對 `f11-d-v2.png`（`evt-fail` 第 3 列、佇列 `f14sNh`）；390 展開即時活動截圖對 F11-SPEC-LOG `spec-entry-m`；390 佇列對 `f11-m-v2.png` `Ah8fN`。文字、兩行位置、顏色逐項比。
 16. **視覺基準：**
     - 新增夾具 `generation-workspace-v2/failures-long-titles`（`width: 1200`，`penNode: 'screen-section'` 或沿用既有夾具寫法）：佇列＋即時活動同時有「和平使者 S01E01」`target_not_writable`、長片名「魔戒首部曲：魔戒現身 加長版導演剪輯特別收藏版」`no_audio_track`，證明兩邊同一句、原因在第二行、長片名兩行截斷。
     - **預期會變：** `complete-with-failures`（兩列 ④ 變兩行）。**預期不變：** `running`、`budget_ceiling`、`credit_exhausted`、`idle`——變了要查原因，不要直接更新。
     - 做法：`complete-with-failures` 與新夾具的 `-darwin` 本機產（刪舊 darwin 檔後 `AI_PROVIDER=claude pnpm test:visual:update-missing`）；`complete-with-failures/default-visual-linux.png` **刪掉**（`git rm`），新夾具**不產 `-linux`**，交給 CI 的 Visual Regression 開 `chore(visual): bootstrap N missing -linux baselines` PR。**絕不跑 `test:visual:update`、不 commit 本機產的 `-linux.png`。** 其餘基準 `AI_PROVIDER=claude pnpm test:visual`（不更新）全綠。
 17. `pnpm nx run web:test`（subtitle＋hooks＋activity 相關 spec）、`pnpm nx run web:typecheck`、`pnpm run lint:all`（看「✖ N problems (X errors」那行）、`pnpm run format:check`、`python3 scripts/check-design-refs.py` 綠；`git grep -n "生成失敗" tests/e2e` 仍為零，跑一次 `tests/e2e/generation-workspace.spec.ts`、`generation-workspace-mobile.spec.ts`、`batch-subtitle.spec.ts` 綠。
+
+## 2026-10-20 追加：對話框佇列列改兩行（Alexyu 選 B，Sally 裁定）
+
+**為什麼重開：** 本單原本對話框「只改字、不改版面」。PR #851 實測：對話框裡失敗列的原因（例如「影片所在的資料夾寫不進字幕」）跟片名擠在同一行，手機上片名被擠到看不見是哪一部。Alexyu 選 B（改兩行），Sally 2026-10-20 裁定版面，**在 PR #851 上做**（重開，不另開單）。
+
+**設計稿：** F8-D-v2 `i9Nun1`、F8-M-v2 `H717g`、新規格稿 **F8-SPEC-ROW**（截圖 `_bmad-output/screenshots/flow-f-subtitle-v2/f8-spec-row.png`，2026-10-20 繪製中；節點 id 等稿 PR 合併、`pen-node-ids.json` 更新後才寫進 `Design ref:`，否則 `check-design-refs.py` 會紅）。
+
+**裁定：** 產生字幕對話框（F8，`GenerationBatchDialogV2.tsx` 的 `QueueRow`）裡，有東西要解釋的列（失敗、已略過）一律兩行；其他狀態維持一行。第一行片名（最多兩行）＋右邊短狀態字、對齊片名第一行；第二行原因（Body、`--text-secondary`、左緣對齊片名、前面不加「·」、不截斷、會折行）。桌機 F8-D-v2 同一排法。已略過（灰色「已略過」＋原因）由 `disc-2026-10-no-text-source-skip-b` 做，本單只做結構與失敗列。
+
+**下游：** `disc-2026-10-no-text-source-skip-b` 等本單合併才開工，它只改 `queueRowBadge`／`queueRowLabel` 的回傳，靠本單的兩行結構顯示「已略過」＋原因。
+
+18. **版面**（`QueueRow`，`GenerationBatchDialogV2.tsx:345-394`）：
+    - 縮圖之後改成一個內容欄 `div.min-w-0.flex-1.flex-col`。
+    - 內容欄第一行 `div.flex.items-start.gap-3`，裝片名與 `RowStageLabel`。片名由 `truncate` 改成 `line-clamp-2 break-words`，保留 `min-w-0 flex-1`。
+    - 內容欄第二行：`{detail && <p data-testid={`gen-batch-row-detail-${mediaId}`} className="break-words text-sm text-[var(--text-secondary)]">{detail}</p>}`。
+    - **不變：** 外層 `flex items-center gap-3.5`、進度條 `sm:pl-12`、`gen-batch-row-*` testid、`data-state`。
+19. **狀態字與第二行：**
+    - 失敗列的狀態字改成短字「失敗」（`queueRowBadge`）；顏色與圖示仍來自 `queueRowLabel`（紅色、`alert`）。
+    - `detail` ＝ `item.status === 'failed'` 時 `queueRowLabel(view).text`，否則 `null`。
+    - 非失敗列（完成、排隊、進行中、已暫停、已取消）狀態字照舊用 `queueRowLabel(...).text`、沒有第二行。
+    - 退回列（沒有後端 items，`:514-520`、`:769-795`）照同一規則：失敗列狀態字「失敗」、第二行「生成失敗」。
+20. **對齊：** `RowStageLabel` 的高度等於片名一行的行高（例如 20px 行高就 `h-5`），讓狀態字跟片名第一行置中對齊；**不要**用 `mt-[Npx]` 硬推。
+21. **測試：**
+    - 失敗列：原因在 `gen-batch-row-detail-<id>` 裡、狀態字是「失敗」（原因**不在**狀態字那格）；片名元素有 `line-clamp-2`、沒有 `truncate`。
+    - 完成、排隊、進行中列沒有 detail 元素。
+    - 既有 `GenerationBatchDialogV2.spec.tsx:1355`、`:1424`、`:2019` 與 E2E `tests/e2e/batch-subtitle.spec.ts:254-256` 仍綠（若既有斷言是「列含原因文字」，仍成立——原因還在同一列裡）。
+    - 故意改壞（寫進 Debug Log）：(viii) 片名改回 `truncate` → 紅；(ix) 原因塞回狀態字 → 紅；(x) 非失敗列也給 `detail` → 紅。
+22. **真瀏覽器量測**（數字寫進 Completion Notes）：F8-M-v2 sheet 寬 **320** 與 **390**、桌機對話框 **880**。片名用「和平使者 S01E01」與「和平使者 S01E01 — 一個很長很長的集名標題」，原因用「影片所在的資料夾寫不進字幕」。
+    - **合格：** 片名那格 390 ≥200px、320 ≥150px；「和平使者 S01E01」兩個寬度都整個看得到；長片名最多兩行、結尾「…」。
+    - 狀態字中心與片名第一行中心的差 ≤1px。
+    - 一行的列高不變（桌機 82px、手機 78px）。
+    - 不合格 → 停下來回報 Sally，不合併。
+23. **視覺基準：** 有失敗列的對話框夾具（至少 `generation-batch-dialog-v2/complete-with-failures`）會變：`-darwin` 本機更新（刪舊 darwin 後 `AI_PROVIDER=claude pnpm test:visual:update-missing`）、`-linux` **`git rm`** 交給 CI bootstrap。其他對話框夾具（沒有失敗列）不應變——變了要查。**絕不跑 `test:visual:update`、不 commit 本機產的 `-linux.png`。**
+24. **UX 驗收：** 390 與 880 截圖對 F8-M-v2 `H717g`、F8-D-v2 `i9Nun1`、F8-SPEC-ROW（`f8-spec-row.png`）；兩行位置、狀態字對齊、顏色逐項比。
 
 ## Tasks / Subtasks
 
@@ -128,12 +162,18 @@ Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design`
 - [ ] **T3 右欄即時活動（AC #7–#9）**：`generationEventCopy.ts`（`FeedRowView.detail`、`view()`、`failedView`、⑤⑤b）、`GenerationWorkspaceV2.tsx`（`FeedRowItem` 兩行排法、圖示對第一行、片名兩行）、註解。
 - [ ] **T4 測試（AC #10–#13）**：三方一致性、改寫既有 `parts` 斷言、四個 spec 新增、七種故意改壞。
 - [ ] **T5 量測＋UX 驗收＋基準＋收尾（AC #14–#17）**：390／320／1440 量測、對三張稿、新夾具、`complete-with-failures` darwin 更新與 linux 刪除、lint／typecheck／format／design-refs／E2E；更新 `sprint-status.yaml`。
+- [ ] **T6 對話框佇列列兩行（2026-10-20 追加，AC #18–#24）**：contract v2 重新確認（Dev Notes STALE 下方）；`GenerationBatchDialogV2.tsx` `QueueRow`／`RowStageLabel`；測試與三種故意改壞；320／390／880 量測；對話框基準 darwin 更新、linux 刪除；對 F8 三張稿。
 
 ## Dev Notes
 
 > ⚠️ STALE [@contract-v1→v2]: upstream disc-2026-10-live-activity-failure-reasons-a AC #1 bumped 2026-10-20; re-confirm against v2 before dev — see disc-2026-10-no-text-source-skip-a
 >
 > 上游變了什麼：`failure_reason` 多一個值 `no_text_source`（共十二個）；批次 `reason == "skipped"` 的項目現在也可能帶代碼（`no_text_source`／`asr_unconfigured`，其餘仍是 `""`）。本單只細分 `reason == "error"`，照字面不受影響，但 `FAILURE_COPY_BY_REASON` 的鍵清單／一致性測試若用 `Object.keys` 逐一比對，要確認 `no_text_source` 由誰加（`-b` 計畫在 `runFailureCopy.ts` 加）。
+>
+> **2026-10-20 重開時追加（Bob）：dev 要對 contract v2 重新確認，結果寫進 Completion Notes。** `-a` 已合併 #855，後端現在真的會送 `no_text_source`（單次即時事件，以及批次 `skipped` 項目）。`no_text_source` 是本單文字表沒有的新代碼，要確認：
+> - 佇列與對話框：`queueRowLabel` 只對 `error` 看代碼，`skipped` 項目照舊走 `FAILURE_TEXT.skipped`「沒有可用的字幕來源」——這是合理的退回，**不要**把它畫成「生成失敗」。對話框第二行（AC #19）因此是「沒有可用的字幕來源」，狀態字暫時是紅色「失敗」；灰色「已略過」與 19 字原因是 `disc-2026-10-no-text-source-skip-b` 的事。
+> - 即時活動單次列：`failureCopyForReason('no_text_source')` 在 `-b` 加條目前會退回「生成失敗」（跟今天一樣），可接受；但要寫一條測試釘住「不認得的代碼 → 退回，不會壞」。
+> - 三方一致測試用 `Object.keys(FAILURE_COPY_BY_REASON)` 逐一比，**本單不加 `no_text_source`**（`-b` AC #1 加），測試鍵數維持十一。
 
 ### 不要做的事
 
@@ -149,6 +189,7 @@ Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design`
 
 ### 預設做法（要改請 Alexyu／Sally 裁定）
 
+- ⚠️ 2026-10-20：下面這條的「只改字，不改版面」被「2026-10-20 追加」取代（對話框也改兩行）。
 - **產生字幕對話框（F8）的佇列也一起講具體原因**（只改字，不改版面、不改片名截斷）。兩畫面共用 `queueRowLabel` 是刻意的（`generationQueueRow.ts:94-98`、`GenerationWorkspaceV2.tsx:20-23`，dsr-6d-c-1 建單裁定 #2「同一部片不能講兩種話」）。代價：對話框手機標籤變長、片名變短（估約 90px／6 字，AC #14 實測）。Sally 稿沒畫對話框；若 Alexyu 只要工作區，改成只在工作區傳 `failureReason`。對話框片名要不要也兩行，另找 Sally。
 - **極少見的 `error`＋`budget_exceeded`／`credit_exhausted`**：佇列與即時活動批次列都是紅色「失敗」＋「已達預算上限」／「AI 帳號沒有額度」，不改黃色。
 
@@ -193,6 +234,14 @@ Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design`
 - [Source: apps/web/src/routes/test/-gallery.fixtures.tsx:475-479, 6895-6910, 7097, 7158, 7217, 7272-7320, 7322]
 - [Source: tests/e2e/generation-workspace.spec.ts:42-44, 62-63；tests/e2e/batch-subtitle.spec.ts:254-256]
 - [Source: project-context.md Rule 16, Rule 21]
+
+## Change Log
+
+| 日期 | 變更 |
+|---|---|
+| 2026-10-19 | 建單（Bob）。 |
+| 2026-10-20 | `-a`（#855）stale-mark：契約升 `[@contract-v2]`。 |
+| 2026-10-20 | Bob：重開（PR #851）。新增「2026-10-20 追加：對話框佇列列改兩行（Alexyu 選 B，Sally 裁定）」AC #18–#24、T6；STALE 下方加 contract v2 重確認說明；AC #6、#14 對話框部分標為被取代；Status → in-progress。 |
 
 ## Dev Agent Record
 
