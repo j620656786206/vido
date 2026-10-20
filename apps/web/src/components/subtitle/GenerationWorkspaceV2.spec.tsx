@@ -285,9 +285,63 @@ describe('GenerationWorkspaceV2 — items-first rows (dsr-6d-c-1 AC #2)', () => 
     expect(busy).toHaveTextContent('這部正在別處處理');
     expect(busy).not.toHaveTextContent('完成');
 
+    // disc-2026-10-no-text-source-skip-b AC #4/#10 — overturns dsr-6d-b's
+    // 「不准用已略過」: a skip is a neutral 已略過 badge (the 已取消 tint, no
+    // glyph) with the reason on the line under the title. data-state stays
+    // `failed` (the E2E reads it); data-skipped is the new hook.
     const skipped = screen.getByTestId('workspace-queue-row-m4');
-    expect(skipped).toHaveTextContent('沒有可用的字幕來源');
-    expect(skipped).not.toHaveTextContent('已略過');
+    expect(skipped).toHaveAttribute('data-state', 'failed');
+    expect(skipped).toHaveAttribute('data-skipped', 'true');
+    const badge = within(skipped).getByText('已略過');
+    expect(badge.className).toContain('bg-[var(--bg-tertiary)]');
+    expect(badge.className).not.toContain('--error-tint');
+    expect(badge.className).toContain('text-[var(--text-muted)]');
+    expect(badge.querySelector('svg')).toBeNull();
+    expect(skipped).not.toHaveTextContent('失敗');
+    const sub = within(skipped).getByText('沒有可用的字幕來源');
+    expect(sub.className).toContain('--text-secondary');
+    // The real failure beside it is untouched: red-tinted 失敗 with its glyph.
+    expect(busy).not.toHaveAttribute('data-skipped');
+    const busyBadge = within(busy).getByText('失敗');
+    expect(busyBadge.className).toContain('--error-tint');
+    expect(busyBadge.querySelector('svg')).not.toBeNull();
+  });
+
+  it('[P0] a skipped film says the same sentence in the queue and in the live log (AC #10)', () => {
+    const NO_SOURCE = '沒有可用的字幕來源，也沒有設定語音辨識';
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          progress: progress({
+            items: [
+              { ...item('m5', '星際效應', 'failed', 'skipped'), failureReason: 'no_text_source' },
+              item('m12', '奧本海默', 'running'),
+            ],
+          }),
+          feed: [
+            ...feed,
+            {
+              seq: 3,
+              kind: 'failed',
+              mediaId: 'm5',
+              title: '星際效應',
+              seriesTitle: '',
+              reason: 'skipped',
+              failureReason: 'no_text_source',
+            },
+          ],
+        })}
+      />
+    );
+    const row = screen.getByTestId('workspace-queue-row-m5');
+    expect(within(row).getByText('已略過')).toBeInTheDocument();
+    expect(within(row).getByText(NO_SOURCE).className).toContain('--text-secondary');
+    const logRow = within(screen.getByTestId('workspace-event-log'))
+      .getAllByTestId('workspace-feed-row')
+      .find((r) => r.textContent!.includes('星際效應'))!;
+    expect(logRow).toHaveTextContent('已略過');
+    expect(logRow).not.toHaveTextContent('失敗');
+    expect(within(logRow).getByTestId('workspace-feed-row-detail').textContent).toBe(NO_SOURCE);
   });
 
   it('[P0] a failed row draws NO stepper (it is not being worked on)', () => {

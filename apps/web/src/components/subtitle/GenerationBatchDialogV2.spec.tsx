@@ -1324,9 +1324,13 @@ describe('GenerationBatchPanelV2 — rows from progress.items (dsr-6d-b AC #2/#3
     expect(busy).toHaveTextContent('這部正在別處處理');
     expect(busy).not.toHaveTextContent('完成');
 
+    // disc-2026-10-no-text-source-skip-b AC #5/#10 (Sally 2026-10-20, which
+    // overturned dsr-6d-b's 「不含已略過」): a skip says 已略過 in grey with its
+    // reason on line two; it is still `failed` on the wire.
     const skipped = screen.getByTestId(`gen-batch-row-${M4}`);
+    expect(skipped).toHaveAttribute('data-state', 'failed');
     expect(skipped).toHaveTextContent('沒有可用的字幕來源');
-    expect(skipped).not.toHaveTextContent('已略過');
+    expect(skipped).toHaveTextContent('已略過');
 
     expect(screen.getByTestId(`gen-batch-row-${M5}`)).toHaveAttribute('data-state', 'running');
   });
@@ -1433,7 +1437,7 @@ describe('GenerationBatchPanelV2 — rows from progress.items (dsr-6d-b AC #2/#3
       for (const id of [M1, M2, M3, M4, M5]) expect(detail(id)).toBeNull();
     });
 
-    it('[P0] busy_elsewhere / skipped rows are failed rows too: 失敗 + their sentence on line two', () => {
+    it('[P0] busy_elsewhere is 失敗 and a skip is grey 已略過 — each with its sentence on line two', () => {
       renderPanel({
         status: 'complete',
         progress: progressOf({
@@ -1446,16 +1450,22 @@ describe('GenerationBatchPanelV2 — rows from progress.items (dsr-6d-b AC #2/#3
         items: [],
       });
       expect(stage(M1)).toHaveTextContent(/^失敗$/);
+      expect(stage(M1).className).toContain('text-[var(--error-text)]');
       expect(detail(M1)!.textContent).toBe('這部正在別處處理');
-      expect(stage(M2)).toHaveTextContent(/^失敗$/);
+      // disc-2026-10-no-text-source-skip-b AC #5: 已略過, grey, no glyph; the
+      // reason is line two, NOT in the status slot.
+      expect(stage(M2)).toHaveTextContent(/^已略過$/);
+      expect(stage(M2).className).toContain('text-[var(--text-muted)]');
+      expect(stage(M2).querySelector('svg')).toBeNull();
+      expect(stage(M2)).not.toHaveTextContent('沒有可用的字幕來源');
       expect(detail(M2)!.textContent).toBe('沒有可用的字幕來源');
+      expect(detail(M2)!.className).toContain('text-[var(--text-secondary)]');
     });
 
-    // Contract v2 (#855): skipped items may now carry no_text_source /
-    // asr_unconfigured. This story does not word them (that is
-    // no-text-source-skip-b) — they must keep today's sentence, and an
-    // error code this build has never heard of must fall back, not crash.
-    it('[P0] contract v2: skipped + no_text_source keeps 沒有可用的字幕來源; an unknown error code falls back to 生成失敗', () => {
+    // Contract v2 (#855) + disc-2026-10-no-text-source-skip-b AC #5/#10: a
+    // skip's code words its second line; an error code this build has never
+    // heard of still falls back to a red 失敗 · 生成失敗.
+    it('[P0] contract v2: a skip is worded by its code; an unknown error code falls back to 生成失敗', () => {
       renderPanel({
         status: 'complete',
         progress: progressOf({
@@ -1464,16 +1474,27 @@ describe('GenerationBatchPanelV2 — rows from progress.items (dsr-6d-b AC #2/#3
             { ...state(M1, '星際效應', 'failed', 'skipped'), failureReason: 'no_text_source' },
             { ...state(M2, '奧本海默', 'failed', 'skipped'), failureReason: 'asr_unconfigured' },
             { ...state(M3, '沙丘：第二部', 'failed', 'error'), failureReason: 'some_future_code' },
-            { ...state(M4, '全面啟動', 'failed', 'error'), failureReason: 'no_text_source' },
+            { ...state(M4, '全面啟動', 'failed', 'error'), failureReason: 'target_not_writable' },
           ],
         }),
         items: [],
       });
-      expect(detail(M1)!.textContent).toBe('沒有可用的字幕來源');
-      expect(detail(M2)!.textContent).toBe('沒有可用的字幕來源');
+      expect(detail(M1)!.textContent).toBe('沒有可用的字幕來源，也沒有設定語音辨識');
+      expect(detail(M2)!.textContent).toBe('語音辨識未設定');
+      for (const id of [M1, M2]) {
+        expect(stage(id)).toHaveTextContent(/^已略過$/);
+        expect(stage(id).className).toContain('text-[var(--text-muted)]');
+        expect(stage(id).querySelector('svg')).toBeNull();
+        expect(screen.getByTestId(`gen-batch-row-${id}`)).toHaveAttribute('data-state', 'failed');
+      }
+      // Regression: real failures in the same render stay red 失敗.
       expect(detail(M3)!.textContent).toBe('生成失敗');
-      expect(detail(M4)!.textContent).toBe('生成失敗');
-      for (const id of [M1, M2, M3, M4]) expect(stage(id)).toHaveTextContent(/^失敗$/);
+      expect(detail(M4)!.textContent).toBe('影片所在的資料夾寫不進字幕');
+      for (const id of [M3, M4]) {
+        expect(stage(id)).toHaveTextContent(/^失敗$/);
+        expect(stage(id).className).toContain('text-[var(--error-text)]');
+        expect(stage(id).querySelector('svg')).not.toBeNull();
+      }
     });
 
     it('[P0] the fallback path (no backend items) follows the same rule: 失敗 + 生成失敗 on line two', () => {

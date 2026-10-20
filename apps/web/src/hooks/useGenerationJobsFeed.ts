@@ -102,7 +102,9 @@ export type FeedRow =
        * The backend's reason code (`failure_reason`, disc-2026-10-live-activity-
        * failure-reasons-a AC #1 `[@contract-v1]`; the same classifier the
        * activity record uses). The view looks the words up; null = no code
-       * (unknown cause, or a batch failure that is not `error`). The raw error
+       * (unknown cause, or a `busy_elsewhere` batch failure). A `skipped` batch
+       * item keeps its code too — `no_text_source` / `asr_unconfigured` word the
+       * grey 已略過 (disc-2026-10-no-text-source-skip-b AC #6). The raw error
        * string is deliberately NOT kept — it can carry a server path.
        */
       failureReason: string | null;
@@ -521,7 +523,12 @@ function reducer(state: GenerationJobsFeedState, action: Action): GenerationJobs
                   mediaId: id,
                   ...info,
                   reason: changed.reason,
-                  failureReason: changed.reason === 'error' ? changed.failureReason || null : null,
+                  // error and skipped keep their code (no_text_source says
+                  // what a skip lacked); busy_elsewhere never carries one.
+                  failureReason:
+                    changed.reason === 'error' || changed.reason === 'skipped'
+                      ? changed.failureReason || null
+                      : null,
                 };
           // The same result may already be in the log (a changed_item: running
           // lost to the hub made the run look like a single job).

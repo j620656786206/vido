@@ -6,7 +6,7 @@ import {
   type RunFailureReason,
 } from './generationEventCopy';
 import { recentSubtitleDetail } from '../activity/recentEventCopy';
-import { queueRowLabel } from './generationQueueRow';
+import { queueRowBadge, queueRowLabel } from './generationQueueRow';
 
 // dsr-6d-c-2 AC #2 — the ten row kinds, as the view draws them.
 describe('feedRowView', () => {
@@ -90,9 +90,28 @@ describe('feedRowView', () => {
   // disc-2026-10-generation-queue-failure-reason AC #7/#11: the reason is the
   // row's SECOND line (`detail`), no longer a `·` part next to the film name.
   it('④ a batch failure uses the backend reason; `error` is refined by its reason code', () => {
+    // disc-2026-10-no-text-source-skip-b AC #7: `skipped` is no longer ④ — it
+    // is the grey 已略過 row (⑧'s tones), the reason still on line two.
     expect(
       feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'skipped', failureReason: null })
-    ).toMatchObject({ parts: ['奧本海默'], detail: '沒有可用的字幕來源' });
+    ).toMatchObject({
+      glyph: 'circle-dashed',
+      glyphClass: 'text-[var(--text-muted)]',
+      stage: '已略過',
+      stageClass: 'text-[var(--text-secondary)]',
+      parts: ['奧本海默'],
+      detail: '沒有可用的字幕來源',
+      announce: '已略過：奧本海默，沒有可用的字幕來源',
+    });
+    expect(
+      feedRowView({
+        seq: 1,
+        kind: 'failed',
+        ...film,
+        reason: 'skipped',
+        failureReason: 'no_text_source',
+      })
+    ).toMatchObject({ stage: '已略過', detail: '沒有可用的字幕來源，也沒有設定語音辨識' });
     expect(
       feedRowView({ seq: 1, kind: 'failed', ...film, reason: 'error', failureReason: 'timeout' })
     ).toMatchObject({ parts: ['奧本海默'], detail: '處理逾時' });
@@ -115,7 +134,8 @@ describe('feedRowView', () => {
       announce: '失敗：奧本海默，影片所在的資料夾寫不進字幕',
     });
     expect(notWritable.stageClass).toContain('--error-text');
-    // A code only refines `error`: skipped / busy_elsewhere keep their own words.
+    // A code refines `error` and `skipped`, never busy_elsewhere: that one
+    // keeps its own words and stays a red failure, whatever code came with it.
     expect(
       feedRowView({
         seq: 1,
@@ -125,6 +145,15 @@ describe('feedRowView', () => {
         failureReason: 'target_not_writable',
       })
     ).toMatchObject({ parts: ['奧本海默'], detail: '這部正在別處處理' });
+    expect(
+      feedRowView({
+        seq: 1,
+        kind: 'failed',
+        ...film,
+        reason: 'busy_elsewhere',
+        failureReason: 'no_text_source',
+      })
+    ).toMatchObject({ stage: '失敗', glyph: 'triangle-alert', detail: '這部正在別處處理' });
   });
 
   it('a single job: the code decides the words; no code, an unknown or a prototype name says 生成失敗', () => {
@@ -153,20 +182,40 @@ describe('feedRowView', () => {
     }
   });
 
-  // Contract v2 (#855): the backend now really sends no_text_source on a single
-  // job. This build has no sentence for it yet (disc-2026-10-no-text-source-
-  // skip-b adds one — flip this expectation there); until then it must land on
-  // the same 生成失敗 the screen showed before #855, not crash or go blank.
-  it('contract v2: no_text_source (not worded until -b) falls back to 生成失敗', () => {
+  // Contract v2 (#855) + disc-2026-10-no-text-source-skip-b AC #7: a single
+  // job with nothing to generate from is a grey 已略過, not 失敗 · 生成失敗.
+  it('a single job with no_text_source is the grey 已略過 row', () => {
+    const v = feedRowView({
+      seq: 1,
+      kind: 'failed',
+      ...film,
+      reason: null,
+      failureReason: 'no_text_source',
+    });
+    expect(v).toEqual({
+      glyph: 'circle-dashed',
+      glyphClass: 'text-[var(--text-muted)]',
+      spin: false,
+      stage: '已略過',
+      stageClass: 'text-[var(--text-secondary)]',
+      parts: ['奧本海默'],
+      detail: '沒有可用的字幕來源，也沒有設定語音辨識',
+      trail: null,
+      trailClass: 'text-[var(--text-secondary)]',
+      announce: '已略過：奧本海默，沒有可用的字幕來源，也沒有設定語音辨識',
+      srState: null,
+    });
+    // asr_unconfigured on a single job is still a failure (the old no-key path
+    // the user has to fix); only no_text_source is flagged skipped.
     expect(
       feedRowView({
         seq: 1,
         kind: 'failed',
         ...film,
         reason: null,
-        failureReason: 'no_text_source',
+        failureReason: 'asr_unconfigured',
       })
-    ).toMatchObject({ stage: '失敗', parts: ['奧本海默'], detail: '生成失敗' });
+    ).toMatchObject({ stage: '失敗', detail: '語音辨識未設定' });
   });
 
   it('⑤ a single job stopped by the budget is 已停止 in ochre', () => {
@@ -331,6 +380,13 @@ describe('feedRowView', () => {
         reason: null,
         failureReason: 'budget_exceeded',
       }),
+      feedRowView({
+        seq: 1,
+        kind: 'failed',
+        ...film,
+        reason: null,
+        failureReason: 'no_text_source',
+      }),
       batch('complete'),
       batch('error'),
       batch('budget_ceiling'),
@@ -383,7 +439,7 @@ describe('live log ⇄ activity record ⇄ queue: one sentence per reason code',
   const codes = Object.keys(FAILURE_COPY_BY_REASON) as RunFailureReason[];
 
   it.each(codes)('%s', (code) => {
-    const { text, stopped } = FAILURE_COPY_BY_REASON[code];
+    const { text, stopped, skipped } = FAILURE_COPY_BY_REASON[code];
     const single = feedRowView({
       seq: 1,
       kind: 'failed',
@@ -396,7 +452,7 @@ describe('live log ⇄ activity record ⇄ queue: one sentence per reason code',
     // The live log's reason line is the table's sentence…
     expect(single.detail).toBe(text);
     expect(single.parts).toEqual(['奧本海默']);
-    expect(single.stage).toBe(stopped ? '已停止' : '失敗');
+    expect(single.stage).toBe(skipped ? '已略過' : stopped ? '已停止' : '失敗');
     // …and the activity record's description ends with the very same words.
     const activity = recentSubtitleDetail({
       kind: 'subtitle',
@@ -418,14 +474,56 @@ describe('live log ⇄ activity record ⇄ queue: one sentence per reason code',
       failureReason: code,
     });
     expect(batchRow.detail).toBe(text);
-    // …and so does the queue row on the left of the same screen — always as a
-    // red failure, whatever the code's `stopped` says (a real money stop pauses).
-    const queue = queueRowLabel({ status: 'failed', reason: 'error', failureReason: code });
+    expect(batchRow.stage).toBe(skipped ? '已略過' : '失敗');
+    // …and so does the queue row on the left of the same screen — a red
+    // failure whatever the code's `stopped` says (a real money stop pauses),
+    // a grey 已略過 when the code is flagged `skipped`.
+    const queueView = { status: 'failed', reason: 'error', failureReason: code } as const;
+    const queue = queueRowLabel(queueView);
     expect(queue.text).toBe(text);
     expect(queue.text).toBe(single.detail);
     expect(queue.text).toBe(batchRow.detail);
-    expect(queue.className).toContain('--error-text');
-    expect(queue.icon).toBe('alert');
+    expect(queueRowBadge(queueView, '')).toBe(skipped ? '已略過' : '失敗');
+    expect(queue.className).toContain(skipped ? '--text-muted' : '--error-text');
+    expect(queue.icon).toBe(skipped ? null : 'alert');
+  });
+
+  // disc-2026-10-no-text-source-skip-b AC #9: the skip the backend really
+  // sends — a single job's code, and a batch `skipped` item carrying it — is
+  // one sentence on all four surfaces, and all three call it a skip.
+  it('no_text_source: one sentence, and 已略過, everywhere', () => {
+    const want = FAILURE_COPY_BY_REASON.no_text_source.text;
+    // Pinned verbatim: the backend's sentence (solo_runner.go) minus 「這部影片」.
+    expect(want).toBe('沒有可用的字幕來源，也沒有設定語音辨識');
+    const base = {
+      seq: 1,
+      kind: 'failed',
+      mediaId: 'm1',
+      title: '奧本海默',
+      seriesTitle: '',
+    } as const;
+    const single = feedRowView({ ...base, reason: null, failureReason: 'no_text_source' });
+    const batchRow = feedRowView({ ...base, reason: 'skipped', failureReason: 'no_text_source' });
+    const queueView = {
+      status: 'failed',
+      reason: 'skipped',
+      failureReason: 'no_text_source',
+    } as const;
+    const activity = recentSubtitleDetail({
+      kind: 'subtitle',
+      result: 'failed',
+      at: '2026-10-19T00:00:00Z',
+      mediaType: 'movie',
+      mediaTitle: '奧本海默',
+      failureReason: 'no_text_source',
+    });
+    expect(single.detail).toBe(want);
+    expect(batchRow.detail).toBe(want);
+    expect(queueRowLabel(queueView).text).toBe(want);
+    expect(activity.split(' · ')[1]).toBe(want);
+    expect(single.stage).toBe('已略過');
+    expect(batchRow.stage).toBe('已略過');
+    expect(queueRowBadge(queueView, '')).toBe('已略過');
   });
 });
 
@@ -438,7 +536,7 @@ describe('FAILURE_COPY_BY_REASON', () => {
     }
   );
 
-  it('has exactly the eleven contract codes', () => {
+  it('has exactly the twelve contract codes', () => {
     expect(Object.keys(FAILURE_COPY_BY_REASON).sort()).toEqual(
       [
         'asr_unconfigured',
@@ -447,6 +545,7 @@ describe('FAILURE_COPY_BY_REASON', () => {
         'credit_exhausted',
         'ffmpeg_missing',
         'no_audio_track',
+        'no_text_source',
         'other',
         'queue_timeout',
         'target_not_writable',
@@ -454,6 +553,14 @@ describe('FAILURE_COPY_BY_REASON', () => {
         'unauthorized',
       ].sort()
     );
+  });
+
+  // disc-2026-10-no-text-source-skip-b AC #1/#9: no_text_source is the one
+  // "not done, nothing broken" code, and no entry is both stopped and skipped.
+  it('only no_text_source is skipped; nothing is both stopped and skipped', () => {
+    const entries = Object.entries(FAILURE_COPY_BY_REASON);
+    expect(entries.filter(([, c]) => c.skipped).map(([k]) => k)).toEqual(['no_text_source']);
+    for (const [, c] of entries) expect(c.stopped && c.skipped).toBe(false);
   });
 
   it('an unknown, missing or prototype-named code falls back to 生成失敗', () => {

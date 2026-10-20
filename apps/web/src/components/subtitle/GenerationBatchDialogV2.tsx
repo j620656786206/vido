@@ -184,7 +184,10 @@ const FALLBACK_STATUS: Record<RowState, GenerationBatchItemState['status']> = {
  * AC #19, F8-SPEC-ROW NfHKO). A FAILED row has something to explain, so it
  * splits: the status slot says the short 失敗 (colour + icon still from
  * queueRowLabel) and the full reason becomes `detail`, a second line of its
- * own. Every other status keeps its one-line label and has no `detail`.
+ * own. A skipped item is still `failed` on the wire, so it takes the same path:
+ * queueRowBadge says the grey 已略過 and queueRowLabel's reason is the second
+ * line (disc-2026-10-no-text-source-skip-b AC #5). Every other status keeps
+ * its one-line label and has no `detail`.
  */
 function queueRowLines(
   view: QueueRowView,

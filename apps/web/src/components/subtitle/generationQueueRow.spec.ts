@@ -3,6 +3,7 @@ import {
   queueRowLabel,
   queueRowTitle,
   queueRowBadge,
+  queueRowIsSkipped,
   queueRowSubStatus,
   type QueueRowView,
 } from './generationQueueRow';
@@ -48,12 +49,20 @@ describe('queueRowLabel (dsr-6d-b AC #3 — the row says what the backend says)'
   });
 
   describe('failed — the reason is the sentence (AC #3)', () => {
-    it('skipped never says 已略過 (legacy unconfigured keys land here too)', () => {
-      const label = queueRowLabel(view({ status: 'failed', reason: 'skipped' }));
-      expect(label.text).toBe('沒有可用的字幕來源');
-      expect(label.text.startsWith('已略過')).toBe(false);
-      expect(label.className).toBe('text-[var(--error-text)]');
-      expect(label.icon).toBe('alert');
+    // disc-2026-10-no-text-source-skip-b AC #3/#10 — overturns dsr-6d-b AC #3
+    // (「skipped 不准用已略過」): the 2026-10-19 party mode ruled a skip is not a
+    // failure. The reason line now says what is missing, and the no-key legacy
+    // path sends asr_unconfigured, so 已略過 can no longer read as the system
+    // choosing not to.
+    it('skipped is a grey 已略過: muted, no glyph, the reason as its sentence', () => {
+      const v = view({ status: 'failed', reason: 'skipped' });
+      expect(queueRowLabel(v)).toEqual({
+        text: '沒有可用的字幕來源',
+        className: 'text-[var(--text-muted)]',
+        icon: null,
+      });
+      expect(queueRowBadge(v, '')).toBe('已略過');
+      expect(queueRowIsSkipped(v)).toBe(true);
     });
 
     it('busy_elsewhere names the other job', () => {
@@ -107,15 +116,12 @@ describe('queueRowLabel (dsr-6d-b AC #3 — the row says what the backend says)'
       }
     );
 
-    it('a code never rewords skipped / busy_elsewhere / a reason-less failure', () => {
+    it('a code never rewords busy_elsewhere or a reason-less failure', () => {
       const code = 'target_not_writable';
       expect(
         queueRowLabel(view({ status: 'failed', reason: 'busy_elsewhere', failureReason: code }))
           .text
       ).toBe('這部正在別處處理');
-      expect(
-        queueRowLabel(view({ status: 'failed', reason: 'skipped', failureReason: code })).text
-      ).toBe('沒有可用的字幕來源');
       expect(queueRowLabel(view({ status: 'failed', reason: '', failureReason: code })).text).toBe(
         '生成失敗'
       );
@@ -130,6 +136,86 @@ describe('queueRowLabel (dsr-6d-b AC #3 — the row says what the backend says)'
       expect(
         queueRowLabel(view({ status: 'done', reason: 'error', failureReason: 'timeout' })).text
       ).toBe('完成');
+    });
+  });
+
+  // disc-2026-10-no-text-source-skip-b AC #2/#3/#10 — a skip is grey 已略過,
+  // worded by its code; every real failure stays red 失敗.
+  describe('skipped — grey 已略過, worded by its code', () => {
+    const skipped = (failureReason: string | null | undefined) =>
+      view({ status: 'failed', reason: 'skipped', failureReason });
+    const grey = (text: string) => ({
+      text,
+      className: 'text-[var(--text-muted)]',
+      icon: null,
+    });
+
+    it.each([
+      ['no_text_source', '沒有可用的字幕來源，也沒有設定語音辨識'],
+      ['asr_unconfigured', '語音辨識未設定'],
+    ])('skipped + %s → %s, grey, badge 已略過', (code, text) => {
+      expect(queueRowLabel(skipped(code))).toEqual(grey(text));
+      expect(queueRowBadge(skipped(code), '')).toBe('已略過');
+    });
+
+    it.each([null, undefined, '', 'other', 'nope', 'constructor', '__proto__'])(
+      'skipped + no / unknown / other / prototype code %s → 沒有可用的字幕來源, never 生成失敗',
+      (code) => {
+        expect(queueRowLabel(skipped(code))).toEqual(grey('沒有可用的字幕來源'));
+        expect(queueRowBadge(skipped(code), '')).toBe('已略過');
+      }
+    );
+
+    it('an `error` whose code is flagged skipped (no_text_source) is a skip too', () => {
+      const v = view({ status: 'failed', reason: 'error', failureReason: 'no_text_source' });
+      expect(queueRowIsSkipped(v)).toBe(true);
+      expect(queueRowLabel(v)).toEqual(grey('沒有可用的字幕來源，也沒有設定語音辨識'));
+      expect(queueRowBadge(v, '')).toBe('已略過');
+    });
+
+    it('the sub-status line is the reason sentence', () => {
+      const v = skipped('no_text_source');
+      expect(queueRowSubStatus(v, queueRowLabel(v).text)).toBe(
+        '沒有可用的字幕來源，也沒有設定語音辨識'
+      );
+    });
+
+    it('regression: real failures stay red 失敗', () => {
+      const notWritable = view({
+        status: 'failed',
+        reason: 'error',
+        failureReason: 'target_not_writable',
+      });
+      expect(queueRowIsSkipped(notWritable)).toBe(false);
+      expect(queueRowLabel(notWritable)).toEqual({
+        text: '影片所在的資料夾寫不進字幕',
+        className: 'text-[var(--error-text)]',
+        icon: 'alert',
+      });
+      expect(queueRowBadge(notWritable, '')).toBe('失敗');
+      // busy_elsewhere never reads a code — not even a skipped one.
+      const busy = view({
+        status: 'failed',
+        reason: 'busy_elsewhere',
+        failureReason: 'no_text_source',
+      });
+      expect(queueRowIsSkipped(busy)).toBe(false);
+      expect(queueRowLabel(busy)).toEqual({
+        text: '這部正在別處處理',
+        className: 'text-[var(--error-text)]',
+        icon: 'alert',
+      });
+      expect(queueRowBadge(busy, '')).toBe('失敗');
+      // A reason-less failure (pre-dsr-6d-a server) is not a skip either.
+      expect(queueRowIsSkipped(view({ status: 'failed', reason: '' }))).toBe(false);
+    });
+
+    it('only a failed row can be skipped', () => {
+      for (const status of ['done', 'running', 'paused', 'cancelled', 'queued'] as const) {
+        expect(
+          queueRowIsSkipped(view({ status, reason: 'skipped', failureReason: 'no_text_source' }))
+        ).toBe(false);
+      }
     });
   });
 

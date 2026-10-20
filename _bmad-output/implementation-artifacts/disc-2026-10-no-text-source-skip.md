@@ -1,6 +1,6 @@
 # Disc（傘狀）：沒有字幕來源、也沒設語音辨識時，生成畫面寫灰色「已略過」，不再寫紅色「失敗 · 生成失敗」
 
-Status: backlog（傘狀單，已拆 `-a` 後端／`-b` 前端）
+Status: done（2026-10-20：`-a` 後端 #855、`-b` 前端都已合併；原：backlog（傘狀單，已拆 `-a` 後端／`-b` 前端））
 
 **Source:** 2026-10-19 party mode（founder-pm／Winston／Sally／John／Bob／Mary＋負責 #848 片旁字幕的另一個 session）。單次按「生成字幕」時，片內沒有可用字幕、又沒設語音辨識，這次生成被記成 `skipped`。結果三個地方講三種話：
 - 生成畫面的即時活動：紅色「失敗 · 生成失敗」（`failure_reason` 落到 `other`）；
