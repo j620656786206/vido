@@ -9,6 +9,7 @@ import (
 
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/tmdb"
+	"github.com/vido/api/internal/zhtw"
 )
 
 // TMDbConfig holds configuration for the TMDb service
@@ -70,6 +71,7 @@ type TMDbService struct {
 	cacheService  tmdb.CacheServiceInterface
 	client        tmdb.ClientInterface
 	rawClient     *tmdb.Client // the concrete HTTP client, for SetRequestObserver
+	fallback      *tmdb.LanguageFallbackClient
 	contentFilter *ContentFilterService
 }
 
@@ -119,7 +121,17 @@ func NewTMDbService(cfg TMDbConfig, cacheRepo repository.CacheRepositoryInterfac
 		cacheService:  cacheService,
 		client:        client,
 		rawClient:     client,
+		fallback:      fallbackClient,
 		contentFilter: NewContentFilterService(),
+	}
+}
+
+// SetChineseConverter turns TMDb's Simplified answers Traditional before they
+// are cached or stored (disc-2026-10-metadata-zh-fallback-simplified). main.go
+// hands in the same OpenCC converter the subtitles use.
+func (s *TMDbService) SetChineseConverter(conv zhtw.ScriptConverter) {
+	if s.fallback != nil {
+		s.fallback.SetChineseConverter(conv)
 	}
 }
 
