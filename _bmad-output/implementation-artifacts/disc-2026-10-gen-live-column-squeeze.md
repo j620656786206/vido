@@ -1,6 +1,6 @@
 # Disc：批次執行中，筆電寬度（1024／1280）看生成畫面，右邊「即時活動」被擠成一字一行
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 2026-10-20 #874（`disc-2026-10-gen-queue-done-row-1024`）Dev Agent Record「附帶發現」：批次執行中、佇列裡有一部正在處理時，1024 寬右邊即時活動欄被擠到 **54px**（一字一行，等於不能讀）；1280 也只剩 **310px**（設計是 400）。#874 之前就這樣，用 main 的程式量也是 54。只要有一部在處理就會發生，也就是批次執行的大部分時間。⚖️ Alexyu 2026-10-20：開單，請 Sally 決定怎麼修。
 
@@ -76,14 +76,14 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] T0：確認設計稿與截圖已補（AC #0）
-- [ ] T1：改前在 1440 量一次六個 `gen-stage-*` 的位置，記下來（AC #3 的比對基準）
-- [ ] T2：先改兩支 spec 的期待值，跑一次看紅（AC #4）
-- [ ] T3：右欄 `lg:shrink-0`、左欄 `min-w-0`（AC #1）
-- [ ] T4：`GenerationProgressV2` 加「看容器」設定，`QueueRow` 外層 `@container`、縮排改容器變體（AC #2）；跑 spec 看綠；DevTools 確認容器變體的 CSS 真的有產生
-- [ ] T5：真瀏覽器量 1024／1280／1440／390／320（AC #3）
-- [ ] T6：視覺基準＋新 fixture（AC #5）、UX 截圖（AC #6）
-- [ ] T7：全綠（AC #7）
+- [x] T0：確認設計稿與截圖已補（AC #0）
+- [x] T1：改前在 1440 量一次六個 `gen-stage-*` 的位置，記下來（AC #3 的比對基準）
+- [x] T2：先改兩支 spec 的期待值，跑一次看紅（AC #4）
+- [x] T3：右欄 `lg:shrink-0`、左欄 `min-w-0`（AC #1）
+- [x] T4：`GenerationProgressV2` 加「看容器」設定，`QueueRow` 外層 `@container`、縮排改容器變體（AC #2）；跑 spec 看綠；DevTools 確認容器變體的 CSS 真的有產生
+- [x] T5：真瀏覽器量 1024／1280／1440／390／320（AC #3）
+- [x] T6：視覺基準＋新 fixture（AC #5）、UX 截圖（AC #6）
+- [x] T7：全綠（AC #7）
 
 ## Dev Notes
 
@@ -110,7 +110,7 @@ Status: ready-for-dev
 
 ### 設計稿 / Design ref
 
-- **F11-SPEC-WIDTH**（新增，id 待 Pencil 建好後回填）：窄桌機版面規則＋1024 示意。
+- **F11-SPEC-WIDTH `V2oywc`**：窄桌機版面規則＋1024 示意（已加進 `GenerationWorkspaceV2.tsx`、`GenerationProgressV2.tsx` 檔頭）。
 - F11-D-v2 `l8FsB`：1440 執行中，處理中列 `OkdGK`（橫排進度條 `gkGTR` → 元件 `XkGvG`），右欄 `DUvwI`（400）——不變。
 - F11-M-v2 `PXB0z`：手機，處理中列 `n79vZ`（直排進度條 `p8No2j`）——窄桌機直排照這個樣子。
 - F12-D-v2 `iH98f`：預算上限終態——不變。
@@ -174,13 +174,44 @@ Status: ready-for-dev
 |---|---|
 | 2026-10-20 | 建單（Bob）。Sally 裁定 (d)：右欄桌機固定 400、左欄讓寬度；處理中列的進度條看列寬，列內不到 616 改直排（手機同款）。設計稿新增獨立規格畫面 F11-SPEC-WIDTH，先 blocked 等 Pencil。 |
 | 2026-10-20 | 解除 blocked → ready-for-dev：Alexyu 跑完 Pencil，新增 F11-SPEC-WIDTH `V2oywc`（截圖 `flow-f-subtitle-v2/f11-spec-width.png`）。Sally 補裁：直排只有翻譯中那一步右邊加百分比（`useGenerationProgress` 只在翻譯中給百分比），spec-intro `UBkSu` 與本單三處同步改字。 |
+| 2026-10-20 | Dev（Amelia）完成 → done：右欄 `lg:shrink-0`、左欄 `min-w-0`；`GenerationProgressV2` 加 `widthSource`（預設 viewport 逐字不變，只有 `QueueRow` 傳 container）；佇列列 `@container`、縮排 `@min-[616px]:pl-[54px]`；新 fixture `running-narrow`。量測全過合格線。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia）
+
 ### Debug Log References
+
+- 量測用暫時的 Playwright spec（chromium，`/activity?view=generation`，狀態查詢 `progress`／`last`＋假 SSE stub；第一條 EventSource 收整批事件，之後每一條都收 `translation_progress` 45%，讓單片進度 hook 自己那條也拿到），量完刪掉、不進版控。改前（main 程式）與改後各量一次，JSON 與截圖在 session scratchpad `measure/`（`before-*`、`after-*`）。
+- 改前重現：1024 即時活動 **54**、1280 **310**、1440 400；1024 執行中佇列欄 650（列內 616）。
 
 ### Completion Notes List
 
+- **AC #0：** `_bmad-output/screenshots/flow-f-subtitle-v2/f11-spec-width.png` 在 main（#877）；`scripts/export-pen-screenshots.py` `SCREENS` 有 `V2oywc`；`_bmad-output/pen-node-ids.json` 有 `V2oywc`。
+- **AC #1：** 右欄 `<aside workspace-event-log>` 加 `lg:shrink-0`；body 左欄加 `min-w-0`。640～1023 與手機的上下排法沒動。
+- **AC #2：** `GenerationProgressV2` 加選填 `widthSource?: 'viewport' | 'container'`（預設 viewport）。兩套 class 都整串寫在 `LAYOUT` 表裡（不拼字串）；container 版把 `sm:` 換成 `@min-[616px]:`、`max-sm:` 換成 `@max-[616px]:`。`QueueRow` 的 `<li>` 加 `@container`，進度條外框改 `@min-[616px]:pl-[54px]`，傳 `widthSource="container"`。`git grep GenerationProgressV2`：使用處是 `GenerationBatchDialogV2`（F8）、`ManageSubtitleDialogV2`（F3／F4）、`GenerationWorkspaceV2`、畫廊；只有工作區 `QueueRow` 傳新設定。五步版（抽取字幕）走同一組 class。百分比只在翻譯中那一步（`useGenerationProgress` 只在翻譯中給百分比；有測試守）。
+- **AC #3 量測（真瀏覽器，改完；佇列：完成、處理中「翻譯中 45%」、排隊中、失敗「影片所在的資料夾寫不進字幕」魔戒長名、已略過 19 字原因）：**
+  - **1024 執行中：** 即時活動 **400**（改前 54）；佇列欄 304、處理中列內寬 270 → **直排**：六個 `gen-stage-*` 左緣 x 都是 289、y 由 505.3 往下每格 36.7（30.8 高），每個步驟名 `scrollWidth == clientWidth`（56／42／42／42／41／28）；處理中列片名欄 **93px**（≥ 64，不用回報）；即時活動每列內容欄 346 寬、階段字都是一行高（23px，沒有一字一行）、長片名 288、原因 346（短片名「奧本海默」是自然寬 56，不是被擠）；五列說明行 `scrollWidth == clientWidth`（138／93／126／138／146）；`documentElement.scrollWidth` 1024，無橫捲。
+  - **1024 預算上限終態：** 即時活動 400（跟改前一樣），佇列 304，說明行全部整句，無橫捲。
+  - **1280 執行中：** 即時活動 **400**（改前 310）；佇列 560、列內 526 → **直排**（x 都是 289），步驟名整字；說明行沒有「…」（394／349／382／394／402 全部 sw==cw）；無橫捲。
+  - **1440 執行中：** 即時活動 400；佇列 720、列內 686 → **橫排**、縮排 54；六個 `gen-stage-*` 的 (x, y, 寬) 跟改前**逐一相同**：(343, 505.3, 72)、(441, 505.3, 72)、(539, 505.3, 72)、(637, 505.3, 72)、(735, 505.3, 72)、(833, 505.3, 72)；說明行全部數字跟改前一樣；無橫捲。
+  - **390／320 執行中：** 跟改前完全一樣：直排（x 33，寬 324／254）、步驟名整字、即時活動在佇列下面（y 1062.5／1123.5）、說明行數字不變；無橫捲（390／320）。
+  - **選做 1024 側欄收合：** 佇列欄變 480、列內 446（< 616）→ 仍是直排（x 113），即時活動 400；切換點跟著列寬走，不是視窗寬。
+- **AC #4：** 先改兩支 spec 跑：4 支紅（container 版 class、五步版、右欄／左欄、`@container`）；改程式後 105 支綠。預設（不傳）的六組 class 逐字比對現在的字串，改前改後都綠。變異測試（每次只改一處、跑完還原）：拿掉 `lg:shrink-0` → 1 紅；拿掉 `min-w-0` → 1 紅；縮排改回 `sm:pl-[54px]` → 1 紅；`QueueRow` 不傳 `widthSource` → 1 紅；拿掉 `@container` → 1 紅；container 版步驟改回 `max-sm:p-1` → 3 紅；viewport 版 `sm:w-[72px]` 改 64 → 2 紅；預設改成 container → 5 紅。
+- **AC #5 視覺：** 加 fixture 後全套 visual 本機跑：只有新 fixture 缺基準，其餘全綠。再把既有六張 `generation-workspace-v2/*` darwin 刪掉重產：running、credit_exhausted、complete-with-failures、idle byte 相同；budget_ceiling、failures-long-titles 各 19 個像素差 1（反鋸齒雜訊），已還原。對話框基準沒變（全套綠）。沒有既有基準內容改變，所以沒有 `-linux` 要 `git rm`。新增 `generation-workspace-v2/running-narrow`：跟 `running` 同一份資料（抽成 `WS_FX_RUNNING_PROPS` 共用）。⚠️ 寬度用 **784** 而不是 story 寫的 720：畫廊的 `width` 是工作區本身的寬，工作區 body 還有左右各 32 的內距（1200 → 內容 1136 也是這樣算），784 − 64 ＝ 720 才是 1024 的內容區；用 720 會變成佇列 240、列內 206，比真的 1024 還窄。基準圖：佇列 304、即時活動 400、處理中列直排。darwin 本機 `update-missing` 產生；`-linux` 交 CI bootstrap。
+- **AC #6 UX：** 1024 截圖（`after-running-1024.png`）：右欄 400、處理中列直排、翻譯中那一步右邊 45%，對 F11-SPEC-WIDTH `V2oywc` 的 demo-1024 一致；1440 截圖跟 F11-D-v2 `l8FsB` 一樣（橫排、位置逐一不變）；390 直排跟 F11-M-v2 `n79vZ` 一樣（改前改後同數字）。截圖留在本機 session scratchpad。
+- **AC #7：** `pnpm nx run web:test` 298 檔／4862 支全綠；`web:typecheck` 綠；`lint:all` ✖ 170 problems（0 errors, 170 warnings）；`format:check` 綠；`check-design-refs.py` 綠（400 個檔頭節點）。沒有刪改 testid；`git grep -n "gen-stage-\|workspace-event-log" tests/e2e` 沒有寫死寬度或排法的斷言（`batch-consent-mobile` 量的是對話框的進度條，預設行為沒變）；跑 `generation-workspace.spec.ts`、`generation-workspace-mobile.spec.ts`、`batch-consent-mobile.spec.ts`（chromium＋mobile-chrome）18 支綠、10 支照設計 skip。
+- **附帶觀察（不是本單要改的）：** 640～1023（右欄在下面）時，處理中那列的進度條現在也照「列內 616」的同一條規則走：例如 768 寬列內不到 616 會是直排。改前那個寬度橫排要 650，會把佇列撐出去；現在不會了。上下排法本身沒變。
+
 ### File List
+
+- apps/web/src/components/subtitle/GenerationProgressV2.tsx
+- apps/web/src/components/subtitle/GenerationProgressV2.spec.tsx
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.tsx
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.spec.tsx
+- apps/web/src/routes/test/-gallery.fixtures.tsx
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/running-narrow/default-visual-darwin.png（新增；`-linux` 交 CI bootstrap）
+- _bmad-output/implementation-artifacts/disc-2026-10-gen-live-column-squeeze.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml

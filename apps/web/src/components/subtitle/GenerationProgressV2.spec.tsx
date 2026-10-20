@@ -285,4 +285,90 @@ describe('GenerationProgressV2', () => {
       );
     });
   });
+
+  // disc-2026-10-gen-live-column-squeeze (F11-SPEC-WIDTH V2oywc): the workspace
+  // queue row picks horizontal / vertical from ITS OWN width (616 = 562 stepper +
+  // 54 indent), not the viewport. jsdom has no layout — these pin the class
+  // strings; the real widths are measured in a browser (story AC #3).
+  describe('widthSource — viewport (dialogs, default) vs container (workspace queue row)', () => {
+    const classesOf = () => {
+      const ol = screen.getByRole('list', { name: '字幕生成進度' });
+      const connector = Array.from(ol.querySelectorAll('span[aria-hidden="true"]')).find((el) =>
+        el.className.includes('h-0.5')
+      )!;
+      return {
+        ol: ol.className,
+        li: ol.querySelector('li')!.className,
+        connector: connector.className,
+        stage: screen.getByTestId('gen-stage-翻譯中').className,
+        label: screen.getByText('翻譯中').className,
+        pct: screen.getByText('45%').className,
+      };
+    };
+
+    it('[P0] no widthSource: every class string is VERBATIM what the dialogs draw today (F3/F4/F8 unchanged)', () => {
+      render(<GenerationProgressV2 phase="translating" percentage={45} />);
+      expect(classesOf()).toEqual({
+        ol: 'flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-0 sm:justify-center',
+        li: 'flex w-full items-start sm:w-auto',
+        connector: 'hidden sm:block mt-[10px] h-0.5 sm:w-[26px] bg-[var(--success)]',
+        stage:
+          'flex w-full flex-row items-center gap-2.5 max-sm:p-1 sm:w-[72px] sm:flex-col sm:gap-1.5',
+        label: 'text-sm sm:text-xs sm:leading-normal font-semibold text-[var(--accent-text)]',
+        pct: 'ml-auto font-mono text-xs tabular-nums text-[var(--accent-text)] sm:ml-0',
+      });
+    });
+
+    it('[P0] widthSource="viewport" is the same as omitting it', () => {
+      const { unmount } = render(<GenerationProgressV2 phase="translating" percentage={45} />);
+      const omitted = classesOf();
+      unmount();
+      render(<GenerationProgressV2 phase="translating" percentage={45} widthSource="viewport" />);
+      expect(classesOf()).toEqual(omitted);
+    });
+
+    it('[P0] widthSource="container": horizontal at a ≥616 container, the phone stack below it — no viewport class left', () => {
+      render(
+        <GenerationProgressV2
+          phase="translating"
+          percentage={45}
+          align="start"
+          widthSource="container"
+        />
+      );
+      const c = classesOf();
+      expect(c).toEqual({
+        ol: 'flex flex-col gap-1.5 @min-[616px]:flex-row @min-[616px]:items-start @min-[616px]:gap-0 @min-[616px]:justify-start',
+        li: 'flex w-full items-start @min-[616px]:w-auto',
+        connector:
+          'hidden @min-[616px]:block mt-[10px] h-0.5 @min-[616px]:w-[26px] bg-[var(--success)]',
+        stage:
+          'flex w-full flex-row items-center gap-2.5 @max-[616px]:p-1 @min-[616px]:w-[72px] @min-[616px]:flex-col @min-[616px]:gap-1.5',
+        label:
+          'text-sm @min-[616px]:text-xs @min-[616px]:leading-normal font-semibold text-[var(--accent-text)]',
+        pct: 'ml-auto font-mono text-xs tabular-nums text-[var(--accent-text)] @min-[616px]:ml-0',
+      });
+      // A viewport breakpoint left behind would flip the row at 640 again.
+      for (const cls of Object.values(c)) expect(cls).not.toMatch(/(^|\s)(max-)?sm:/);
+    });
+
+    it('[P1] the five-stage extract lane uses the same switch point', () => {
+      render(
+        <GenerationProgressV2
+          phase="translating"
+          percentage={45}
+          route="extract"
+          widthSource="container"
+        />
+      );
+      expect(screen.getByTestId('gen-stage-抽取字幕').className).toContain('@min-[616px]:w-[72px]');
+      expect(screen.getByTestId('gen-stage-翻譯中').className).toContain('@max-[616px]:p-1');
+    });
+
+    it('[P1] only the 翻譯中 step carries a percentage, in both layouts', () => {
+      render(<GenerationProgressV2 phase="translating" percentage={45} widthSource="container" />);
+      expect(screen.getAllByText('45%')).toHaveLength(1);
+      expect(screen.getByTestId('gen-stage-翻譯中')).toHaveTextContent('45%');
+    });
+  });
 });

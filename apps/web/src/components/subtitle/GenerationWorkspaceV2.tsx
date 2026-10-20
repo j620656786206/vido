@@ -1,5 +1,5 @@
 // Implements: Component/GenQueueRow-v2 (aw4Qr)
-// Design ref: ux-design.pen Screen F11-D-v2 (l8FsB) · F12-D-v2 (iH98f) · F13-D-v2 (F7ohe) · F11-M-v2 (PXB0z) · F9b-D-v2 (YHnnC)
+// Design ref: ux-design.pen Screen F11-D-v2 (l8FsB) · F12-D-v2 (iH98f) · F13-D-v2 (F7ohe) · F11-M-v2 (PXB0z) · F9b-D-v2 (YHnnC) · F11-SPEC-WIDTH (V2oywc)
 // Source: ux-design.pen (Pencil app)
 /**
  * The AI generation WORKSPACE (Story ux3-ai-2, PH3-G1) — an immersive, 活動-hosted
@@ -321,7 +321,9 @@ function QueueRow({
       data-testid={`workspace-queue-row-${item.mediaId}`}
       data-state={item.status}
       data-skipped={skipped ? 'true' : undefined}
-      className="flex flex-col gap-2.5 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3.5"
+      // `@container`: the stepper below reads THIS row's width (F11-SPEC-WIDTH
+      // V2oywc) — horizontal from 616 inside the row, the phone stack below it.
+      className="@container flex flex-col gap-2.5 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3.5"
     >
       <div className="flex items-center gap-3.5">
         <span
@@ -367,9 +369,10 @@ function QueueRow({
         </div>
       </div>
       {isRunning && (
-        <div className="sm:pl-[54px]">
+        <div className="@min-[616px]:pl-[54px]">
           <GenerationProgressV2
             align="start"
+            widthSource="container"
             // A failed per-item event must render the FAILED stepper, not rewind
             // to 提取音訊 as if extraction had restarted.
             phase={activeItemProgress?.phase ?? 'idle'}
@@ -517,7 +520,9 @@ function EventLogPane({
       // rows and the whole page scrolled instead (CR H3).
       // Phone: no outer frame — the header is its own card and the open list
       // carries its own border (F11-M `AfUUS`).
-      className="flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] max-sm:gap-2 max-sm:overflow-visible max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-6rem)] lg:w-[400px]"
+      // lg:shrink-0: 400 on every desktop width — the queue gives way instead
+      // (F11-SPEC-WIDTH V2oywc; a running row once squeezed this to 54px at 1024).
+      className="flex w-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] max-sm:gap-2 max-sm:overflow-visible max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-6rem)] lg:w-[400px] lg:shrink-0"
     >
       {/* `relative` lives HERE, not on the button: the toggle's ::after stretches
           over the whole header so the entire bar is the hit area. */}
@@ -846,7 +851,9 @@ export function GenerationWorkspaceV2({
 
       {/* Body */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 max-sm:gap-3.5 max-sm:px-4 sm:px-8 lg:flex-row">
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
+        {/* min-w-0: on a narrow desktop the QUEUE gives way, never 即時活動
+            (its 400 is lg:shrink-0 — F11-SPEC-WIDTH V2oywc). */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           {dataError && (
             <div
               data-testid="workspace-data-error"

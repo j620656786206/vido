@@ -1,5 +1,5 @@
 // Implements: Component/GenerationProgress-v2 (XkGvG) + Component/GenerationProgress-v2/Extract (CZrmG)
-// Spec: J12-D (jYNkJ) — 生成進度條依路線切換
+// Spec: J12-D (jYNkJ) — 生成進度條依路線切換 · F11-SPEC-WIDTH (V2oywc) — 工作區佇列看列寬切直排
 // Source: ux-design.pen (Pencil app)
 /**
  * Route C generation stepper (ux3-subtitle-v2 AC 3, Component Library sJzat row
@@ -108,7 +108,47 @@ export interface GenerationProgressV2Props {
    * five-stage variant; anything else (or absent) keeps the six-stage one.
    */
   route?: string | null;
+  /**
+   * What decides horizontal vs vertical. Default 'viewport' (the dialogs F3/F4/F8):
+   * vertical below `sm`, horizontal from `sm` up — unchanged. 'container' (the
+   * workspace queue row, F11-SPEC-WIDTH `V2oywc`): the nearest `@container`'s
+   * width decides — horizontal from 616 (562 stepper + 54 indent), the phone
+   * stack below it — so a narrow desktop queue never squeezes the live pane.
+   */
+  widthSource?: 'viewport' | 'container';
 }
+
+/**
+ * The layout classes for each width source, written out WHOLE (Tailwind only
+ * generates classes it finds as complete strings — never build these by
+ * concatenation). `viewport` is verbatim the pre-container markup.
+ */
+const LAYOUT = {
+  viewport: {
+    ol: 'flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-0',
+    olStart: 'sm:justify-start',
+    olCenter: 'sm:justify-center',
+    li: 'flex w-full items-start sm:w-auto',
+    connectorShow: 'hidden sm:block',
+    connectorSize: 'mt-[10px] h-0.5 sm:w-[26px]',
+    stage:
+      'flex w-full flex-row items-center gap-2.5 max-sm:p-1 sm:w-[72px] sm:flex-col sm:gap-1.5',
+    label: 'text-sm sm:text-xs sm:leading-normal',
+    pct: 'ml-auto font-mono text-xs tabular-nums text-[var(--accent-text)] sm:ml-0',
+  },
+  container: {
+    ol: 'flex flex-col gap-1.5 @min-[616px]:flex-row @min-[616px]:items-start @min-[616px]:gap-0',
+    olStart: '@min-[616px]:justify-start',
+    olCenter: '@min-[616px]:justify-center',
+    li: 'flex w-full items-start @min-[616px]:w-auto',
+    connectorShow: 'hidden @min-[616px]:block',
+    connectorSize: 'mt-[10px] h-0.5 @min-[616px]:w-[26px]',
+    stage:
+      'flex w-full flex-row items-center gap-2.5 @max-[616px]:p-1 @min-[616px]:w-[72px] @min-[616px]:flex-col @min-[616px]:gap-1.5',
+    label: 'text-sm @min-[616px]:text-xs @min-[616px]:leading-normal',
+    pct: 'ml-auto font-mono text-xs tabular-nums text-[var(--accent-text)] @min-[616px]:ml-0',
+  },
+} as const;
 
 /** F4-D-v2 `pjXCe`: the failure named with the stepper's own words. */
 const FAILED_STAGE_TEXT: Record<ActivePhase, string> = {
@@ -223,7 +263,9 @@ export function GenerationProgressV2({
   costLimitText,
   align = 'center',
   route = null,
+  widthSource = 'viewport',
 }: GenerationProgressV2Props) {
+  const layout = LAYOUT[widthSource];
   const shape = stepperShape(route, phase);
   const states = stepStates(shape, phase, failedPhase);
   const failedText = shape.failedText[failedPhase ?? 'extracting'];
@@ -236,41 +278,35 @@ export function GenerationProgressV2({
       {/* Stepper — mobile (<sm) = vertical full-width rows per F3-M-v2 (k8sJl4 `fS5is`,
           Sally gate MUST-FIX 2026-07-05): [22px circle + Body 14 label + spacer + Mono pct].
           Desktop (sm+) keeps the original horizontal stepper — every sm: class computes
-          IDENTICALLY to the pre-fix desktop DOM (zero darwin-baseline diff). */}
+          IDENTICALLY to the pre-fix desktop DOM (zero darwin-baseline diff).
+          widthSource="container" swaps sm / max-sm for @min-[616px] / @max-[616px]. */}
       <ol
-        className={cn(
-          'flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-0',
-          align === 'start' ? 'sm:justify-start' : 'sm:justify-center'
-        )}
+        className={cn(layout.ol, align === 'start' ? layout.olStart : layout.olCenter)}
         aria-label="字幕生成進度"
       >
         {shape.stages.map((stage, i) => {
           const state = states[i];
           return (
-            <li key={stage} className="flex w-full items-start sm:w-auto">
+            <li key={stage} className={layout.li}>
               {i > 0 && (
                 <span
                   aria-hidden="true"
                   className={cn(
-                    'hidden sm:block',
+                    layout.connectorShow,
                     // Connector is desktop-only (hidden below sm) — XkGvG `ITuZl` 26×2.
-                    'mt-[10px] h-0.5 sm:w-[26px]',
+                    layout.connectorSize,
                     states[i - 1] === 'done' || states[i - 1] === 'skipped'
                       ? 'bg-[var(--success)]'
                       : 'bg-[var(--border-subtle)]'
                   )}
                 />
               )}
-              <span
-                data-testid={`gen-stage-${stage}`}
-                data-state={state}
-                className="flex w-full flex-row items-center gap-2.5 max-sm:p-1 sm:w-[72px] sm:flex-col sm:gap-1.5"
-              >
+              <span data-testid={`gen-stage-${stage}`} data-state={state} className={layout.stage}>
                 <StepMark state={state} />
                 <span
                   className={cn(
                     // Phone: Body 14 (F3-M-v2 IdGB2). Desktop: Label 12 / 1.5.
-                    'text-sm sm:text-xs sm:leading-normal',
+                    layout.label,
                     state === 'active' && 'font-semibold text-[var(--accent-text)]',
                     state === 'failed' && 'font-semibold text-[var(--error-text)]',
                     state === 'done' && 'text-[var(--text-secondary)]',
@@ -279,11 +315,7 @@ export function GenerationProgressV2({
                 >
                   {stage}
                 </span>
-                {state === 'active' && pctText && (
-                  <span className="ml-auto font-mono text-xs tabular-nums text-[var(--accent-text)] sm:ml-0">
-                    {pctText}
-                  </span>
-                )}
+                {state === 'active' && pctText && <span className={layout.pct}>{pctText}</span>}
               </span>
             </li>
           );
