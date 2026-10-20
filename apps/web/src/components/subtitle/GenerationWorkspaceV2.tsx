@@ -290,7 +290,7 @@ function QueueRow({
   activeItemProgress?: GenerationProgressState | null;
 }) {
   const label = queueRowLabel(
-    { status: item.status, reason: item.reason },
+    { status: item.status, reason: item.reason, failureReason: item.failureReason },
     activeItemProgress?.phase
   );
   const isRunning = item.status === 'running';
@@ -316,7 +316,8 @@ function QueueRow({
           className="h-[60px] w-10 shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)]"
         />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="truncate text-base font-semibold text-[var(--text-primary)]">
+          {/* Two lines at most, then … (F11-D-v2 f14sNh / F11-M-v2 Ah8fN). */}
+          <span className="line-clamp-2 break-words text-base font-semibold text-[var(--text-primary)]">
             {queueRowTitle(item)}
           </span>
           <span
@@ -379,42 +380,65 @@ const FEED_GLYPH: Record<FeedGlyph, typeof Check> = {
   'circle-dashed': CircleDashed,
 };
 
-/** One log row (F11 `evt-N`): glyph 16 · stage · `·` · film … trailing value. */
+/**
+ * One log row (F11 `evt-N`, F11-SPEC-LOG tT3JX): glyph 16 + a content column.
+ * Line 1: stage · `·` film … trailing value — the film name wraps to two lines
+ * at most, then ends in …. Line 2 (④ 失敗 / ⑤ / ⑤b 已停止 only): the reason,
+ * whole, with no `·`, left edge under the stage word because the column starts
+ * after the glyph. A long reason therefore never squeezes the film name away
+ * (disc-2026-10-generation-queue-failure-reason). The glyph centres on the
+ * FIRST line, not on the whole row.
+ */
 function FeedRowItem({ row }: { row: FeedRow }) {
   const v = feedRowView(row);
   const Glyph = FEED_GLYPH[v.glyph];
   return (
-    <li data-testid="workspace-feed-row" className="flex items-center gap-2 px-3.5 py-2">
-      <Glyph
-        className={cn(
-          'h-4 w-4 shrink-0',
-          v.glyphClass,
-          v.spin && 'animate-spin motion-reduce:animate-none'
-        )}
-        aria-hidden="true"
-      />
-      <span className={cn('shrink-0 text-sm font-semibold', v.stageClass)}>{v.stage}</span>
-      {v.srState && <span className="sr-only">{v.srState}</span>}
-      {v.parts.map((part, i) => (
-        <span
-          key={i}
+    <li data-testid="workspace-feed-row" className="flex items-start gap-2 px-3.5 py-2">
+      {/* One text-sm line tall (1lh), so the glyph centres on line 1. */}
+      <span aria-hidden="true" className="flex h-[1lh] shrink-0 items-center text-sm">
+        <Glyph
           className={cn(
-            'flex items-center gap-2 text-sm text-[var(--text-secondary)]',
-            // The film name may truncate; the reason after it stays whole.
-            i === 0 ? 'min-w-0 shrink' : 'shrink-0'
+            'h-4 w-4 shrink-0',
+            v.glyphClass,
+            v.spin && 'animate-spin motion-reduce:animate-none'
           )}
-        >
-          <span aria-hidden="true" className="text-[var(--text-muted)]">
-            ·
-          </span>
-          <span className={cn(i === 0 && 'truncate')}>{part}</span>
-        </span>
-      ))}
-      {v.trail && (
-        <span className={cn('ml-auto shrink-0 font-mono text-sm tabular-nums', v.trailClass)}>
-          {v.trail}
-        </span>
-      )}
+          aria-hidden="true"
+        />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-start gap-2">
+          <span className={cn('shrink-0 text-sm font-semibold', v.stageClass)}>{v.stage}</span>
+          {v.srState && <span className="sr-only">{v.srState}</span>}
+          {v.parts.map((part, i) => (
+            <span
+              key={i}
+              className={cn(
+                'flex items-start gap-2 text-sm text-[var(--text-secondary)]',
+                // The film name gives way (two lines, then …); the rest stays whole.
+                i === 0 ? 'min-w-0 shrink' : 'shrink-0'
+              )}
+            >
+              <span aria-hidden="true" className="text-[var(--text-muted)]">
+                ·
+              </span>
+              <span className={cn(i === 0 && 'line-clamp-2 min-w-0 break-words')}>{part}</span>
+            </span>
+          ))}
+          {v.trail && (
+            <span className={cn('ml-auto shrink-0 font-mono text-sm tabular-nums', v.trailClass)}>
+              {v.trail}
+            </span>
+          )}
+        </div>
+        {v.detail && (
+          <p
+            data-testid="workspace-feed-row-detail"
+            className="break-words text-sm text-[var(--text-secondary)]"
+          >
+            {v.detail}
+          </p>
+        )}
+      </div>
     </li>
   );
 }

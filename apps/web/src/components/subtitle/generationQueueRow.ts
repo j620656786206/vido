@@ -13,6 +13,12 @@
  * Stage names are re-exported from the FROZEN `GENERATION_STAGES` list rather
  * than re-typed: renaming them would break the fixture↔baseline mapping, and a
  * private copy would silently drift from the stepper drawn right below the row.
+ *
+ * A failed item with `reason: "error"` is worded from its `failure_reason` code
+ * through runFailureCopy's FAILURE_COPY_BY_REASON — the same sentence the live
+ * log and the activity record show for that failure
+ * (disc-2026-10-generation-queue-failure-reason). `FAILURE_TEXT.error` is only
+ * the fallback when no code came with it.
  */
 import type {
   GenerationBatchItemReason,
@@ -20,11 +26,18 @@ import type {
 } from '../../services/subtitleService';
 import type { GenerationPhase } from '../../hooks/useGenerationProgress';
 import { GENERATION_STAGES } from './GenerationProgressV2';
+import { failureCopyForReason } from './runFailureCopy';
 
-/** The two backend-owned fields a row's label is derived from. */
+/** The backend-owned fields a row's label is derived from. */
 export interface QueueRowView {
   status: GenerationBatchItemStatus;
   reason: GenerationBatchItemReason;
+  /**
+   * The run's failure code (`failure_reason`). Only read for `failed` +
+   * `reason: "error"`; absent on older servers and on the dialog's fallback
+   * rows, which then say 生成失敗.
+   */
+  failureReason?: string | null;
 }
 
 /** Which lucide glyph precedes the label (the component owns the rendering). */
@@ -44,6 +57,10 @@ const MUTED = 'text-[var(--text-muted)]';
  * with 已略過: legacy runs with no API key configured land on the same reason
  * (dsr-6d-a CR L8), and "skipped" would read as a decision the system made on
  * purpose rather than something it could not do.
+ *
+ * `error` is refined by the run's failure code (FAILURE_COPY_BY_REASON, shared
+ * with the live log and the activity record); the `error` entry here is only
+ * the fallback for a failure that came with no code.
  */
 const FAILURE_TEXT: Record<GenerationBatchItemReason, string> = {
   skipped: '沒有可用的字幕來源',
@@ -72,7 +89,12 @@ export function queueRowLabel(view: QueueRowView, phase?: GenerationPhase | null
       return { text: '完成', className: 'text-[var(--success-text)]', icon: 'check' };
     case 'failed':
       return {
-        text: FAILURE_TEXT[view.reason] ?? FAILURE_TEXT[''],
+        // Always red 失敗 — a code's `stopped` flag is not read here: a real
+        // budget / credit stop pauses the item, it does not fail it.
+        text:
+          view.reason === 'error'
+            ? failureCopyForReason(view.failureReason).text
+            : (FAILURE_TEXT[view.reason] ?? FAILURE_TEXT['']),
         className: 'text-[var(--error-text)]',
         icon: 'alert',
       };

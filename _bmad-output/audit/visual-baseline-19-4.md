@@ -718,3 +718,7 @@ Linux baselines incrementally bootstrapped 2026-10-19 via runner ubuntu-24.04 (I
 Linux baselines bootstrapped 2026-10-19 via runner ubuntu-24.04 (ImageVersion: 20261012.334.1)
 
 Linux baselines incrementally bootstrapped 2026-10-19 via runner ubuntu-24.04 (ImageVersion: 20261012.334.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/media-detail-hero-v2-long-title-mobile/default-visual-linux.png
+
+Linux baselines incrementally bootstrapped 2026-10-19 via runner ubuntu-24.04 (ImageVersion: 20261012.334.1) — 2 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/complete-with-failures/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/failures-long-titles/default-visual-linux.png
+
+Linux baselines incrementally bootstrapped 2026-10-20 via runner ubuntu-24.04 (ImageVersion: 20261012.334.1) — 3 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/failures-long-titles-mobile/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/budget_ceiling-mobile/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/complete-with-failures/default-visual-linux.png

@@ -176,8 +176,9 @@ export interface GenerationBatchItemState extends GenerationBatchItem {
   /**
    * Why a `failed` + `error` item failed — one of the backend's reason codes
    * (`failure_reason`, disc-2026-10-live-activity-failure-reasons-a AC #1
-   * `[@contract-v1]`; words in generationEventCopy's FAILURE_COPY_BY_REASON).
-   * The backend always sends it; `''` means not an `error` failure. Optional
+   * `[@contract-v1]`; words in runFailureCopy's FAILURE_COPY_BY_REASON). Read
+   * by the live log AND the queue rows (workspace + dialog, via queueRowLabel —
+   * disc-2026-10-generation-queue-failure-reason). The backend always sends it; `''` means not an `error` failure. Optional
    * only so older fixtures still type-check.
    */
   failureReason?: string;

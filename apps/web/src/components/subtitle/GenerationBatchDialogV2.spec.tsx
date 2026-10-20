@@ -1331,6 +1331,182 @@ describe('GenerationBatchPanelV2 — rows from progress.items (dsr-6d-b AC #2/#3
     expect(screen.getByTestId(`gen-batch-row-${M5}`)).toHaveAttribute('data-state', 'running');
   });
 
+  // disc-2026-10-generation-queue-failure-reason AC #3/#12: the dialog shares
+  // queueRowLabel with the workspace, so an `error` row names the run's reason.
+  it("[P0] a failed + error row names the reason code's sentence, not 生成失敗", () => {
+    renderPanel({
+      status: 'running',
+      progress: progressOf({
+        currentMediaId: M2,
+        items: [
+          { ...state(M1, '沙丘：第二部', 'failed', 'error'), failureReason: 'no_audio_track' },
+          state(M2, '奧本海默', 'running'),
+        ],
+      }),
+      items: [],
+    });
+    const row = screen.getByTestId(`gen-batch-row-${M1}`);
+    expect(row).toHaveAttribute('data-state', 'failed');
+    expect(row).toHaveTextContent('找不到可用的音軌');
+    expect(row).not.toHaveTextContent('生成失敗');
+  });
+
+  // disc-2026-10-generation-queue-failure-reason AC #18–#21 (2026-10-20 追加,
+  // F8-SPEC-ROW NfHKO): a row with something to explain is TWO lines — the
+  // short status word stays on the title's first line, the reason drops to a
+  // secondary-colour line of its own, so the title is not squeezed out.
+  describe('two-line failed row (AC #18–#21)', () => {
+    const stage = (id: string) => screen.getByTestId(`gen-batch-row-stage-${id}`);
+    const detail = (id: string) => screen.queryByTestId(`gen-batch-row-detail-${id}`);
+
+    it('[P0] a failed row: status word is the short 失敗, the reason is on its own second line', () => {
+      renderPanel({
+        status: 'running',
+        progress: progressOf({
+          currentMediaId: M2,
+          items: [
+            {
+              ...state(M1, '和平使者 S01E01', 'failed', 'error'),
+              failureReason: 'target_not_writable',
+            },
+            state(M2, '奧本海默', 'running'),
+          ],
+        }),
+        items: [],
+      });
+
+      expect(stage(M1)).toHaveTextContent(/^失敗$/);
+      expect(stage(M1).className).toContain('text-[var(--error-text)]');
+      expect(stage(M1)).not.toHaveTextContent('影片所在的資料夾寫不進字幕');
+
+      const line2 = detail(M1);
+      expect(line2).not.toBeNull();
+      // exactly the reason — no leading「·」, nothing else on that line
+      expect(line2!.textContent).toBe('影片所在的資料夾寫不進字幕');
+      expect(line2!.className).toContain('text-[var(--text-secondary)]');
+      expect(line2!.className).not.toContain('truncate');
+      // the whole row still reads the reason (E2E / older asserts stay true)
+      expect(screen.getByTestId(`gen-batch-row-${M1}`)).toHaveTextContent(
+        '影片所在的資料夾寫不進字幕'
+      );
+    });
+
+    it('[P0] the title clamps at two lines instead of truncating to one', () => {
+      renderPanel({
+        status: 'complete',
+        progress: progressOf({
+          status: 'complete',
+          items: [
+            { ...state(M1, '和平使者 S01E01', 'failed', 'error'), failureReason: 'no_audio_track' },
+            state(M2, '奧本海默', 'done'),
+          ],
+        }),
+        items: [],
+      });
+      for (const title of ['和平使者 S01E01', '奧本海默']) {
+        const el = screen.getByText(title);
+        expect(el.className).toContain('line-clamp-2');
+        expect(el.className).not.toContain('truncate');
+      }
+    });
+
+    it('[P0] rows with nothing to explain (完成／排隊中／進行中／已暫停／已取消) stay one line', () => {
+      renderPanel({
+        status: 'running',
+        progress: progressOf({
+          currentMediaId: M3,
+          items: [
+            state(M1, '沙丘：第二部', 'done'),
+            state(M2, '奧本海默', 'paused'),
+            state(M3, '怪奇物語 S04E07', 'running'),
+            state(M4, '星際效應', 'cancelled'),
+            state(M5, '全面啟動', 'queued'),
+          ],
+        }),
+        items: [],
+      });
+      expect(stage(M1)).toHaveTextContent('完成');
+      expect(stage(M2)).toHaveTextContent('已暫停 — 下次繼續');
+      expect(stage(M3)).toHaveTextContent('處理中');
+      expect(stage(M4)).toHaveTextContent('已取消');
+      expect(stage(M5)).toHaveTextContent('排隊中');
+      for (const id of [M1, M2, M3, M4, M5]) expect(detail(id)).toBeNull();
+    });
+
+    it('[P0] busy_elsewhere / skipped rows are failed rows too: 失敗 + their sentence on line two', () => {
+      renderPanel({
+        status: 'complete',
+        progress: progressOf({
+          status: 'complete',
+          items: [
+            state(M1, '怪奇物語 S04E07', 'failed', 'busy_elsewhere'),
+            state(M2, '星際效應', 'failed', 'skipped'),
+          ],
+        }),
+        items: [],
+      });
+      expect(stage(M1)).toHaveTextContent(/^失敗$/);
+      expect(detail(M1)!.textContent).toBe('這部正在別處處理');
+      expect(stage(M2)).toHaveTextContent(/^失敗$/);
+      expect(detail(M2)!.textContent).toBe('沒有可用的字幕來源');
+    });
+
+    // Contract v2 (#855): skipped items may now carry no_text_source /
+    // asr_unconfigured. This story does not word them (that is
+    // no-text-source-skip-b) — they must keep today's sentence, and an
+    // error code this build has never heard of must fall back, not crash.
+    it('[P0] contract v2: skipped + no_text_source keeps 沒有可用的字幕來源; an unknown error code falls back to 生成失敗', () => {
+      renderPanel({
+        status: 'complete',
+        progress: progressOf({
+          status: 'complete',
+          items: [
+            { ...state(M1, '星際效應', 'failed', 'skipped'), failureReason: 'no_text_source' },
+            { ...state(M2, '奧本海默', 'failed', 'skipped'), failureReason: 'asr_unconfigured' },
+            { ...state(M3, '沙丘：第二部', 'failed', 'error'), failureReason: 'some_future_code' },
+            { ...state(M4, '全面啟動', 'failed', 'error'), failureReason: 'no_text_source' },
+          ],
+        }),
+        items: [],
+      });
+      expect(detail(M1)!.textContent).toBe('沒有可用的字幕來源');
+      expect(detail(M2)!.textContent).toBe('沒有可用的字幕來源');
+      expect(detail(M3)!.textContent).toBe('生成失敗');
+      expect(detail(M4)!.textContent).toBe('生成失敗');
+      for (const id of [M1, M2, M3, M4]) expect(stage(id)).toHaveTextContent(/^失敗$/);
+    });
+
+    it('[P0] the fallback path (no backend items) follows the same rule: 失敗 + 生成失敗 on line two', () => {
+      renderPanel({
+        status: 'complete',
+        progress: progressOf({ status: 'complete', successCount: 4, failCount: 1 }),
+        items: ITEMS,
+        failedIds: new Set([M2]),
+      });
+      expect(stage(M2)).toHaveTextContent(/^失敗$/);
+      expect(detail(M2)!.textContent).toBe('生成失敗');
+      expect(detail(M1)).toBeNull();
+    });
+
+    it('[P1] the status word box is one title line tall, so it centres on the first line (AC #20)', () => {
+      renderPanel({
+        status: 'complete',
+        progress: progressOf({
+          status: 'complete',
+          items: [state(M1, '和平使者 S01E01', 'failed', 'error')],
+        }),
+        items: [],
+      });
+      // one title line tall: the wrapper takes the title's type size and is 1lh
+      const box = stage(M1).parentElement!;
+      expect(box.className).toContain('h-[1lh]');
+      expect(box.className).toContain('text-sm');
+      expect(box.className).toContain('items-center');
+      expect(box.className).not.toMatch(/\bmt-/);
+      expect(stage(M1).className).not.toMatch(/\bmt-/);
+    });
+  });
+
   it('[P0] 🔴 #9 a failed row draws NO stepper (it is not being worked on)', () => {
     renderPanel({
       status: 'running',
