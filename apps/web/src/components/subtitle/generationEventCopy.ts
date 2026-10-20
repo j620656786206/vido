@@ -26,8 +26,8 @@
  * no usable subtitle and no speech recognition set up (`no_text_source`, or a
  * batch item's `reason: "skipped"`) is a grey 已略過 row — the muted
  * circle-dashed glyph and secondary stage word of ⑧ 批次已取消 — with the
- * reason on its second line like ④. F11-SPEC-LOG has no such row yet
- * (待 Sally 補稿). `queueRowIsSkipped` decides it for the batch rows, so the
+ * reason on its second line like ④ (F11-SPEC-LOG ④b 已略過, `XHbwN`).
+ * `queueRowIsSkipped` decides it for the batch rows, so the
  * queue on the left and this log never disagree.
  */
 import type { FeedRow, FeedStage } from '../../hooks/useGenerationJobsFeed';
