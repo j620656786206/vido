@@ -12659,7 +12659,7 @@
                                   "content": "沙丘：第二部"
                                 },
                                 "lUZol": {
-                                  "content": "已生成繁中字幕"
+                                  "content": "字幕已寫入檔案"
                                 }
                               }
                             },
@@ -19644,7 +19644,7 @@
                               "fill": "$text-secondary",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "已生成繁中字幕",
+                              "content": "字幕已寫入檔案",
                               "lineHeight": "$Type/Body/Line",
                               "fontFamily": "$Type/Family/Primary",
                               "fontSize": "$Type/Body/Size",
@@ -140606,7 +140606,7 @@
                                       "content": "沙丘：第二部"
                                     },
                                     "lUZol": {
-                                      "content": "已生成繁中字幕，已寫入檔案"
+                                      "content": "字幕已寫入檔案"
                                     }
                                   }
                                 },
@@ -141958,7 +141958,7 @@
                                       "content": "沙丘：第二部"
                                     },
                                     "lUZol": {
-                                      "content": "已生成繁中字幕，已寫入檔案"
+                                      "content": "字幕已寫入檔案"
                                     }
                                   }
                                 },
@@ -171651,7 +171651,7 @@
                           "content": "沙丘：第二部"
                         },
                         "lUZol": {
-                          "content": "已完成，字幕已寫入檔案"
+                          "content": "字幕已寫入檔案"
                         }
                       }
                     },

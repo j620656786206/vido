@@ -1,6 +1,6 @@
 # Disc：筆電寬度（1024）看生成畫面，左邊佇列「完成」那列的說明被「…」切掉
 
-Status: blocked（waiting Pencil：設計稿四列「完成」的說明行要先改成新文案，Alexyu 跑下面的 Pencil 提示詞、存檔、出截圖後解除；之後改 ready-for-dev）
+Status: ready-for-dev
 
 **Source:** 2026-10-20 #871（`disc-2026-10-gen-queue-reason-wrap-desktop`）Dev Agent Record「附帶發現」：1024 寬、右邊即時活動欄有顯示時，左邊佇列「完成」列的說明行「已完成，字幕已寫入檔案」要 154px、格子只有 142px，被切成「已完成，字幕已寫入…」。#871 之前就是這樣；1280、1440 沒事。⚖️ Alexyu 2026-10-20：開單，請 Sally 決定怎麼修。
 
@@ -121,6 +121,7 @@ Status: blocked（waiting Pencil：設計稿四列「完成」的說明行要先
 | 日期 | 變更 |
 |---|---|
 | 2026-10-20 | 建單（Bob）。Sally 裁定 (a)：完成列說明行改成「字幕已寫入檔案」（徽章已寫「完成」，不重複）；設計稿四列＋元件母版同步改字，先 blocked 等 Pencil。 |
+| 2026-10-20 | 解除 blocked → ready-for-dev：Alexyu 跑完 Pencil，母版 aw4Qr›lUZol＋oxc7d／bbDtK／Qp7Cm／dzmKk 的說明行改成「字幕已寫入檔案」，截圖 f11-d-v2／f12-d-v2／f11-m-v2／component-library 隨設計稿 PR 一起提交。 |
 
 ## Dev Agent Record
 
