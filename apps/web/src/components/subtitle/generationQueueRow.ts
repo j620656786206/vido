@@ -188,12 +188,14 @@ export function queueRowBadge(view: QueueRowView, stage: string): string {
  *  - `cancelled` does NOT say 未處理. `finish()` marks the in-flight item
  *    cancelled too, and that item may already have been paid for.
  *  - `done` does NOT say 繁中. A run can deliver a partial translation
- *    (`englishKeptBlocks`) or keep 簡體 under the CN policy.
+ *    (`englishKeptBlocks`) or keep 簡體 under the CN policy. Nor does it
+ *    repeat 已完成 — the 完成 badge already says it, and the shorter line
+ *    fits whole at 1024 (disc-2026-10-gen-queue-done-row-1024).
  */
 export function queueRowSubStatus(view: QueueRowView, labelText: string): string {
   switch (view.status) {
     case 'done':
-      return '已完成，字幕已寫入檔案';
+      return '字幕已寫入檔案';
     case 'failed':
       return labelText;
     case 'running':

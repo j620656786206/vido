@@ -432,7 +432,7 @@ describe('GenerationWorkspaceV2 — items-first rows (dsr-6d-c-1 AC #2)', () => 
     // Everything else keeps one line on desktop: a long 翻譯中… line would
     // otherwise make the row (and the queue) jump as it changes.
     for (const line of [
-      sub('m0', '已完成，字幕已寫入檔案'),
+      sub('m0', '字幕已寫入檔案'),
       sub('m20', '等待前面項目完成'),
       within(screen.getByTestId('workspace-queue-row-m12')).getByText(/…$/),
     ]) {
@@ -1325,9 +1325,7 @@ describe('GenerationWorkspaceV2 (dsr-6f-4 — phone page)', () => {
     expect(row.querySelector('.font-semibold.text-base')!.className).toBe(
       'line-clamp-2 break-words text-base font-semibold text-[var(--text-primary)]'
     );
-    expect(within(row).getByText('已完成，字幕已寫入檔案').className).toContain(
-      'max-sm:whitespace-normal'
-    );
+    expect(within(row).getByText('字幕已寫入檔案').className).toContain('max-sm:whitespace-normal');
   });
 });
 

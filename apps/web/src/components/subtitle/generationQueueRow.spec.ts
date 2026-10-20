@@ -301,8 +301,12 @@ describe('queueRowBadge / queueRowSubStatus (dsr-6d-c-1 — one vocabulary, two 
 
   it('[P0] a done row never claims 繁中 — a run can keep English blocks or 簡體', () => {
     const text = queueRowSubStatus(view({ status: 'done' }), '完成');
-    expect(text).toBe('已完成，字幕已寫入檔案');
+    expect(text).toBe('字幕已寫入檔案');
     expect(text).not.toContain('繁中');
+  });
+
+  it('a done row does not repeat 已完成 — the 完成 badge already says it (disc-2026-10-gen-queue-done-row-1024)', () => {
+    expect(queueRowSubStatus(view({ status: 'done' }), '完成')).not.toContain('已完成');
   });
 
   it('[P0] a failed row carries the REASON, not a generic sentence', () => {
