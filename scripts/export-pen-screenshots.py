@@ -386,6 +386,8 @@ SCREENS = {
     "H717g": ("flow-f-subtitle-v2", "f8-m-v2"),
     # disc-2026-10-generation-queue-failure-reason — 佇列列兩行規格（失敗／已略過的原因在第二行）
     "NfHKO": ("flow-f-subtitle-v2", "f8-spec-row"),
+    # disc-2026-10-gen-live-column-squeeze — 窄桌機（1024／1280）版面規格：即時活動固定 400、進度條依列寬改直排
+    "V2oywc": ("flow-f-subtitle-v2", "f11-spec-width"),
     # sub-7-6c — F8c 批次完成收據（F8 的完成態：收據行＋關閉）
     "gWFcx": ("flow-f-subtitle-v2", "f8c-d-v2"),
     "LAeqW": ("flow-f-subtitle-v2", "f8c-m-v2"),

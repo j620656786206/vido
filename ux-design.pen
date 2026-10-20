@@ -184622,6 +184622,548 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "text",
+              "id": "UbgGO",
+              "x": 25720,
+              "y": 34348,
+              "name": "cap-F11-SPEC-WIDTH",
+              "fill": "$text-muted",
+              "content": "F11 · 生成工作區・窄桌機（1024／1280）版面規格",
+              "lineHeight": "$Type/Body/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Body/Size",
+              "fontWeight": "$Type/H4/Weight"
+            },
+            {
+              "type": "frame",
+              "id": "V2oywc",
+              "x": 25720,
+              "y": 34393,
+              "name": "F11-SPEC-WIDTH",
+              "width": 880,
+              "fill": "$bg-secondary",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": "$Space/lg",
+              "padding": [
+                "$Space/lg-plus",
+                "$Space/xl"
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "UBkSu",
+                  "name": "spec-intro",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "生成工作區在桌機寬度（1024 以上）左右並排：右欄「即時活動」固定 400 寬，任何時候都不會被擠窄；左欄佇列拿剩下的寬度。處理中那列的六步進度條，看「這一列本身」的寬度決定排法：列內可用寬度 616 以上用橫排（F11-D-v2，跟現在一樣）；不到 616 改用直排，跟手機 F11-M-v2 同一個樣子——一步一行，圓點 22＋步驟名，只有翻譯中那一步右邊加百分比，沒有左邊縮排。只有這一個切換點，不另做縮小版橫排。對話框（F3／F4／F8）裡的進度條不適用這條規則。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "frame",
+                  "id": "Ew6Av",
+                  "name": "demo-1024",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "padding": "$Space/none",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "TIQjs",
+                      "name": "demo-queue-304",
+                      "width": 304,
+                      "layout": "vertical",
+                      "gap": "$Space/sm-plus",
+                      "padding": "$Space/none",
+                      "children": [
+                        {
+                          "id": "Ioji8",
+                          "type": "ref",
+                          "ref": "aw4Qr",
+                          "name": "demo-row-running-vertical",
+                          "width": "fill_container",
+                          "descendants": {
+                            "bSNmA": {
+                              "content": "奧本海默"
+                            },
+                            "lUZol": {
+                              "content": "轉錄中…",
+                              "fill": "$accent-text"
+                            },
+                            "OMD2y": {
+                              "enabled": false,
+                              "content": "45%"
+                            },
+                            "IcPTo": {
+                              "fill": "$accent-tint"
+                            },
+                            "CQhw2": {
+                              "icon": "loader-circle",
+                              "fill": "$accent-text"
+                            },
+                            "OLg1J": {
+                              "content": "轉錄中",
+                              "fill": "$accent-text"
+                            },
+                            "dxgox": {
+                              "type": "frame",
+                              "id": "tvXpw",
+                              "name": "row-stepper-vertical",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": "$Space/xs-plus",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "MGENJ",
+                                  "name": "mst-1",
+                                  "width": "fill_container",
+                                  "gap": "$Space/sm-plus",
+                                  "padding": "$Space/xs",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "w9d1C",
+                                      "name": "mst-1-ic",
+                                      "width": 22,
+                                      "height": 22,
+                                      "fill": "$success-tint",
+                                      "cornerRadius": "$radius-lg",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "wF4vM",
+                                          "name": "mst-1-mark",
+                                          "width": 14,
+                                          "height": 14,
+                                          "icon": "check",
+                                          "library": "lucide",
+                                          "fill": "$success"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "x2pPGZ",
+                                      "name": "mst-1-lb",
+                                      "fill": "$text-secondary",
+                                      "content": "提取音訊",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "MSXjk",
+                                      "name": "mst-1-sp",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "j0bWi3",
+                                  "name": "mst-2",
+                                  "width": "fill_container",
+                                  "gap": "$Space/sm-plus",
+                                  "padding": "$Space/xs",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "Sisba",
+                                      "name": "mst-2-ic",
+                                      "width": 22,
+                                      "height": 22,
+                                      "fill": "$accent-tint",
+                                      "cornerRadius": "$radius-lg",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "E9u8g",
+                                          "name": "mst-2-mark",
+                                          "width": 14,
+                                          "height": 14,
+                                          "icon": "loader-circle",
+                                          "library": "lucide",
+                                          "fill": "$accent-text"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "MtUQ5",
+                                      "name": "mst-2-lb",
+                                      "fill": "$accent-text",
+                                      "content": "轉錄中",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "A6UDWL",
+                                      "name": "mst-2-sp",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "hXH67",
+                                      "x": 332,
+                                      "y": 6.5,
+                                      "name": "mst-2-pct",
+                                      "enabled": false,
+                                      "fill": "$accent-text",
+                                      "content": "45%",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Mono",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "y9XDEt",
+                                  "name": "mst-3",
+                                  "width": "fill_container",
+                                  "gap": "$Space/sm-plus",
+                                  "padding": "$Space/xs",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "K9XPp4",
+                                      "name": "mst-3-ic",
+                                      "width": 22,
+                                      "height": 22,
+                                      "fill": "$bg-tertiary",
+                                      "cornerRadius": "$radius-lg",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "WLumI",
+                                          "name": "mst-3-mark",
+                                          "fill": "$text-muted",
+                                          "width": 6,
+                                          "height": 6
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "vxXNp",
+                                      "name": "mst-3-lb",
+                                      "fill": "$text-muted",
+                                      "content": "翻譯中",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "sqnT2",
+                                      "name": "mst-3-sp",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "XKD5V",
+                                  "name": "mst-4",
+                                  "width": "fill_container",
+                                  "gap": "$Space/sm-plus",
+                                  "padding": "$Space/xs",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "ABtcv",
+                                      "name": "mst-4-ic",
+                                      "width": 22,
+                                      "height": 22,
+                                      "fill": "$bg-tertiary",
+                                      "cornerRadius": "$radius-lg",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "pqb4J",
+                                          "name": "mst-4-mark",
+                                          "fill": "$text-muted",
+                                          "width": 6,
+                                          "height": 6
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "d5Kr9",
+                                      "name": "mst-4-lb",
+                                      "fill": "$text-muted",
+                                      "content": "簡轉繁",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "J5ZfH",
+                                      "name": "mst-4-sp",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "gxs3d",
+                                  "name": "mst-ai",
+                                  "width": "fill_container",
+                                  "gap": "$Space/sm-plus",
+                                  "padding": "$Space/xs",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "uTi1s",
+                                      "name": "mst-4-ic",
+                                      "width": 22,
+                                      "height": 22,
+                                      "fill": "$bg-tertiary",
+                                      "cornerRadius": "$radius-lg",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "WHd8C",
+                                          "name": "mst-4-mark",
+                                          "fill": "$text-muted",
+                                          "width": 6,
+                                          "height": 6
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "g0yorG",
+                                      "name": "mst-4-lb",
+                                      "fill": "$text-muted",
+                                      "content": "AI校正",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "z8LYFv",
+                                      "name": "mst-4-sp",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "lwaEt",
+                                  "name": "mst-5",
+                                  "width": "fill_container",
+                                  "gap": "$Space/sm-plus",
+                                  "padding": "$Space/xs",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "cUYwd",
+                                      "name": "mst-5-ic",
+                                      "width": 22,
+                                      "height": 22,
+                                      "fill": "$bg-tertiary",
+                                      "cornerRadius": "$radius-lg",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "ellipse",
+                                          "id": "Qe5dH",
+                                          "name": "mst-5-mark",
+                                          "fill": "$text-muted",
+                                          "width": 6,
+                                          "height": 6
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "VCTIP",
+                                      "name": "mst-5-lb",
+                                      "fill": "$text-muted",
+                                      "content": "完成",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "OOVjq",
+                                      "name": "mst-5-sp",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EyOol",
+                      "name": "demo-live-400",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": "$Space/sm",
+                      "padding": [
+                        "$Space/md",
+                        "$Space/md-plus"
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "e78t7",
+                          "name": "demo-live-title",
+                          "fill": "$text-primary",
+                          "content": "即時活動（固定 400 寬）",
+                          "lineHeight": "$Type/Body/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Body/Size",
+                          "fontWeight": "$Type/H4/Weight"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Mn3Nn",
+                          "name": "demo-live-note",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1024 寬時內容區只有 720：佇列 304＋間距 16＋即時活動 400。空間不夠時讓佇列變窄，右欄不讓。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Body/Weight"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "bgM5F",
+                  "name": "demo-caption",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "▲ 1024 寬・批次執行中：處理中那列的進度條改成直排（跟手機 F11-M-v2 同一個樣子），右邊即時活動維持 400。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "f2vL2D",
+                  "name": "spec-note-1440",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "① 1440（F11-D-v2）：佇列 720，列內 686，616 以上 → 橫排，跟現在一模一樣；即時活動 400。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "idDvr",
+                  "name": "spec-note-1280",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "② 1280：佇列 560，列內 526，不到 616 → 直排；即時活動 400（改之前被擠成 310）。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "ljg9V",
+                  "name": "spec-note-1024",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "③ 1024：佇列 304，列內 270 → 直排；即時活動 400（改之前被擠成 54，一字一行）。處理中那列會變高約 210，一次只有一列在處理，可以接受。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "Cpvgi",
+                  "name": "spec-note-phone",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "④ 手機 390／320：本來就是直排、即時活動在佇列下面，不變。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                },
+                {
+                  "type": "text",
+                  "id": "DDVYe",
+                  "name": "spec-note-why",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "⑤ 為什麼不縮小橫排：1024 列內只剩 270，六個步驟名（最長 4 字約 48px）加五條連接線最少要約 330，放不下；只留圓點就看不出做完哪些、還剩哪些。直排手機已經在用，不用學新樣子。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "$Type/Body/Weight"
+                }
+              ]
             }
           ]
         }
