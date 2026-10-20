@@ -124,6 +124,9 @@ type itemHarness struct {
 	conv      *recordingConverter
 	order     *[]string
 	progress  []string
+	// progressMsg is the message of each progress event, index-aligned with
+	// progress.
+	progressMsg []string
 }
 
 // newItemHarness wires a fully-ported pipeline over fakes, with a translator
@@ -170,8 +173,9 @@ func newItemHarness(t *testing.T, decision RouteDecision, opts ...PipelineOption
 		WithRunStore(h.runs),
 		WithSegmentCache(h.cache),
 		WithModelID("claude-haiku-4-5"),
-		WithProgress(func(_ MediaRef, stage PipelineStage, _ string) {
+		WithProgress(func(_ MediaRef, stage PipelineStage, msg string) {
 			h.progress = append(h.progress, string(stage))
+			h.progressMsg = append(h.progressMsg, msg)
 		}),
 	}
 	h.pipeline = NewPipeline(h.trans, h.conv, nil, append(base, opts...)...)
@@ -352,15 +356,21 @@ func TestProcessItem_VerdictBranches(t *testing.T) {
 		wantPlaced  bool
 		wantPayload string
 		wantSource  string
+		// wantPrefixed: a skipped row carries NoTextSourceRunPrefix — only
+		// when speech recognition was the fallback and was unavailable
+		// (disc-2026-10-no-text-source-skip-a). This harness wires no ASR.
+		wantPrefixed bool
 	}{
 		{
 			name: "no usable text source",
 			decision: RouteDecision{Kind: RouteNoTextSource,
 				Reason: "no usable embedded text subtitle track (2 image-codec track(s), 0 text)"},
-			wantRun:    models.SubtitleRunSkipped,
-			wantStatus: []models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusNoTextSource},
+			wantRun:      models.SubtitleRunSkipped,
+			wantStatus:   []models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusNoTextSource},
+			wantPrefixed: true,
 		},
 		{
+			// A deliberate verdict — ASR was never tried, so no prefix.
 			name: "deliberate skip",
 			decision: RouteDecision{Kind: RouteSkip,
 				Reason: "1 embedded text track(s) present but none tagged eng/en"},
@@ -422,7 +432,19 @@ func TestProcessItem_VerdictBranches(t *testing.T) {
 
 			if !tc.wantPlaced {
 				assert.Empty(t, h.placer.requests, "a routed-out item must never touch the media folder")
-				assert.Equal(t, tc.decision.Reason, final.ErrorMessage, "the routing reason is the skip's record")
+				if tc.wantPrefixed {
+					assert.Equal(t, NoTextSourceRunPrefix+tc.decision.Reason, final.ErrorMessage,
+						"no text source and no ASR: the routing reason under the no-text-source prefix")
+					assert.Equal(t, models.SubtitleRunFailureNoTextSource, models.SubtitleRunFailureReason(final.ErrorMessage))
+				} else {
+					assert.Equal(t, tc.decision.Reason, final.ErrorMessage, "the routing reason is the skip's record")
+					assert.False(t, strings.HasPrefix(final.ErrorMessage, NoTextSourceRunPrefix))
+					assert.Equal(t, models.SubtitleRunFailureOther, models.SubtitleRunFailureReason(final.ErrorMessage))
+				}
+				// The progress event keeps the bare router sentence either way.
+				require.NotEmpty(t, h.progressMsg)
+				assert.Equal(t, string(StageSkipped), h.progress[len(h.progress)-1])
+				assert.Equal(t, tc.decision.Reason, h.progressMsg[len(h.progressMsg)-1])
 				return
 			}
 

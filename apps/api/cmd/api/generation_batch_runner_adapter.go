@@ -70,7 +70,12 @@ func (r pipelineGenerationRunner) IsAvailable() bool {
 // services.ErrGenerationItemSkipped: the pipeline deliberately produced no
 // subtitle (only non-target text tracks, or no_text_source with no live ASR),
 // and crediting that as batch success would let a keyless deployment report
-// N successes, $0 spent, zero subtitles (CR sub-4-2 H1).
+// N successes, $0 spent, zero subtitles (CR sub-4-2 H1). When the row says
+// "no usable subtitle and no speech recognition" (its no-text-source prefix,
+// read through the one classifier) the error is the narrower
+// services.ErrGenerationItemNoTextSource — it wraps ErrGenerationItemSkipped —
+// so the batch item carries failure_reason no_text_source
+// (disc-2026-10-no-text-source-skip-a).
 func (r pipelineGenerationRunner) ExecuteGeneration(ctx context.Context, mediaID, mediaType, _, _ string) error {
 	ref := subtitle.MediaRef{ID: mediaID, MediaType: mediaType}
 	if r.guard != nil {
@@ -87,7 +92,11 @@ func (r pipelineGenerationRunner) ExecuteGeneration(ctx context.Context, mediaID
 		return err
 	}
 	if outcome != nil && outcome.Run != nil && outcome.Run.Status == models.SubtitleRunSkipped {
-		return fmt.Errorf("media %s: %s: %w", mediaID, outcome.Run.ErrorMessage, services.ErrGenerationItemSkipped)
+		sentinel := services.ErrGenerationItemSkipped
+		if models.SubtitleRunFailureReason(outcome.Run.ErrorMessage) == models.SubtitleRunFailureNoTextSource {
+			sentinel = services.ErrGenerationItemNoTextSource
+		}
+		return fmt.Errorf("media %s: %s: %w", mediaID, outcome.Run.ErrorMessage, sentinel)
 	}
 	return nil
 }

@@ -1076,11 +1076,11 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 			return fmt.Errorf("transcribe: %w", err)
 		}
 
-		// Phase 3: Save SRT
+		// Phase 3: Save SRT — never over a subtitle already beside the file
+		// (the user's own .en.srt); the resume reads the path recorded below.
 		baseName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
-		srtPath = filepath.Join(mediaDir, baseName+".en.srt")
-
-		if err := os.WriteFile(srtPath, []byte(srtContent), 0644); err != nil {
+		srtPath, err = saveEnglishTranscript(mediaDir, baseName, srtContent)
+		if err != nil {
 			s.failJob(jobID, mediaID, fmt.Sprintf("save SRT: %v", err))
 			return fmt.Errorf("save SRT: %w", err)
 		}

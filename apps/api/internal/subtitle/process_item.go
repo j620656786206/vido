@@ -241,7 +241,9 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		if opts.TranscribeWhenSkipped {
 			return p.transcribeFallback(ctx, ref, run, decision, item, models.SubtitleStatusSkipped)
 		}
-		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusSkipped)
+		// No NoTextSourceRunPrefix: ASR was never tried here, so "no speech
+		// recognition" would be a false reason (disc-2026-10-no-text-source-skip-a).
+		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusSkipped, decision.Reason)
 	case RouteDeliverDirect, RouteConvertThenDeliver, RouteTranslate:
 		// handled below
 	default:
@@ -539,6 +541,13 @@ func (p *Pipeline) translateWithCache(
 // skipStatus is the media verdict when speech recognition cannot serve the
 // item: `no_text_source` for a RouteNoTextSource decision, `skipped` for a
 // RouteSkip one routed here by TranscribeWhenSkipped.
+//
+// When it degrades because speech recognition is unavailable (no ASR port, or
+// the service reports ErrTranscriptionDisabled) the skipped run row carries
+// NoTextSourceRunPrefix, so the live event says no_text_source — "no usable
+// subtitle and no speech recognition" — instead of a bare other
+// (disc-2026-10-no-text-source-skip-a). A series ref is not transcribable for a
+// different reason and keeps the router's plain sentence.
 func (p *Pipeline) transcribeFallback(
 	ctx context.Context,
 	ref MediaRef,
@@ -548,8 +557,11 @@ func (p *Pipeline) transcribeFallback(
 	skipStatus models.SubtitleStatus,
 ) (*ProcessOutcome, error) {
 	transcribable := ref.MediaType == models.SubtitleRunMediaMovie || ref.MediaType == models.SubtitleRunMediaEpisode
-	if p.asr == nil || !transcribable {
-		return p.recordSkip(ctx, ref, run, decision, skipStatus)
+	if !transcribable {
+		return p.recordSkip(ctx, ref, run, decision, skipStatus, decision.Reason)
+	}
+	if p.asr == nil {
+		return p.recordSkip(ctx, ref, run, decision, skipStatus, NoTextSourceRunPrefix+decision.Reason)
 	}
 
 	// The D6 stage stays inside the existing 12-value set: the media row
@@ -575,7 +587,7 @@ func (p *Pipeline) transcribeFallback(
 	case err == nil:
 		// fall through to the provenance record below
 	case errors.Is(err, services.ErrTranscriptionDisabled):
-		return p.recordSkip(ctx, ref, run, decision, skipStatus)
+		return p.recordSkip(ctx, ref, run, decision, skipStatus, NoTextSourceRunPrefix+decision.Reason)
 	case errors.Is(err, ai.ErrBudgetExceeded):
 		return p.pauseASRItem(ctx, ref, run, err)
 	default:
@@ -734,6 +746,24 @@ const CancelledRunPrefix = models.SubtitleRunCancelledPrefix
 // deadline, so only AutoGenerator rows ever carry it.
 const QueueTimeoutRunPrefix = models.SubtitleRunQueueTimeoutPrefix
 
+// NoTextSourceRunPrefix marks a `skipped` run that found no usable text
+// subtitle in the file AND could not fall back to speech recognition — no ASR
+// port wired in, or the service reported ErrTranscriptionDisabled (no ASR key,
+// no ffmpeg, or the key was removed mid-run). transcribeFallback is the only
+// writer: it is the one place that knows both facts at once, while the
+// router's sentence after the prefix cannot tell "ASR unavailable" from "ASR
+// never tried" (a deliberately skipped und track, which carries no prefix).
+// The live events read it through models.SubtitleRunFailureReason and send
+// failure_reason no_text_source (disc-2026-10-no-text-source-skip-a).
+//
+// AutoGenerator never sees it: the FreeOnly lane defers before
+// transcribeFallback (deferPaidItem), and excludedMediaIDs reads only the
+// deferred-paid prefix of skipped rows.
+//
+// The value lives in models (models.SubtitleRunNoTextSourcePrefix) so the
+// classifier reads the same prefix this writes.
+const NoTextSourceRunPrefix = models.SubtitleRunNoTextSourcePrefix
+
 // deferPaidItem is the FreeOnly brake (9R-10b AC #3): the run stops at the
 // threshold of a paid call, having spent nothing.
 //
@@ -804,21 +834,26 @@ func (p *Pipeline) deferPaidItem(
 }
 
 // recordSkip writes the two terminal rows for a routed-out item: the run is
-// `skipped` with the router's reason, and the media row takes the status that
+// `skipped` with runMessage, and the media row takes the status that
 // distinguishes "nothing to work with" (recoverable by P2 ASR) from "we
 // deliberately declined" (P0).
+//
+// runMessage is the router's reason, or — when transcribeFallback could not
+// reach speech recognition — NoTextSourceRunPrefix plus that reason. The
+// subtitle_progress event and the log keep the bare decision.Reason.
 func (p *Pipeline) recordSkip(
 	ctx context.Context,
 	ref MediaRef,
 	run *models.SubtitleRun,
 	decision RouteDecision,
 	status models.SubtitleStatus,
+	runMessage string,
 ) (*ProcessOutcome, error) {
 	completedAt := p.now().UTC()
 	run.Status = models.SubtitleRunSkipped
 	// error_message is the only free-text column on the row; for a skipped run
-	// it carries the routing reason, not a failure.
-	run.ErrorMessage = decision.Reason
+	// it carries the routing reason (optionally prefixed), not a failure.
+	run.ErrorMessage = runMessage
 	run.CompletedAt = &completedAt
 	p.stampRunSpend(ctx, run)
 

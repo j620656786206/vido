@@ -429,7 +429,12 @@ func (s *SoloRunner) emitTerminal(ref MediaRef, job *soloJob, outcome *ProcessOu
 // log and the activity page name the same cause
 // (disc-2026-10-live-activity-failure-reasons-a AC #2).
 //
-// The row is the record when the pipeline hands it back. When the run FAILED,
+// The row is the record when the pipeline hands it back. A SKIPPED row is read
+// the same way: when transcribeFallback could not reach speech recognition it
+// wrote the no-text-source prefix (NoTextSourceRunPrefix), and the code is
+// no_text_source (disc-2026-10-no-text-source-skip-a, live-a AC #1
+// [@contract-v2]); any other skipped row (its text is the router's reason)
+// comes out other. When the run FAILED,
 // failItem returns no outcome — only the error — and the stored message may
 // carry a prefix the error does not (failItem adds it from the error TYPE, and
 // a killed subprocess says "signal: killed", not "context canceled"). So the
@@ -505,6 +510,11 @@ func failureMessage(run *models.SubtitleRun, runErr error, budget *ai.Budget) (m
 	case runErr != nil:
 		return "字幕生成失敗", runErr.Error()
 	case run != nil && run.Status == models.SubtitleRunSkipped:
+		// A solo run reaches a skipped row only through transcribeFallback
+		// (the click sets TranscribeWhenSkipped), so it IS "no usable source
+		// and no speech recognition"; its failure_reason is no_text_source
+		// when the row carries the no-text-source prefix (soloFailureReason).
+		// The detail is the stored row text, prefix included.
 		return "這部影片沒有可用的字幕來源，也沒有設定語音辨識", run.ErrorMessage
 	case run != nil && run.Status == models.SubtitleRunFailed:
 		return "字幕生成失敗", run.ErrorMessage

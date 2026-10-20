@@ -97,6 +97,38 @@ func TestPipelineGenerationRunner_SkippedRunIsNotSuccess(t *testing.T) {
 	}
 }
 
+// disc-2026-10-no-text-source-skip-a AC #4: a skipped row carrying the
+// no-text-source prefix maps to the narrower ErrGenerationItemNoTextSource —
+// which still IS ErrGenerationItemSkipped — and any other skipped row maps to
+// ErrGenerationItemSkipped alone.
+func TestPipelineGenerationRunner_NoTextSourceSkipCarriesItsSentinel(t *testing.T) {
+	cases := []struct {
+		name      string
+		msg       string
+		noTextSrc bool
+	}{
+		{"prefixed row", subtitle.NoTextSourceRunPrefix + "no usable embedded text subtitle track (1 image-codec track(s), 0 text)", true},
+		{"deliberate und skip", "2 embedded text track(s) present but none tagged Chinese or eng/en — M1 never treats und as English", false},
+		{"bare router sentence", "no usable embedded text subtitle track (1 image-codec track(s), 0 text)", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fake := &fakeBatchItemProcessor{outcome: &subtitle.ProcessOutcome{
+				Run: &models.SubtitleRun{Status: models.SubtitleRunSkipped, ErrorMessage: tc.msg},
+			}}
+			r := pipelineGenerationRunner{pipeline: fake, available: func() bool { return true }}
+
+			err := r.ExecuteGeneration(context.Background(), "m-1", models.SubtitleRunMediaMovie, "", "")
+			if !errors.Is(err, services.ErrGenerationItemSkipped) {
+				t.Fatalf("every skipped run must still be ErrGenerationItemSkipped, got: %v", err)
+			}
+			if got := errors.Is(err, services.ErrGenerationItemNoTextSource); got != tc.noTextSrc {
+				t.Fatalf("errors.Is(err, ErrGenerationItemNoTextSource) = %v, want %v (err: %v)", got, tc.noTextSrc, err)
+			}
+		})
+	}
+}
+
 func TestPipelineGenerationRunner_CompletedRunIsSuccess(t *testing.T) {
 	fake := &fakeBatchItemProcessor{outcome: &subtitle.ProcessOutcome{
 		Run: &models.SubtitleRun{Status: models.SubtitleRunCompleted},

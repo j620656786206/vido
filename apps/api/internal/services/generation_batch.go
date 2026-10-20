@@ -48,7 +48,22 @@ var ErrGenerationSelectionInvalid = errors.New("selected media cannot run genera
 // subtitles (CR sub-4-2 H1). Legacy mode already fails these items via
 // ErrTranscriptionDisabled; this sentinel restores the same honesty for the
 // pipeline engine.
+//
+// Its failure_reason on the batch item is "" — except for the
+// ErrGenerationItemNoTextSource refinement below (no_text_source), and
+// ErrTranscriptionDisabled in legacy mode (asr_unconfigured)
+// (disc-2026-10-no-text-source-skip-a).
 var ErrGenerationItemSkipped = errors.New("generation item skipped by pipeline")
+
+// ErrGenerationItemNoTextSource is the skip whose run row carries the
+// no-text-source prefix: the file had no usable text subtitle AND speech
+// recognition could not be reached. It WRAPS ErrGenerationItemSkipped, so every
+// existing errors.Is(err, ErrGenerationItemSkipped) check still holds (reason
+// skipped, fail_count counted); the batch item's failure_reason becomes
+// no_text_source (disc-2026-10-live-activity-failure-reasons-a AC #1
+// [@contract-v2]). It travels as a type because the runner's error text is
+// prefixed with "media <id>: " — the row's prefix is not at its start.
+var ErrGenerationItemNoTextSource = fmt.Errorf("%w: no text source and speech recognition unavailable", ErrGenerationItemSkipped)
 
 // Generation-batch terminal/live statuses (AC 9 vocabulary, [@contract-v2] —
 // media ids are UUID STRINGS since 9R-18).
@@ -88,7 +103,10 @@ const (
 	GenerationBatchItemReasonNone GenerationBatchItemReason = ""
 	// Skipped: the item had nothing usable to generate from — the pipeline
 	// routed it out, or (legacy mode) generation is not configured. One name
-	// for both modes: it is the same situation seen from two engines.
+	// for both modes: it is the same situation seen from two engines. Since
+	// disc-2026-10-no-text-source-skip-a a skipped item may also carry a
+	// failure_reason (no_text_source / asr_unconfigured) — see
+	// GenerationBatchItemState.
 	GenerationBatchItemReasonSkipped GenerationBatchItemReason = "skipped"
 	// BusyElsewhere: the media was already being processed by the pool, a
 	// worker or the detail dialog.
@@ -144,10 +162,19 @@ type GenerationBatchItem struct {
 // GenerationBatchItemState is a queue entry plus its state (dsr-6d-a AC #1
 // [@contract-v1]). Every key is always present — reason is "" unless failed.
 //
-// failure_reason (disc-2026-10-live-activity-failure-reasons-a AC #1,
-// additive) is one of the models.SubtitleRunFailure* codes when status is
-// failed AND reason is error — the code the activity record gives the same
-// run, so the live log can word it the same way — and "" otherwise.
+// failure_reason (disc-2026-10-live-activity-failure-reasons-a AC #1
+// [@contract-v2]) is a models.SubtitleRunFailure* code when status is failed
+// and:
+//   - reason is error — the code the activity record gives the same run, so
+//     the live log can word it the same way;
+//   - reason is skipped — no_text_source when the runner returned
+//     ErrGenerationItemNoTextSource (no usable subtitle and no speech
+//     recognition), asr_unconfigured when it returned ErrTranscriptionDisabled
+//     (legacy mode, which never reads embedded tracks), "" for any other skip
+//     (e.g. an und track deliberately declined) — v2,
+//     disc-2026-10-no-text-source-skip-a.
+//
+// It is "" for every other status and reason.
 type GenerationBatchItemState struct {
 	GenerationBatchItem
 	Status        GenerationBatchItemStatus `json:"status"`
@@ -795,7 +822,8 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 			p.logger.Warn("generation batch item skipped — counted as failed",
 				"batch_id", batchID, "index", i+1, "total", len(items),
 				"media_id", item.MediaID, "title", item.Title, "reason", err)
-			p.markItem(batchID, i, item, GenerationBatchItemFailed, GenerationBatchItemReasonSkipped, "", budget)
+			p.markItem(batchID, i, item, GenerationBatchItemFailed, GenerationBatchItemReasonSkipped,
+				skippedFailureReason(err), budget)
 		case errors.Is(err, ErrTranscriptionInProgress):
 			// The user ran that item from the detail dialog mid-batch, or the
 			// pool owns it right now: count the failure, keep going (AC 5).
@@ -846,7 +874,8 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 // markItem moves queue entry i to status and updates the counters in the SAME
 // critical section (dsr-6d-a AC #1), then broadcasts a running event carrying
 // just that entry. Running also advances current_*. failureReason is the
-// failure_reason code — "" unless status is failed and reason is error.
+// failure_reason code — "" unless status is failed and reason is error or
+// skipped (see GenerationBatchItemState for which skips carry one).
 func (p *GenerationBatchProcessor) markItem(batchID string, i int, item GenerationBatchItem, status GenerationBatchItemStatus, reason GenerationBatchItemReason, failureReason string, budget *ai.Budget) {
 	var payload map[string]interface{}
 	p.withLock(func() {
@@ -872,6 +901,22 @@ func (p *GenerationBatchProcessor) markItem(batchID string, i int, item Generati
 		payload = batchEventData(b, budget, nil, &changed)
 	})
 	p.broadcastData(payload)
+}
+
+// skippedFailureReason is the failure_reason of a batch item the runner
+// skipped (disc-2026-10-no-text-source-skip-a): read from the error's TYPE,
+// never its text — the pipeline runner prefixes "media <id>: ".
+func skippedFailureReason(err error) string {
+	switch {
+	case errors.Is(err, ErrGenerationItemNoTextSource):
+		return models.SubtitleRunFailureNoTextSource
+	case errors.Is(err, ErrTranscriptionDisabled):
+		// Legacy (Route C) never reads embedded tracks, so "no usable
+		// subtitle source" would be unfounded; it is the ASR that is missing.
+		return models.SubtitleRunFailureASRUnconfigured
+	default:
+		return ""
+	}
 }
 
 // finish records the terminal status, keeps it as the last snapshot,

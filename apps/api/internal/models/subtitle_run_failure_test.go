@@ -174,17 +174,65 @@ func TestSubtitleRunFailureReason_LiveLogStrings(t *testing.T) {
 	}
 }
 
-// Every code the function can return is one of the eleven the contract names —
-// the web client's FAILURE_COPY_BY_REASON has exactly these keys.
+// disc-2026-10-no-text-source-skip-a AC #2: a skipped row that found no usable
+// subtitle and could not reach speech recognition is no_text_source — decided
+// by the write-time prefix ONLY, never by the router's English sentence.
+func TestSubtitleRunFailureReason_NoTextSource(t *testing.T) {
+	// The router's three explanation shapes (router.go) a skipped row carries.
+	routerReasons := []string{
+		"no usable embedded text subtitle track (2 image-codec track(s), 0 text)",
+		"stream 3 parsed but no cue survived SDH filtering",
+		"2 embedded text track(s) present but none tagged Chinese or eng/en — M1 never treats und as English",
+	}
+	for _, reason := range routerReasons {
+		t.Run("prefixed/"+reason, func(t *testing.T) {
+			assert.Equal(t, SubtitleRunFailureNoTextSource,
+				SubtitleRunFailureReason(SubtitleRunNoTextSourcePrefix+reason))
+		})
+		// Pins "never match the router's sentences": a skipped row written
+		// without the prefix (a deliberate und skip, or a row from before
+		// the prefix existed) stays other.
+		t.Run("bare/"+reason, func(t *testing.T) {
+			assert.Equal(t, SubtitleRunFailureOther, SubtitleRunFailureReason(reason))
+		})
+	}
+
+	// The prefix must beat every later rule's words.
+	for _, tail := range []string{
+		"stream 2 probe timed out",
+		"context canceled while reading tracks",
+		"context deadline exceeded",
+		"transcription unavailable",
+	} {
+		t.Run("prefix wins over/"+tail, func(t *testing.T) {
+			assert.Equal(t, SubtitleRunFailureNoTextSource,
+				SubtitleRunFailureReason(SubtitleRunNoTextSourcePrefix+tail))
+		})
+	}
+
+	// The auto-generation free lane's deferral is a different skip.
+	assert.Equal(t, SubtitleRunFailureOther,
+		SubtitleRunFailureReason("deferred-paid: no usable embedded text subtitle track (1 image-codec track(s), 0 text)"))
+	// The prefix only counts at the start.
+	assert.Equal(t, SubtitleRunFailureOther,
+		SubtitleRunFailureReason("media m1: "+SubtitleRunNoTextSourcePrefix+routerReasons[0]))
+}
+
+// Every code the function can return is one of the twelve the contracts name:
+// the activity record (disc-2026-10-activity-subtitle-run-time-a AC #1
+// [@contract-v2]) and the live events
+// (disc-2026-10-live-activity-failure-reasons-a AC #1 [@contract-v2], which
+// added no_text_source). The web client's FAILURE_COPY_BY_REASON carries these
+// keys (no_text_source lands with disc-2026-10-no-text-source-skip-b).
 func TestSubtitleRunFailureReason_CodesAreTheContract(t *testing.T) {
 	contract := map[string]bool{
-		"queue_timeout": true, "cancelled": true, "budget_exceeded": true, "credit_exhausted": true,
+		"no_text_source": true, "queue_timeout": true, "cancelled": true, "budget_exceeded": true, "credit_exhausted": true,
 		"target_not_writable": true, "no_audio_track": true, "ffmpeg_missing": true,
 		"asr_unconfigured": true, "unauthorized": true, "timeout": true, "other": true,
 	}
 	seen := map[string]bool{SubtitleRunFailureOther: true}
 	for _, r := range subtitleRunFailureRules {
-		assert.Truef(t, contract[r.reason], "rule code %q is not in the [@contract-v2] list", r.reason)
+		assert.Truef(t, contract[r.reason], "rule code %q is in neither contract list (activity [@contract-v2], live events [@contract-v2])", r.reason)
 		assert.Falsef(t, seen[r.reason], "code %q has two rules — merge them so the order stays readable", r.reason)
 		seen[r.reason] = true
 	}

@@ -1,6 +1,6 @@
 # Disc（後端）：生成字幕再也不會蓋掉使用者自己放的英文字幕檔
 
-Status: ready-for-dev
+Status: done
 
 **Source:** `backlog-movie-generate-overwrites-existing-en-srt`（P1）。2026-10-19 準備 FB 新貼文截圖時在正式機重現；⚖️ Alexyu 同日「請 Bob 把 P1 開成 story」。依 Story Splitting Rule 拆兩張：
 - **本單 `-a`**：安全網——不管走哪條路，**絕不覆寫使用者原本的 `.en.srt`**（純後端、小）。
@@ -62,4 +62,29 @@ Status: ready-for-dev
 
 ### Completion Notes
 
-（dev 填）
+- **做法：** 新增 `apps/api/internal/services/transcript_sidecar.go` 的 `saveEnglishTranscript`。`<base>.en.srt` 那個名字上**有任何東西**（使用者的檔、甚至讀不到狀態的東西）就改寫 `<base>.vido.en.srt`；只有那個名字完全空著才寫 `<base>.en.srt`。寫入是「同資料夾暫存檔（檔名含 `.tmp.`，字幕清單和 miner 都會跳過）→ chmod 0644 → rename」，失敗會刪暫存檔。`runPipeline` Phase 3 改呼叫它，`srtPath` 就是實際寫入的檔，所以 `transcription_complete` 的 `srt_path`、`untranslated` 寫回的路徑、帳本輸出都跟著對（AC #5）。
+- **續跑（AC #3）不用改：** `resumeSource` 本來就讀媒體列**記錄的路徑**，不是用檔名去猜。新稿記成 `.vido.en.srt` 就從它續；升級前記成 `.en.srt` 的照舊續；`untranslated` 以外的狀態一律不續（既有 `TestRunTranscription_NoResumeWhenStatusNotUntranslated` 仍綠）。
+- **連帶修一處：** `subtitle/inventory.go` 的 `sidecarLanguage` 原本取檔名標籤第一段當語言，`.vido.en.srt` 會被標成語言「vido」。現在先去掉開頭的 `vido.`，讀成英文；管理字幕對話框的「現有字幕」和單集的 subtitle_tracks 都走這裡。
+- **檢查過、不用改：** miner 的英文片旁字幕依檔名排序，`X.en.srt` 排在 `X.vido.en.srt` 前面，兩個都在時仍先用使用者的；`.en.srt` 全專案只有這一個寫入點。
+- **給 `-b2` 的提醒：** 路由把片旁英文字幕當翻譯來源時，`.vido.en.srt` 是 Vido 自己的聽寫稿，不是使用者的字幕，要另外決定要不要用。
+- **測試（AC #4，真檔案系統 `t.TempDir()`）：** `transcript_sidecar_test.go`——
+  - `saveEnglishTranscript` 五個：空著寫原名＋權限 0644＋沒留暫存檔；使用者檔不動、稿子進 `.vido.en.srt`；第二次重寫自己的稿；名字被資料夾占住也算占用；rename 失敗不留暫存檔、使用者檔不動。
+  - 續跑：`untranslated` 記錄 `.vido.en.srt` → 只翻譯、送去翻的是聽寫稿不是使用者檔、使用者檔不動。
+  - **整條跑一次（真 ffmpeg 做兩秒的片＋假聽寫＋假翻譯）**：電影、單集各一，使用者 `.en.srt` 一個 byte 不變、聽寫稿在 `.vido.en.srt`、`.zh-Hant.srt` 有產生、完成事件的 `srt_path` 指向 `.vido.en.srt`；旁邊沒字幕時照舊寫 `.en.srt`。沒有 ffmpeg 的環境（CI）這三個會 skip，前面六個照跑。
+  - 把修正拿掉重跑：電影、單集兩個整條測試都 FAIL（證明測得到原本的 bug）。
+- **檢查：** `go test ./...` 全綠、`go vet` 乾淨、`~/go/bin/staticcheck ./...` 乾淨、`lint:all`「✖ 170 problems (0 errors」、`format:check` 通過。
+- **跨模型 CR（Sonnet，2026-10-20）：** 沒有 blocker。
+  - 修了一條 should-fix：片庫的「有沒有中文字幕」判斷（`models/chinese_subtitle.go` 的 `classifyTag`）會把 `vido.en` 的第一段「vido」當成看不懂的標籤，判成「不確定」而不是「沒有中文」。現在把 `vido` 加進 `nonLanguageSegments`，並補了測試案例。
+  - 沒改的 nit：(1) 檢查檔案和 rename 之間如果使用者剛好放進 `.en.srt`，還是會蓋掉。這個空檔只有幾毫秒；改用 hardlink 防的話，NAS 的 SMB／shfs 不一定支援，所以不做。(2) 以前 Vido 自己寫的 `.en.srt` 分不出是不是使用者的檔，重新生成時會留著，另外寫 `.vido.en.srt`。這是安全的那一邊。(3) CI 沒有 ffmpeg，三個整條測試在 CI 會 skip，本機有跑過。
+- **正式機驗證（AC #6，2026-10-20 09:29，映像 revision `2dfe4efd`）：** 通過。對《Tears of Steel》按生成字幕（`POST /movies/:id/transcribe?translate=true`，估價 $0.19、實花 $0.068，ElevenLabs 聽寫 6 段＋翻譯 1 次，32 秒）。
+  ```
+  -rw-r--r-- 1 nobody users  4764 Oct 19 21:04 Tears of Steel (2012).en.srt        ← 沒動（時間仍是 10-19）
+  -rw-r--r-- 1 nobody users  5179 Oct 20 09:30 Tears of Steel (2012).vido.en.srt   ← 聽寫稿（開頭 Roger, Roger.）
+  -rw-r--r-- 1 nobody users  5445 Oct 20 09:30 Tears of Steel (2012).zh-Hant.srt
+  -rw-r--r-- 1 nobody users  5477 Oct 19 20:53 Tears of Steel (2012).zh-Hant.srt.bak
+  ce9578f6fe098a5821045a38884b229160f9e7ba27890448a92f5be330c6e6fe  .en.srt（跑之前、跑之後都一樣）
+  0730db7594726f281b9f04ccc5e83a387de29f223cac103a388bfea8fe94b3bb  .vido.en.srt
+  c48d681175e91c36eac595e3ec5587bf8f8f499c382e31d2887d8b987de83969  .zh-Hant.srt
+  ```
+  log：`transcription complete … srt_path=".../Tears of Steel (2012).vido.en.srt"`。字幕清單 API 把兩個英文檔都標成 `en`。
+  - 觀察到、沒修：清單裡 `.vido.en.srt` 的 `is_vido_output` 是 false（只有記錄的 zh-Hant 路徑會被標成 Vido 產的），所以對話框會把它寫成「英文・本地檔案」。不影響使用者的檔，等 `-b3` 改對話框時一起看。
