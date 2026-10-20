@@ -333,9 +333,17 @@ function QueueRow({
           <span className="line-clamp-2 break-words text-base font-semibold text-[var(--text-primary)]">
             {queueRowTitle(item)}
           </span>
+          {/* A failed / skipped row's line is its REASON: always whole, wrapping
+              at any width (F8-SPEC-ROW NfHKO, F11-SPEC-LOG ④b XHbwN) — at 1024
+              the 19-character skip reason needs 266px of a 242px column.
+              Every other line stays one line from sm up, so a changing 翻譯中…
+              never makes the row jump (disc-2026-10-gen-queue-reason-wrap-desktop). */}
           <span
             className={cn(
-              'truncate text-sm max-sm:whitespace-normal',
+              'text-sm',
+              item.status === 'failed'
+                ? 'whitespace-normal break-words'
+                : 'truncate max-sm:whitespace-normal',
               isRunning ? label.className : 'text-[var(--text-secondary)]'
             )}
           >
@@ -396,7 +404,7 @@ const FEED_GLYPH: Record<FeedGlyph, typeof Check> = {
 /**
  * One log row (F11 `evt-N`, F11-SPEC-LOG tT3JX): glyph 16 + a content column.
  * Line 1: stage · `·` film … trailing value — the film name wraps to two lines
- * at most, then ends in …. Line 2 (④ 失敗 / ⑤ / ⑤b 已停止 only): the reason,
+ * at most, then ends in …. Line 2 (④ 失敗 / ④b 已略過 / ⑤ / ⑤b 已停止 only): the reason,
  * whole, with no `·`, left edge under the stage word because the column starts
  * after the glyph. A long reason therefore never squeezes the film name away
  * (disc-2026-10-generation-queue-failure-reason). The glyph centres on the

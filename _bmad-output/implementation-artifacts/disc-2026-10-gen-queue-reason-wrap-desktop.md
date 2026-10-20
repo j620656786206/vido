@@ -1,6 +1,6 @@
 # Disc：生成畫面左邊佇列，桌機中等寬度時失敗／已略過的原因可能被「…」切掉
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 2026-10-20 Sally 畫 F11「已略過」稿（PR #866）時發現。**推測、還沒量過**——開工第一步就是量。
 
@@ -46,13 +46,13 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] T0：確認 #866 已合併（AC #0）
-- [ ] T1：1024／1280 真瀏覽器量測，記錄數字（AC #1）
-- [ ] T2：修兩段註解（AC #4）
-- [ ] T3（被切才做）：失敗／已略過列原因行改可折行（AC #2）＋ spec（AC #5）
-- [ ] T4（被切才做）：改完量 1024／1280／1440／390／320（AC #3）
-- [ ] T5（被切才做）：視覺基準（AC #6）＋ UX 截圖（AC #7）
-- [ ] T6：全綠（AC #8）
+- [x] T0：確認 #866 已合併（AC #0）
+- [x] T1：1024／1280 真瀏覽器量測，記錄數字（AC #1）
+- [x] T2：修兩段註解（AC #4）
+- [x] T3（被切才做）：失敗／已略過列原因行改可折行（AC #2）＋ spec（AC #5）
+- [x] T4（被切才做）：改完量 1024／1280／1440／390／320（AC #3）
+- [x] T5（被切才做）：視覺基準（AC #6）＋ UX 截圖（AC #7）
+- [x] T6：全綠（AC #8）
 
 ## Dev Notes
 
@@ -86,13 +86,43 @@ Status: ready-for-dev
 | 日期 | 變更 |
 |---|---|
 | 2026-10-20 | 建單（Bob）。Sally 推測 1024～1200 寬佇列原因被「…」切掉，先量再改；只讓失敗／已略過列原因折行；順手修兩段過期註解。⛔ 等 PR #866 合併。 |
+| 2026-10-20 | Dev（Amelia）：1024 量到被切（266 > 242）→ 失敗／已略過列原因行改折行；兩段註解修好；基準不變。Status → done。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia）
+
 ### Debug Log References
+
+- 量測用暫時的 Playwright spec（chromium，`/activity?view=generation`，狀態查詢 `last` ＋假 SSE stub，量完刪掉、不進版控）。截圖在 session scratchpad `shots/`（before-*／after-*）。
 
 ### Completion Notes List
 
+- **AC #0：** #866 已合併（7806c98d）；`pen-node-ids.json` 列得到 `LJCbp`、`XHbwN`。
+- **AC #1 量測（改之前）：** 佇列三部片：和平使者 S01E01（`skipped + no_text_source`，19 字原因）、魔戒首部曲：魔戒現身 加長版導演剪輯特別收藏版（`error + target_not_writable`「影片所在的資料夾寫不進字幕」）、駭客任務（完成）。即時活動欄都有顯示、三列。
+  - **1024：被切。** 略過列說明行 `scrollWidth 266 > clientWidth 242`，畫面是「沒有可用的字幕來源，也沒有設定語…」。即時活動欄 304 寬。
+  - 1280：沒切（略過列 402／402、失敗列 394／394）；即時活動欄 400。
+  - 1440：沒切（562／562）。390、320：本來就折行、整句（略過列 390 兩行、320 三行）。
+  - → 有一個寬度被切，做 AC #2～#5。
+- **附帶發現（改之前，同一份舊程式）：** 1024 的即時活動欄 304 寬是長原因「不折行」把左欄最小寬度撐大、擠窄右欄的副作用。換成一般內容再量：只有完成／排隊中時即時活動欄 396、文字欄 142，**「已完成，字幕已寫入檔案」本來就被切**（154 > 142）；一完成一失敗時即時活動欄 368、文字欄 170，**失敗原因「影片所在的資料夾寫不進字幕」也被切**（182 > 170）。1100、1200 都沒切。所以原因被切在 1024 不只略過那句，一般失敗也會。
+- **AC #2：** 說明行 class 改成：`status === 'failed'`（含已略過）→ `whitespace-normal break-words`（不截斷、不限行數）；其他狀態 → 照舊 `truncate max-sm:whitespace-normal`。處理中那行顏色（`label.className`）沒動，文字沒動。
+- **AC #3 量測（改之後）：**
+  - 1024：略過列原因 150／150 折兩行整句；失敗列原因 142／142 折兩行整句；片名最多兩行（魔戒兩行後「…」）；徽章一行（高 30）；頁面寬 1024 無橫捲。即時活動欄回到 396（跟一般內容的舊行為一樣）。完成列「已完成，字幕已寫入…」照舊被切——屬上面講的既有狀況，story 規定其他狀態維持 truncate，本單不動。
+  - 1280：略過 402／402、失敗 394／394，一行整句；即時活動 400；無橫捲。
+  - 1440：562／562、554／554，一行整句；無橫捲。
+  - 390：略過兩行、失敗一行、完成一行，跟改之前一樣；320：略過三行、失敗兩行、完成兩行，跟改之前一樣；無橫捲。
+- **AC #4：** `generationEventCopy.ts` 檔頭改指 F11-SPEC-LOG ④b 已略過（`XHbwN`）；`FeedRowItem` 註解補上 ④b 已略過。
+- **AC #5：** `GenerationWorkspaceV2.spec.tsx` 加一支：失敗列與已略過列說明行沒有 `truncate`、有 `whitespace-normal`、沒有 `line-clamp`、仍是次要色；完成、排隊中、處理中仍有 `truncate max-sm:whitespace-normal`。先寫先紅（舊 class 有 `truncate`）；改完綠；故意把失敗分支加回 `truncate` → 紅，還原。
+- **AC #6 視覺基準：** 全套 visual 本機綠。`generation-workspace-v2` 六張 darwin 刪掉後 `update-missing` 重產比對：五張 byte 相同（含 `complete-with-failures`——畫廊寬 1200、沒有側欄，原因本來就一行）；`credit_exhausted` 有 byte 差，但它沒有失敗列，是重產雜訊，已還原。**沒有基準要換**，不需要 CI bootstrap。
+- **AC #7 UX：** 1280 截圖對 F11-D-v2（`f11-d-v2.png`）佇列列：失敗、已略過列原因整句在片名下一行，排法一致；1024 原因折行整句，符合 F8-SPEC-ROW／F11-SPEC-LOG ④b「整句、會折行、不截斷」。
+- **AC #8：** `pnpm nx run web:test` 298 檔／4854 支全綠；`web:typecheck` 綠；`lint:all` 0 errors（✖ 168／170 problems 都是 warnings）；`format:check` 綠；`check-design-refs.py` 綠。沒刪改 testid；另跑 `generation-workspace.spec.ts`、`generation-workspace-mobile.spec.ts`（chromium＋mobile-chrome）14 支綠、6 支照設計 skip。
+
 ### File List
+
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.tsx
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.spec.tsx
+- apps/web/src/components/subtitle/generationEventCopy.ts（只改註解）
+- _bmad-output/implementation-artifacts/disc-2026-10-gen-queue-reason-wrap-desktop.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml

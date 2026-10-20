@@ -393,6 +393,53 @@ describe('GenerationWorkspaceV2 — items-first rows (dsr-6d-c-1 AC #2)', () => 
     expect(badge!.className).toContain('bg-[var(--success-tint)]');
     expect(badge!.textContent).toContain('完成');
   });
+
+  it('[P0] a failed / skipped row wraps its reason whole; other rows still truncate (disc-2026-10-gen-queue-reason-wrap-desktop)', () => {
+    // At 1024 wide the live log leaves the queue's text column 242px, and the
+    // 19-character skip reason needs 266px — it used to end in 「…」.
+    // F8-SPEC-ROW / F11-SPEC-LOG: a reason is always whole and wraps.
+    render(
+      <GenerationWorkspaceV2
+        {...props({
+          progress: progress({
+            currentMediaId: 'm12',
+            items: [
+              item('m0', '沙丘：第二部', 'done'),
+              { ...item('m4', '星際效應', 'failed', 'skipped'), failureReason: 'no_text_source' },
+              {
+                ...item('m5', '奧本海默', 'failed', 'error'),
+                failureReason: 'target_not_writable',
+              },
+              item('m12', '花月殺手', 'running'),
+              item('m20', '沙丘', 'queued'),
+            ],
+          }),
+        })}
+      />
+    );
+    const sub = (id: string, text: string) =>
+      within(screen.getByTestId(`workspace-queue-row-${id}`)).getByText(text);
+
+    for (const reason of [
+      sub('m4', '沒有可用的字幕來源，也沒有設定語音辨識'),
+      sub('m5', '影片所在的資料夾寫不進字幕'),
+    ]) {
+      expect(reason.className).not.toContain('truncate');
+      expect(reason.className).toContain('whitespace-normal');
+      expect(reason.className).not.toContain('line-clamp');
+      expect(reason.className).toContain('--text-secondary');
+    }
+    // Everything else keeps one line on desktop: a long 翻譯中… line would
+    // otherwise make the row (and the queue) jump as it changes.
+    for (const line of [
+      sub('m0', '已完成，字幕已寫入檔案'),
+      sub('m20', '等待前面項目完成'),
+      within(screen.getByTestId('workspace-queue-row-m12')).getByText(/…$/),
+    ]) {
+      expect(line.className).toContain('truncate');
+      expect(line.className).toContain('max-sm:whitespace-normal');
+    }
+  });
 });
 
 describe('GenerationWorkspaceV2 — terminal honesty (dsr-6d-c-1 AC #4/#5)', () => {
