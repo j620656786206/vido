@@ -1,6 +1,6 @@
 # Disc（後端）：先免費檢查「影片旁邊的英文字幕」跟影片對不對得上
 
-Status: review
+Status: done
 
 **Source:** 傘狀單 `disc-2026-10-generate-keeps-user-en-srt-b` 拆出的第一張。⚖️ Alexyu 2026-10-19（party mode 選 A）：片旁英文字幕可以拿來翻（推翻 sub-1-4 的範圍限制），但要**先免費檢查時間軸**：對得上才用；對不上就用白話告訴使用者，讓他自己選。**不准默默改走比較貴的聽寫。**
 
