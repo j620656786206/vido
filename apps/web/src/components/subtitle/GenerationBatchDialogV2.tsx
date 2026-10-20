@@ -1,4 +1,4 @@
-// Design ref: ux-design.pen Screen F8-D-v2 (i9Nun1) + Screen F8-M-v2 (H717g) · F9b-D-v2 (YHnnC)
+// Design ref: ux-design.pen Screen F8-D-v2 (i9Nun1) + Screen F8-M-v2 (H717g) · F9b-D-v2 (YHnnC) · F8-SPEC-ROW (NfHKO)
 /**
  * 產生字幕 dialog (Story ux3-subtitle-v2-batch F8 execution shell; idle branch
  * REPLACED by the sub-4-3 consent flow). Screens: F8-D-v2 i9Nun1 / F8-M-v2
@@ -59,7 +59,13 @@ import {
 } from '../../hooks/useGenerationProgress';
 import { GenerationProgressV2 } from './GenerationProgressV2';
 import { GenerationConsentView } from './consent/GenerationConsentView';
-import { queueRowLabel, queueRowTitle, type QueueRowView } from './generationQueueRow';
+import {
+  queueRowBadge,
+  queueRowLabel,
+  queueRowTitle,
+  type QueueRowLabel as QueueRowLabelT,
+  type QueueRowView,
+} from './generationQueueRow';
 import { libraryKeys } from '../../hooks/useLibrary';
 import { detailKeys } from '../../hooks/useMediaDetails';
 import { activityKeys } from '../../hooks/useActivity';
@@ -173,20 +179,38 @@ const FALLBACK_STATUS: Record<RowState, GenerationBatchItemState['status']> = {
   stopped: 'cancelled',
 };
 
-function RowStageLabel({
-  view,
-  phase,
-}: {
-  view: QueueRowView;
-  phase?: GenerationProgressState['phase'] | null;
-}) {
+/**
+ * The words one queue row draws (disc-2026-10-generation-queue-failure-reason
+ * AC #19, F8-SPEC-ROW NfHKO). A FAILED row has something to explain, so it
+ * splits: the status slot says the short 失敗 (colour + icon still from
+ * queueRowLabel) and the full reason becomes `detail`, a second line of its
+ * own. Every other status keeps its one-line label and has no `detail`.
+ */
+function queueRowLines(
+  view: QueueRowView,
+  phase?: GenerationProgressState['phase'] | null
+): { label: QueueRowLabelT; detail: string | null } {
   const label = queueRowLabel(view, phase);
+  if (view.status !== 'failed') return { label, detail: null };
+  return { label: { ...label, text: queueRowBadge(view, '') }, detail: label.text };
+}
+
+function RowStageLabel({ mediaId, label }: { mediaId: string; label: QueueRowLabelT }) {
+  // The outer box is exactly ONE title line tall (`text-sm` + `h-[1lh]` = the
+  // title's own line-height, 22.75px with the zh-TW type scale), so the word
+  // centres on the title's FIRST line however many lines the title wraps to
+  // (AC #20) — no mt-[Npx] guess that breaks when the type scale moves.
   return (
-    <span className={cn('flex shrink-0 items-center gap-1.5 text-xs', label.className)}>
-      {label.icon === 'check' && <Check className="h-4 w-4" aria-hidden="true" />}
-      {label.icon === 'alert' && <CircleAlert className="h-4 w-4" aria-hidden="true" />}
-      {label.icon === 'pause' && <CirclePause className="h-3.5 w-3.5" aria-hidden="true" />}
-      {label.text}
+    <span className="flex h-[1lh] shrink-0 items-center text-sm">
+      <span
+        data-testid={`gen-batch-row-stage-${mediaId}`}
+        className={cn('flex items-center gap-1.5 text-xs', label.className)}
+      >
+        {label.icon === 'check' && <Check className="h-4 w-4" aria-hidden="true" />}
+        {label.icon === 'alert' && <CircleAlert className="h-4 w-4" aria-hidden="true" />}
+        {label.icon === 'pause' && <CirclePause className="h-3.5 w-3.5" aria-hidden="true" />}
+        {label.text}
+      </span>
     </span>
   );
 }
@@ -353,6 +377,10 @@ function QueueRow({
   // running row may make it. A failed row used to draw 提取音訊中 underneath
   // its own 失敗 label (dsr-6d-b 🔴 #9).
   const showStepper = item.status === 'running';
+  const { label, detail } = queueRowLines(
+    { status: item.status, reason: item.reason, failureReason: item.failureReason },
+    activeItemProgress?.phase
+  );
   return (
     <li
       data-testid={`gen-batch-row-${item.mediaId}`}
@@ -366,13 +394,24 @@ function QueueRow({
           aria-hidden="true"
           className="h-[54px] w-[38px] shrink-0 rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)]"
         />
-        <span className="min-w-0 flex-1 truncate text-sm text-[var(--text-primary)]">
-          {queueRowTitle(item)}
-        </span>
-        <RowStageLabel
-          view={{ status: item.status, reason: item.reason, failureReason: item.failureReason }}
-          phase={activeItemProgress?.phase}
-        />
+        {/* Two-line row (AC #18): line one = title (≤2 lines) + status word,
+            line two = the failure reason — never squeezed beside the title. */}
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex items-start gap-3">
+            <span className="line-clamp-2 min-w-0 flex-1 break-words text-sm text-[var(--text-primary)]">
+              {queueRowTitle(item)}
+            </span>
+            <RowStageLabel mediaId={item.mediaId} label={label} />
+          </div>
+          {detail && (
+            <p
+              data-testid={`gen-batch-row-detail-${item.mediaId}`}
+              className="break-words text-sm text-[var(--text-secondary)]"
+            >
+              {detail}
+            </p>
+          )}
+        </div>
       </div>
       {showStepper && (
         <div className="sm:pl-12">

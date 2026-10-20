@@ -153,6 +153,22 @@ describe('feedRowView', () => {
     }
   });
 
+  // Contract v2 (#855): the backend now really sends no_text_source on a single
+  // job. This build has no sentence for it yet (disc-2026-10-no-text-source-
+  // skip-b adds one — flip this expectation there); until then it must land on
+  // the same 生成失敗 the screen showed before #855, not crash or go blank.
+  it('contract v2: no_text_source (not worded until -b) falls back to 生成失敗', () => {
+    expect(
+      feedRowView({
+        seq: 1,
+        kind: 'failed',
+        ...film,
+        reason: null,
+        failureReason: 'no_text_source',
+      })
+    ).toMatchObject({ stage: '失敗', parts: ['奧本海默'], detail: '生成失敗' });
+  });
+
   it('⑤ a single job stopped by the budget is 已停止 in ochre', () => {
     const v = feedRowView({
       seq: 1,

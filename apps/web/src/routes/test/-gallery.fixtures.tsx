@@ -6961,6 +6961,68 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     statesOnly: ['default'],
   },
   {
+    // disc-2026-10-generation-queue-failure-reason AC #18–#22 (F8-SPEC-ROW
+    // NfHKO): on a phone the failure reason used to sit BESIDE the title and
+    // squeeze it to one character (「和…」at 320). Failed rows are now two
+    // lines — title (≤2 lines) + 失敗, then the reason — so 「和平使者 S01E01」
+    // reads in full and the long episode title clamps with 「…」.
+    id: 'generation-batch-dialog-v2/failures-long-titles-mobile',
+    label: 'subtitle/GenerationBatchPanelV2 (failed rows two lines — long titles) — 手機 sheet',
+    component: GenerationBatchPanelV2,
+    props: {
+      open: true,
+      status: 'running',
+      progress: {
+        batchId: 'gb-fx-3',
+        totalItems: 4,
+        currentIndex: 4,
+        currentMediaId: BATCH_FX_IDS[3],
+        currentItem: '怪奇物語 S04E07 第七章',
+        successCount: 0,
+        failCount: 3,
+        pausedCount: 0,
+        status: 'running',
+        spentUsd: 0.42,
+        budgetUsd: 5,
+        items: [
+          {
+            ...BATCH_FX_ITEMS[0],
+            title: '和平使者 S01E01',
+            status: 'failed',
+            reason: 'error',
+            failureReason: 'target_not_writable',
+          },
+          {
+            ...BATCH_FX_ITEMS[1],
+            title: '和平使者 S01E01 — 一個很長很長的集名標題，長到兩行也放不下的那一種',
+            status: 'failed',
+            reason: 'error',
+            failureReason: 'target_not_writable',
+          },
+          { ...BATCH_FX_ITEMS[2], title: '花月殺手', status: 'failed', reason: 'skipped' },
+          batchFxItem(3, 'running'),
+        ],
+      },
+      items: BATCH_FX_ITEMS.slice(0, 4),
+      activeItemProgress: {
+        phase: 'transcribing',
+        failedPhase: null,
+        percentage: null,
+        message: '正在轉錄音訊',
+        jobId: 'job-fx',
+        error: null,
+        srtPath: null,
+        zhSrtPath: null,
+      },
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F8-M-v2 (H717g) + F8-SPEC-ROW (NfHKO)
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
     // sub-7-6c AC #2 — F8c-D-v2 (gWFcx): the completion RECEIPT replaces
     // 本次用量／上限 and the SSE chip once the batch has ended. Three rows, not
     // five: on the desktop the receipt sits at the END of the scrolling body

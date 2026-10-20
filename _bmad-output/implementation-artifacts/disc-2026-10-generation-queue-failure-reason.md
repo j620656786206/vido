@@ -1,6 +1,6 @@
 # Disc：生成畫面的失敗原因——左邊佇列講出原因、右邊即時活動把原因放第二行，片名不再被擠掉
 
-Status: in-progress（2026-10-20 重開：PR #851 為「對話框佇列列改兩行」重開，見「2026-10-20 追加」；原：Sally 稿 `disc-2026-10-live-activity-row-layout-design` 已跟本檔同一個 PR 合併，2026-10-19 解除 blocked）
+Status: done（2026-10-20 對話框兩行做完、量測合格、PR #851 合併；原：2026-10-20 重開：PR #851 為「對話框佇列列改兩行」重開，見「2026-10-20 追加」；原：Sally 稿 `disc-2026-10-live-activity-row-layout-design` 已跟本檔同一個 PR 合併，2026-10-19 解除 blocked）
 
 **Source（兩件事併一張）：**
 1. `disc-2026-10-live-activity-failure-reasons-b`（PR #846）合併時 dev 回報（範圍外）：生成字幕畫面右邊「即時活動」已經寫「影片所在的資料夾寫不進字幕」，左邊「生成佇列」同一部片還寫「生成失敗」——同一個畫面、同一次失敗，兩邊對不起來。⚖️ **Alexyu 2026-10-19 裁定 2A：** 開單補上，佇列失敗項目改用同一份失敗原因文字（`FAILURE_COPY_BY_REASON`）。
@@ -162,11 +162,11 @@ Status: in-progress（2026-10-20 重開：PR #851 為「對話框佇列列改兩
 - [x] **T3 右欄即時活動（AC #7–#9）**：`generationEventCopy.ts`（`FeedRowView.detail`、`view()`、`failedView`、⑤⑤b）、`GenerationWorkspaceV2.tsx`（`FeedRowItem` 兩行排法、圖示對第一行、片名兩行）、註解。
 - [x] **T4 測試（AC #10–#13）**：三方一致性、改寫既有 `parts` 斷言、四個 spec 新增、七種故意改壞。
 - [x] **T5 量測＋UX 驗收＋基準＋收尾（AC #14–#17）**：390／320／1440 量測、對三張稿、新夾具、`complete-with-failures` darwin 更新與 linux 刪除、lint／typecheck／format／design-refs／E2E；更新 `sprint-status.yaml`。
-- [ ] **T6 對話框佇列列兩行（2026-10-20 追加，AC #18–#24）**：contract v2 重新確認（Dev Notes STALE 下方）；`GenerationBatchDialogV2.tsx` `QueueRow`／`RowStageLabel`；測試與三種故意改壞；320／390／880 量測；對話框基準 darwin 更新、linux 刪除；對 F8 三張稿。
+- [x] **T6 對話框佇列列兩行（2026-10-20 追加，AC #18–#24）**：contract v2 重新確認（Dev Notes STALE 下方）；`GenerationBatchDialogV2.tsx` `QueueRow`／`RowStageLabel`；測試與三種故意改壞；320／390／880 量測；對話框基準 darwin 更新、linux 刪除；對 F8 三張稿。
 
 ## Dev Notes
 
-> ⚠️ STALE [@contract-v1→v2]: upstream disc-2026-10-live-activity-failure-reasons-a AC #1 bumped 2026-10-20; re-confirm against v2 before dev — see disc-2026-10-no-text-source-skip-a
+> ✅ confirmed against [@contract-v2] (Story disc-2026-10-live-activity-failure-reasons-a AC #1) 2026-10-20 by dev — 原 STALE 標記已解除，結果見 Completion Notes「contract v2 重新確認」。原文：STALE [@contract-v1→v2]: upstream … AC #1 bumped 2026-10-20; re-confirm against v2 before dev — see disc-2026-10-no-text-source-skip-a
 >
 > 上游變了什麼：`failure_reason` 多一個值 `no_text_source`（共十二個）；批次 `reason == "skipped"` 的項目現在也可能帶代碼（`no_text_source`／`asr_unconfigured`，其餘仍是 `""`）。本單只細分 `reason == "error"`，照字面不受影響，但 `FAILURE_COPY_BY_REASON` 的鍵清單／一致性測試若用 `Object.keys` 逐一比對，要確認 `no_text_source` 由誰加（`-b` 計畫在 `runFailureCopy.ts` 加）。
 >
@@ -241,6 +241,7 @@ Status: in-progress（2026-10-20 重開：PR #851 為「對話框佇列列改兩
 |---|---|
 | 2026-10-19 | 建單（Bob）。 |
 | 2026-10-20 | `-a`（#855）stale-mark：契約升 `[@contract-v2]`。 |
+| 2026-10-20 | Amelia：T6 完成——對話框失敗列兩行（狀態字「失敗」＋第二行原因、片名最多兩行、狀態字對齊片名第一行）；contract v2 重新確認、STALE 解除；量測 320／390／880 合格；基準 `complete-with-failures`／`budget_ceiling-mobile` 更新、新增 `failures-long-titles-mobile`；Status → done。 |
 | 2026-10-20 | Bob：重開（PR #851）。新增「2026-10-20 追加：對話框佇列列改兩行（Alexyu 選 B，Sally 裁定）」AC #18–#24、T6；STALE 下方加 contract v2 重確認說明；AC #6、#14 對話框部分標為被取代；Status → in-progress。 |
 
 ## Dev Agent Record
@@ -261,6 +262,12 @@ Claude Opus 5.5（claude-opus-5-5）
   - (vii) 佇列片名改回 `truncate` → 2 紅；說明行改 `--error-text` → 1 紅（12(a)）。
 - 本機 `batch-subtitle.spec.ts` 兩案紅（POST body 多一個 `model_id: "claude-sonnet-5"`）：本機為了讓 Go API 起得來帶了 `AI_PROVIDER=claude`，模型挑選器因此送出 model_id；本單沒動 POST 組法，CI 環境為準。
 
+- AC #21 故意改壞（2026-10-20，每項改壞→跑 GenerationBatchDialogV2／generationEventCopy 兩支 spec→還原）：
+  - (viii) 片名改回 `truncate` → 1 紅（片名兩行那條）。
+  - (ix) 原因塞回狀態字（狀態字不改短字、照樣給 detail）→ 4 紅（失敗列、busy／skipped、contract v2、退回列）。
+  - (x) 非失敗列也給 `detail` → 2 紅（一行列沒有 detail、退回列）。
+- 2026-10-20 本機 `batch-subtitle.spec.ts` 仍是同樣兩案紅（POST body 多 `model_id: "claude-sonnet-5"`，本機帶 `AI_PROVIDER=claude` 的環境差異），其餘全綠；`generation-workspace.spec.ts`、`generation-workspace-mobile.spec.ts` 全綠。
+
 ### Completion Notes List
 
 - **AC #0：** `origin/main` 的 sprint-status `disc-2026-10-live-activity-row-layout-design: done`（PR #850）；`pen-node-ids.json` 有 `stf9c`／`cu3CY`／`c5WP3`／`f14sNh`／`Ah8fN`；Sally 稿 done 說明列了 ④ 手機示範 `T6WrrI`（358 寬）、`evt-fail`（`mHyTb`）。八條裁定與本單一致，沒有改 AC。
@@ -272,6 +279,20 @@ Claude Opus 5.5（claude-opus-5-5）
   - **產生字幕對話框：** 880 片名格 474px，三部都完整。390 片名格 88px，「和平使者 S…」（看得到 6 字，集數被截）、「花月殺手」完整、魔戒 5 字。**320 片名格 18px，三部都只剩「和…」「花…」「魔…」一個字**（標籤「影片所在的資料夾寫不進字幕」178px 不讓）。390 沒踩到停止條件，但 320 手機踩到 → 照停止條件停在合併前，等裁定。
 - **AC #15 UX 驗收：** 1440 截圖對 `f11-d-v2.png`（即時活動失敗列兩行、原因在階段字正下方、次要色；佇列同一部片同一句、說明行次要色、徽章紅「失敗」）一致；390 展開即時活動對 F11-SPEC-LOG ④ 手機示範一致（片名一行整個看得到、原因第二行整句）；390 佇列對 `f11-m-v2.png` `Ah8fN` 一致。截圖在 scratchpad `queue-reason-ux/`。
 - **AC #16 視覺基準：** `complete-with-failures` 如預期改變（兩列 ④ 變兩行），darwin 本機重產、linux `git rm`；新增 `failures-long-titles`（darwin 本機產，linux 交 CI bootstrap）。其餘 `running`／`budget_ceiling`／`credit_exhausted`／`idle` 沒有變（`test:visual` 全綠）。⚠️ 夾具的長片名比 AC 寫的再長一截（加「4K 數位修復二十週年紀念典藏版（含幕後花絮與導演講評音軌）」）：AC 原本那串在 400 側欄剛好兩行放得下，證明不了「超過兩行加 …」；量測仍用 AC 原本的片名。
+- **2026-10-20 T6 對話框佇列列兩行（AC #18–#24）：**
+  - **做法：** `QueueRow` 縮圖後改成內容欄；第一行片名（`line-clamp-2 break-words`）＋狀態字，第二行 `gen-batch-row-detail-<id>`（`text-sm`、`--text-secondary`、`break-words`）。失敗列狀態字＝`queueRowBadge`（「失敗」），顏色／圖示仍取自 `queueRowLabel`，第二行＝`queueRowLabel(...).text`；其他狀態一行、沒有第二行。退回列（沒有後端 items、409 降級卡）走同一個 `QueueRow`，失敗列第二行「生成失敗」。新增 testid `gen-batch-row-stage-<id>`、`gen-batch-row-detail-<id>`，沒有刪改既有 testid。
+  - **對齊（AC #20）：** 專案的字級表把 `text-sm` 行高設成 1.625（22.75px，不是 Tailwind 預設 20px），所以 `h-5` 會差 1.4px（第一版實測 −1.4px，不合格）。改成狀態字外包一層 `text-sm h-[1lh]`（＝片名一行高），實測差 0px，字級表改了也跟著走。
+  - **contract v2 重新確認：** `queueRowLabel` 只對 `reason == "error"` 讀代碼；`skipped` 項目即使帶 `no_text_source`／`asr_unconfigured`，對話框仍是紅色「失敗」＋第二行「沒有可用的字幕來源」（灰色「已略過」與 19 字原因是 `no-text-source-skip-b` 的事）。`error`＋不認得的代碼（含 `no_text_source`、`some_future_code`）→ 第二行「生成失敗」，不會壞。即時活動單次列 `no_text_source` → 「生成失敗」（新增一條測試釘住，`-b` 加文字時要翻轉）。三方一致性測試鍵數維持十一，本單沒加 `no_text_source`。
+  - **給 `-b` 的接點：** 對話框狀態字＝`queueRowBadge(view, '')`、顏色／圖示＝`queueRowLabel(view).className／icon`、第二行＝`queueRowLabel(view).text`，判斷「有沒有第二行」目前是 `status === 'failed'`（在 `GenerationBatchDialogV2.tsx` 的 `queueRowLines`）。
+  - **AC #22 真瀏覽器量測**（本機 chromium，gallery 夾具 `generation-batch-dialog-v2/failures-long-titles-mobile`；片名「和平使者 S01E01」與「和平使者 S01E01 — 一個很長很長的集名標題，長到兩行也放不下的那一種」，原因「影片所在的資料夾寫不進字幕」）：
+    - **320**（sheet 寬 320）：片名格 **152px**（合格線 ≥150）；「和平使者 S01E01」一行整個看得到；長片名兩行、結尾「…」；原因一行整句；狀態字中心與片名第一行中心差 **0px**；原因左緣與片名左緣差 0px。改之前片名格 18px（「和…」）。
+    - **390**（sheet 寬 390）：片名格 **222px**（合格線 ≥200）；「和平使者 S01E01」整個看得到；長片名兩行＋「…」；原因一行；差值 0px。改之前 88px。
+    - **880**（桌機對話框寬 880）：片名格 686px，全部一行；差值 0px。
+    - **列高不變：** 一行的列（含失敗列，兩行文字 49.5px 仍矮於 54px 縮圖）桌機 84px、手機 80px（含上下 1px 邊框＝AC 的 82／78），跟改之前同一個夾具量到的數字一樣；只有片名真的折兩行的失敗列變 98px。
+    - 320 時整頁 `scrollWidth` 355 是 gallery 頁面自己的 `<code>` 標籤（改之前一樣），對話框本身 320 寬、沒有橫捲。
+  - **AC #23 視覺基準：** `complete-with-failures` 如預期改變（兩列失敗變兩行），darwin 本機重產、linux `git rm`。⚠️ `budget_ceiling-mobile` 也變了（不是失敗列）：查了，是「怪奇物語 S04E07 第七章」已暫停列——片名從 `truncate`（「…第…」）改成 AC #18 的 `line-clamp-2`，在 390 折成兩行把整個片名畫出來，列高不變；這是 AC #18「片名由 truncate 改成 line-clamp-2」對所有列的直接結果（也合 Sally「片名所有列最多兩行」），所以照樣更新 darwin、linux `git rm`。新增 `failures-long-titles-mobile`（390，darwin 本機產，linux 交 CI bootstrap）。其餘對話框夾具與全套 `test:visual` 綠。
+  - **AC #24 UX 驗收：** 390 截圖對 `f8-m-v2.png`：片名＋右邊紅色「① 失敗」對第一行、第二行原因次要色、長片名兩行「…」，一致；880 截圖對 `f8-d-v2.png`：同排法，一致；320 對 `f8-spec-row.png` ③（稿上片名格約 156px、實測 152px；「和平使者 S01E01」整個看得到）一致。截圖在 scratchpad `shots/`。
+  - **範圍外（沒改）：** 320 寬時對話框底部「本次用量：$0.42 / 上限 $5.00」會折成好幾行、跟「即時更新（SSE）」擠在一起（改之前就這樣）。
 - 範圍外：生成步驟條（GenerationProgressV2）、管理字幕對話框（ManageSubtitleDialogV2）、`useGenerationProgress` 仍有「生成失敗」字樣，不在本單。
 
 ### File List
@@ -291,4 +312,9 @@ Claude Opus 5.5（claude-opus-5-5）
 - tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/complete-with-failures/default-visual-darwin.png（更新）
 - tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/complete-with-failures/default-visual-linux.png（刪除，交 CI 重產）
 - tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/failures-long-titles/default-visual-darwin.png（新增）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/complete-with-failures/default-visual-darwin.png（更新，2026-10-20）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/complete-with-failures/default-visual-linux.png（刪除，交 CI 重產）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/budget_ceiling-mobile/default-visual-darwin.png（更新，2026-10-20）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/budget_ceiling-mobile/default-visual-linux.png（刪除，交 CI 重產）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/failures-long-titles-mobile/default-visual-darwin.png（新增）
 - _bmad-output/implementation-artifacts/sprint-status.yaml
