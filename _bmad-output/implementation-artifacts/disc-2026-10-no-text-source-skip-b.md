@@ -11,7 +11,7 @@ Status: done（2026-10-20：實作、測試、量測、基準完成，PR `feat/n
   - ⛔ **（2026-10-20 追加）對話框佇列列的兩行結構也由那張做**：Sally 2026-10-20 新裁定（見檔尾）要產生字幕對話框的失敗／已略過列一律兩行，版面（`QueueRow` 第一行片名＋狀態字、第二行 `gen-batch-row-detail-${mediaId}` 原因）由 `disc-2026-10-generation-queue-failure-reason` 的「2026-10-20 追加」做（PR #851 重開）。**本單必須等 #851 合併後才開工**；本單在對話框只負責讓 `queueRowBadge`／`queueRowLabel` 對略過項目回「已略過」＋原因，不碰兩行結構。
   - ✅ `-a` 已合併 #855（2026-10-20）：契約是 `[@contract-v2]`，本單讀 `no_text_source`（另有舊路徑 `asr_unconfigured`）。原本的說明：本單單獨先上也不會壞：批次 `reason: skipped` 會變灰色（沒代碼時第二行寫「沒有可用的字幕來源」）；單次要等 `-a` 送代碼才會變灰。
 - **契約 ack：** confirmed against `[@contract-v2]` (Story disc-2026-10-live-activity-failure-reasons-a AC #1)（由 `-a` 升版：多 `no_text_source`；批次 `skipped` 項目帶 `no_text_source`／`asr_unconfigured`／`""`）。
-- **灰色用什麼：** 設計稿**沒有**「已略過」這種即時活動列或佇列徽章 → ⚖️ **待 Sally 追認**，預設沿用既有中性色（見 AC #3、#4）。不擋開工。
+- **灰色用什麼：** 設計稿**沒有**「已略過」這種即時活動列或佇列徽章 → ⚖️ **待 Sally 追認**，預設沿用既有中性色（見 AC #3、#4）。不擋開工。→ ✅ **2026-10-20 已追認**：Sally 補稿（F11 佇列 `LJCbp`／`cslat`、即時活動 `P4QzT`、SPEC-LOG ④b `XHbwN`／`XZhLe`，PR #866），現有程式相符，不用改（見檔尾）。
 
 ## 設計稿 / Design ref
 
@@ -135,7 +135,7 @@ Status: done（2026-10-20：實作、測試、量測、基準完成，PR `feat/n
 
 ## Dev Notes
 
-### ⚖️ 待 Sally 追認（不擋開工，預設照做）
+### ⚖️ 待 Sally 追認（不擋開工，預設照做）——✅ 2026-10-20 全部結案（#1 工作區／即時活動樣式見檔尾「2026-10-20 追認」）
 
 1. **灰色樣式**：即時活動略過列 `circle-dashed`＋`--text-muted` 圖示＋`--text-secondary` 階段字（同 ⑧ 批次已取消的色調；圖示借「已中斷」的虛線圓，意思是「沒完成」）；佇列徽章 `--bg-tertiary`＋`--text-muted`、無圖示（同已取消）。設計稿沒有這一列／這個徽章狀態——要補稿另開 design 單。
 2. **推翻 dsr-6d-b／CR L8「不准用已略過」**：party mode 裁定要用；第二行講清楚「也沒有設定語音辨識」，舊路徑沒設金鑰改送「語音辨識未設定」。
@@ -207,6 +207,7 @@ Status: done（2026-10-20：實作、測試、量測、基準完成，PR `feat/n
 |---|---|
 | 2026-10-19 | 建單（Bob）。party mode 裁定灰色「已略過」＋第二行原因；⚖️ Alexyu 由這邊直接做。樣式預設中性色，待 Sally 追認 4 項。 |
 | 2026-10-20 | Amelia：實作完成——灰色「已略過」＋第二行原因（工作區佇列、即時活動、對話框）；`queueRowIsSkipped` 只在 `skipped`／`error` 看代碼（`busy_elsewhere` 不看）；六種故意改壞都轉紅；量測合格；基準三張（含 `failures-long-titles-mobile`）；Status → done。 |
+| 2026-10-20 | Bob：Sally 追認工作區佇列／即時活動「已略過」樣式——補稿 F11 佇列 `LJCbp`／`cslat`、即時活動 `P4QzT`、SPEC-LOG ④b `XHbwN`／`XZhLe`（PR #866）；現有程式相符，不用改程式。另開 `disc-2026-10-gen-queue-reason-wrap-desktop`（桌機中等寬度原因可能被切，待量）。 |
 | 2026-10-20 | Bob：套 Sally 新裁定（推翻追認 #3）——對話框略過列兩行，第一行灰色「已略過」、第二行原因；改寫 AC #0、#5、#10（對話框）、#12（對話框量測）、#13、#14、T2、Dev Notes。記錄依賴：對話框兩行結構由 gen-queue「2026-10-20 追加」做（PR #851），本單等 #851 合併才開工。`-a` 已合併 #855，契約 v2。 |
 
 ## Dev Agent Record
@@ -244,7 +245,7 @@ Claude Opus 5.5（Amelia，BMAD dev）
     - 390：即時活動列寬 356，三列都「已略過」、原因一行整句；和平使者 107px 一行、花月殺手 56px、魔戒 232px 兩行；圖示對階段字中心差 0、原因左緣對階段字 0。佇列片名格 200px，和平使者一行、魔戒兩行（沒被截）；徽章「已略過」一行（高 30、寬 56，`--bg-tertiary` 底、`--text-muted` 字、無圖示）；說明行兩行整句、次要色。頁面寬 390 無橫捲。
     - 320：即時活動列寬 286，原因折兩行整句；和平使者 107px 一行、魔戒 162px 兩行；差值 0。佇列片名格 130px，和平使者一行，魔戒兩行後「…」（照 gen-queue 規則）；徽章一行；說明行三行整句。無橫捲。
     - 1440：即時活動側欄列寬 398，原因一行；和平使者一行、魔戒 274px 兩行；差值 0。佇列片名格 562px 都一行，說明行一行。
-- **AC #13 UX 驗收：** 對話框 390 截圖對 `f8-m-v2.png`／`f8-spec-row.png` ②（花月殺手＋右邊灰色「已略過」、無圖示，第二行原因）一致；880 對 `f8-d-v2.png` 同排法一致。工作區即時活動略過列：虛線圓圖示 `--text-muted`、階段字 `--text-secondary`，跟 `f11-spec-log.png` ⑧ 批次已取消同色調；兩行位置同 ④。佇列徽章 `--bg-tertiary`＋`--text-muted`、無圖示，同已取消。截圖在 scratchpad（`skip-ux/`、`shots-skip/`），PR 附說明，等 Sally 追認工作區／即時活動的樣式（沒有對應稿）。
+- **AC #13 UX 驗收：** 對話框 390 截圖對 `f8-m-v2.png`／`f8-spec-row.png` ②（花月殺手＋右邊灰色「已略過」、無圖示，第二行原因）一致；880 對 `f8-d-v2.png` 同排法一致。工作區即時活動略過列：虛線圓圖示 `--text-muted`、階段字 `--text-secondary`，跟 `f11-spec-log.png` ⑧ 批次已取消同色調；兩行位置同 ④。佇列徽章 `--bg-tertiary`＋`--text-muted`、無圖示，同已取消。截圖在 scratchpad（`skip-ux/`、`shots-skip/`），PR 附說明，等 Sally 追認工作區／即時活動的樣式（沒有對應稿）。→ ✅ 2026-10-20 Sally 已補稿並追認（見檔尾），程式不用改。
 - **AC #14 視覺基準：** 兩個夾具的 `skipped` 項目／即時活動列加 `failureReason: 'no_text_source'`。全套 visual 跑一次：只有 `generation-workspace-v2/complete-with-failures` 超過門檻；`generation-batch-dialog-v2/complete-with-failures` 與 **`generation-batch-dialog-v2/failures-long-titles-mobile`** 內容有變但低於門檻（狀態字「失敗」→「已略過」）。後者 story 寫「不含略過、不動」，但 #851 新增的它有一列「花月殺手 skipped」，所以也是預期改變（夾具資料沒動，略過列沒帶代碼 → 第二行「沒有可用的字幕來源」）。三張 darwin 刪掉後 `update-missing` 重產、linux `git rm`，交 CI bootstrap。其餘生成相關基準沒變。
 - **AC #15：** `pnpm nx run web:test` 298 檔／4853 支全綠；`web:typecheck` 綠；`lint:all` 0 errors（✖ 168／170 problems 都是 warnings）；`format:check` 綠；`check-design-refs.py` 綠。E2E `generation-workspace.spec.ts`、`generation-workspace-mobile.spec.ts` 全綠；`batch-subtitle.spec.ts` 本機 2 支紅（`[P0] confirm sends POST…`、`library selection ACTUALLY flows`），原因是 POST body 多了 `model_id: "claude-sonnet-5"`——本機 Go API 用 `AI_PROVIDER=claude` 起，沒被 stub 的模型清單選了一個模型；本單沒碰送出請求的程式，交 CI E2E 確認。
 - `git grep "已略過\|沒有可用的字幕來源" tests/e2e` 為零；沒刪改任何 testid，只新增 `data-skipped`。
@@ -289,3 +290,11 @@ Alexyu 選 B（對話框佇列列改兩行），Sally 裁定：
 - 桌機 F8-D-v2 同一排法。
 - 設計稿：F8-D-v2 `i9Nun1`、F8-M-v2 `H717g`、新規格稿 F8-SPEC-ROW（`flow-f-subtitle-v2/f8-spec-row.png`，繪製中）。
 - 分工：兩行結構由 `disc-2026-10-generation-queue-failure-reason`（PR #851 重開）做；本單只讓 `queueRowBadge`／`queueRowLabel` 對帶 `no_text_source`／`asr_unconfigured`（或 `reason: skipped`）的略過項目回「已略過」＋原因。**本單等 #851 合併才開工。**
+
+## ⚖️ Sally 追認工作區佇列／即時活動「已略過」樣式（2026-10-20）
+
+上面「待 Sally 追認」#1 與 AC #13 留下的最後一項（工作區佇列徽章、即時活動略過列沒有對應稿）結案：
+
+- 2026-10-20 Sally 補稿（PR #866）：F11 佇列略過列 `LJCbp`／`cslat`、即時活動略過列 `P4QzT`、F11-SPEC-LOG ④b `XHbwN`／`XZhLe`。
+- 稿子照的就是本單已上線的樣式（佇列徽章 `--bg-tertiary`＋`--text-muted`、無圖示；即時活動 `circle-dashed`＋`--text-muted` 圖示、`--text-secondary` 階段字、第二行原因同 ④ 排法）。**現有程式相符，不用改程式。**
+- 補稿時發現桌機中等寬度（1024～1200）佇列原因行可能被「…」切掉 → 另開 `disc-2026-10-gen-queue-reason-wrap-desktop`（先量再改），不在本單。
