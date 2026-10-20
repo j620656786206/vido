@@ -136438,7 +136438,7 @@
                                   "id": "dP5Lo",
                                   "name": "overall-count",
                                   "fill": "$text-primary",
-                                  "content": "2 / 5",
+                                  "content": "3 / 5",
                                   "lineHeight": "$Type/H3/Line",
                                   "fontFamily": "$Type/Family/Mono",
                                   "fontSize": "$Type/H3/Size",
@@ -136462,7 +136462,7 @@
                                   "id": "M2wvy8",
                                   "name": "overall-fill",
                                   "fill": "$accent-primary",
-                                  "width": 333,
+                                  "width": 499,
                                   "height": 6
                                 }
                               ]
@@ -136559,7 +136559,7 @@
                             {
                               "type": "frame",
                               "id": "JSEQV",
-                              "name": "item-奧本海默",
+                              "name": "item-failed",
                               "width": "fill_container",
                               "fill": "$bg-secondary",
                               "cornerRadius": "$radius-lg",
@@ -136584,52 +136584,203 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "P4ijH",
-                                  "name": "title-wrap",
+                                  "id": "az3SS",
+                                  "name": "content-col",
                                   "width": "fill_container",
-                                  "gap": "$Space/xs-plus",
-                                  "alignItems": "center",
+                                  "layout": "vertical",
+                                  "gap": "$Space/none",
+                                  "padding": "$Space/none",
                                   "children": [
                                     {
+                                      "type": "frame",
+                                      "id": "dASYN",
+                                      "name": "line-1",
+                                      "width": "fill_container",
+                                      "gap": "$Space/md",
+                                      "padding": "$Space/none",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "P4ijH",
+                                          "name": "title-wrap",
+                                          "width": "fill_container",
+                                          "gap": "$Space/xs-plus",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "A2alT",
+                                              "name": "item-title",
+                                              "fill": "$text-primary",
+                                              "textGrowth": "fixed-width",
+                                              "width": "fill_container",
+                                              "content": "和平使者 S01E01 — 一個很長很長的集名標題",
+                                              "lineHeight": "$Type/Body/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Body/Size",
+                                              "fontWeight": "$Type/Body/Weight"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "opOww",
+                                          "name": "stage",
+                                          "gap": "$Space/xs-plus",
+                                          "padding": [
+                                            "$Space/2xs",
+                                            "$Space/none",
+                                            "$Space/none",
+                                            "$Space/none"
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "qserD",
+                                              "name": "done-check",
+                                              "width": 16,
+                                              "height": 16,
+                                              "icon": "circle-alert",
+                                              "library": "lucide",
+                                              "fill": "$error-text"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "r8KiP",
+                                              "name": "stage-lb",
+                                              "fill": "$error-text",
+                                              "content": "失敗",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
                                       "type": "text",
-                                      "id": "A2alT",
-                                      "name": "item-title",
-                                      "fill": "$text-primary",
-                                      "content": "奧本海默",
+                                      "id": "XOsvN",
+                                      "name": "reason",
+                                      "fill": "$text-secondary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "影片所在的資料夾寫不進字幕",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Body/Size",
                                       "fontWeight": "$Type/Body/Weight"
                                     }
                                   ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "iDPip",
+                              "name": "item-skipped",
+                              "width": "fill_container",
+                              "fill": "$bg-secondary",
+                              "cornerRadius": "$radius-lg",
+                              "stroke": "$border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": "$Space/md-plus",
+                              "padding": [
+                                "$Space/md-plus",
+                                "$Space/lg"
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$radius-sm",
+                                  "id": "PsAxk",
+                                  "name": "thumb",
+                                  "fill": "$bg-tertiary",
+                                  "width": 38,
+                                  "height": 54
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "opOww",
-                                  "name": "stage",
-                                  "gap": "$Space/xs-plus",
-                                  "alignItems": "center",
+                                  "id": "AEEyp",
+                                  "name": "content-col",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/none",
+                                  "padding": "$Space/none",
                                   "children": [
                                     {
-                                      "type": "icon",
-                                      "id": "qserD",
-                                      "name": "done-check",
-                                      "width": 16,
-                                      "height": 16,
-                                      "icon": "check",
-                                      "library": "lucide",
-                                      "fill": "$success"
+                                      "type": "frame",
+                                      "id": "FRi2n",
+                                      "name": "line-1",
+                                      "width": "fill_container",
+                                      "gap": "$Space/md",
+                                      "padding": "$Space/none",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "BVsNi",
+                                          "name": "title-wrap",
+                                          "width": "fill_container",
+                                          "gap": "$Space/xs-plus",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "v4UPkN",
+                                              "name": "item-title",
+                                              "fill": "$text-primary",
+                                              "textGrowth": "fixed-width",
+                                              "width": "fill_container",
+                                              "content": "花月殺手",
+                                              "lineHeight": "$Type/Body/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Body/Size",
+                                              "fontWeight": "$Type/Body/Weight"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "SxbLX",
+                                          "name": "stage",
+                                          "gap": "$Space/xs-plus",
+                                          "padding": [
+                                            "$Space/2xs",
+                                            "$Space/none",
+                                            "$Space/none",
+                                            "$Space/none"
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "LggEY",
+                                              "name": "stage-lb",
+                                              "fill": "$text-muted",
+                                              "content": "已略過",
+                                              "lineHeight": "$Type/Label/Line",
+                                              "fontFamily": "$Type/Family/Primary",
+                                              "fontSize": "$Type/Label/Size",
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        }
+                                      ]
                                     },
                                     {
                                       "type": "text",
-                                      "id": "r8KiP",
-                                      "name": "stage-lb",
-                                      "fill": "$success-text",
-                                      "content": "完成",
-                                      "lineHeight": "$Type/Label/Line",
+                                      "id": "IQ7wn",
+                                      "name": "reason",
+                                      "fill": "$text-secondary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "沒有可用的字幕來源，也沒有設定語音辨識",
+                                      "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "normal"
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
                                     }
                                   ]
                                 }
@@ -136798,75 +136949,6 @@
                                     {
                                       "type": "text",
                                       "id": "jure8",
-                                      "name": "stage-lb",
-                                      "fill": "$text-muted",
-                                      "content": "排隊中",
-                                      "lineHeight": "$Type/Label/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Label/Size",
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "HJBlW",
-                              "name": "item-全面啟動",
-                              "width": "fill_container",
-                              "fill": "$bg-secondary",
-                              "cornerRadius": "$radius-lg",
-                              "stroke": "$border-subtle",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "gap": "$Space/md-plus",
-                              "padding": [
-                                "$Space/md-plus",
-                                "$Space/lg"
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$radius-sm",
-                                  "id": "cesVK",
-                                  "name": "thumb",
-                                  "fill": "$bg-tertiary",
-                                  "width": 38,
-                                  "height": 54
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "MlA8w",
-                                  "name": "title-wrap",
-                                  "width": "fill_container",
-                                  "gap": "$Space/xs-plus",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "cdScw",
-                                      "name": "item-title",
-                                      "fill": "$text-primary",
-                                      "content": "全面啟動",
-                                      "lineHeight": "$Type/Body/Line",
-                                      "fontFamily": "$Type/Family/Primary",
-                                      "fontSize": "$Type/Body/Size",
-                                      "fontWeight": "$Type/Body/Weight"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "HnAh3",
-                                  "name": "stage",
-                                  "gap": "$Space/xs-plus",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "Vm4pA",
                                       "name": "stage-lb",
                                       "fill": "$text-muted",
                                       "content": "排隊中",
@@ -170298,7 +170380,7 @@
                         {
                           "type": "frame",
                           "id": "fBMht",
-                          "name": "item-奧本海默",
+                          "name": "item-failed",
                           "width": "fill_container",
                           "fill": "$bg-secondary",
                           "cornerRadius": "$radius-lg",
@@ -170320,52 +170402,200 @@
                             },
                             {
                               "type": "frame",
-                              "id": "AsHCg",
-                              "name": "title-wrap",
+                              "id": "l4O4E",
+                              "name": "content-col",
                               "width": "fill_container",
-                              "gap": "$Space/xs-plus",
-                              "alignItems": "center",
+                              "layout": "vertical",
+                              "gap": "$Space/none",
+                              "padding": "$Space/none",
                               "children": [
                                 {
+                                  "type": "frame",
+                                  "id": "z4ecl",
+                                  "name": "line-1",
+                                  "width": "fill_container",
+                                  "gap": "$Space/md",
+                                  "padding": "$Space/none",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "AsHCg",
+                                      "name": "title-wrap",
+                                      "width": "fill_container",
+                                      "gap": "$Space/xs-plus",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "u9PmWs",
+                                          "name": "item-title",
+                                          "fill": "$text-primary",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "和平使者 S01E01 — 一個很長很長的集名標題",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "E07fg",
+                                      "name": "stage",
+                                      "gap": "$Space/xs-plus",
+                                      "padding": [
+                                        "$Space/2xs",
+                                        "$Space/none",
+                                        "$Space/none",
+                                        "$Space/none"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "FKAQX",
+                                          "name": "done-check",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "circle-alert",
+                                          "library": "lucide",
+                                          "fill": "$error-text"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "jcZDz",
+                                          "name": "stage-lb",
+                                          "fill": "$error-text",
+                                          "content": "失敗",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
                                   "type": "text",
-                                  "id": "u9PmWs",
-                                  "name": "item-title",
-                                  "fill": "$text-primary",
-                                  "content": "奧本海默",
+                                  "id": "Ye7bp",
+                                  "name": "reason",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "影片所在的資料夾寫不進字幕",
                                   "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
                                   "fontSize": "$Type/Body/Size",
                                   "fontWeight": "$Type/Body/Weight"
                                 }
                               ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "APVEl",
+                          "name": "item-skipped",
+                          "width": "fill_container",
+                          "fill": "$bg-secondary",
+                          "cornerRadius": "$radius-lg",
+                          "stroke": "$border-subtle",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": "$Space/md",
+                          "padding": "$Space/md",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": "$radius-sm",
+                              "id": "sojuV",
+                              "name": "thumb",
+                              "fill": "$bg-tertiary",
+                              "width": 38,
+                              "height": 54
                             },
                             {
                               "type": "frame",
-                              "id": "E07fg",
-                              "name": "stage",
-                              "gap": "$Space/xs-plus",
-                              "alignItems": "center",
+                              "id": "DjDSA",
+                              "name": "content-col",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": "$Space/none",
+                              "padding": "$Space/none",
                               "children": [
                                 {
-                                  "type": "icon",
-                                  "id": "FKAQX",
-                                  "name": "done-check",
-                                  "width": 16,
-                                  "height": 16,
-                                  "icon": "check",
-                                  "library": "lucide",
-                                  "fill": "$success"
+                                  "type": "frame",
+                                  "id": "nfV17",
+                                  "name": "line-1",
+                                  "width": "fill_container",
+                                  "gap": "$Space/md",
+                                  "padding": "$Space/none",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "j04JFj",
+                                      "name": "title-wrap",
+                                      "width": "fill_container",
+                                      "gap": "$Space/xs-plus",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "WfrGk",
+                                          "name": "item-title",
+                                          "fill": "$text-primary",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "花月殺手",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "T0Z5Mp",
+                                      "name": "stage",
+                                      "gap": "$Space/xs-plus",
+                                      "padding": [
+                                        "$Space/2xs",
+                                        "$Space/none",
+                                        "$Space/none",
+                                        "$Space/none"
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "m5WJN",
+                                          "name": "stage-lb",
+                                          "fill": "$text-muted",
+                                          "content": "已略過",
+                                          "lineHeight": "$Type/Label/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Label/Size",
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
                                 },
                                 {
                                   "type": "text",
-                                  "id": "jcZDz",
-                                  "name": "stage-lb",
-                                  "fill": "$success-text",
-                                  "content": "完成",
-                                  "lineHeight": "$Type/Label/Line",
+                                  "id": "t97OJ",
+                                  "name": "reason",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "沒有可用的字幕來源，也沒有設定語音辨識",
+                                  "lineHeight": "$Type/Body/Line",
                                   "fontFamily": "$Type/Family/Primary",
-                                  "fontSize": "$Type/Label/Size",
-                                  "fontWeight": "normal"
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
                                 }
                               ]
                             }
@@ -183375,6 +183605,594 @@
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
                       "content": "語言：中文一律看檔案內容（.zh-TW.srt 內容是簡體就顯示簡中）；片內 chi 軌靠軌道名稱判斷繁／簡／粵，猜不到就寫「中文」，不假裝是繁中。只列中文與英文的片內軌（Apple TV+ 一集常有 30 種語言）。影集層級（非單集）的對話框不讀清單。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "K7XXx",
+              "x": 24740,
+              "y": 34348,
+              "name": "cap-F8-SPEC-ROW",
+              "fill": "#888888",
+              "content": "F8 · 批次生成・佇列列兩行規格（手機 390／320）",
+              "lineHeight": "$Type/Body/Line",
+              "fontFamily": "$Type/Family/Primary",
+              "fontSize": "$Type/Body/Size",
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "NfHKO",
+              "x": 24740,
+              "y": 34393,
+              "name": "F8-SPEC-ROW",
+              "width": 880,
+              "fill": "$bg-secondary",
+              "cornerRadius": "$radius-lg",
+              "layout": "vertical",
+              "gap": "$Space/lg",
+              "padding": [
+                "$Space/lg-plus",
+                "$Space/xl"
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "uwO0x",
+                  "name": "spec-intro",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "產生字幕對話框（F8）的佇列列＝縮圖 38×54 · 內容欄。內容欄第一行：片名（Body、主要色，最多兩行，超過才在結尾加「…」）＋右邊狀態字（Label，對齊片名第一行）。第二行只有「失敗」和「已略過」才有：原因（Body、次要色），左緣對齊片名，前面不加「·」，永遠完整顯示，太長就折行。狀態押在第一行：失敗＝紅色圖示＋「失敗」；已略過＝灰色「已略過」、沒有圖示。完成／排隊中／處理中（含進度條）／已暫停／已取消維持一行。桌機（F8-D-v2）同一個排法。跟 F11 即時活動 ④、生成工作區佇列同一套：第一行是哪一部，第二行是為什麼。",
+                  "lineHeight": "$Type/Label/Line",
+                  "fontFamily": "$Type/Family/Primary",
+                  "fontSize": "$Type/Label/Size",
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "F7z4PK",
+                  "name": "spec-entry-1",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "padding": "$Space/none",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "MPAkz",
+                      "name": "item-failed",
+                      "width": 358,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": "$Space/md",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": "$radius-sm",
+                          "id": "bNK8B",
+                          "name": "thumb",
+                          "fill": "$bg-tertiary",
+                          "width": 38,
+                          "height": 54
+                        },
+                        {
+                          "type": "frame",
+                          "id": "thgoC",
+                          "name": "content-col",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
+                          "padding": "$Space/none",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "f5tofl",
+                              "name": "line-1",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "padding": "$Space/none",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "JbTRu",
+                                  "name": "title-wrap",
+                                  "width": "fill_container",
+                                  "gap": "$Space/xs-plus",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Wwl2s",
+                                      "name": "item-title",
+                                      "fill": "$text-primary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "和平使者 S01E01 — 一個很長很長的集名標題",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "VhLSe",
+                                  "name": "stage",
+                                  "gap": "$Space/xs-plus",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "et14x",
+                                      "name": "done-check",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "circle-alert",
+                                      "library": "lucide",
+                                      "fill": "$error-text"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "I8OIM",
+                                      "name": "stage-lb",
+                                      "fill": "$error-text",
+                                      "content": "失敗",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "tsh83",
+                              "name": "reason",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "影片所在的資料夾寫不進字幕",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "leWet",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "① 失敗・手機 390（列寬 358）｜片名那格約 226px（約 16 字），長片名折成兩行；原因約 182px，第二行有約 284px，一行放得下。改版前原因跟片名擠同一行，片名只剩 88px（「和平使者 S…」）。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a788p",
+                  "name": "spec-entry-2",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "padding": "$Space/none",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hGJ5a",
+                      "name": "item-skipped",
+                      "width": 358,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": "$Space/md",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": "$radius-sm",
+                          "id": "c5Dg5",
+                          "name": "thumb",
+                          "fill": "$bg-tertiary",
+                          "width": 38,
+                          "height": 54
+                        },
+                        {
+                          "type": "frame",
+                          "id": "YiNlf",
+                          "name": "content-col",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
+                          "padding": "$Space/none",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "aVK7I",
+                              "name": "line-1",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "padding": "$Space/none",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "vcnY5",
+                                  "name": "title-wrap",
+                                  "width": "fill_container",
+                                  "gap": "$Space/xs-plus",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "nl0lJ",
+                                      "name": "item-title",
+                                      "fill": "$text-primary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "花月殺手",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Koaus",
+                                  "name": "stage",
+                                  "gap": "$Space/xs-plus",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "nd8ND",
+                                      "name": "stage-lb",
+                                      "fill": "$text-muted",
+                                      "content": "已略過",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "daH0F",
+                              "name": "reason",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "沒有可用的字幕來源，也沒有設定語音辨識",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "JJZ1N",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "② 已略過・手機 390｜片子沒壞，只是缺東西：灰色「已略過」、沒有圖示，第二行講原因。19 字的原因（約 266px）一行放得下。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "z6HInR",
+                  "name": "spec-entry-3",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "padding": "$Space/none",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "RNKLG",
+                      "name": "item-failed",
+                      "width": 288,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": "$Space/md",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": "$radius-sm",
+                          "id": "qwNCP",
+                          "name": "thumb",
+                          "fill": "$bg-tertiary",
+                          "width": 38,
+                          "height": 54
+                        },
+                        {
+                          "type": "frame",
+                          "id": "UpmZ0",
+                          "name": "content-col",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
+                          "padding": "$Space/none",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "biNYJ",
+                              "name": "line-1",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "padding": "$Space/none",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "p8pOi",
+                                  "name": "title-wrap",
+                                  "width": "fill_container",
+                                  "gap": "$Space/xs-plus",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "s097Y",
+                                      "name": "item-title",
+                                      "fill": "$text-primary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "和平使者 S01E01",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "A6Q2MA",
+                                  "name": "stage",
+                                  "gap": "$Space/xs-plus",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "QAXrX",
+                                      "name": "done-check",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "circle-alert",
+                                      "library": "lucide",
+                                      "fill": "$error-text"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "V4gpXY",
+                                      "name": "stage-lb",
+                                      "fill": "$error-text",
+                                      "content": "失敗",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Eq2dF",
+                              "name": "reason",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "影片所在的資料夾寫不進字幕",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "W0AiQt",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "③ 失敗・手機 320（列寬 288）｜片名那格約 156px，兩行約 22 字，「和平使者 S01E01」整個看得到。改版前只剩 18px（「和…」）。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "K0ut6O",
+                  "name": "spec-entry-4",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "padding": "$Space/none",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uLOhN",
+                      "name": "item-skipped",
+                      "width": 288,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": "$Space/md",
+                      "padding": "$Space/md",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": "$radius-sm",
+                          "id": "v7AU3E",
+                          "name": "thumb",
+                          "fill": "$bg-tertiary",
+                          "width": 38,
+                          "height": 54
+                        },
+                        {
+                          "type": "frame",
+                          "id": "tVsNo",
+                          "name": "content-col",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
+                          "padding": "$Space/none",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "AZW6t",
+                              "name": "line-1",
+                              "width": "fill_container",
+                              "gap": "$Space/md",
+                              "padding": "$Space/none",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "S7aC9",
+                                  "name": "title-wrap",
+                                  "width": "fill_container",
+                                  "gap": "$Space/xs-plus",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "C5TZH",
+                                      "name": "item-title",
+                                      "fill": "$text-primary",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "花月殺手",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "dyFEf",
+                                  "name": "stage",
+                                  "gap": "$Space/xs-plus",
+                                  "padding": [
+                                    "$Space/2xs",
+                                    "$Space/none",
+                                    "$Space/none",
+                                    "$Space/none"
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "lzk5H",
+                                      "name": "stage-lb",
+                                      "fill": "$text-muted",
+                                      "content": "已略過",
+                                      "lineHeight": "$Type/Label/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Label/Size",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "FWFiG",
+                              "name": "reason",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "沒有可用的字幕來源，也沒有設定語音辨識",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "uZiGk",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "④ 已略過・手機 320｜原因那行約 214px，19 字的原因折成兩行——原因永遠完整，不截斷。",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Label/Size",
