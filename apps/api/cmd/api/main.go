@@ -37,6 +37,7 @@ import (
 	"github.com/vido/api/internal/subtitle"
 	"github.com/vido/api/internal/subtitle/miner"
 	subtitleproviders "github.com/vido/api/internal/subtitle/providers"
+	"github.com/vido/api/internal/subtitle/sidecarcheck"
 	"github.com/vido/api/internal/tmdb"
 	"github.com/vido/api/internal/usagereport"
 	// Media config is loaded during service initialization
@@ -879,6 +880,12 @@ func main() {
 	// restart, the exact class this story removes). The gate still governs every
 	// RUNTIME entry point: the endpoint's 409, the EnqueueMissing scan sweep, and
 	// the per-batch seam below.
+	// -b2: the English subtitle beside a film is translated when its timing
+	// matches. One finder serves the run's router and the dialog's quote, so
+	// both read the same stored checks (cache_entries, sidecar_alignment).
+	sidecarFinder := sidecarcheck.NewFinder(
+		sidecarcheck.NewChecker(ffprobeService, repos.Cache, slog.Default()),
+		audioExtractorService, slog.Default())
 	if cfg.SubtitlePipelineEnabled() {
 		subtitleExtractor := subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitleExtractorOpts...)
 		subtitleRouter := subtitle.NewRouter(
@@ -886,6 +893,7 @@ func main() {
 			subtitleExtractor,
 			slog.Default(),
 		)
+		subtitleRouter.SetSidecarFinder(sidecarFinder)
 		// sub-3-1: the ASR fallback port + the sweep's availability gate share
 		// one adapter over the SAME transcription service the manual Route-C
 		// dialog uses, so a no_text_source movie is recovered by exactly the
@@ -1233,6 +1241,7 @@ func main() {
 	if subtitleSoloRunner != nil {
 		transcriptionHandler.SetSoloGenerator(subtitleSoloRunner)
 		transcriptionEstimateService.SetRoutePredictor(routePredictor)
+		transcriptionEstimateService.SetSidecarSource(sidecarFinder)
 	}
 
 	// 9R-13: .nfo metadata localizer (movies) — additive zh-TW .nfo via the

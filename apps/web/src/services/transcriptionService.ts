@@ -77,9 +77,12 @@ async function parseTranscribeResponse(response: Response): Promise<TranscribeOu
 export interface TranscriptionEstimate {
   mediaId: string;
   mediaType: 'movie' | 'episode';
-  plan: 'full' | 'translate_only' | 'extract';
-  /** Probe-only lane prediction; absent in legacy mode or when unclassifiable. */
-  route?: 'extract' | 'asr' | 'skip';
+  /** 'sidecar' (-b2): the English subtitle beside the file matches its timing
+   *  and is translated — no speech recognition. */
+  plan: 'full' | 'translate_only' | 'extract' | 'sidecar';
+  /** Probe-only lane prediction; absent in legacy mode or when unclassifiable.
+   *  'sidecar' when the English subtitle beside the file matches. */
+  route?: 'extract' | 'asr' | 'skip' | 'sidecar';
   asrAvailable: boolean;
   selfHostedAsr: boolean;
   /** asr-scribe-b (additive): 'openai' | 'elevenlabs' | 'self_hosted'; absent on old servers. */
@@ -91,6 +94,28 @@ export interface TranscriptionEstimate {
   runtimeKnown: boolean;
   runtimeSource: 'ffprobe' | 'tmdb' | 'fallback';
   estimatedUsd: number;
+  /** The English-sidecar timing check (-b2). Absent when an embedded track
+   *  decides the route, in legacy mode, or on older servers. */
+  sidecarCheck?: SidecarCheck;
+}
+
+/**
+ * The timing check of the English subtitle beside the file
+ * (disc-2026-10-generate-keeps-user-en-srt-b2; names confirmed by Alexyu
+ * 2026-10-20). Only `aligned` changes the quote; every other status keeps the
+ * speech-recognition price.
+ */
+export interface SidecarCheck {
+  /** none: no English subtitle beside the file · checking: running in the
+   *  background — ask again · aligned: matches, plan 'sidecar' · offset: the
+   *  whole file is early/late by offsetSeconds · mismatch: no single shift
+   *  fits · unusable: unreadable, too short or not English · unknown: the
+   *  check could not run. */
+  status: 'none' | 'checking' | 'aligned' | 'offset' | 'mismatch' | 'unusable' | 'unknown';
+  /** Positive = the subtitle is late. Meaningful for offset (and aligned). */
+  offsetSeconds: number;
+  /** The file the status is about. */
+  fileName?: string;
 }
 
 /**

@@ -52,6 +52,8 @@ type Verdict struct {
 	Reason  string         `json:"reason,omitempty"`
 	Score   float64        `json:"score"`
 	Windows []WindowResult `json:"windows,omitempty"`
+	// AudioStream is the stream the verdict was reached on.
+	AudioStream int `json:"audio_stream"`
 	// ElapsedMS is how long the check itself took (not a cache read).
 	ElapsedMS int64 `json:"elapsed_ms"`
 	// Cached is true when this verdict came from the cache.
@@ -82,6 +84,7 @@ type Checker struct {
 	cache     Cache
 	decode    decodeFunc
 	hasCentre func(ctx context.Context, mediaPath string, audioStream int) bool
+	hasFFmpeg func() bool
 	// onCurves, when set, sees every check's per-window score curves (the
 	// exam saves them to tune decide offline).
 	onCurves func(curves [][]float64, starts []int)
@@ -93,7 +96,7 @@ func NewChecker(prober Prober, cache Cache, logger *slog.Logger) *Checker {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Checker{prober: prober, cache: cache, decode: decodeWindow, hasCentre: hasCentreChannel, logger: logger}
+	return &Checker{prober: prober, cache: cache, decode: decodeWindow, hasCentre: hasCentreChannel, hasFFmpeg: ffmpegInstalled, logger: logger}
 }
 
 // ErrNoFFmpeg means the check cannot run at all. A caller must treat it as
@@ -114,8 +117,8 @@ func (c *Checker) Check(ctx context.Context, mediaPath string, audioStream int, 
 	if err != nil {
 		return Verdict{}, fmt.Errorf("sidecar check: subtitle: %w", err)
 	}
-	key := cacheKey(mediaPath, media, sidecarPath, side, audioStream)
-	if v, ok := c.cached(ctx, key); ok {
+	key := cacheKey(mediaPath, media, sidecarPath, side)
+	if v, ok := c.cached(ctx, key); ok && v.AudioStream == audioStream {
 		return v, nil
 	}
 
@@ -124,12 +127,28 @@ func (c *Checker) Check(ctx context.Context, mediaPath string, audioStream int, 
 	if err != nil {
 		return Verdict{}, err
 	}
+	v.AudioStream = audioStream
 	v.ElapsedMS = time.Since(started).Milliseconds()
 	c.store(ctx, key, v)
 	c.logger.Info("sidecar subtitle alignment checked",
 		"result", v.Result, "offset_seconds", v.OffsetSeconds, "reason", v.Reason,
 		"score", v.Score, "windows", len(v.Windows), "elapsed_ms", v.ElapsedMS)
 	return v, nil
+}
+
+// Lookup returns the stored verdict for this pair of files without checking
+// anything: no ffmpeg, no audio stream needed — a cost screen can afford it
+// for every film. ok is false when none is stored (or either file changed).
+func (c *Checker) Lookup(ctx context.Context, mediaPath, sidecarPath string) (Verdict, bool) {
+	media, err := os.Stat(mediaPath)
+	if err != nil {
+		return Verdict{}, false
+	}
+	side, err := os.Stat(sidecarPath)
+	if err != nil {
+		return Verdict{}, false
+	}
+	return c.cached(ctx, cacheKey(mediaPath, media, sidecarPath, side))
 }
 
 func (c *Checker) check(ctx context.Context, mediaPath string, audioStream int, sidecarPath string) (Verdict, error) {
@@ -147,7 +166,7 @@ func (c *Checker) check(ctx context.Context, mediaPath string, audioStream int, 
 		return Verdict{Result: Unusable, Reason: why}, nil
 	}
 
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
+	if !c.hasFFmpeg() {
 		return Verdict{}, ErrNoFFmpeg
 	}
 	info, err := c.prober.Probe(ctx, mediaPath)
@@ -205,6 +224,11 @@ func decodeWindow(ctx context.Context, mediaPath string, audioStream int, w wind
 	return out, nil
 }
 
+func ffmpegInstalled() bool {
+	_, err := exec.LookPath("ffmpeg")
+	return err == nil
+}
+
 // centreLayouts are the ffmpeg channel layouts with a front-centre channel.
 // pan=…FC on a layout without one yields silence, not an error, so the
 // layout is asked first.
@@ -231,12 +255,14 @@ func hasCentreChannel(ctx context.Context, mediaPath string, audioStream int) bo
 	return centreLayouts[strings.TrimSpace(string(out))]
 }
 
-// cacheKey changes whenever either file, the stream or the algorithm does.
-func cacheKey(mediaPath string, media os.FileInfo, sidecarPath string, side os.FileInfo, audioStream int) string {
-	h := sha256.Sum256([]byte(fmt.Sprintf("%s|%d|%d|%s|%d|%d|%d|%s|%s",
+// cacheKey changes whenever either file or the algorithm does. The audio
+// stream is not in it — Lookup has no stream to give — but rides in the
+// verdict, and Check redoes a verdict reached on another stream.
+func cacheKey(mediaPath string, media os.FileInfo, sidecarPath string, side os.FileInfo) string {
+	h := sha256.Sum256([]byte(fmt.Sprintf("%s|%d|%d|%s|%d|%d|%s|%s",
 		mediaPath, media.Size(), media.ModTime().UnixNano(),
 		sidecarPath, side.Size(), side.ModTime().UnixNano(),
-		audioStream, algorithmVersion, tunables())))
+		algorithmVersion, tunables())))
 	return CacheType + ":" + hex.EncodeToString(h[:16])
 }
 

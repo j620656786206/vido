@@ -173,6 +173,10 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		}
 		p.emitProgress(ref, StageExtracting, fmt.Sprintf(extractWaitProgressFormat, ahead))
 	})
+	if opts.FreeOnly {
+		// -b2: a matching sidecar would only be parked as paid — skip the check.
+		routeCtx = WithoutSidecars(routeCtx)
+	}
 	decision, err := p.router.SelectAndRoute(routeCtx, item.FilePath, tmpDir)
 	if err != nil {
 		return p.failItem(ctx, ref, run, "route", err)

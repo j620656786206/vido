@@ -23,7 +23,43 @@ const (
 	// translated (disc-2026-10-single-generate-ignores-embedded-english-a).
 	// Only reported in pipeline mode.
 	TranscriptionPlanExtract = "extract"
+	// TranscriptionPlanSidecar — no usable embedded track, but the English
+	// subtitle beside the file matches its timing, so the click translates
+	// that file instead of paying for speech recognition
+	// (disc-2026-10-generate-keeps-user-en-srt-b2).
+	TranscriptionPlanSidecar = "sidecar"
 )
+
+// RouteSidecarPrediction is the estimate's `route` for a matching English
+// sidecar. It is not a RoutePrediction: the probe alone cannot know it.
+const RouteSidecarPrediction = "sidecar"
+
+// Sidecar check states reported in TranscriptionEstimate.SidecarCheck
+// (-b2, field names confirmed by Alexyu 2026-10-20).
+const (
+	SidecarStatusNone     = "none"     // no English subtitle beside the file
+	SidecarStatusChecking = "checking" // the timing check is running in the background
+	SidecarStatusAligned  = "aligned"  // matches: plan "sidecar"
+	SidecarStatusOffset   = "offset"   // the whole file is early or late by OffsetSeconds
+	SidecarStatusMismatch = "mismatch" // no single shift fits (frame rate, cut, another film)
+	SidecarStatusUnusable = "unusable" // unreadable, too short or not English
+	SidecarStatusUnknown  = "unknown"  // the check could not run
+)
+
+// SidecarAlignment is what the estimate knows about the English subtitle
+// beside the file. FileName is the file the status is about.
+type SidecarAlignment struct {
+	Status        string  `json:"status"`
+	OffsetSeconds float64 `json:"offset_seconds"`
+	FileName      string  `json:"file_name,omitempty"`
+}
+
+// SidecarAlignmentSource answers from stored checks and starts a check in the
+// background when none is stored (sidecarcheck.Finder in production). It
+// never makes the caller wait for ffmpeg.
+type SidecarAlignmentSource interface {
+	Peek(ctx context.Context, mediaPath string) SidecarAlignment
+}
 
 // TranscriptionEstimate is the price the 管理字幕 dialog shows on its paid
 // buttons (story dsr-6a AC #2 [@contract-v2]).
@@ -82,6 +118,9 @@ type TranscriptionEstimate struct {
 	// CachedTranslationShare: 0–1 of the English SRT's cues whose translation
 	// is cached (plan=translate_only).
 	CachedTranslationShare float64 `json:"cached_translation_share,omitempty"`
+	// SidecarCheck is the English-sidecar timing check (-b2). Absent when no
+	// sidecar source is wired or an embedded track already decides the route.
+	SidecarCheck *SidecarAlignment `json:"sidecar_check,omitempty"`
 }
 
 // TranscriptionEstimateTarget is the media row the handler already resolved and
@@ -131,7 +170,9 @@ type TranscriptionEstimateService struct {
 	// routes classifies the file for the pipeline-mode quote. nil = legacy
 	// mode: no route is reported and the speech-recognition quote stands.
 	routes RoutePredictor
-	logger *slog.Logger
+	// sidecars reports the English-sidecar check; nil = not consulted.
+	sidecars SidecarAlignmentSource
+	logger   *slog.Logger
 }
 
 // NewTranscriptionEstimateService wires the estimator. plan is the
@@ -187,6 +228,13 @@ func (s *TranscriptionEstimateService) SetRoutePredictor(p RoutePredictor) {
 	s.routes = p
 }
 
+// SetSidecarSource turns on the English-sidecar quote (-b2). main.go wires it
+// with the same finder the pipeline's router uses, so the quote and the run
+// read the same stored checks.
+func (s *TranscriptionEstimateService) SetSidecarSource(src SidecarAlignmentSource) {
+	s.sidecars = src
+}
+
 // Estimate prices the run a click on 生成字幕 would start for target.
 //
 // The dialog's movie trigger always sends ?translate=true and the episode
@@ -215,8 +263,21 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 		route = s.probeRoute(ctx, target)
 	}
 
+	// No usable embedded track: the router tries the English subtitle beside
+	// the file before speech recognition, so the quote asks the same finder.
+	// Only a stored "aligned" changes the price; anything else — including a
+	// check still running — quotes speech recognition, the dearer lane, so the
+	// user never pays more than they were shown.
+	var sidecar *SidecarAlignment
+	if s.sidecars != nil && route != RouteExtract && target.FilePath != "" && s.routes != nil {
+		sa := s.sidecars.Peek(ctx, target.FilePath)
+		sidecar = &sa
+	}
+
 	plan := TranscriptionPlanFull
 	switch {
+	case sidecar != nil && sidecar.Status == SidecarStatusAligned:
+		plan = TranscriptionPlanSidecar
 	case route == RouteExtract:
 		// The embedded track is translated (or delivered); the `untranslated`
 		// row's English SRT is not what this lane reads, so no resume.
@@ -238,11 +299,16 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 	asrRate, asrProvider := s.asrRateFor(ctx)
 	usd := s.priceUSD(plan, translate, minutes, model, credit, asrRate)
 
+	routeOut := string(route)
+	if plan == TranscriptionPlanSidecar {
+		routeOut = RouteSidecarPrediction
+	}
+
 	return TranscriptionEstimate{
 		MediaID:                target.MediaID,
 		MediaType:              target.MediaType,
 		Plan:                   plan,
-		Route:                  string(route),
+		Route:                  routeOut,
 		ASRAvailable:           s.plan.IsAvailable(),
 		SelfHostedASR:          asrProvider == ASRProviderSelfHosted,
 		ASRProvider:            asrProvider,
@@ -254,6 +320,7 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 		EstimatedUSD:           usd.InexactFloat64(),
 		ResumedASRMinutes:      credit.asrMinutes,
 		CachedTranslationShare: credit.translatedShare,
+		SidecarCheck:           sidecar,
 	}
 }
 
@@ -275,6 +342,13 @@ func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, min
 	mins := decimal.NewFromFloat(minutes)
 	asrMins := decimal.NewFromFloat(max(minutes-credit.asrMinutes, 0))
 	switch {
+	case plan == TranscriptionPlanSidecar && translate:
+		// The sidecar runs the pipeline's translate lane — the same lane and
+		// price as an embedded English track.
+		return estimateUSD(RouteExtract, minutes, asrRate, model)
+	case plan == TranscriptionPlanSidecar:
+		// No key: the translate verdict fails before any paid call.
+		return decimal.Zero
 	case plan == TranscriptionPlanExtract && translate:
 		// The batch consent list's extract price — LLM translation of the
 		// track, no speech recognition. A Chinese track ends up free; quoting

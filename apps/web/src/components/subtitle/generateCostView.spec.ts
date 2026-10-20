@@ -4,6 +4,9 @@ import type { TranscriptionEstimate } from '../../services/transcriptionService'
 import {
   deriveGenerateCostView,
   FALLBACK_RUNTIME_LINE,
+  SIDECAR_CHECKING_LINE,
+  SIDECAR_LINE,
+  TRANSLATION_KEY_MISSING_LINE,
   type EstimateQueryState,
 } from './generateCostView';
 
@@ -305,6 +308,56 @@ describe('deriveGenerateCostView', () => {
       expect(skip.cost).toEqual({ status: 'unavailable' });
       const asr = deriveGenerateCostView({ mediaType: 'movie', estimate: ready({ route: 'asr' }) });
       expect(asr.helper.text).toBe('語音辨識＋AI 翻譯，約需數分鐘');
+    });
+  });
+
+  describe('-b2: the English subtitle beside the file matches (plan sidecar)', () => {
+    const sidecar = { plan: 'sidecar' as const, route: 'sidecar' as const, estimatedUsd: 0.07 };
+
+    it('quotes the translation and says it uses the subtitle beside the file', () => {
+      const view = deriveGenerateCostView({ mediaType: 'movie', estimate: ready(sidecar) });
+      expect(view.cost).toEqual({ status: 'ready', usd: 0.07, approximate: false });
+      expect(view.helper).toEqual({ text: SIDECAR_LINE, tone: 'muted', settingsLink: false });
+    });
+
+    it('needs no speech-recognition key', () => {
+      const view = deriveGenerateCostView({
+        mediaType: 'movie',
+        estimate: ready({ ...sidecar, asrAvailable: false }),
+      });
+      expect(view.cost.status).toBe('ready');
+      expect(view.helper.text).toBe(SIDECAR_LINE);
+    });
+
+    it('is blocked without a translation key — it would produce nothing', () => {
+      const view = deriveGenerateCostView({
+        mediaType: 'movie',
+        estimate: ready({ ...sidecar, translationConfigured: false, estimatedUsd: 0 }),
+      });
+      expect(view.cost).toEqual({ status: 'unavailable' });
+      expect(view.helper.text).toBe(TRANSLATION_KEY_MISSING_LINE);
+    });
+
+    it('without an ASR key, a running check says so instead of flashing the key notice', () => {
+      const view = deriveGenerateCostView({
+        mediaType: 'movie',
+        estimate: ready({
+          asrAvailable: false,
+          sidecarCheck: { status: 'checking', offsetSeconds: 0 },
+        }),
+      });
+      expect(view.cost).toEqual({ status: 'unavailable' });
+      expect(view.helper.text).toBe(SIDECAR_CHECKING_LINE);
+      expect(view.helper.settingsLink).toBe(false);
+    });
+
+    it('a check still running keeps the speech-recognition line and price', () => {
+      const view = deriveGenerateCostView({
+        mediaType: 'movie',
+        estimate: ready({ sidecarCheck: { status: 'checking', offsetSeconds: 0 } }),
+      });
+      expect(view.helper.text).toBe('語音辨識＋AI 翻譯，約需數分鐘');
+      expect(view.cost).toEqual({ status: 'ready', usd: 0.67, approximate: false });
     });
   });
 });
