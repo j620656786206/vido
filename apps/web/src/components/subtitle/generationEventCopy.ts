@@ -5,7 +5,7 @@
  * one recorded row into what the pane draws. The row kinds are specified on
  * the .pen spec screen F11-SPEC-LOG (tT3JX) — change them there too. A row is
  * two lines at most: stage · parts on the first, and for "one film + why"
- * (④ 失敗, ⑤ / ⑤b 已停止) the reason on its own second line (`detail`), so a
+ * (④ 失敗, ⑤ / ⑤b 已停止, 已略過) the reason on its own second line (`detail`), so a
  * long reason never squeezes the film name away
  * (disc-2026-10-generation-queue-failure-reason).
  *
@@ -19,10 +19,19 @@
  *
  * A batch item's `skipped` / `busy_elsewhere` is the structured
  * `changed_item.reason`, worded by generationQueueRow's `queueRowLabel`; the
- * reason code only refines `reason: "error"`.
+ * reason code refines `reason: "error"` and `"skipped"`, never
+ * `busy_elsewhere`.
+ *
+ * Skipped is NOT a failure (disc-2026-10-no-text-source-skip-b): a film with
+ * no usable subtitle and no speech recognition set up (`no_text_source`, or a
+ * batch item's `reason: "skipped"`) is a grey 已略過 row — the muted
+ * circle-dashed glyph and secondary stage word of ⑧ 批次已取消 — with the
+ * reason on its second line like ④. F11-SPEC-LOG has no such row yet
+ * (待 Sally 補稿). `queueRowIsSkipped` decides it for the batch rows, so the
+ * queue on the left and this log never disagree.
  */
 import type { FeedRow, FeedStage } from '../../hooks/useGenerationJobsFeed';
-import { queueRowLabel, queueRowTitle } from './generationQueueRow';
+import { queueRowIsSkipped, queueRowLabel, queueRowTitle } from './generationQueueRow';
 import { GENERATION_STAGES } from './GenerationProgressV2';
 import { usd } from '../../lib/currency';
 import { creditProviderName } from './creditStop';
@@ -58,7 +67,7 @@ export interface FeedRowView {
   parts: string[];
   /**
    * The second line: shown whole under the stage word, with NO `·` in front —
-   * the reason of ④ 失敗 / ⑤ / ⑤b 已停止 (F11-SPEC-LOG tT3JX). null = one line.
+   * the reason of ④ 失敗 / ⑤ / ⑤b 已停止 / 已略過 (F11-SPEC-LOG tT3JX). null = one line.
    */
   detail: string | null;
   trail: string | null;
@@ -159,6 +168,7 @@ export function feedRowView(row: FeedRow): FeedRowView {
       const name = filmName(row);
       if (row.reason === null) {
         const copy = failureCopyForReason(row.failureReason);
+        if (copy.skipped) return skippedView(name, copy.text);
         if (copy.stopped) {
           return view({
             glyph: 'circle-alert',
@@ -172,17 +182,19 @@ export function feedRowView(row: FeedRow): FeedRowView {
         }
         return failedView(name, copy.text);
       }
-      // A batch item that failed with `error`: the code says why — always as a
-      // failure (AC #3). A real money stop does not end up here: the batch
-      // itself ends as budget_ceiling / credit_exhausted and pauses the item.
-      // Same call as the queue row on the left, so the two sides of the
-      // workspace word one failure the same way.
-      const text = queueRowLabel({
+      // A batch item: skipped (reason `skipped`, or a `skipped` code) is a grey
+      // 已略過; anything else that failed is a failure, the code saying why
+      // (AC #3). A real money stop does not end up here: the batch itself ends
+      // as budget_ceiling / credit_exhausted and pauses the item. Same call as
+      // the queue row on the left, so the two sides of the workspace word one
+      // outcome the same way.
+      const item = {
         status: 'failed',
         reason: row.reason,
         failureReason: row.failureReason,
-      }).text;
-      return failedView(name, text);
+      } as const;
+      const text = queueRowLabel(item).text;
+      return queueRowIsSkipped(item) ? skippedView(name, text) : failedView(name, text);
     }
     case 'batch': {
       const { status, successCount, failCount } = row;
@@ -268,5 +280,22 @@ function failedView(name: string, reason: string): FeedRowView {
     parts: [name],
     detail: reason,
     announce: `失敗：${name}，${reason}`,
+  });
+}
+
+/**
+ * Not done, nothing broken: the film had nothing to generate from
+ * (disc-2026-10-no-text-source-skip-b AC #7). ⑧ 批次已取消's neutral tones and
+ * the 已中斷 dashed circle ("did not happen"); two lines like ④.
+ */
+function skippedView(name: string, reason: string): FeedRowView {
+  return view({
+    glyph: 'circle-dashed',
+    glyphClass: MUTED,
+    stage: '已略過',
+    stageClass: SECONDARY,
+    parts: [name],
+    detail: reason,
+    announce: `已略過：${name}，${reason}`,
   });
 }

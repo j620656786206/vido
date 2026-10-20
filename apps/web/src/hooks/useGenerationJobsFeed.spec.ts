@@ -77,7 +77,7 @@ const item = (
   status,
   reason,
   // disc-2026-10-live-activity-failure-reasons-a AC #1: always on the wire;
-  // a code only for failed + error.
+  // a code for failed + error, and for failed + skipped since contract v2.
   failure_reason: failureReason,
 });
 
@@ -694,13 +694,21 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     expect(JSON.stringify(result.current.feed)).not.toContain('no audio track');
   });
 
-  it('a batch failure that is not `error` carries no code, even if one is sent', () => {
+  // disc-2026-10-no-text-source-skip-b AC #6: a skip keeps its code now —
+  // no_text_source is what makes the row say 「也沒有設定語音辨識」 — while
+  // busy_elsewhere still never carries one.
+  it('a `skipped` batch failure keeps its code; `busy_elsewhere` still carries none', () => {
     const { result, es } = connected();
     act(() => {
       es.emit('generation_batch_progress', running(item('m3', 'C', 'running')));
       es.emit(
         'generation_batch_progress',
-        running(item('m3', 'C', 'failed', 'skipped', '', 'other'))
+        running(item('m3', 'C', 'failed', 'skipped', '', 'no_text_source'))
+      );
+      es.emit('generation_batch_progress', running(item('m5', 'E', 'running')));
+      es.emit(
+        'generation_batch_progress',
+        running(item('m5', 'E', 'failed', 'busy_elsewhere', '', 'no_text_source'))
       );
       es.emit('generation_batch_progress', running(item('m4', 'D', 'running')));
       // An `error` item whose code is missing (older server) says nothing specific.
@@ -708,6 +716,10 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     });
     expect(rowsFor(result.current.feed, 'm3').at(-1)).toMatchObject({
       reason: 'skipped',
+      failureReason: 'no_text_source',
+    });
+    expect(rowsFor(result.current.feed, 'm5').at(-1)).toMatchObject({
+      reason: 'busy_elsewhere',
       failureReason: null,
     });
     expect(rowsFor(result.current.feed, 'm4').at(-1)).toMatchObject({

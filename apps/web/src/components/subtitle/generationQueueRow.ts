@@ -19,6 +19,12 @@
  * log and the activity record show for that failure
  * (disc-2026-10-generation-queue-failure-reason). `FAILURE_TEXT.error` is only
  * the fallback when no code came with it.
+ *
+ * A SKIPPED item (`reason: "skipped"`, or a code whose `skipped` flag is set —
+ * `no_text_source`) is not a failure: the film is fine, there was nothing to
+ * generate from. It is a grey 已略過 with the reason as its sentence
+ * (disc-2026-10-no-text-source-skip-b). `queueRowIsSkipped` is the one place
+ * that decides it — the workspace queue, the dialog and the live log all ask it.
  */
 import type {
   GenerationBatchItemReason,
@@ -26,7 +32,11 @@ import type {
 } from '../../services/subtitleService';
 import type { GenerationPhase } from '../../hooks/useGenerationProgress';
 import { GENERATION_STAGES } from './GenerationProgressV2';
-import { failureCopyForReason } from './runFailureCopy';
+import {
+  FAILURE_COPY_BY_REASON,
+  failureCopyForReason,
+  type RunFailureReason,
+} from './runFailureCopy';
 
 /** The backend-owned fields a row's label is derived from. */
 export interface QueueRowView {
@@ -34,8 +44,8 @@ export interface QueueRowView {
   reason: GenerationBatchItemReason;
   /**
    * The run's failure code (`failure_reason`). Only read for `failed` +
-   * `reason: "error"`; absent on older servers and on the dialog's fallback
-   * rows, which then say 生成失敗.
+   * `reason: "error"` or `"skipped"` (never for `busy_elsewhere`); absent on
+   * older servers and on the dialog's fallback rows, which then say 生成失敗.
    */
   failureReason?: string | null;
 }
@@ -53,10 +63,15 @@ export interface QueueRowLabel {
 const MUTED = 'text-[var(--text-muted)]';
 
 /**
- * Failure sentences per backend reason. `skipped` deliberately does NOT open
- * with 已略過: legacy runs with no API key configured land on the same reason
- * (dsr-6d-a CR L8), and "skipped" would read as a decision the system made on
- * purpose rather than something it could not do.
+ * Failure sentences per backend reason. `skipped` is the fallback reason line
+ * of a grey 已略過 row (a skipped item that came with no usable code).
+ *
+ * ⚖️ History: dsr-6d-b AC #3 / dsr-6d-a CR L8 forbade 已略過 here — legacy runs
+ * with no API key landed on `skipped` too, and 略過 read as the system choosing
+ * not to. Overturned by the 2026-10-19 party mode (Sally 追認 #2,
+ * disc-2026-10-no-text-source-skip-b): the second line now says exactly what is
+ * missing (「也沒有設定語音辨識」), and the no-key legacy path sends
+ * `asr_unconfigured` (語音辨識未設定) instead.
  *
  * `error` is refined by the run's failure code (FAILURE_COPY_BY_REASON, shared
  * with the live log and the activity record); the `error` entry here is only
@@ -69,6 +84,31 @@ const FAILURE_TEXT: Record<GenerationBatchItemReason, string> = {
   // Pre-dsr-6d-a servers send no reason at all.
   '': '生成失敗',
 };
+
+/**
+ * Is this row a grey 已略過 rather than a failure? `reason: "skipped"`, or an
+ * `error` whose code is flagged `skipped` (`no_text_source`). `busy_elsewhere`
+ * never is — its code, if any, is not read (the film is busy, not missing
+ * anything). The single judge for the queue, the dialog and the live log.
+ */
+export function queueRowIsSkipped(view: QueueRowView): boolean {
+  if (view.status !== 'failed') return false;
+  if (view.reason === 'skipped') return true;
+  return view.reason === 'error' && failureCopyForReason(view.failureReason).skipped;
+}
+
+/**
+ * A skipped row's reason line: the code's own sentence when it came with a
+ * known one (`no_text_source`, `asr_unconfigured`, …), else 沒有可用的字幕來源 —
+ * a skipped row never says 生成失敗.
+ */
+function skippedText(failureReason: string | null | undefined): string {
+  const code = failureReason ?? '';
+  if (code !== 'other' && Object.prototype.hasOwnProperty.call(FAILURE_COPY_BY_REASON, code)) {
+    return FAILURE_COPY_BY_REASON[code as RunFailureReason].text;
+  }
+  return FAILURE_TEXT.skipped;
+}
 
 /** Live phases that name a stage; everything else has no stage to show yet. */
 const PHASE_STAGE: Partial<Record<GenerationPhase, string>> = {
@@ -88,6 +128,10 @@ export function queueRowLabel(view: QueueRowView, phase?: GenerationPhase | null
     case 'done':
       return { text: '完成', className: 'text-[var(--success-text)]', icon: 'check' };
     case 'failed':
+      if (queueRowIsSkipped(view)) {
+        // Grey, no glyph — the same neutral as 已取消 (Sally 追認 #1).
+        return { text: skippedText(view.failureReason), className: MUTED, icon: null };
+      }
       return {
         // Always red 失敗 — a code's `stopped` flag is not read here: a real
         // budget / credit stop pauses the item, it does not fail it.
@@ -124,7 +168,7 @@ export function queueRowBadge(view: QueueRowView, stage: string): string {
     case 'done':
       return '完成';
     case 'failed':
-      return '失敗';
+      return queueRowIsSkipped(view) ? '已略過' : '失敗';
     case 'running':
       return stage;
     case 'paused':

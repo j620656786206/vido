@@ -174,12 +174,14 @@ export interface GenerationBatchItemState extends GenerationBatchItem {
   status: GenerationBatchItemStatus;
   reason: GenerationBatchItemReason;
   /**
-   * Why a `failed` + `error` item failed — one of the backend's reason codes
+   * Why a `failed` item failed — one of the backend's reason codes
    * (`failure_reason`, disc-2026-10-live-activity-failure-reasons-a AC #1
-   * `[@contract-v1]`; words in runFailureCopy's FAILURE_COPY_BY_REASON). Read
+   * `[@contract-v2]`; words in runFailureCopy's FAILURE_COPY_BY_REASON). Set on
+   * `error` items, and on `skipped` items too (`no_text_source` /
+   * `asr_unconfigured`, or `''` — disc-2026-10-no-text-source-skip-a). Read
    * by the live log AND the queue rows (workspace + dialog, via queueRowLabel —
-   * disc-2026-10-generation-queue-failure-reason). The backend always sends it; `''` means not an `error` failure. Optional
-   * only so older fixtures still type-check.
+   * disc-2026-10-generation-queue-failure-reason). Never read for
+   * `busy_elsewhere`. Optional only so older fixtures still type-check.
    */
   failureReason?: string;
 }

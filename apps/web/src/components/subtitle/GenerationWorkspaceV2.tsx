@@ -60,6 +60,7 @@ import { cn } from '../../lib/utils';
 import { GenerationProgressV2 } from './GenerationProgressV2';
 import { generationBatchPreviewKey, generationBatchStatusKey } from './GenerationBatchDialogV2';
 import {
+  queueRowIsSkipped,
   queueRowLabel,
   queueRowTitle,
   queueRowBadge,
@@ -241,16 +242,25 @@ function StatusPill({ mode }: { mode: WorkspaceMode }) {
 }
 
 /**
- * Badge tint per backend status (`aw4Qr` → `IcPTo`). Paused/cancelled/queued are
- * NEUTRAL: an item nobody got to is not a warning, it is simply not done yet.
+ * What a badge draws: the backend status, except a failed item that was only
+ * skipped (`queueRowIsSkipped`) — that is its own neutral 已略過
+ * (disc-2026-10-no-text-source-skip-b AC #4).
  */
-const BADGE_TINT: Record<GenerationBatchItemStatus, string> = {
+type BadgeState = GenerationBatchItemStatus | 'skipped';
+
+/**
+ * Badge tint per display state (`aw4Qr` → `IcPTo`). Paused/cancelled/queued/
+ * skipped are NEUTRAL: an item nobody got to — or had nothing to work from — is
+ * not a warning, it is simply not done.
+ */
+const BADGE_TINT: Record<BadgeState, string> = {
   done: 'bg-[var(--success-tint)]',
   failed: 'bg-[var(--error-tint)]',
   running: 'bg-[var(--accent-tint)]',
   paused: 'bg-[var(--bg-tertiary)]',
   cancelled: 'bg-[var(--bg-tertiary)]',
   queued: 'bg-[var(--bg-tertiary)]',
+  skipped: 'bg-[var(--bg-tertiary)]',
 };
 
 /**
@@ -259,7 +269,7 @@ const BADGE_TINT: Record<GenerationBatchItemStatus, string> = {
  * draw a different set for the same states, so it is a rendering choice — not
  * something to force into the shared module).
  */
-function BadgeIcon({ status }: { status: GenerationBatchItemStatus }) {
+function BadgeIcon({ status }: { status: BadgeState }) {
   const cls = 'h-3.5 w-3.5 shrink-0';
   switch (status) {
     case 'done':
@@ -294,6 +304,8 @@ function QueueRow({
     activeItemProgress?.phase
   );
   const isRunning = item.status === 'running';
+  const skipped = queueRowIsSkipped(item);
+  const badgeState: BadgeState = skipped ? 'skipped' : item.status;
   // The percentage only exists in the translating stage (dsr-6d-a): claiming one
   // during extraction/transcription would be inventing a number.
   const pct =
@@ -308,6 +320,7 @@ function QueueRow({
     <li
       data-testid={`workspace-queue-row-${item.mediaId}`}
       data-state={item.status}
+      data-skipped={skipped ? 'true' : undefined}
       className="flex flex-col gap-2.5 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3.5"
     >
       <div className="flex items-center gap-3.5">
@@ -336,11 +349,11 @@ function QueueRow({
           <span
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs',
-              BADGE_TINT[item.status],
+              BADGE_TINT[badgeState],
               label.className
             )}
           >
-            <BadgeIcon status={item.status} />
+            <BadgeIcon status={badgeState} />
             {queueRowBadge(item, label.text)}
           </span>
         </div>

@@ -1,6 +1,6 @@
 # Disc：沒有字幕來源也沒設語音辨識 B（前端）——生成畫面寫灰色「已略過」＋第二行「沒有可用的字幕來源，也沒有設定語音辨識」
 
-Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason`（PR #851，2026-10-20 為對話框兩行重開）合併才開工；`-a` 已合併 #855）
+Status: done（2026-10-20：實作、測試、量測、基準完成，PR `feat/no-text-source-skip-b`；原：ready-for-dev（⛔ 等 #851 合併才開工；`-a` 已合併 #855））
 
 **Source:** 傘狀單 `disc-2026-10-no-text-source-skip`（2026-10-19 party mode：founder-pm／Winston／Sally／John／Bob／Mary＋#848 的另一個 session；⚖️ Alexyu：由這邊直接做）。
 
@@ -126,12 +126,12 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason`�
 
 ## Tasks / Subtasks
 
-- [ ] **T0 解開條件（AC #0）**：確認 gen-queue 已合併、`-a` 狀態、契約 ack。
-- [ ] **T1 文字表（AC #1）**：`runFailureCopy.ts` 型別、旗標、新條目；註解。
-- [ ] **T2 佇列＋對話框（AC #2–#5）**：`generationQueueRow.ts`（`queueRowIsSkipped`、label、badge、`FAILURE_TEXT` 註解）、`GenerationWorkspaceV2.tsx`（徽章底色／圖示、可選 `data-skipped`）、`GenerationBatchDialogV2.tsx`（只確認略過列吃到 `queueRowBadge`「已略過」與灰色無圖示；兩行結構是 #851 的）。
-- [ ] **T3 即時活動（AC #6–#8）**：`useGenerationJobsFeed.ts:524`、`generationEventCopy.ts`（`skippedView`、單次與批次分支、檔頭）、`subtitleService.ts` 註解。
-- [ ] **T4 測試（AC #9–#11）**：三方一致擴充、六個 spec 改寫／新增、六種故意改壞。
-- [ ] **T5 量測＋UX＋基準＋收尾（AC #12–#15）**：390／320／1440／880 量測、對最接近稿的截圖、兩個夾具、兩張 darwin 更新與 linux 刪除、lint／typecheck／format／design-refs／E2E；更新 `sprint-status.yaml`。
+- [x] **T0 解開條件（AC #0）**：確認 gen-queue 已合併、`-a` 狀態、契約 ack。
+- [x] **T1 文字表（AC #1）**：`runFailureCopy.ts` 型別、旗標、新條目；註解。
+- [x] **T2 佇列＋對話框（AC #2–#5）**：`generationQueueRow.ts`（`queueRowIsSkipped`、label、badge、`FAILURE_TEXT` 註解）、`GenerationWorkspaceV2.tsx`（徽章底色／圖示、可選 `data-skipped`）、`GenerationBatchDialogV2.tsx`（只確認略過列吃到 `queueRowBadge`「已略過」與灰色無圖示；兩行結構是 #851 的）。
+- [x] **T3 即時活動（AC #6–#8）**：`useGenerationJobsFeed.ts:524`、`generationEventCopy.ts`（`skippedView`、單次與批次分支、檔頭）、`subtitleService.ts` 註解。
+- [x] **T4 測試（AC #9–#11）**：三方一致擴充、六個 spec 改寫／新增、六種故意改壞。
+- [x] **T5 量測＋UX＋基準＋收尾（AC #12–#15）**：390／320／1440／880 量測、對最接近稿的截圖、兩個夾具、兩張 darwin 更新與 linux 刪除、lint／typecheck／format／design-refs／E2E；更新 `sprint-status.yaml`。
 
 ## Dev Notes
 
@@ -206,17 +206,70 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason`�
 | 日期 | 變更 |
 |---|---|
 | 2026-10-19 | 建單（Bob）。party mode 裁定灰色「已略過」＋第二行原因；⚖️ Alexyu 由這邊直接做。樣式預設中性色，待 Sally 追認 4 項。 |
+| 2026-10-20 | Amelia：實作完成——灰色「已略過」＋第二行原因（工作區佇列、即時活動、對話框）；`queueRowIsSkipped` 只在 `skipped`／`error` 看代碼（`busy_elsewhere` 不看）；六種故意改壞都轉紅；量測合格；基準三張（含 `failures-long-titles-mobile`）；Status → done。 |
 | 2026-10-20 | Bob：套 Sally 新裁定（推翻追認 #3）——對話框略過列兩行，第一行灰色「已略過」、第二行原因；改寫 AC #0、#5、#10（對話框）、#12（對話框量測）、#13、#14、T2、Dev Notes。記錄依賴：對話框兩行結構由 gen-queue「2026-10-20 追加」做（PR #851），本單等 #851 合併才開工。`-a` 已合併 #855，契約 v2。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia，BMAD dev）
+
 ### Debug Log References
+
+**AC #11 故意改壞**（每項改壞 → 跑六支 spec → 還原；還原後 412／412 綠）：
+
+| # | 改壞 | 轉紅的測試 |
+|---|---|---|
+| (i) | `no_text_source` 文字改一個字（辨→辯） | 8 支紅：三方一致「no_text_source: one sentence, and 已略過, everywhere」（釘了字面）、單次略過列、④、佇列 `skipped + no_text_source`、對話框 contract v2、工作區左右一致、活動頁 `failed no_text_source` |
+| (ii) | `no_text_source.skipped` 改 `false` | 4 支紅：「only no_text_source is skipped」、單次略過列、三方一致 no_text_source、佇列「error + skipped code」 |
+| (iii) | hook 改回只留 `error` 的代碼 | 1 支紅：hook「a `skipped` batch failure keeps its code」。工作區左右一致測試直接餵 feed 列、不經 hook，所以不會因 hook 紅（AC 預期它也紅，實際是 hook 測試擋） |
+| (iv) | `queueRowIsSkipped` 拿掉 `reason === 'skipped'` | 18 支紅：佇列、批次列 ④、工作區、對話框、三方一致 |
+| (v) | 工作區徽章底色用回 `item.status` | 1 支紅：工作區「a refused item…」的 `--error-tint`／`--bg-tertiary` 斷言 |
+| (vi) | `busy_elsewhere` 也看代碼（照 AC #2 字面公式） | 2 支紅：佇列迴歸「real failures stay red」、④ 的 `busy_elsewhere + no_text_source` |
 
 ### Completion Notes List
 
+- **AC #0 開工前確認：** #851 已合併（842c00bc）：`runFailureCopy.ts` 存在、`queueRowLabel` 收 `failureReason`、`FeedRowView.detail` 存在、對話框 `QueueRow` 已兩行（`queueRowLines`：失敗列狀態字 `queueRowBadge`、第二行 `gen-batch-row-detail-${mediaId}`）。`-a` 已合併 #855，契約 `[@contract-v2]`；gen-queue 的 STALE 已由 #851 處理（sprint-status 記「STALE 解除」）。
+- **AC #1 選法：** 用 `skipped: boolean` 旗標（不是 `tone`），十二條都寫；測試保證只有 `no_text_source` 是 `true`、沒有一條 `stopped` 與 `skipped` 同時 `true`。
+- **AC #2 公式的一個修正（照 AC #10／#11(vi) 的迴歸意圖）：** AC #2 字面是 `status === 'failed' && (reason === 'skipped' || copy(code).skipped)`，但這樣 `busy_elsewhere + no_text_source` 會變灰，跟 AC #10「`busy_elsewhere`＋`no_text_source` 仍紅色」衝突。實作改成 `reason === 'skipped' || (reason === 'error' && copy(code).skipped)`：代碼只在 `skipped`／`error` 時看，`busy_elsewhere` 與沒有 reason 的舊伺服器都不看。(vi) 就是把它改回字面公式 → 迴歸測試紅。
+- **AC #3 一個邊角：** 照字面「認得、不是 `other` 的代碼就用它的句子」，所以理論上 `skipped + target_not_writable` 會是灰色「影片所在的資料夾寫不進字幕」；後端契約 `skipped` 只會帶 `no_text_source`／`asr_unconfigured`／`""`，實際不會發生。原本 #851 的測試「a code never rewords skipped」因此改成只釘 `busy_elsewhere` 與無 reason。
+- **AC #5 對話框：** 沒動版面；`queueRowLines` 只改註解。略過列自動拿到「已略過」（灰、無圖示）＋第二行原因。#851 的 contract v2 測試（`skipped + no_text_source` 仍寫「沒有可用的字幕來源」）改寫成新行為。
+- **AC #12 真瀏覽器量測**（本機 chromium，片名「和平使者 S01E01」與「魔戒首部曲：魔戒現身 加長版導演剪輯特別收藏版」，原因 19 字「沒有可用的字幕來源，也沒有設定語音辨識」）：
+  - **產生字幕對話框**（gallery 夾具，同 #851 AC #22 的量法；略過列換成上面兩個片名＋19 字原因）：
+    - 320（sheet 寬 320）：片名格 **162px**（≥150 合格）；「和平使者 S01E01」一行整個看得到；魔戒兩行沒有被截；狀態字「已略過」灰色、無圖示，中心與片名第一行中心差 **0px**；原因折兩行整句、左緣與片名差 0px。
+    - 390（sheet 寬 390）：片名格 **232px**（≥200 合格）；和平使者一行、魔戒兩行；差值 0px；原因一行整句。
+    - 880（桌機對話框寬 880）：片名格 696px，兩個片名都一行；差值 0px；原因一行。
+  - **工作區**（真頁面 `/activity?view=generation`，狀態查詢＋假 SSE stub，三部片 `skipped + no_text_source`；手機展開即時活動）：
+    - 390：即時活動列寬 356，三列都「已略過」、原因一行整句；和平使者 107px 一行、花月殺手 56px、魔戒 232px 兩行；圖示對階段字中心差 0、原因左緣對階段字 0。佇列片名格 200px，和平使者一行、魔戒兩行（沒被截）；徽章「已略過」一行（高 30、寬 56，`--bg-tertiary` 底、`--text-muted` 字、無圖示）；說明行兩行整句、次要色。頁面寬 390 無橫捲。
+    - 320：即時活動列寬 286，原因折兩行整句；和平使者 107px 一行、魔戒 162px 兩行；差值 0。佇列片名格 130px，和平使者一行，魔戒兩行後「…」（照 gen-queue 規則）；徽章一行；說明行三行整句。無橫捲。
+    - 1440：即時活動側欄列寬 398，原因一行；和平使者一行、魔戒 274px 兩行；差值 0。佇列片名格 562px 都一行，說明行一行。
+- **AC #13 UX 驗收：** 對話框 390 截圖對 `f8-m-v2.png`／`f8-spec-row.png` ②（花月殺手＋右邊灰色「已略過」、無圖示，第二行原因）一致；880 對 `f8-d-v2.png` 同排法一致。工作區即時活動略過列：虛線圓圖示 `--text-muted`、階段字 `--text-secondary`，跟 `f11-spec-log.png` ⑧ 批次已取消同色調；兩行位置同 ④。佇列徽章 `--bg-tertiary`＋`--text-muted`、無圖示，同已取消。截圖在 scratchpad（`skip-ux/`、`shots-skip/`），PR 附說明，等 Sally 追認工作區／即時活動的樣式（沒有對應稿）。
+- **AC #14 視覺基準：** 兩個夾具的 `skipped` 項目／即時活動列加 `failureReason: 'no_text_source'`。全套 visual 跑一次：只有 `generation-workspace-v2/complete-with-failures` 超過門檻；`generation-batch-dialog-v2/complete-with-failures` 與 **`generation-batch-dialog-v2/failures-long-titles-mobile`** 內容有變但低於門檻（狀態字「失敗」→「已略過」）。後者 story 寫「不含略過、不動」，但 #851 新增的它有一列「花月殺手 skipped」，所以也是預期改變（夾具資料沒動，略過列沒帶代碼 → 第二行「沒有可用的字幕來源」）。三張 darwin 刪掉後 `update-missing` 重產、linux `git rm`，交 CI bootstrap。其餘生成相關基準沒變。
+- **AC #15：** `pnpm nx run web:test` 298 檔／4853 支全綠；`web:typecheck` 綠；`lint:all` 0 errors（✖ 168／170 problems 都是 warnings）；`format:check` 綠；`check-design-refs.py` 綠。E2E `generation-workspace.spec.ts`、`generation-workspace-mobile.spec.ts` 全綠；`batch-subtitle.spec.ts` 本機 2 支紅（`[P0] confirm sends POST…`、`library selection ACTUALLY flows`），原因是 POST body 多了 `model_id: "claude-sonnet-5"`——本機 Go API 用 `AI_PROVIDER=claude` 起，沒被 stub 的模型清單選了一個模型；本單沒碰送出請求的程式，交 CI E2E 確認。
+- `git grep "已略過\|沒有可用的字幕來源" tests/e2e` 為零；沒刪改任何 testid，只新增 `data-skipped`。
+
 ### File List
+
+- apps/web/src/components/subtitle/runFailureCopy.ts
+- apps/web/src/components/subtitle/generationQueueRow.ts
+- apps/web/src/components/subtitle/generationQueueRow.spec.ts
+- apps/web/src/components/subtitle/generationEventCopy.ts
+- apps/web/src/components/subtitle/generationEventCopy.spec.ts
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.tsx
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.spec.tsx
+- apps/web/src/components/subtitle/GenerationBatchDialogV2.tsx（只改註解）
+- apps/web/src/components/subtitle/GenerationBatchDialogV2.spec.tsx
+- apps/web/src/hooks/useGenerationJobsFeed.ts
+- apps/web/src/hooks/useGenerationJobsFeed.spec.ts
+- apps/web/src/components/activity/recentEventCopy.spec.ts
+- apps/web/src/services/subtitleService.ts（註解）
+- apps/web/src/routes/test/-gallery.fixtures.tsx
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/complete-with-failures/（darwin 更新、linux 刪除）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/complete-with-failures/（darwin 更新、linux 刪除）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/failures-long-titles-mobile/（darwin 更新、linux 刪除）
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/implementation-artifacts/disc-2026-10-no-text-source-skip.md（傘狀單結案）
 
 ## ⚖️ Sally 追認（2026-10-19，開工前）
 

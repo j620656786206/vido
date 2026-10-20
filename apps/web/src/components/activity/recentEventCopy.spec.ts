@@ -138,6 +138,7 @@ describe('recentSubtitleName / recentSubtitleDetail (AC #3)', () => {
     ['unauthorized', 'API 金鑰無效'],
     ['timeout', '處理逾時'],
     ['queue_timeout', '處理逾時'],
+    ['no_text_source', '沒有可用的字幕來源，也沒有設定語音辨識'],
     ['other', '生成失敗'],
     ['brand_new_code', '生成失敗'],
     [undefined, '生成失敗'],

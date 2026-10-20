@@ -6947,7 +6947,9 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
           batchFxItem(0, 'done'),
           batchFxItem(1, 'failed', 'busy_elsewhere'),
           batchFxItem(2, 'done'),
-          batchFxItem(3, 'failed', 'skipped'),
+          // disc-2026-10-no-text-source-skip-b: a skip with its code — grey 已略過,
+          // the full 「也沒有設定語音辨識」 sentence on line two.
+          { ...batchFxItem(3, 'failed', 'skipped'), failureReason: 'no_text_source' },
           batchFxItem(4, 'done'),
         ],
       },
@@ -7397,14 +7399,15 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         items: [
           wsFxItem(0, 'done'),
           wsFxItem(1, 'failed', 'busy_elsewhere'),
-          wsFxItem(2, 'failed', 'skipped'),
+          // disc-2026-10-no-text-source-skip-b: grey 已略過 badge + the full reason.
+          { ...wsFxItem(2, 'failed', 'skipped'), failureReason: 'no_text_source' },
         ],
       },
       // The log names the SAME reasons as the queue rows beside it.
       feed: [
         wsFxFeed(1, 0, { kind: 'done' }),
         wsFxFeed(2, 1, { kind: 'failed', reason: 'busy_elsewhere', failureReason: null }),
-        wsFxFeed(3, 2, { kind: 'failed', reason: 'skipped', failureReason: null }),
+        wsFxFeed(3, 2, { kind: 'failed', reason: 'skipped', failureReason: 'no_text_source' }),
         {
           seq: 4,
           kind: 'batch',
