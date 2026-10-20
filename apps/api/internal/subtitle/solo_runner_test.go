@@ -349,10 +349,53 @@ func TestSoloRunner_FailedTerminals(t *testing.T) {
 		assert.Equal(t, "failed", data["phase"])
 		assert.Equal(t, "這部影片沒有可用的字幕來源，也沒有設定語音辨識", data["message"])
 		assert.Contains(t, data, "spent_usd")
-		assert.Equal(t, models.SubtitleRunFailureOther, data["failure_reason"],
-			"every failed terminal carries the code; a skip's routing reason names no known cause")
+		// disc-2026-10-no-text-source-skip-a: the skip now has its own code,
+		// and it is the code this run's row classifies to.
+		assert.Equal(t, models.SubtitleRunFailureNoTextSource, data["failure_reason"])
+		row := s.runs.lastUpdate(t)
+		require.Equal(t, models.SubtitleRunSkipped, row.Status)
+		assert.Equal(t, models.SubtitleRunFailureReason(row.ErrorMessage), data["failure_reason"],
+			"the live event and the run row name the same cause (row: %q)", row.ErrorMessage)
 		assert.False(t, s.guard.IsInFlight(s.ref))
 	})
+
+	// disc-2026-10-no-text-source-skip-a AC #6: the other two ways a solo run
+	// ends "no usable source and no speech recognition".
+	noTextSourceCases := []struct {
+		name     string
+		decision RouteDecision
+		opts     []PipelineOption
+	}{
+		{
+			// The click opts into ASR for an und-tagged track; there is none.
+			name:     "und track (RouteSkip) and no ASR → no_text_source",
+			decision: skipDecision(),
+		},
+		{
+			// The ASR key was removed mid-run: the service reports disabled.
+			name:     "ASR wired but reports disabled → no_text_source",
+			decision: noTextDecision(),
+			opts: []PipelineOption{WithSpeechTranscriber(
+				&fakeSpeechTranscriber{available: false, err: services.ErrTranscriptionDisabled})},
+		},
+	}
+	for _, tc := range noTextSourceCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newSoloHarness(t, tc.decision, tc.opts)
+			s.ref = MediaRef{ID: "mv-1", MediaType: models.SubtitleRunMediaMovie}
+			startAndWait(t, s, "")
+
+			last := s.hub.last()
+			require.Equal(t, services.EventTranscriptionFailed, last.Type)
+			data := last.Data.(map[string]interface{})
+			assert.Equal(t, "failed", data["phase"])
+			assert.Equal(t, "這部影片沒有可用的字幕來源，也沒有設定語音辨識", data["message"])
+			assert.Equal(t, models.SubtitleRunFailureNoTextSource, data["failure_reason"])
+			row := s.runs.lastUpdate(t)
+			require.Equal(t, models.SubtitleRunSkipped, row.Status)
+			assert.Equal(t, models.SubtitleRunFailureReason(row.ErrorMessage), data["failure_reason"])
+		})
+	}
 
 	t.Run("budget ceiling → failed with the ceiling message", func(t *testing.T) {
 		asr := &fakeSpeechTranscriber{available: true, err: fmt.Errorf("transcribe: %w", ai.ErrBudgetExceeded)}
@@ -498,7 +541,11 @@ func TestSoloRunner_FailureReasonMatchesTheActivityRecord(t *testing.T) {
 // verdict, or a run that ended without an error) and the error otherwise.
 func TestSoloFailureReason_RowFirstThenError(t *testing.T) {
 	skipped := &models.SubtitleRun{Status: models.SubtitleRunSkipped, ErrorMessage: "no usable embedded text subtitle track (0 image-codec track(s), 0 text)"}
-	assert.Equal(t, models.SubtitleRunFailureOther, soloFailureReason(skipped, nil))
+	assert.Equal(t, models.SubtitleRunFailureOther, soloFailureReason(skipped, nil),
+		"a skipped row without the no-text-source prefix names no known cause")
+	prefixed := &models.SubtitleRun{Status: models.SubtitleRunSkipped,
+		ErrorMessage: NoTextSourceRunPrefix + "no usable embedded text subtitle track (0 image-codec track(s), 0 text)"}
+	assert.Equal(t, models.SubtitleRunFailureNoTextSource, soloFailureReason(prefixed, nil))
 
 	stored := &models.SubtitleRun{Status: models.SubtitleRunFailed, ErrorMessage: "cancelled: subtitle pipeline: movie x: route: signal: killed"}
 	assert.Equal(t, models.SubtitleRunFailureCancelled, soloFailureReason(stored, errors.New("signal: killed")),

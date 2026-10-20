@@ -69,11 +69,17 @@ func assertInvariants(t *testing.T, prog *GenerationBatchProgress) {
 		if it.Status != GenerationBatchItemFailed {
 			assert.Equal(t, GenerationBatchItemReasonNone, it.Reason, "reason is only set on failed items (%s)", it.MediaID)
 		}
-		// disc-2026-10-live-activity-failure-reasons-a AC #1: a code only on
-		// a failed `error` item, "" everywhere else.
-		if it.Status == GenerationBatchItemFailed && it.Reason == GenerationBatchItemReasonError {
+		// disc-2026-10-live-activity-failure-reasons-a AC #1 [@contract-v2]:
+		// a code on a failed `error` item; on a failed `skipped` item only
+		// no_text_source / asr_unconfigured / ""; "" everywhere else.
+		switch {
+		case it.Status == GenerationBatchItemFailed && it.Reason == GenerationBatchItemReasonError:
 			assert.NotEmpty(t, it.FailureReason, "a failed error item names its cause (%s)", it.MediaID)
-		} else {
+		case it.Status == GenerationBatchItemFailed && it.Reason == GenerationBatchItemReasonSkipped:
+			assert.Contains(t,
+				[]string{models.SubtitleRunFailureNoTextSource, models.SubtitleRunFailureASRUnconfigured, ""},
+				it.FailureReason, "a skipped item carries only the skip codes (%s)", it.MediaID)
+		default:
 			assert.Empty(t, it.FailureReason, "failure_reason is only set on failed error items (%s)", it.MediaID)
 		}
 	}
@@ -228,6 +234,82 @@ func TestGenerationBatchItems_FailureReasonCode(t *testing.T) {
 	}
 	assert.Equal(t, want, got, "terminal items[].failure_reason")
 	assertInvariants(t, lastSnapshot(t, p))
+}
+
+// disc-2026-10-no-text-source-skip-a AC #4 / #6: a skipped item names WHY when
+// the runner's error type says so — no usable subtitle and no speech
+// recognition (pipeline), or no ASR at all (legacy) — and stays "" for any
+// other skip. reason stays skipped and fail_count still counts all three.
+func TestGenerationBatchItems_SkippedFailureReasonCode(t *testing.T) {
+	runner := &fakeGenerationRunner{
+		available: true,
+		errs: map[string]error{
+			// The pipeline runner's shape: "media <id>: " before the row's
+			// prefix, so only the error TYPE can carry the cause.
+			uuidA: fmt.Errorf("media %s: no-text-source: no usable embedded text subtitle track (1 image-codec track(s), 0 text): %w",
+				uuidA, ErrGenerationItemNoTextSource),
+			uuidB: ErrTranscriptionDisabled,
+			uuidC: fmt.Errorf("media %s: 2 embedded text track(s) present but none tagged Chinese or eng/en: %w",
+				uuidC, ErrGenerationItemSkipped),
+		},
+	}
+	finder := &fakeCandidateFinder{movies: []models.Movie{
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/b.mkv"),
+		genMovie(uuidC, "C", "/m/c.mkv"),
+		genMovie(uuidSeven, "Seven", "/m/7.mkv"),
+	}}
+	p, client := newTestGenerationProcessor(t, runner, finder, 5)
+
+	_, _, err := p.Start(context.Background(), "missing", nil, 0, "")
+	require.NoError(t, err)
+	waitUntilIdle(t, p)
+	events := eventsUntilTerminal(t, client)
+
+	want := map[string]string{
+		uuidA:     models.SubtitleRunFailureNoTextSource,
+		uuidB:     models.SubtitleRunFailureASRUnconfigured,
+		uuidC:     "",
+		uuidSeven: "",
+	}
+	finalChange := map[string]GenerationBatchItemState{}
+	for _, ev := range events[:len(events)-1] {
+		ch, ok := ev["changed_item"].(GenerationBatchItemState)
+		require.True(t, ok)
+		if ch.Status == GenerationBatchItemRunning {
+			continue
+		}
+		finalChange[ch.MediaID] = ch
+	}
+	for id, code := range want {
+		ch := finalChange[id]
+		assert.Equal(t, code, ch.FailureReason, "changed_item.failure_reason (%s)", id)
+		if id == uuidSeven {
+			assert.Equal(t, GenerationBatchItemDone, ch.Status)
+			continue
+		}
+		assert.Equal(t, GenerationBatchItemFailed, ch.Status, id)
+		assert.Equal(t, GenerationBatchItemReasonSkipped, ch.Reason, "reason stays skipped (%s)", id)
+	}
+
+	got := map[string]string{}
+	for _, it := range terminalItems(t, events) {
+		got[it.MediaID] = it.FailureReason
+	}
+	assert.Equal(t, want, got, "terminal items[].failure_reason")
+
+	last := lastSnapshot(t, p)
+	assert.Equal(t, 3, last.FailCount, "every skip still counts as a failure (sub-4-2 CR H1)")
+	assert.Equal(t, 1, last.SuccessCount)
+	assertInvariants(t, last)
+}
+
+// The narrower sentinel must keep satisfying every existing skip check.
+func TestErrGenerationItemNoTextSource_WrapsSkipped(t *testing.T) {
+	err := fmt.Errorf("media x: %w", ErrGenerationItemNoTextSource)
+	assert.ErrorIs(t, err, ErrGenerationItemSkipped)
+	assert.ErrorIs(t, err, ErrGenerationItemNoTextSource)
+	assert.NotErrorIs(t, fmt.Errorf("media x: %w", ErrGenerationItemSkipped), ErrGenerationItemNoTextSource)
 }
 
 // AC #1: changed_item and every items[] entry always carry the key on the

@@ -38,7 +38,7 @@ Status: done
 
 ## Acceptance Criteria
 
-1. **合約 `[@contract-v1]`（本單定、B 單 ack）：** 新增鍵 `failure_reason`（字串），值域＝`models.SubtitleRunFailure*` 十個代碼（`cancelled`、`budget_exceeded`、`credit_exhausted`、`target_not_writable`、`no_audio_track`、`ffmpeg_missing`、`asr_unconfigured`、`unauthorized`、`timeout`、`other`）。
+1. **合約 `[@contract-v2]`（v1 本單定、B 單 ack；v2 由 `disc-2026-10-no-text-source-skip-a` 升，差異見檔尾 Change Log）：** 新增鍵 `failure_reason`（字串），值域＝`models.SubtitleRunFailure*` 十個代碼（`cancelled`、`budget_exceeded`、`credit_exhausted`、`target_not_writable`、`no_audio_track`、`ffmpeg_missing`、`asr_unconfigured`、`unauthorized`、`timeout`、`other`）。
    | 事件 | 什麼時候有 | 值 |
    |---|---|---|
    | `transcription_failed`（單次生成，`SoloRunner`） | 每一個失敗事件都有 | AC #2 的判斷 |
@@ -169,3 +169,9 @@ Claude Opus 5.5（dev agent，2026-10-19）
 - _bmad-output/implementation-artifacts/disc-2026-10-live-activity-failure-reasons-a.md
 - _bmad-output/implementation-artifacts/disc-2026-10-live-activity-failure-reasons-b.md
 - _bmad-output/implementation-artifacts/sprint-status.yaml
+
+## Change Log
+
+| 日期 | 變更 |
+|---|---|
+| 2026-10-20 | [@contract-v1→v2] AC #1: failure_reason 多一個值 no_text_source（沒有可用的字幕來源、也接不起語音辨識的 skipped 紀錄；單次 transcription_failed 從 other 改成它），批次 reason=skipped 的項目改帶 no_text_source／asr_unconfigured／""（原本一律 ""）；下游：前端 RunFailureReason／FAILURE_COPY_BY_REASON 要多一個鍵、useGenerationJobsFeed 要保留 skipped 的代碼，舊前端照舊顯示「生成失敗」／「沒有可用的字幕來源」（disc-2026-10-no-text-source-skip-a） |

@@ -213,11 +213,16 @@ func TestProcessItem_ASRFallback_NilPortRecordsNoTextSourceAsToday(t *testing.T)
 
 	final := h.runs.lastUpdate(t)
 	assert.Equal(t, models.SubtitleRunSkipped, final.Status)
-	assert.Equal(t, noTextDecision().Reason, final.ErrorMessage)
+	// disc-2026-10-no-text-source-skip-a: the row now says WHY under the
+	// no-text-source prefix; the media row and the progress event are unchanged.
+	assert.Equal(t, NoTextSourceRunPrefix+noTextDecision().Reason, final.ErrorMessage)
+	assert.Equal(t, models.SubtitleRunFailureNoTextSource, models.SubtitleRunFailureReason(final.ErrorMessage))
 	assert.Equal(t,
 		[]models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusNoTextSource},
 		h.media.statuses())
 	assert.Contains(t, h.progress, string(StageSkipped))
+	assert.Equal(t, noTextDecision().Reason, h.progressMsg[len(h.progressMsg)-1],
+		"subtitle_progress keeps the bare router sentence")
 }
 
 // ─── AC #9 (c): unavailable service → same recorded outcome as (b) ─────────
@@ -239,6 +244,9 @@ func TestProcessItem_ASRFallback_UnavailableServiceDegradesLikeNilPort(t *testin
 
 	final := h.runs.lastUpdate(t)
 	assert.Equal(t, models.SubtitleRunSkipped, final.Status)
+	assert.Equal(t, NoTextSourceRunPrefix+noTextDecision().Reason, final.ErrorMessage,
+		"ErrTranscriptionDisabled degrades exactly like the nil port — prefix included")
+	assert.Equal(t, models.SubtitleRunFailureNoTextSource, models.SubtitleRunFailureReason(final.ErrorMessage))
 	assert.Equal(t,
 		[]models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusNoTextSource},
 		h.media.statuses())
@@ -261,6 +269,9 @@ func TestProcessItem_ASRFallback_RouteSkipNeverTouchesASR(t *testing.T) {
 	assert.Empty(t, asr.calls, "skipped is a deliberate routing decision — ASR must not second-guess it")
 	final := h.runs.lastUpdate(t)
 	assert.Equal(t, models.SubtitleRunSkipped, final.Status)
+	assert.Equal(t, "1 embedded text track(s) present but none tagged eng/en", final.ErrorMessage,
+		"ASR was never tried — no no-text-source prefix")
+	assert.Equal(t, models.SubtitleRunFailureOther, models.SubtitleRunFailureReason(final.ErrorMessage))
 	assert.Equal(t,
 		[]models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusSkipped},
 		h.media.statuses())
@@ -360,6 +371,9 @@ func TestProcessItem_ASRFallback_SeriesStillDegradesToNoTextSource(t *testing.T)
 	assert.Empty(t, asr.calls, "a series ref must not reach the transcription service")
 	final := h.runs.lastUpdate(t)
 	assert.Equal(t, models.SubtitleRunSkipped, final.Status)
+	assert.Equal(t, noTextDecision().Reason, final.ErrorMessage,
+		"a series is not transcribable for a reason other than missing ASR — no prefix")
+	assert.Equal(t, models.SubtitleRunFailureOther, models.SubtitleRunFailureReason(final.ErrorMessage))
 	assert.Equal(t,
 		[]models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusNoTextSource},
 		h.media.statuses())

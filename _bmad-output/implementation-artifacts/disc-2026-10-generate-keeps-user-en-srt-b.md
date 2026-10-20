@@ -42,3 +42,7 @@ Status: backlog（傘狀單，已拆 -b1／-b2／-b3）
 
 - 絕不覆寫使用者檔案 → `-a`（先做）。
 - 片旁簡中字幕直接轉繁（已有 `subtitle_handler.go:353` 的轉換入口）→ 不在本單。
+
+## 下游註記（2026-10-20，disc-2026-10-no-text-source-skip）
+
+- `-b1`／`-b2`／`-b3` 走到「沒有可用來源、又沒聽寫」時，沿用 `no_text_source` 代碼（寫紀錄時的 `no-text-source: ` 前綴，`process_item.go` `transcribeFallback`）與前端文字，不另外定義。
