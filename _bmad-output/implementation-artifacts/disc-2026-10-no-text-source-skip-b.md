@@ -1,6 +1,6 @@
 # Disc：沒有字幕來源也沒設語音辨識 B（前端）——生成畫面寫灰色「已略過」＋第二行「沒有可用的字幕來源，也沒有設定語音辨識」
 
-Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` 合併；建議也等 `-a` 合併）
+Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason`（PR #851，2026-10-20 為對話框兩行重開）合併才開工；`-a` 已合併 #855）
 
 **Source:** 傘狀單 `disc-2026-10-no-text-source-skip`（2026-10-19 party mode：founder-pm／Winston／Sally／John／Bob／Mary＋#848 的另一個 session；⚖️ Alexyu：由這邊直接做）。
 
@@ -8,7 +8,8 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
 - 拆單後的前端那張（後端 `-a` 送代碼 `no_text_source`）。前端 5 項。
 - **依賴：**
   - ⛔ blocked-by `disc-2026-10-generation-queue-failure-reason`（2026-10-19 正在另一個 dev agent 手上，未合併）。那張會新增 `apps/web/src/components/subtitle/runFailureCopy.ts`（`FAILURE_COPY_BY_REASON` 搬過去）、讓 `queueRowLabel` 收 `failureReason`、把即時活動 ④⑤⑤b 改成兩行（`FeedRowView.detail`）。本單**建立在那三件事上**，下面引用的行號是 `origin/main` 49d96125（那張合併前），開工時以合併後的程式為準。
-  - 建議 `-a` 先合併。本單單獨先上也不會壞：批次 `reason: skipped` 會變灰色（沒代碼時第二行寫「沒有可用的字幕來源」）；單次要等 `-a` 送代碼才會變灰。
+  - ⛔ **（2026-10-20 追加）對話框佇列列的兩行結構也由那張做**：Sally 2026-10-20 新裁定（見檔尾）要產生字幕對話框的失敗／已略過列一律兩行，版面（`QueueRow` 第一行片名＋狀態字、第二行 `gen-batch-row-detail-${mediaId}` 原因）由 `disc-2026-10-generation-queue-failure-reason` 的「2026-10-20 追加」做（PR #851 重開）。**本單必須等 #851 合併後才開工**；本單在對話框只負責讓 `queueRowBadge`／`queueRowLabel` 對略過項目回「已略過」＋原因，不碰兩行結構。
+  - ✅ `-a` 已合併 #855（2026-10-20）：契約是 `[@contract-v2]`，本單讀 `no_text_source`（另有舊路徑 `asr_unconfigured`）。原本的說明：本單單獨先上也不會壞：批次 `reason: skipped` 會變灰色（沒代碼時第二行寫「沒有可用的字幕來源」）；單次要等 `-a` 送代碼才會變灰。
 - **契約 ack：** confirmed against `[@contract-v2]` (Story disc-2026-10-live-activity-failure-reasons-a AC #1)（由 `-a` 升版：多 `no_text_source`；批次 `skipped` 項目帶 `no_text_source`／`asr_unconfigured`／`""`）。
 - **灰色用什麼：** 設計稿**沒有**「已略過」這種即時活動列或佇列徽章 → ⚖️ **待 Sally 追認**，預設沿用既有中性色（見 AC #3、#4）。不擋開工。
 
@@ -18,7 +19,7 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
   - 即時活動：F11-SPEC-LOG `tT3JX` 的 ⑧「批次已取消」（圖示 `--text-muted`、階段字 `--text-secondary`）；兩行排法照 ④ `stf9c`（`evt-line`＋`evt-reason-row`，`disc-2026-10-live-activity-row-layout-design` 裁定 1、2、4、5）。
   - 生成佇列：`Component/GenQueueRow-v2`（`aw4Qr`）的「已取消／已暫停」徽章（`bg-[var(--bg-tertiary)]`＋`--text-muted`）；說明行 `lUZol` 仍是 `$text-secondary`（Sally 裁定 6）。
   - 片庫徽章的前例：`apps/web/src/utils/libraryStatus.ts:166-171`「無字幕源」「已略過」都是 `TINT.neutral`（`bg-[var(--bg-tertiary)] text-[var(--text-muted)]`，`:48`）。
-- 產生字幕對話框 F8-D-v2 `i9Nun1`／F8-M-v2 `H717g`：只換標籤的顏色與字，不改版面。
+- 產生字幕對話框（**2026-10-20 改，Sally 新裁定**）：F8-D-v2 `i9Nun1`、F8-M-v2 `H717g`、新規格稿 **F8-SPEC-ROW**（截圖 `_bmad-output/screenshots/flow-f-subtitle-v2/f8-spec-row.png`，2026-10-20 繪製中；節點 id 等稿 PR 合併、`pen-node-ids.json` 更新後再寫進 `Design ref:`，否則 `check-design-refs.py` 會紅）。失敗與已略過列兩行：第一行片名（最多兩行）＋右邊短狀態字，第二行原因。已略過＝灰色「已略過」（`--text-muted`、無圖示）＋第二行原因。桌機 F8-D-v2 同一排法。
 - ⚖️ Sally 若要補稿（F11-SPEC-LOG 加一列「已略過」、GenQueueRow-v2 加一個狀態），另開 design 單；本單照預設先做，稿出來後以稿為準修。
 
 ## 查到的事（2026-10-19，`origin/main` 49d96125；另參考工作目錄裡 generation-queue-failure-reason 的進行中改動）
@@ -35,6 +36,7 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
 - **舊裁定（要推翻）：** `FAILURE_TEXT` 上方註解（`:42-47`）＝ dsr-6d-b AC #3／dsr-6d-a CR L8：「`skipped` 不准用『已略過』開頭——舊路徑沒設金鑰也走這個原因，『略過』像是系統自己決定不做」。三支測試釘住：`generationQueueRow.spec.ts:51-57`（`startsWith('已略過')` 為 false、紅色、`alert`）、`GenerationWorkspaceV2.spec.tsx:288-290`（`not.toHaveTextContent('已略過')`）、`GenerationBatchDialogV2.spec.tsx:1327-1329`（同）。2026-10-19 party mode 改成要用，理由：第二行把原因講清楚（「也沒有設定語音辨識」），不會被誤會成系統自己決定；舊路徑沒設金鑰另給「語音辨識未設定」（`-a` AC #1）。→ ⚖️ 待 Sally 追認（傘狀單 #2）。
 - 工作區列：`QueueRow`（`apps/web/src/components/subtitle/GenerationWorkspaceV2.tsx:285-371`）；徽章底色 `BADGE_TINT`（`:247-254`，依 `status`，`failed` → `--error-tint`；`paused`／`cancelled`／`queued` → `--bg-tertiary`）；徽章圖示 `BadgeIcon`（`:262-283`，`failed` → `TriangleAlert`、`cancelled` → 無）；`data-state={item.status}`（`:310`）。
 - 對話框列：`QueueRow`（`apps/web/src/components/subtitle/GenerationBatchDialogV2.tsx:345-394`）→ `RowStageLabel`（`:176-192`）只有**一個**標籤（沒有徽章），顏色與圖示來自 `queueRowLabel`；`data-state={item.status}`（`:359`）。
+  - ⚠️ 2026-10-20：#851（gen-queue「2026-10-20 追加」）合併後，失敗列改成兩行——狀態字＝`queueRowBadge`（失敗列「失敗」），顏色／圖示仍來自 `queueRowLabel`，第二行 `detail`＝`queueRowLabel(view).text`（只在 `failed` 時有）。本單的略過列吃同一條路：`queueRowBadge` 回「已略過」、`queueRowLabel` 回灰色無圖示＋原因句 → 對話框自動變成「已略過」＋第二行原因。開工時以合併後的程式為準。
 - 型別：`GenerationBatchItemReason`（`apps/web/src/services/subtitleService.ts:164-170`）；`failureReason` 註解（`:176-183`）寫「failed＋error 才有」→ 要改。
 - **總結句不動：** 「完成 N 部、失敗 M 部」（工作區 `workspace-terminal-label`、即時活動 ⑦）用後端 `failCount`，略過仍算在失敗裡（傘狀單 #3，預設不改）。
 
@@ -58,7 +60,7 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
 
 ## Acceptance Criteria
 
-0. **開工前確認**（寫進 Completion Notes）：`disc-2026-10-generation-queue-failure-reason` 已合併（`runFailureCopy.ts` 存在、`queueRowLabel` 收 `failureReason`、`FeedRowView` 有 `detail`）；`-a` 是否已合併（沒合併也可以開工，AC #11 的單次案例用假事件）。若 gen-queue 被標了 `⚠️ STALE [@contract-v1→v2]`，確認已處理。
+0. **開工前確認**（寫進 Completion Notes）：`disc-2026-10-generation-queue-failure-reason`（PR #851）已合併（`runFailureCopy.ts` 存在、`queueRowLabel` 收 `failureReason`、`FeedRowView` 有 `detail`、**對話框 `QueueRow` 已是兩行：失敗列狀態字用 `queueRowBadge`、第二行 `gen-batch-row-detail-${mediaId}`**）；`-a` 已合併 #855（2026-10-20，契約 `[@contract-v2]`）。若 gen-queue 被標了 `⚠️ STALE [@contract-v1→v2]`，確認已處理。
 
 **文字表**
 
@@ -77,7 +79,13 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
    - `queueRowSubStatus`：`failed` 仍回標籤文字（略過時就是原因句）。
    - `FAILURE_TEXT` 上方註解改寫：舊的「不准用已略過」由 2026-10-19 party mode 推翻（理由見「查到的事」），`skipped` 現在是灰色徽章「已略過」＋第二行原因；舊路徑沒設金鑰後端改送 `asr_unconfigured`。
 4. **工作區徽章：** `GenerationWorkspaceV2.tsx` 的 `QueueRow` 在 `queueRowIsSkipped(item)` 時：徽章底色 `bg-[var(--bg-tertiary)]`（同已取消）、徽章文字色 `--text-muted`（來自 `label.className`）、**不畫圖示**（同已取消）。做法建議：`BADGE_TINT`／`BadgeIcon` 收一個「顯示狀態」（`'skipped' | GenerationBatchItemStatus`），不要在 JSX 裡散寫判斷。說明行顏色維持 `--text-secondary`（Sally 裁定 6）。**`data-state` 仍是 `item.status`（`failed`）**——E2E 靠它；要給測試抓「略過」可**新增** `data-skipped="true"`（新增，不改既有）。
-5. **對話框：** `GenerationBatchDialogV2.tsx` 的 `RowStageLabel` 收 `failureReason`（gen-queue 之後已是），略過時標籤是灰色原因句、**沒有圖示**；對話框沒有徽章位置，所以**不顯示「已略過」三個字**（預設；Sally 若要「已略過 — 原因」的寫法，比照「已暫停 — 下次繼續」，另裁定）。版面、片名截斷不改。退回列（沒有後端 items 時，`:514-520`、`:769-795`）不受影響。
+5. **對話框（2026-10-20 改寫，Sally 新裁定推翻追認 #3）：** 產生字幕對話框（F8，`GenerationBatchDialogV2.tsx` 的 `QueueRow`）的略過列跟失敗列一樣是**兩行**，兩行結構由 #851 做好，本單只改字與顏色：
+   - **第一行：** 片名（最多兩行，`line-clamp-2`，#851 已改）＋右邊短狀態字「**已略過**」（`queueRowBadge`，AC #3），灰色 `--text-muted`、**沒有圖示**（來自 `queueRowLabel`，AC #3），對齊片名第一行。
+   - **第二行：** 原因（`gen-batch-row-detail-${mediaId}`，Body 字級、`--text-secondary`），左緣對齊片名、**前面沒有「·」、不截斷**、太長就折行。`no_text_source` →「沒有可用的字幕來源，也沒有設定語音辨識」；`asr_unconfigured` →「語音辨識未設定」；沒代碼／不認得／`other` →「沒有可用的字幕來源」。
+   - 桌機 F8-D-v2 同一排法。其他狀態（完成、排隊、進行中、已暫停、已取消）維持一行，本單不動。
+   - **不要**在本單改對話框 `QueueRow` 的版面、`RowStageLabel` 的高度／對齊、`detail` 的條件——那是 #851 的事；若 #851 合併後的寫法讓略過列拿不到狀態字或第二行，先回報 SM，不要在本單重做版面。
+   - 退回列（沒有後端 items 時，`:514-520`、`:769-795`）不受影響。
+   - ~~舊預設：對話框不顯示「已略過」三個字、只放灰色原因句~~（Sally 2026-10-19 追認 #3，2026-10-20 推翻）。
 
 **即時活動（右欄）**
 
@@ -101,17 +109,17 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
     - `generationEventCopy.spec.ts:89-125`：`reason: 'skipped'` 那列改成略過列（`stage` 已略過、`glyph` circle-dashed、`detail`）；`:115` 註解改寫。新增單次 `failureReason: 'no_text_source'` → 略過列（`announce` 逐字）。
     - `useGenerationJobsFeed.spec.ts:697-717` 改名「a `skipped` batch failure keeps its code; `busy_elsewhere` still carries none」：`skipped`＋`'no_text_source'` → 保留；`busy_elsewhere`＋任何代碼 → `null`；`error` 沒代碼 → `null`（保留）。
     - `GenerationWorkspaceV2.spec.tsx:276-290`：`m4` 列徽章「已略過」、徽章沒有 `--error-tint`、有 `--bg-tertiary`、沒有警告三角形、`data-state="failed"` 不變、說明行「沒有可用的字幕來源」且 `--text-secondary`。新增：同一次 render，佇列 `m5`（`skipped`＋`no_text_source`）與即時活動同一部片的略過列講同一句；即時活動略過列原因在 `workspace-feed-row-detail`（gen-queue 新增的 testid）裡。
-    - `GenerationBatchDialogV2.spec.tsx:1315-1329`：仍「沒有可用的字幕來源」、仍**不含**「已略過」（AC #5 預設），但顏色是 `--text-muted`、沒有 `CircleAlert`；新增 `skipped`＋`no_text_source` 那列含 19 字那句。
+    - `GenerationBatchDialogV2.spec.tsx:1315-1329`（2026-10-20 改寫，推翻「不含已略過」）：略過列狀態字是「已略過」、`--text-muted`、沒有 `CircleAlert`；原因「沒有可用的字幕來源」在 `gen-batch-row-detail-<id>` 裡（第二行），**不在**狀態字那格；`data-state` 仍是 `failed`。新增 `skipped`＋`no_text_source` 那列：狀態字「已略過」、第二行恰為 19 字那句；`skipped`＋`asr_unconfigured` 第二行「語音辨識未設定」。迴歸：同一份 render 的 `error` 失敗列狀態字仍是紅色「失敗」。#851 新增的對話框兩行測試與既有 `:1355`、`:1424`、`:2019`、E2E `batch-subtitle.spec.ts:254-256` 仍綠。
 11. **故意改壞驗證**（每項改壞→看到紅→還原，寫進 Debug Log）：(i) `FAILURE_COPY_BY_REASON.no_text_source` 文字改一個字 → 三方一致紅；(ii) `no_text_source` 的 `skipped` 改 `false` → 單次略過列測試、三方一致的 stage 紅；(iii) hook `:524` 改回只留 `error` → hook 測試與工作區左右一致測試紅；(iv) `queueRowIsSkipped` 拿掉 `reason === 'skipped'` → 佇列與批次列測試紅；(v) 工作區徽章底色忘了換 → 10 的 `--error-tint` 斷言紅；(vi) 讓 `busy_elsewhere` 也看代碼 → 迴歸測試紅。
 
 **量測、基準、收尾**
 
 12. **真頁面量測**（本機、stub；片名「和平使者 S01E01」「魔戒首部曲：魔戒現身 加長版導演剪輯特別收藏版」，原因用 19 字那句）。數字寫進 Completion Notes：
     - 工作區，390／320／1440：即時活動略過列原因整句（手機可折行）、片名照 gen-queue 規則（最多兩行）；佇列略過列徽章「已略過」一行、說明行整句。
-    - 產生字幕對話框，390（F8-M-v2）／880：片名那格寬度與看得到幾個字。**手機片名只剩「…」或 1～2 字 → 停下來回報 Sally，不合併**（傘狀單 #5）。
-13. **UX 驗收：** 沒有對應稿，改對「最接近的既有狀態」：1440 截圖裡略過列的圖示／階段字色調與 ⑧ 批次已取消一致（`f11-spec-log.png`）、兩行位置與 ④ 一致；佇列略過徽章色調與已暫停／已取消一致（`f9-d-v2.png` 或畫廊 `budget_ceiling` 的已暫停列）。截圖附在 PR，請 Sally 追認（見下）。
+    - 產生字幕對話框（2026-10-20 改，沿用 #851 的合格線）：F8-M-v2 sheet 寬 320／390、桌機對話框 880，略過列（19 字原因）：片名那格 390 ≥200px、320 ≥150px，「和平使者 S01E01」兩寬都整個看得到；狀態字「已略過」與片名第一行對齊（差 ≤1px）；第二行原因整句、可折行。不合格 → 停下來回報 Sally，不合併。
+13. **UX 驗收：** 對話框略過列對 F8-SPEC-ROW（`f8-spec-row.png`）與 F8-M-v2 `H717g`／F8-D-v2 `i9Nun1`（2026-10-20 新稿）。工作區與即時活動沒有對應稿，改對「最接近的既有狀態」：1440 截圖裡略過列的圖示／階段字色調與 ⑧ 批次已取消一致（`f11-spec-log.png`）、兩行位置與 ④ 一致；佇列略過徽章色調與已暫停／已取消一致（`f9-d-v2.png` 或畫廊 `budget_ceiling` 的已暫停列）。截圖附在 PR，請 Sally 追認（見下）。
 14. **視覺基準：**
-    - 夾具：`generation-workspace-v2/complete-with-failures` 的佇列 `skipped` 項目與即時活動 `skipped` 列加 `failureReason: 'no_text_source'`（展示完整那句）；`generation-batch-dialog-v2/complete-with-failures` 的 `skipped` 項目同樣加。不新增夾具（gen-queue 的 `failures-long-titles` 不含略過，不動）。
+    - 夾具：`generation-workspace-v2/complete-with-failures` 的佇列 `skipped` 項目與即時活動 `skipped` 列加 `failureReason: 'no_text_source'`（展示完整那句）；`generation-batch-dialog-v2/complete-with-failures` 的 `skipped` 項目同樣加（這張 #851 會先因兩行改版更新過——以 #851 合併後的 darwin 為起點）。不新增夾具（gen-queue 的 `failures-long-titles` 不含略過，不動）。
     - **預期會變：** 上面兩張。**預期不變：** 其餘生成相關基準（`running`、`budget_ceiling`、`credit_exhausted`、`idle`、`failures-long-titles`、對話框其他）——變了要查，不要直接更新。
     - 做法：兩張的 `-darwin` 本機產（刪舊 darwin 後 `AI_PROVIDER=claude pnpm test:visual:update-missing`）；兩張的 `default-visual-linux.png` **`git rm`**，交給 CI 的 Visual Regression 開 `chore(visual): bootstrap N missing -linux baselines` PR。**絕不跑 `test:visual:update`、不 commit 本機產的 `-linux.png`。**
 15. `pnpm nx run web:test`（subtitle＋hooks＋activity 相關 spec）、`pnpm nx run web:typecheck`、`pnpm run lint:all`（看「✖ N problems (X errors」那行）、`pnpm run format:check`、`python3 scripts/check-design-refs.py` 綠；跑一次 `tests/e2e/generation-workspace.spec.ts`、`generation-workspace-mobile.spec.ts`、`batch-subtitle.spec.ts` 綠。
@@ -120,7 +128,7 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
 
 - [ ] **T0 解開條件（AC #0）**：確認 gen-queue 已合併、`-a` 狀態、契約 ack。
 - [ ] **T1 文字表（AC #1）**：`runFailureCopy.ts` 型別、旗標、新條目；註解。
-- [ ] **T2 佇列＋對話框（AC #2–#5）**：`generationQueueRow.ts`（`queueRowIsSkipped`、label、badge、`FAILURE_TEXT` 註解）、`GenerationWorkspaceV2.tsx`（徽章底色／圖示、可選 `data-skipped`）、`GenerationBatchDialogV2.tsx`（`RowStageLabel` 圖示）。
+- [ ] **T2 佇列＋對話框（AC #2–#5）**：`generationQueueRow.ts`（`queueRowIsSkipped`、label、badge、`FAILURE_TEXT` 註解）、`GenerationWorkspaceV2.tsx`（徽章底色／圖示、可選 `data-skipped`）、`GenerationBatchDialogV2.tsx`（只確認略過列吃到 `queueRowBadge`「已略過」與灰色無圖示；兩行結構是 #851 的）。
 - [ ] **T3 即時活動（AC #6–#8）**：`useGenerationJobsFeed.ts:524`、`generationEventCopy.ts`（`skippedView`、單次與批次分支、檔頭）、`subtitleService.ts` 註解。
 - [ ] **T4 測試（AC #9–#11）**：三方一致擴充、六個 spec 改寫／新增、六種故意改壞。
 - [ ] **T5 量測＋UX＋基準＋收尾（AC #12–#15）**：390／320／1440／880 量測、對最接近稿的截圖、兩個夾具、兩張 darwin 更新與 linux 刪除、lint／typecheck／format／design-refs／E2E；更新 `sprint-status.yaml`。
@@ -131,13 +139,14 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
 
 1. **灰色樣式**：即時活動略過列 `circle-dashed`＋`--text-muted` 圖示＋`--text-secondary` 階段字（同 ⑧ 批次已取消的色調；圖示借「已中斷」的虛線圓，意思是「沒完成」）；佇列徽章 `--bg-tertiary`＋`--text-muted`、無圖示（同已取消）。設計稿沒有這一列／這個徽章狀態——要補稿另開 design 單。
 2. **推翻 dsr-6d-b／CR L8「不准用已略過」**：party mode 裁定要用；第二行講清楚「也沒有設定語音辨識」，舊路徑沒設金鑰改送「語音辨識未設定」。
-3. **對話框不顯示「已略過」三個字**（只有一個標籤位，放原因句、灰色、無圖示）。要不要寫成「已略過 — 原因」？
+3. ~~**對話框不顯示「已略過」三個字**（只有一個標籤位，放原因句、灰色、無圖示）。~~ → **2026-10-20 Sally 新裁定推翻**：對話框略過列兩行，第一行灰色「已略過」、第二行原因（見 AC #5、檔尾）。
 4. **總結句仍說「失敗 M 部」**（傘狀單 #3，預設不改）。
 
 ### 不要做的事
 
 - 不要改後端（`-a` 的事），不要比對任何英文或中文錯誤字串判斷略過——只看 `reason === 'skipped'` 與代碼的 `skipped` 旗標。
 - 不要改 `data-state`（E2E `generation-workspace.spec.ts:43` 靠它）、不要改既有 testid；只可新增 `data-skipped`。
+- 不要改對話框 `QueueRow` 的兩行結構、`RowStageLabel` 高度／對齊、`detail` 條件（#851 的範圍）；本單只改 `queueRowBadge`／`queueRowLabel` 的回傳。
 - 不要改「完成 N 部、失敗 M 部」、重試集合（對話框 `remainingIds`，`GenerationBatchDialogV2.tsx:144` 一帶）、批次層列 ⑦⑧⑩⑪。
 - 不要讓 `busy_elsewhere`、`error` 的顏色或文字跟著變（迴歸測試釘住）。
 - 不要動活動頁的列與篩選（skipped 不列，傘狀單「不做」）；`recentEventCopy.ts` 只因型別多一個代碼而受影響。
@@ -188,13 +197,16 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
 - [Source: _bmad-output/implementation-artifacts/dsr-6d-b-batch-dialog.md:92, 205]（被推翻的「不准已略過」）
 - [Source: _bmad-output/implementation-artifacts/disc-2026-10-live-activity-row-layout-design.md 裁定 1–6]
 - [Source: _bmad-output/implementation-artifacts/disc-2026-10-generation-queue-failure-reason.md AC #1–#4、#7、#10、#16]
-- [Source: _bmad-output/implementation-artifacts/disc-2026-10-no-text-source-skip-a.md AC #1 `[@contract-v2]`]
+- [Source: _bmad-output/implementation-artifacts/disc-2026-10-no-text-source-skip-a.md AC #1 `[@contract-v2]`]（#855 已合併）
+- [Source: _bmad-output/implementation-artifacts/disc-2026-10-generation-queue-failure-reason.md「2026-10-20 追加」]（對話框兩行結構，PR #851）
+- [Source: F8-D-v2 `i9Nun1`、F8-M-v2 `H717g`、F8-SPEC-ROW `flow-f-subtitle-v2/f8-spec-row.png`（2026-10-20 繪製中）]
 
 ## Change Log
 
 | 日期 | 變更 |
 |---|---|
 | 2026-10-19 | 建單（Bob）。party mode 裁定灰色「已略過」＋第二行原因；⚖️ Alexyu 由這邊直接做。樣式預設中性色，待 Sally 追認 4 項。 |
+| 2026-10-20 | Bob：套 Sally 新裁定（推翻追認 #3）——對話框略過列兩行，第一行灰色「已略過」、第二行原因；改寫 AC #0、#5、#10（對話框）、#12（對話框量測）、#13、#14、T2、Dev Notes。記錄依賴：對話框兩行結構由 gen-queue「2026-10-20 追加」做（PR #851），本單等 #851 合併才開工。`-a` 已合併 #855，契約 v2。 |
 
 ## Dev Agent Record
 
@@ -210,5 +222,17 @@ Status: ready-for-dev（⛔ 等 `disc-2026-10-generation-queue-failure-reason` �
 
 1. 「已略過」沿用「已取消」「批次已取消」的中性灰。理由：沒壞、沒花錢，不該是紅色。
 2. 推翻 dsr-6d-b「佇列不准用『已略過』開頭」：當時怕使用者以為是系統自作主張；現在第二行講明原因，這個顧慮不在了。
-3. 產生字幕對話框只放灰色原因句、不顯示「已略過」三個字：同意。手機片名若只剩 1～2 個字，照停止條件停下來回報。
+3. ~~產生字幕對話框只放灰色原因句、不顯示「已略過」三個字：同意。手機片名若只剩 1～2 個字，照停止條件停下來回報。~~（2026-10-20 推翻，見下）
 4. 批次結尾「完成 N 部、失敗 M 部」先維持把略過算進失敗——跟灰色「已略過」說法不一致，另立 backlog `disc-2026-10-batch-summary-counts-skip-as-fail`，不在本單。
+
+## ⚖️ Sally 新裁定（2026-10-20，推翻上面 #3）
+
+Alexyu 選 B（對話框佇列列改兩行），Sally 裁定：
+
+- 「產生字幕」批次對話框（F8，`GenerationBatchDialogV2.tsx` 的 `QueueRow`）裡，**有東西要解釋的列（失敗、已略過）一律兩行**；其他狀態維持一行。
+- **第一行：** 片名，最多兩行（`line-clamp-2`）＋右邊短狀態字，對齊片名第一行。
+- **第二行：** 原因，Body 字級、`--text-secondary`，左緣對齊片名，前面不加「·」，不截斷、會折行。
+- **已略過：** 灰色「已略過」（`--text-muted`）、無圖示；第二行是原因，例如「沒有可用的字幕來源，也沒有設定語音辨識」。
+- 桌機 F8-D-v2 同一排法。
+- 設計稿：F8-D-v2 `i9Nun1`、F8-M-v2 `H717g`、新規格稿 F8-SPEC-ROW（`flow-f-subtitle-v2/f8-spec-row.png`，繪製中）。
+- 分工：兩行結構由 `disc-2026-10-generation-queue-failure-reason`（PR #851 重開）做；本單只讓 `queueRowBadge`／`queueRowLabel` 對帶 `no_text_source`／`asr_unconfigured`（或 `reason: skipped`）的略過項目回「已略過」＋原因。**本單等 #851 合併才開工。**
