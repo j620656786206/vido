@@ -498,6 +498,61 @@ const wsFxFeed = (seq: number, i: number, row: Record<string, unknown>) => ({
   ...row,
 });
 
+/** ux3-ai-2 F11-D-v2 running batch — shared by the 1200 and the narrow (1024) fixtures. */
+const WS_FX_RUNNING_PROPS = {
+  mode: 'running',
+  progress: {
+    batchId: 'b1',
+    totalItems: 3,
+    currentIndex: 2,
+    currentMediaId: WS_FX_IDS[1],
+    currentItem: '奧本海默',
+    successCount: 1,
+    failCount: 0,
+    pausedCount: 0,
+    status: 'running',
+    spentUsd: 0.42,
+    budgetUsd: 5,
+    // dsr-6d-c-1: the queue is the BACKEND's, and the counts agree with it.
+    items: [wsFxItem(0, 'done'), wsFxItem(1, 'running'), wsFxItem(2, 'queued')],
+  },
+  activeItemProgress: {
+    phase: 'transcribing',
+    failedPhase: null,
+    percentage: null,
+    message: '正在轉錄音訊',
+    jobId: 'job-fx',
+    error: null,
+    srtPath: null,
+    zhSrtPath: null,
+    partial: false,
+    englishKeptBlocks: null,
+  },
+  // Same film, same stage as the queue on the left (轉錄中, no percentage).
+  feed: [
+    wsFxFeed(1, 0, { kind: 'done' }),
+    wsFxFeed(2, 1, {
+      kind: 'stage',
+      stage: 'extracting',
+      state: 'passed',
+      pipeline: false,
+      percentage: null,
+    }),
+    wsFxFeed(3, 1, {
+      kind: 'stage',
+      stage: 'transcribing',
+      state: 'live',
+      pipeline: false,
+      percentage: null,
+    }),
+  ],
+  feedConnected: true,
+  onLaunch: noop,
+  onConfirmCancelAll: asyncNoop,
+  onResume: noop,
+  onRetryData: noop,
+};
+
 /**
  * dsr-6a — the three ButtonCost looks (plus ≈) stacked, mirroring J9-D's
  * state column: ① ready, ② ≈ assumed runtime, ④ loading skeleton,
@@ -7207,60 +7262,23 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     label: 'subtitle/GenerationWorkspaceV2 (running — F11 queue + live event log)',
     component: GenerationWorkspaceV2,
     width: 1200,
-    props: {
-      mode: 'running',
-      progress: {
-        batchId: 'b1',
-        totalItems: 3,
-        currentIndex: 2,
-        currentMediaId: WS_FX_IDS[1],
-        currentItem: '奧本海默',
-        successCount: 1,
-        failCount: 0,
-        pausedCount: 0,
-        status: 'running',
-        spentUsd: 0.42,
-        budgetUsd: 5,
-        // dsr-6d-c-1: the queue is the BACKEND's, and the counts agree with it.
-        items: [wsFxItem(0, 'done'), wsFxItem(1, 'running'), wsFxItem(2, 'queued')],
-      },
-      activeItemProgress: {
-        phase: 'transcribing',
-        failedPhase: null,
-        percentage: null,
-        message: '正在轉錄音訊',
-        jobId: 'job-fx',
-        error: null,
-        srtPath: null,
-        zhSrtPath: null,
-        partial: false,
-        englishKeptBlocks: null,
-      },
-      // Same film, same stage as the queue on the left (轉錄中, no percentage).
-      feed: [
-        wsFxFeed(1, 0, { kind: 'done' }),
-        wsFxFeed(2, 1, {
-          kind: 'stage',
-          stage: 'extracting',
-          state: 'passed',
-          pipeline: false,
-          percentage: null,
-        }),
-        wsFxFeed(3, 1, {
-          kind: 'stage',
-          stage: 'transcribing',
-          state: 'live',
-          pipeline: false,
-          percentage: null,
-        }),
-      ],
-      feedConnected: true,
-      onLaunch: noop,
-      onConfirmCancelAll: asyncNoop,
-      onResume: noop,
-      onRetryData: noop,
-    },
+    props: WS_FX_RUNNING_PROPS,
     penNode: 'screen-section', // Screen F11-D-v2 (l8FsB)
+    statesOnly: ['default'],
+  },
+  {
+    // disc-2026-10-gen-live-column-squeeze (F11-SPEC-WIDTH V2oywc): the same batch
+    // at 1024. 784 = 1024 − the 240 sidebar, so the body's px-8 leaves the real
+    // 720 content area: queue 304 + gap 16 + 即時活動 400, and the running row
+    // (270 inside, < 616) draws the phone's vertical stepper. The 1280 visual
+    // viewport keeps lg: on, exactly like a 1024 window.
+    id: 'generation-workspace-v2/running-narrow',
+    label:
+      'subtitle/GenerationWorkspaceV2 (running at 1024 — 即時活動 stays 400, vertical stepper)',
+    component: GenerationWorkspaceV2,
+    width: 784,
+    props: WS_FX_RUNNING_PROPS,
+    penNode: 'screen-section', // Screen F11-SPEC-WIDTH (V2oywc) — demo-1024
     statesOnly: ['default'],
   },
   {

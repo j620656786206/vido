@@ -1443,3 +1443,39 @@ describe('GenerationWorkspaceV2 — one failure, one sentence, both sides', () =
     expect(screen.getByTestId('workspace-feed-row-detail').textContent).toBe('生成失敗');
   });
 });
+
+// disc-2026-10-gen-live-column-squeeze (F11-SPEC-WIDTH V2oywc): at 1024 a running
+// row's stepper used to hold the queue at 650 and squeeze 即時活動 to 54px. The
+// right pane now never gives way; the queue does, and the running row's stepper
+// reads the ROW's width (616) to go vertical. jsdom has no layout — the widths
+// themselves are measured in a real browser (story AC #3).
+describe('GenerationWorkspaceV2 — 即時活動 keeps 400 on a narrow desktop', () => {
+  it('[P0] the live pane never shrinks; the queue column may (min-w-0)', () => {
+    render(<GenerationWorkspaceV2 {...props()} />);
+    const pane = screen.getByTestId('workspace-event-log');
+    expect(pane.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['lg:w-[400px]', 'lg:shrink-0'])
+    );
+    // The queue column is the pane's sibling inside the body row.
+    let queueCol = screen.getByTestId('workspace-queue-row-m12') as HTMLElement;
+    while (queueCol.parentElement && queueCol.parentElement !== pane.parentElement) {
+      queueCol = queueCol.parentElement;
+    }
+    expect(queueCol.parentElement).toBe(pane.parentElement);
+    expect(queueCol.className.split(/\s+/)).toEqual(expect.arrayContaining(['flex-1', 'min-w-0']));
+  });
+
+  it('[P0] the running row is a size container and its stepper reads the ROW, not the viewport', () => {
+    render(<GenerationWorkspaceV2 {...props()} />);
+    const row = screen.getByTestId('workspace-queue-row-m12');
+    expect(row.className.split(/\s+/)).toContain('@container');
+    const stepper = within(row).getByTestId('generation-progress-v2');
+    const indent = stepper.parentElement!;
+    expect(indent.className.split(/\s+/)).toContain('@min-[616px]:pl-[54px]');
+    expect(indent.className).not.toContain('sm:pl-[54px]');
+    const ol = within(row).getByRole('list', { name: '字幕生成進度' });
+    expect(ol.className).toContain('@min-[616px]:flex-row');
+    expect(ol.className).not.toMatch(/(^|\s)sm:flex-row/);
+    expect(within(row).getByTestId('gen-stage-提取音訊').className).toContain('@max-[616px]:p-1');
+  });
+});
