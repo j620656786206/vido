@@ -1,6 +1,6 @@
 # Disc（後端）：TMDb 沒有台灣譯名時，片名和簡介不會再顯示成簡體字
 
-Status: review
+Status: done
 
 **Source:** `backlog-metadata-zh-fallback-simplified`。⚖️ Alexyu 2026-10-20 選 A：先修這張，再拍 FB 貼文的片庫截圖。這張排在 `disc-2026-10-generate-keeps-user-en-srt-b1` 前面。
 
@@ -106,3 +106,9 @@ Status: review
   - (4) 原本兩個欄位都寫回，空字串會被改成 NULL。現在只寫有變的欄位。
   - nit 不改：季和集只轉字、不套台灣用語。理由寫在上面「TMDb 層」那段。
 - **檢查：** `go test ./...`、`go vet`、`~/go/bin/staticcheck ./...` 全部乾淨；`lint:all` 是「✖ 170 problems (0 errors」。
+- **正式機驗證（AC #6，2026-10-20 11:02，映像 revision `458bf2b8`）：** 通過。
+  - 開機 log：`Simplified metadata backfill finished movies=2 series=3 seasons=0 episodes=0`，接著 `cleared cached TMDb answers entries=63`。補轉從 OpenCC 啟動到結束不到 1 秒。
+  - 《Tears of Steel》，`GET /api/v1/movies/:id`：
+    - 修前：`title` 是「钢铁之泪」；簡介前 30 字「Blender 基金会的第四部开源电影 Tears of Steel 问世，与」。
+    - 修後：`title` 是「鋼鐵之淚」；簡介前 30 字「Blender 基金會的第四部開源電影 Tears of Steel 問世，與」。
+  - 展示片庫（5 部 Blender 片，全新資料庫、第一次掃描，走 TMDb 層而不是補轉）：鋼鐵之淚、大雄兔、尋龍記、大象之夢，加上 Caminandes: Gran Dillama（TMDb 只有英文）。5 部都沒有簡體。截圖給 FB 貼文用，存在作者的電腦，不放進 repo。
