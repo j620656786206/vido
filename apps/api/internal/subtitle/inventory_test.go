@@ -32,6 +32,8 @@ func TestListSidecars_LanguageFromContentNotFilename(t *testing.T) {
 	writeFile(t, dir, "See.S01E02.zh-TW.srt", invSimplified)
 	writeFile(t, dir, "See.S01E02.chs.ass", invTraditional)
 	writeFile(t, dir, "See.S01E02.en.srt", invEnglish)
+	// Vido's own transcript beside the user's .en.srt: "vido" is not a language.
+	writeFile(t, dir, "See.S01E02.vido.en.srt", invEnglish)
 	writeFile(t, dir, "See.S01E02.srt", invEnglish)
 	// Noise that must be skipped.
 	writeFile(t, dir, "See.S01E02.zh-Hant.srt.bak", invTraditional)
@@ -47,10 +49,11 @@ func TestListSidecars_LanguageFromContentNotFilename(t *testing.T) {
 		got[f.FileName] = f.Language
 	}
 	assert.Equal(t, map[string]string{
-		"See.S01E02.zh-TW.srt": LangSimplified,
-		"See.S01E02.chs.ass":   LangTraditional,
-		"See.S01E02.en.srt":    "en",
-		"See.S01E02.srt":       LangUndetermined,
+		"See.S01E02.zh-TW.srt":   LangSimplified,
+		"See.S01E02.chs.ass":     LangTraditional,
+		"See.S01E02.en.srt":      "en",
+		"See.S01E02.vido.en.srt": "en",
+		"See.S01E02.srt":         LangUndetermined,
 	}, got)
 }
 

@@ -255,7 +255,8 @@ func (SidecarTrackReader) ReadSidecarTracks(mediaPaths []string, known map[strin
 
 // sidecarLanguage decides a sidecar's language: Chinese from the text, else the
 // first filename tag segment ("en" of "en.sdh"), never a Chinese tag the text
-// does not back up.
+// does not back up. Vido's own transcript tag is not a language: "vido.en"
+// (<base>.vido.en.srt) reads as "en".
 func sidecarLanguage(path, tag string) string {
 	if head, err := readHead(path); err == nil {
 		switch Detect(head).Language {
@@ -267,6 +268,7 @@ func sidecarLanguage(path, tag string) string {
 			return LangChineseUnknown
 		}
 	}
+	tag = strings.TrimPrefix(tag, services.VidoTranscriptTag+".")
 	first := strings.ToLower(strings.SplitN(tag, ".", 2)[0])
 	switch {
 	case first == "" || isChineseTag(first):
