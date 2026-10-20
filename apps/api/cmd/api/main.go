@@ -249,6 +249,22 @@ func main() {
 		FallbackLanguages: cfg.TMDbFallbackLanguages,
 		CacheTTLHours:     cfg.TMDbCacheTTLHours,
 	}, repos.Cache)
+	// OpenCC — built here, before anything can query TMDb, because the TMDb
+	// layer needs it too: a Simplified answer is stored Traditional
+	// (disc-2026-10-metadata-zh-fallback-simplified). The subtitle engine below
+	// reuses the same converter.
+	subtitleConverter, _ := subtitle.NewConverter()
+	if subtitleConverter.IsAvailable() {
+		tmdbService.SetChineseConverter(subtitleConverter)
+		// Rows stored before the TMDb layer converted are fixed here, once: a
+		// settings marker makes later starts return at once. Before the server
+		// starts, so no scan writes the same rows meanwhile.
+		backfillCtx, cancelBackfill := context.WithTimeout(context.Background(), 2*time.Minute)
+		_ = services.NewChineseMetadataBackfill(db.Conn(), subtitleConverter, repos.Cache, repos.Settings, slog.Default()).Run(backfillCtx)
+		cancelBackfill()
+	} else {
+		slog.Warn("OpenCC unavailable — TMDb text borrowed from zh-CN stays Simplified")
+	}
 
 	// Story 12-2: wire the season/episode accordion deps into the series service
 	// (episode repo for local subtitle/file status + TMDb for the canonical episode list).
@@ -616,7 +632,6 @@ func main() {
 	})
 
 	// Initialize subtitle engine components (Story 8.1-8.8)
-	subtitleConverter, _ := subtitle.NewConverter()
 	subtitleScorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
 	subtitlePlacer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
 	// Initialize subtitle providers (Assrt, OpenSubtitles).

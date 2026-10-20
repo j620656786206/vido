@@ -3,6 +3,9 @@ package tmdb
 import (
 	"context"
 	"log/slog"
+	"sync"
+
+	"github.com/vido/api/internal/zhtw"
 )
 
 // DefaultFallbackLanguages defines the default language fallback chain
@@ -15,6 +18,10 @@ var DefaultFallbackLanguages = []string{"zh-TW", "zh-CN", "en"}
 type LanguageFallbackClient struct {
 	client    ClientInterface
 	languages []string
+	// converter turns Simplified answers Traditional (simplified.go); nil
+	// keeps them as sent.
+	converter       zhtw.ScriptConverter
+	warnNoConverter sync.Once
 }
 
 // LanguageFallbackClientInterface defines the contract for language fallback operations
@@ -72,6 +79,7 @@ func (c *LanguageFallbackClient) SearchMoviesWithFallback(ctx context.Context, q
 
 	for _, lang := range c.languages {
 		result, err := c.client.SearchMoviesWithLanguage(ctx, query, lang, page)
+		result = c.localizeMovies(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: search movies failed",
 				"language", lang,
@@ -130,6 +138,7 @@ func (c *LanguageFallbackClient) SearchTVShowsWithFallback(ctx context.Context, 
 
 	for _, lang := range c.languages {
 		result, err := c.client.SearchTVShowsWithLanguage(ctx, query, lang, page)
+		result = c.localizeTVShows(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: search TV shows failed",
 				"language", lang,
@@ -186,6 +195,7 @@ func (c *LanguageFallbackClient) GetMovieDetailsWithFallback(ctx context.Context
 
 	for _, lang := range c.languages {
 		result, err := c.client.GetMovieDetailsWithLanguage(ctx, movieID, lang)
+		result = c.localizeMovieDetails(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: get movie details failed",
 				"language", lang,
@@ -293,6 +303,7 @@ func (c *LanguageFallbackClient) GetTVShowDetailsWithFallback(ctx context.Contex
 
 	for _, lang := range c.languages {
 		result, err := c.client.GetTVShowDetailsWithLanguage(ctx, tvID, lang)
+		result = c.localizeTVShowDetails(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: get TV show details failed",
 				"language", lang,
@@ -373,6 +384,7 @@ func (c *LanguageFallbackClient) GetSeasonDetailsWithFallback(ctx context.Contex
 
 	for _, lang := range c.languages {
 		result, err := c.client.GetSeasonDetailsWithLanguage(ctx, tvID, seasonNumber, lang)
+		result = c.localizeSeasonDetails(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: get season details failed",
 				"language", lang,
@@ -497,6 +509,7 @@ func (c *LanguageFallbackClient) GetTrendingMoviesWithFallback(ctx context.Conte
 
 	for _, lang := range c.languages {
 		result, err := c.client.GetTrendingMoviesWithLanguage(ctx, timeWindow, lang, page)
+		result = c.localizeMovies(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: trending movies failed",
 				"language", lang,
@@ -533,6 +546,7 @@ func (c *LanguageFallbackClient) GetTrendingTVShowsWithFallback(ctx context.Cont
 
 	for _, lang := range c.languages {
 		result, err := c.client.GetTrendingTVShowsWithLanguage(ctx, timeWindow, lang, page)
+		result = c.localizeTVShows(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: trending TV shows failed",
 				"language", lang,
@@ -573,6 +587,9 @@ func (c *LanguageFallbackClient) GetTrendingTVShowsWithFallback(ctx context.Cont
 func (c *LanguageFallbackClient) DiscoverMoviesWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultMovies, string, error) {
 	if params.Language != "" {
 		result, err := c.client.DiscoverMovies(ctx, params)
+		// A caller that asks for zh-CN still gets Traditional: Vido shows
+		// Traditional everywhere (disc-2026-10-metadata-zh-fallback-simplified).
+		result = c.localizeMovies(result, params.Language)
 		if err != nil {
 			return nil, "", err
 		}
@@ -596,6 +613,7 @@ func (c *LanguageFallbackClient) DiscoverMoviesWithFallback(ctx context.Context,
 		p := params
 		p.Language = lang
 		result, err := c.client.DiscoverMovies(ctx, p)
+		result = c.localizeMovies(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: discover movies failed",
 				"language", lang,
@@ -629,6 +647,7 @@ func (c *LanguageFallbackClient) DiscoverMoviesWithFallback(ctx context.Context,
 func (c *LanguageFallbackClient) DiscoverTVShowsWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, string, error) {
 	if params.Language != "" {
 		result, err := c.client.DiscoverTVShows(ctx, params)
+		result = c.localizeTVShows(result, params.Language)
 		if err != nil {
 			return nil, "", err
 		}
@@ -652,6 +671,7 @@ func (c *LanguageFallbackClient) DiscoverTVShowsWithFallback(ctx context.Context
 		p := params
 		p.Language = lang
 		result, err := c.client.DiscoverTVShows(ctx, p)
+		result = c.localizeTVShows(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: discover TV shows failed",
 				"language", lang,
@@ -689,6 +709,7 @@ func (c *LanguageFallbackClient) GetMovieRecommendationsWithFallback(ctx context
 
 	for _, lang := range c.languages {
 		result, err := c.client.GetMovieRecommendationsWithLanguage(ctx, movieID, lang)
+		result = c.localizeMovies(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: movie recommendations failed",
 				"language", lang,
@@ -725,6 +746,7 @@ func (c *LanguageFallbackClient) GetMovieSimilarWithFallback(ctx context.Context
 
 	for _, lang := range c.languages {
 		result, err := c.client.GetMovieSimilarWithLanguage(ctx, movieID, lang)
+		result = c.localizeMovies(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: similar movies failed",
 				"language", lang,
@@ -761,6 +783,7 @@ func (c *LanguageFallbackClient) GetTVRecommendationsWithFallback(ctx context.Co
 
 	for _, lang := range c.languages {
 		result, err := c.client.GetTVRecommendationsWithLanguage(ctx, tvID, lang)
+		result = c.localizeTVShows(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: TV recommendations failed",
 				"language", lang,
@@ -797,6 +820,7 @@ func (c *LanguageFallbackClient) GetTVSimilarWithFallback(ctx context.Context, t
 
 	for _, lang := range c.languages {
 		result, err := c.client.GetTVSimilarWithLanguage(ctx, tvID, lang)
+		result = c.localizeTVShows(result, lang)
 		if err != nil {
 			slog.Debug("Language fallback: similar TV shows failed",
 				"language", lang,

@@ -1,6 +1,6 @@
 # Disc（後端）：TMDb 沒有台灣譯名時，片名和簡介不會再顯示成簡體字
 
-Status: ready-for-dev
+Status: review
 
 **Source:** `backlog-metadata-zh-fallback-simplified`。⚖️ Alexyu 2026-10-20 選 A：先修這張，再拍 FB 貼文的片庫截圖。這張排在 `disc-2026-10-generate-keeps-user-en-srt-b1` 前面。
 
@@ -67,4 +67,42 @@ Status: ready-for-dev
 
 ### Completion Notes
 
-（dev 填）
+- **TMDb 層（AC #1～#3）：** 新增 `tmdb/simplified.go`。`LanguageFallbackClient` 每一個 `c.client.*` 呼叫之後，都多一行 `result = c.localize*(result, lang)`，總共 15 處，包含 discover 由呼叫端指定語言的那條路。
+  - 回應語言是簡體（`zh-CN`／`zh-SG`／`zh-Hans*`）時，先複製一份再轉換，不寫回 client 給的物件。
+  - 轉換範圍：詳細資料的片名、簡介、標語，季名、季簡介、每集名稱和簡介，列表的片名和簡介。
+  - 用語規則：電影和影集用出品國決定；列表電影用 `original_language`；列表影集先看 `origin_country`，再看 `original_language`。
+  - 季的回應沒有國家資訊，所以一律只轉字（`keepOwnWording`）。這比 story 寫的更保守，理由是寧可外國影集的集名少轉一些說法，也不要改掉陸劇原本的用語。
+  - 一次回應裡的所有欄位用分隔字串接成一段，丟給 OpenCC 跑一次，再切回去（`zhtw.ConvertJoined`）。
+  - 沒有接轉換器時只記一次 Warn；轉換失敗時記 log、保留原文，查詢本身不會失敗。
+  - 接線：`main.go` 把 `subtitle.NewConverter()` 移到 TMDb 服務建好之後、任何查詢開始之前，OpenCC 可用時就呼叫 `tmdbService.SetChineseConverter`，所以不會有 data race。
+- **⚠️ 偏離 story：「是不是簡體」不用 `Detect` 判斷，改用 `zhtw.SimplifiedFields`。** 規則是：s2tw 會改到這段文字，而 t2s 完全沒改到，或 t2s 改到的字數不到 s2tw 的一半。後半句是為了接住「簡體簡介裡引了一個繁體名字」這種情況。
+  - 先試過 `Detect`：它的表只有大約 200 個字，「大象之梦」「霸王别姬」都判成「不確定」，等於漏掉。
+  - 再試過「只要 s2tw 會改到就轉」：在正式機資料庫的副本上，這會把 25 部電影和 23 部影集的繁體字改壞，例如「蘇里」變「蘇裡」、「好傢伙」變「好傢夥」、「神祕」變「神秘」、「社區」變「社群」、「淀治」變「澱治」。
+  - 所以多加一道 t2s 檢查：繁體字會被 t2s 改到，就不算簡體。TMDb 層也用同一道檢查，因為 TMDb 的 zh-CN 欄位有時是使用者用繁體填的。
+  - 為了這個，`subtitle.Converter` 多了 `ConvertT2S`。正式映像的 `/usr/share/opencc/` 已經有 `t2s.json`（Dockerfile 會複製整個資料夾）。
+- **補轉（AC #4）：** `services/chinese_metadata_backfill.go`，在伺服器開始接請求之前同步跑，上限 2 分鐘。
+  - **只跑一次**：所有表都轉成功，才在設定表寫 `metadata.zh_hant_backfill_done`。之後開機看到這個標記就直接結束；之後新進來的資料，由 TMDb 層負責轉。
+  - 如果跑失敗，就不寫標記，下次開機會再跑一次。重跑不會把已經轉好的資料再改一遍。
+  - 寫入方式：每張表包在一個 transaction 裡；只寫有變的欄位，所以空的簡介會原樣保留。
+  - **範圍比 story 窄：** 只轉 `metadata_source = 'tmdb'` 的電影和影集，以及這些影集底下的季和集。
+  - 不轉 manual（使用者手動改的）和 nfo（使用者自己的檔）：這兩種是 story 本來就要求的。
+  - 也不轉沒有來源的列：沒比對成功的片，片名就是檔名。
+  - 也不轉豆瓣來源的列：豆瓣在抓的時候已經自己轉過繁體。
+  - 跑成功時也會清掉 TMDb 快取，因為修好之前存進快取的答案可能還是簡體。
+  - log 會寫每張表改了幾筆。
+- **正式機資料庫副本實跑**（真 OpenCC，`.backup` 下來在本機跑）：
+  - 第一次：電影 2 筆、影集 3 筆、季 0、集 0。其中包含 钢铁之泪→鋼鐵之淚（簡介也轉了），另外 2 部陸劇的片名和簡介轉成繁體（只轉字），還有 1 筆測試資料。這份文件是公開的，所以不寫出片庫裡其他片的片名。
+  - 第二次跑：看到標記就直接結束，什麼都沒做。整個流程含編譯不到 2 秒。
+  - 剩一個誤判：一部片名裡的「凶」變成「兇」。OpenCC 把「凶」當成「兇」的簡體寫法，這部片名很可能本來就是台灣譯名。兩種寫法在台灣都有人用，影響正式片庫 57 部裡的 1 部，記錄在這裡，不另外處理。
+- **測試：**
+  - `tmdb/simplified_test.go`：電影、影集、季與集、列表、陸片只轉字、外國片轉台灣說法、HK／US 影集用出品國判斷、zh-TW 和 en 不轉、zh-CN 裡填的是繁體就不轉、沒有轉換器、轉換失敗、語言碼判斷。
+  - `tmdb/simplified_opencc_test.go`：走伺服器實際用的 `subtitle.Converter`，真的開 OpenCC 處理程序（repo 的 stand-in 腳本），確認分隔字串來回一趟不會壞。
+  - `zhtw/script_test.go`：判斷規則、混合字體、錯誤處理、分隔字串被吃掉時拒絕套用。
+  - `services/chinese_metadata_backfill_test.go`：真 SQLite（`t.TempDir()`、跑完整 migration），只有簡體的列被轉；繁體、英文、檔名、manual、nfo、手動改過影集底下的集都不動；陸片只轉字；快取只清一次；第二次跑完全沒變化；轉換失敗不寫入；沒有轉換器就什麼都不做。
+- **跨模型 CR（Sonnet，2026-10-20）：** 沒有 blocker。四項 should-fix 都處理了：
+  - (1) 「簡體裡夾一個繁體字」原本整段會被判成不是簡體，現在用改動字數比較，見上面的規則。
+  - (2) 呼叫端明確要求 zh-CN 時，也照樣轉成繁體。這是刻意的，程式裡有註解。
+  - (3) 補轉原本每次開機都掃一遍，也沒有包 transaction。現在改成只跑一次，每張表一個 transaction。
+  - (4) 原本兩個欄位都寫回，空字串會被改成 NULL。現在只寫有變的欄位。
+  - nit 不改：季和集只轉字、不套台灣用語。理由寫在上面「TMDb 層」那段。
+- **檢查：** `go test ./...`、`go vet`、`~/go/bin/staticcheck ./...` 全部乾淨；`lint:all` 是「✖ 170 problems (0 errors」。

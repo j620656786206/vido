@@ -15,6 +15,7 @@ import (
 const (
 	ProfileS2TWP = "s2twp" // Simplified → Traditional (Taiwan standard + Taiwan phrases)
 	ProfileS2TW  = "s2tw"  // Simplified → Traditional (Taiwan standard characters only, no phrases)
+	ProfileT2S   = "t2s"   // Traditional → Simplified (zhtw.SimplifiedFields tells scripts apart with it)
 )
 
 // Converter wraps the official C++ OpenCC CLI for Chinese variant conversion.
@@ -136,6 +137,12 @@ func (c *Converter) ConvertS2TWP(content []byte) ([]byte, error) {
 // wording (zhtw.KeepsOwnWording).
 func (c *Converter) ConvertS2TW(content []byte) ([]byte, error) {
 	return c.Convert(content, ProfileS2TW)
+}
+
+// ConvertT2S converts Traditional to Simplified. Vido never ships its output:
+// zhtw.SimplifiedFields only checks whether it changes a text.
+func (c *Converter) ConvertT2S(content []byte) ([]byte, error) {
+	return c.Convert(content, ProfileT2S)
 }
 
 // NeedsConversion returns true only for Simplified Chinese ("zh-Hans").
