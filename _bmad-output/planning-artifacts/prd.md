@@ -145,7 +145,7 @@ Bazarr = search-first, weak zh-TW. Lingarr = translation-only (no search/downloa
 
 | Layer | What it fixes | Bazarr / Lingarr today |
 |---|---|---|
-| **Per-show glossary** (FR18–FR20, auto-harvest closed loop) | Proper-noun drift across episodes and runs — the POC produced 隱形戰士/隱形特務 for the same name, and rendered the character "The Deep" as 深海怪物 for lack of a cast roster | Line-by-line or per-file translation; no per-show term memory |
+| **Per-show glossary** (FR18–FR20, auto-harvest closed loop) | Proper-noun drift across episodes and runs — the POC produced 隱形戰士/隱形特務 for the same name, and rendered the character "The Deep" as 深海怪物 for lack of a cast roster | No per-show term memory documented (Lingarr public docs as of 2026-10-20) |
 | **Content-based 繁/簡 detection** (FR6) | Simplified subtitles mislabeled as zh-TW by filename or track tag | Trusts the label — Bazarr's core zh-TW bug |
 | **Library integration** | Subtitle state as a first-class dimension of the library (poster badge, detail page, activity feed) | Bazarr is a standalone admin table; Lingarr is a separate service |
 | **Metadata localization** (zh-TW `.nfo`, additive parallel file) — *gated on spike S1, outside this PRD's scope* | The rest of the title (plot, episode titles, cast) stays foreign even once subtitles are 繁中 | Not attempted |

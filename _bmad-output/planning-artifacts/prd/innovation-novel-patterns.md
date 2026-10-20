@@ -188,6 +188,19 @@ Server-Sent Events hub replaces polling for real-time progress tracking across a
 - Fansub naming is a common complaint on forums/Reddit
 - Existing tools' Chinese support seen as "afterthought" rather than core feature
 
+**Subtitle Tools — Where the Differentiation Actually Lives (added 2026-10-20):**
+
+The subtitle comparison set is Bazarr (search-first, weak zh-TW) and Lingarr (translation-only, no search/download; pluggable LibreTranslate / DeepL / LLM backends). "Vido translates subtitles with AI" is **not** a differentiator: Lingarr can already point at an LLM, and Bazarr can reach AI translation too. The translation engine is commodity and swappable (`subtitle-v4-replan-and-feasibility-audit-2026-06.md`); Vido owns the layer **around** it:
+
+| Layer | Bazarr | Lingarr | Vido |
+|-------|--------|---------|------|
+| **Per-show glossary** (proper-noun consistency across episodes) | ❌ | ❌ None documented | ✅ Auto-harvest + confirm loop |
+| **繁/簡 detection** | ⚠️ Trusts filename / track tag | — Not documented (translates to a configured target) | ✅ From content (innovation #5) |
+| **Library integration** (subtitle state on posters, detail, activity) | ⚠️ Standalone admin table | ❌ Separate service | ✅ First-class library dimension |
+| **Metadata localization** (zh-TW `.nfo`) | ❌ | ❌ | ⏳ Gated on spike S1 |
+
+Detail and evidence: subtitle pipeline PRD (`../prd.md` → *Market Context & Competitive Landscape*). **Messaging guardrail:** never pitch "AI translation" as the differentiator — competitors match it by changing a backend setting. Lingarr cells reflect its public docs as of 2026-10-20. Pitch consistency instead: Bazarr and Lingarr get a subtitle translated; Vido keeps a whole show's Traditional Chinese consistent, from subtitles through metadata.
+
 **Vido's Positioning:**
 "The first media management tool designed specifically for Traditional Chinese users and fansub content"
 
