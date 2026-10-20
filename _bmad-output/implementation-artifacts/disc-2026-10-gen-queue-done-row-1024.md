@@ -1,6 +1,6 @@
 # Disc：筆電寬度（1024）看生成畫面，左邊佇列「完成」那列的說明被「…」切掉
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 2026-10-20 #871（`disc-2026-10-gen-queue-reason-wrap-desktop`）Dev Agent Record「附帶發現」：1024 寬、右邊即時活動欄有顯示時，左邊佇列「完成」列的說明行「已完成，字幕已寫入檔案」要 154px、格子只有 142px，被切成「已完成，字幕已寫入…」。#871 之前就是這樣；1280、1440 沒事。⚖️ Alexyu 2026-10-20：開單，請 Sally 決定怎麼修。
 
@@ -58,12 +58,12 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] T0：確認設計稿與截圖已更新（AC #0）
-- [ ] T1：先改兩支 spec 的期待值，跑一次看紅（AC #4）
-- [ ] T2：`queueRowSubStatus` `done` 分支改字（AC #1）；跑 spec 看綠
-- [ ] T3：真瀏覽器量 1024／1280／390／320（AC #3），數字寫進 Dev Agent Record
-- [ ] T4：視覺基準（AC #5）＋ UX 截圖（AC #6）
-- [ ] T5：全綠（AC #7）
+- [x] T0：確認設計稿與截圖已更新（AC #0）
+- [x] T1：先改兩支 spec 的期待值，跑一次看紅（AC #4）
+- [x] T2：`queueRowSubStatus` `done` 分支改字（AC #1）；跑 spec 看綠
+- [x] T3：真瀏覽器量 1024／1280／390／320（AC #3），數字寫進 Dev Agent Record
+- [x] T4：視覺基準（AC #5）＋ UX 截圖（AC #6）
+- [x] T5：全綠（AC #7）
 
 ## Dev Notes
 
@@ -122,13 +122,41 @@ Status: ready-for-dev
 |---|---|
 | 2026-10-20 | 建單（Bob）。Sally 裁定 (a)：完成列說明行改成「字幕已寫入檔案」（徽章已寫「完成」，不重複）；設計稿四列＋元件母版同步改字，先 blocked 等 Pencil。 |
 | 2026-10-20 | 解除 blocked → ready-for-dev：Alexyu 跑完 Pencil，母版 aw4Qr›lUZol＋oxc7d／bbDtK／Qp7Cm／dzmKk 的說明行改成「字幕已寫入檔案」，截圖 f11-d-v2／f12-d-v2／f11-m-v2／component-library 隨設計稿 PR 一起提交。 |
+| 2026-10-20 | Amelia 實作完成 → done。完成列說明行改字；量測、基準、附帶發現見 Dev Agent Record。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia）
+
 ### Debug Log References
+
+- 量測用暫時的 Playwright spec（chromium，`/activity?view=generation`，狀態查詢 `progress`／`last`＋假 SSE stub，量完刪掉、不進版控）。處理中那列要顯示「翻譯中 45%」，得讓第二條以後的 EventSource 連線也收到 `translation_progress`（單片進度 hook 自己開一條連線）。截圖在 session scratchpad `measure-before/`、`measure-after/`。
 
 ### Completion Notes List
 
+- **AC #0：** Pencil MCP 唯讀讀 `aw4Qr/lUZol`、`oxc7d/lUZol`、`bbDtK/lUZol`、`Qp7Cm/lUZol`、`dzmKk/lUZol`，五個都逐字是「字幕已寫入檔案」；截圖已隨 #873 合併。
+- **AC #1：** `queueRowSubStatus` `done` 分支改成「字幕已寫入檔案」，其他分支沒動；檔頭 ⚠️ 註解補「也不重複已完成」。`git grep queueRowSubStatus` 只有工作區在用（對話框 F8 不受影響）。
+- **AC #2：** 說明行 class 沒動。
+- **AC #3 量測（真瀏覽器，改完）：** 佇列兩組——執行中：完成、處理中（翻譯中 45%）、排隊中、失敗（「影片所在的資料夾寫不進字幕」，片名是魔戒長名）、已略過（19 字原因）；預算上限終態：完成、失敗、已略過、已暫停 ×2。數字是說明行 `scrollWidth/clientWidth`。
+  - **1024 預算上限終態（右欄 400 寬）：** 完成 138/138 一行整句（**改前 154/142 被切**，右欄 396）；已暫停「已暫停 — 下次繼續」126/126 一行整句（改前 130/130，也沒切）；失敗 138/138、已略過 146/146 折兩行整句；片名最多兩行；徽章高 30（一行）；頁面寬 1024 無橫捲。
+  - **1024 執行中：** 完成 484/484、處理中 439/439（翻譯中…＋45%）、排隊中 472/472、失敗 484/484、已略過 492/492，全部一行整句，沒有「…」；無橫捲。→ **排隊中、已暫停、處理中在 1024 都沒被切。**
+  - **1280：** 執行中全部一行（同上數字）；預算上限終態完成 394/394、失敗 394/394、已略過 402/402、已暫停 382/382，一行整句；無橫捲。
+  - **390：** 完成 192/192 一行；其他列跟改之前一樣（失敗一行、已略過兩行）；無橫捲。
+  - **320：** 完成 122/122 一行整句；排隊中、已暫停、失敗兩行，已略過三行（跟改之前一樣，手機本來就折行）；無橫捲。
+- **⚠️ 附帶發現（改之前就有，本單不動，請 Sally 裁定）：** 執行中狀態、1024 寬時，右邊即時活動欄被擠到 **54px**（一字一行，基本上不能讀）；1280 也只剩 **310px**。原因：處理中那列底下的六步進度條（`sm:pl-[54px]` 那塊）最小寬度 616px，整列撐到 650px；左欄是 `flex-1` 沒有 `min-w-0`、右欄 `lg:w-[400px]` 可縮，所以右欄被擠。用 main 的程式量也是 54px，跟本單無關。只要有一部在處理就會發生，也就是批次執行的大部分時間。#871 量的時候佇列裡沒有處理中的列，所以沒看到。
+- **AC #4：** `generationQueueRow.spec.ts` 的 P0 改期待「字幕已寫入檔案」、仍不含「繁中」，另加一支「不含已完成」；`GenerationWorkspaceV2.spec.tsx` 兩處改新字（class 斷言不變）。先改測試跑：4 支紅；改程式後 124 支綠。變異：改回設計稿舊句「已生成繁中字幕，已寫入檔案」→ P0 紅；改成「已完成字幕已寫入檔案」→ 兩支紅；已還原。
+- **AC #5 視覺基準：** 全套 visual 本機綠（文字變短在門檻以下）。`generation-workspace-v2` 六張 darwin 刪掉後 `update-missing` 重產：idle byte 相同；其餘五張都有完成列、內容真的變了——除了 story 列的 running、complete-with-failures、failures-long-titles，**budget_ceiling 與 credit_exhausted 也有完成列**（沙丘：第二部），所以五張都換。五張 `-linux` `git rm`，交給 CI bootstrap。重產後全套 visual 再跑一次綠。
+- **AC #6 UX：** 1024 截圖（預算上限終態，右欄 400 寬）完成列「駭客任務／字幕已寫入檔案／完成」，對 F11-D-v2 `oxc7d` 新文案一致；390 截圖完成列一行整句，對 F11-M-v2 `Qp7Cm` 一致。截圖留在本機 session scratchpad，沒有上傳（照 #871 慣例）。
+- **AC #7：** `pnpm nx run web:test` 298 檔／4855 支全綠；`web:typecheck` 綠；`lint:all` ✖ 170 problems（0 errors, 170 warnings）；`format:check` 綠；`check-design-refs.py` 綠（399 個節點）。E2E 沒有斷言舊句（`git grep` 空）；另跑 `generation-workspace.spec.ts`、`generation-workspace-mobile.spec.ts`（chromium＋mobile-chrome）14 支綠、6 支照設計 skip。沒有刪改 testid。
+
 ### File List
+
+- apps/web/src/components/subtitle/generationQueueRow.ts
+- apps/web/src/components/subtitle/generationQueueRow.spec.ts
+- apps/web/src/components/subtitle/GenerationWorkspaceV2.spec.tsx
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/{running,budget_ceiling,credit_exhausted,complete-with-failures,failures-long-titles}/default-visual-darwin.png（更新）
+- tests/visual/components.visual.spec.ts-snapshots/components/generation-workspace-v2/{同上五張}/default-visual-linux.png（刪除，交 CI bootstrap）
+- _bmad-output/implementation-artifacts/disc-2026-10-gen-queue-done-row-1024.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
