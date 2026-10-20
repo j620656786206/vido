@@ -140708,6 +140708,34 @@
                                   }
                                 },
                                 {
+                                  "id": "LJCbp",
+                                  "type": "ref",
+                                  "ref": "aw4Qr",
+                                  "name": "row-已略過",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "bSNmA": {
+                                      "content": "魔戒首部曲：魔戒現身"
+                                    },
+                                    "lUZol": {
+                                      "content": "沒有可用的字幕來源，也沒有設定語音辨識",
+                                      "fill": "$text-secondary"
+                                    },
+                                    "IcPTo": {
+                                      "fill": "$bg-tertiary"
+                                    },
+                                    "CQhw2": {
+                                      "icon": "triangle-alert",
+                                      "fill": "$error-text",
+                                      "enabled": false
+                                    },
+                                    "OLg1J": {
+                                      "content": "已略過",
+                                      "fill": "$text-muted"
+                                    }
+                                  }
+                                },
+                                {
                                   "type": "text",
                                   "id": "tk1Rj",
                                   "name": "queue-more",
@@ -141026,6 +141054,103 @@
                                           "textGrowth": "fixed-width",
                                           "width": "fill_container",
                                           "content": "影片所在的資料夾寫不進字幕",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "P4QzT",
+                                  "name": "evt-skip",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": "$Space/none",
+                                  "padding": [
+                                    "$Space/sm",
+                                    "$Space/md-plus"
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "H0ekk",
+                                      "name": "evt-line",
+                                      "width": "fill_container",
+                                      "gap": "$Space/sm",
+                                      "padding": "$Space/none",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "kXUHL",
+                                          "name": "evt-ic",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "circle-dashed",
+                                          "library": "lucide",
+                                          "fill": "$text-muted"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Uik49",
+                                          "name": "evt-stage",
+                                          "fill": "$text-secondary",
+                                          "content": "已略過",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "EV8Z9",
+                                          "name": "evt-dot",
+                                          "fill": "$text-muted",
+                                          "content": "·",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "chKOY",
+                                          "name": "evt-item",
+                                          "fill": "$text-secondary",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "魔戒首部曲：魔戒現身",
+                                          "lineHeight": "$Type/Body/Line",
+                                          "fontFamily": "$Type/Family/Primary",
+                                          "fontSize": "$Type/Body/Size",
+                                          "fontWeight": "$Type/Body/Weight"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "aXIks",
+                                      "name": "evt-reason-row",
+                                      "width": "fill_container",
+                                      "padding": [
+                                        "$Space/none",
+                                        "$Space/none",
+                                        "$Space/none",
+                                        "$Space/xl"
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "r7DcCy",
+                                          "name": "evt-item",
+                                          "fill": "$text-secondary",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "沒有可用的字幕來源，也沒有設定語音辨識",
                                           "lineHeight": "$Type/Body/Line",
                                           "fontFamily": "$Type/Family/Primary",
                                           "fontSize": "$Type/Body/Size",
@@ -171942,6 +172067,34 @@
                           "fill": "$error-text"
                         }
                       }
+                    },
+                    {
+                      "id": "cslat",
+                      "type": "ref",
+                      "ref": "aw4Qr",
+                      "name": "row-已略過",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bSNmA": {
+                          "content": "魔戒首部曲：魔戒現身"
+                        },
+                        "lUZol": {
+                          "content": "沒有可用的字幕來源，也沒有設定語音辨識",
+                          "fill": "$text-secondary"
+                        },
+                        "IcPTo": {
+                          "fill": "$bg-tertiary"
+                        },
+                        "CQhw2": {
+                          "icon": "triangle-alert",
+                          "fill": "$error-text",
+                          "enabled": false
+                        },
+                        "OLg1J": {
+                          "content": "已略過",
+                          "fill": "$text-muted"
+                        }
+                      }
                     }
                   ]
                 },
@@ -181157,7 +181310,7 @@
                   "fill": "$text-secondary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "右欄「即時活動」只會出現下面十三種列。每一列＝圖示 16 · 階段字（Body 600）· 「·」· 項目（Body 次要色）· 撐開 · 尾端（Mono，可選）。④⑤⑤b 是「某一部片＋原因」：原因換到第二行，左緣對齊階段字，前面不加「·」，永遠完整顯示；片名在所有列都可以折成兩行，超過兩行才在結尾加「…」。圖示對齊第一行。同一部片同一個階段只佔一列，翻譯百分比原地更新；批次裡每一部的結果只看批次事件（changed_item），不看單部的轉錄事件。",
+                  "content": "右欄「即時活動」只會出現下面十四種列。每一列＝圖示 16 · 階段字（Body 600）· 「·」· 項目（Body 次要色）· 撐開 · 尾端（Mono，可選）。④④b⑤⑤b 是「某一部片＋原因」：原因換到第二行，左緣對齊階段字，前面不加「·」，永遠完整顯示；片名在所有列都可以折成兩行，超過兩行才在結尾加「…」。圖示對齊第一行。同一部片同一個階段只佔一列，翻譯百分比原地更新；批次裡每一部的結果只看批次事件（changed_item），不看單部的轉錄事件。",
                   "lineHeight": "$Type/Label/Line",
                   "fontFamily": "$Type/Family/Primary",
                   "fontSize": "$Type/Label/Size",
@@ -181839,6 +181992,274 @@
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
                       "content": "④ 手機｜390 寬的螢幕上清單只有 358 寬。片名那一行扣掉圖示、「失敗」與「·」還有約 240px（約 17 個中文字）；最長的原因「影片所在的資料夾寫不進字幕」約 182px，放在第二行有約 300px。改版前兩者擠同一行，片名只剩 34px，會變成「和…」。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XHbwN",
+                  "name": "spec-entry-4b",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Yb03P",
+                      "name": "row-box",
+                      "width": 400,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "P5hBJr",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "mHaI2",
+                              "name": "evt-line",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "padding": "$Space/none",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "nDC9a",
+                                  "name": "evt-ic",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "circle-dashed",
+                                  "library": "lucide",
+                                  "fill": "$text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "cq8OJ",
+                                  "name": "evt-stage",
+                                  "fill": "$text-secondary",
+                                  "content": "已略過",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "bp4H1",
+                                  "name": "evt-dot",
+                                  "fill": "$text-muted",
+                                  "content": "·",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "siZuK",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "魔戒首部曲：魔戒現身",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "QUJAc",
+                              "name": "evt-reason-row",
+                              "width": "fill_container",
+                              "padding": [
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/xl"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "h63lj",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "沒有可用的字幕來源，也沒有設定語音辨識",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "heEJz",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "④b 已略過｜片子沒壞、也沒花錢，只是沒有東西可以生成：沒有可用的字幕來源，也沒有設定語音辨識。批次成員：changed_item = failed，reason 是 skipped，或 failure_reason 是 no_text_source；單部：transcription_failed 的 failure_reason 是 no_text_source。灰色：圖示借②b 的虛線圓（沒有做），階段字次要色，跟⑧同一組中性色，不是紅色、不加三角。原因放第二行，同④。這一句跟左欄佇列、產生字幕對話框（F8-SPEC-ROW）逐字相同；沒有代碼時寫「沒有可用的字幕來源」。",
+                      "lineHeight": "$Type/Label/Line",
+                      "fontFamily": "$Type/Family/Primary",
+                      "fontSize": "$Type/Label/Size",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XZhLe",
+                  "name": "spec-entry-4b-m",
+                  "width": "fill_container",
+                  "gap": "$Space/lg",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "VFgeW",
+                      "name": "row-box-m320",
+                      "width": 288,
+                      "fill": "$bg-primary",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "rA336",
+                          "name": "evt",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
+                          "padding": [
+                            "$Space/sm",
+                            "$Space/md-plus"
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "N4ADWA",
+                              "name": "evt-line",
+                              "width": "fill_container",
+                              "gap": "$Space/sm",
+                              "padding": "$Space/none",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "UuKL3",
+                                  "name": "evt-ic",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "circle-dashed",
+                                  "library": "lucide",
+                                  "fill": "$text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "e3Evu",
+                                  "name": "evt-stage",
+                                  "fill": "$text-secondary",
+                                  "content": "已略過",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "i3Tu0",
+                                  "name": "evt-dot",
+                                  "fill": "$text-muted",
+                                  "content": "·",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "jFokY",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "魔戒首部曲：魔戒現身",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Y5i6Ga",
+                              "name": "evt-reason-row",
+                              "width": "fill_container",
+                              "padding": [
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/none",
+                                "$Space/xl"
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dXcbq",
+                                  "name": "evt-item",
+                                  "fill": "$text-secondary",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "沒有可用的字幕來源，也沒有設定語音辨識",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "i6QFnl",
+                      "name": "spec-note",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "④b 手機 320｜清單 288 寬，原因那行扣掉左邊 24 約剩 236px；19 字的原因（約 266px）折成兩行，整句顯示、不截斷。390 寬（清單 358）一行放得下。片名在第一行，不會被原因擠掉。",
                       "lineHeight": "$Type/Label/Line",
                       "fontFamily": "$Type/Family/Primary",
                       "fontSize": "$Type/Label/Size",
