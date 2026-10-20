@@ -1,6 +1,6 @@
 # Disc：沒有字幕來源也沒設語音辨識 A（後端）——即時事件帶新原因代碼 `no_text_source`，不再落成「其他」
 
-Status: ready-for-dev
+Status: review
 
 **Source:** 傘狀單 `disc-2026-10-no-text-source-skip`（2026-10-19 party mode：founder-pm／Winston／Sally／John／Bob／Mary＋#848 的另一個 session；⚖️ Alexyu：由這邊直接做）。單次生成「片內沒有可用字幕、又沒設語音辨識」被記成 `skipped`，即時事件的 `failure_reason` 卻是 `other`，生成畫面因此寫紅色「失敗 · 生成失敗」。
 
@@ -126,11 +126,11 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **T1 models（AC #2、#6 分類）**：常數、前綴、第一條規則、註解；表格測試與合約清單測試。
-- [ ] **T2 寫紀錄（AC #3、#6 寫紀錄）**：`NoTextSourceRunPrefix`、`recordSkip` 參數、`transcribeFallback` 拆 `if`＋加前綴；改寫／新增 `process_item*_test.go` 的斷言。
-- [ ] **T3 單次生成（AC #5、#6 單次）**：註解；`solo_runner_test.go` 兩支改寫＋兩個新案例。
-- [ ] **T4 批次（AC #4、#6 批次）**：`ErrGenerationItemNoTextSource`、adapter、`markItem` 的 skipped 分支、註解（含 `sse/hub.go`）；adapter 與批次測試。
-- [ ] **T5 合約與文件（AC #1、#7）**：
+- [x] **T1 models（AC #2、#6 分類）**：常數、前綴、第一條規則、註解；表格測試與合約清單測試。
+- [x] **T2 寫紀錄（AC #3、#6 寫紀錄）**：`NoTextSourceRunPrefix`、`recordSkip` 參數、`transcribeFallback` 拆 `if`＋加前綴；改寫／新增 `process_item*_test.go` 的斷言。
+- [x] **T3 單次生成（AC #5、#6 單次）**：註解；`solo_runner_test.go` 兩支改寫＋兩個新案例。
+- [x] **T4 批次（AC #4、#6 批次）**：`ErrGenerationItemNoTextSource`、adapter、`markItem` 的 skipped 分支、註解（含 `sse/hub.go`）；adapter 與批次測試。
+- [x] **T5 合約與文件（AC #1、#7）**：
   - `disc-2026-10-live-activity-failure-reasons-a.md` AC #1 的戳改 `[@contract-v2]`；檔尾新增 `## Change Log` 段與一列：`| 2026-10-?? | [@contract-v1→v2] AC #1: failure_reason 多一個值 no_text_source（沒有可用的字幕來源、也接不起語音辨識的 skipped 紀錄；單次 transcription_failed 從 other 改成它），批次 reason=skipped 的項目改帶 no_text_source／asr_unconfigured／""（原本一律 ""）；下游：前端 RunFailureReason／FAILURE_COPY_BY_REASON 要多一個鍵、useGenerationJobsFeed 要保留 skipped 的代碼，舊前端照舊顯示「生成失敗」／「沒有可用的字幕來源」（disc-2026-10-no-text-source-skip-a） |`。
   - Rule 20 🔁 下游掃描：`grep -rnE 'confirmed against \`?\[@contract-v[0-9]+\]' _bmad-output/implementation-artifacts/ | grep -E 'live-activity-failure-reasons-a.*AC #1'`，再放寬成 `grep -rn "live-activity-failure-reasons-a" …`。預期：`-b`（done → 凍結）；`disc-2026-10-generation-queue-failure-reason` 若當時不是 done → 在它的 Dev Notes 與 sprint-status 條目加 `⚠️ STALE [@contract-v1→v2]: upstream disc-2026-10-live-activity-failure-reasons-a AC #1 bumped 2026-10-??; re-confirm against v2 before dev — see disc-2026-10-no-text-source-skip-a`；結果寫進 Completion Notes。
   - `disc-2026-10-generate-keeps-user-en-srt-b.md` **檔尾附加**（只加不改，另一個 session 也在動這組檔）：`## 下游註記（2026-10-??，disc-2026-10-no-text-source-skip）`＋一句「-b1／-b2／-b3 走到『沒有可用來源、又沒聽寫』時，沿用 `no_text_source` 代碼（寫紀錄時的 `no-text-source: ` 前綴，`process_item.go` `transcribeFallback`）與前端文字，不另外定義」。
@@ -196,13 +196,47 @@ Status: ready-for-dev
 | 日期 | 變更 |
 |---|---|
 | 2026-10-19 | 建單（Bob）。party mode 裁定、⚖️ Alexyu 由這邊直接做；拆 -a／-b。本單把 `disc-2026-10-live-activity-failure-reasons-a` AC #1 升 `[@contract-v1→v2]`（`failure_reason` 加 `no_text_source`、批次 skipped 帶代碼），實際改戳與下游掃描在 T5。 |
+| 2026-10-20 | dev 完成（Amelia）：T1–T5 全做；live-a AC #1 已改戳 `[@contract-v2]`＋Change Log；gen-queue stale-mark。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia，dev）
+
 ### Debug Log References
+
+- 七種「故意改壞」逐一套上再跑對應測試，全部變紅（①規則排到 timeout 後、②改成比對 `no usable`、③ transcribeFallback 不加前綴、④ `:244` 也加前綴、⑤ 影集也加前綴、⑥ 批次 skipped 一律 `""`、⑦ adapter 一律包 `ErrGenerationItemSkipped`），還原後全綠。
 
 ### Completion Notes List
 
+- **沒有改** `apps/api/internal/services/transcription_service.go`（不需要；`ErrTranscriptionDisabled` 由 `process_item.go` 的 `transcribeFallback` 接住）。
+- `recordSkip` 多一個 `runMessage` 參數；`transcribeFallback` 的 `p.asr == nil || !transcribable` 拆成兩個 `if`：影集不加前綴、沒接 ASR 加前綴；`ErrTranscriptionDisabled` 加前綴。刻意略過（`RouteSkip` 沒設選項）照舊傳 `decision.Reason`。`subtitle_progress` 的訊息仍是不帶前綴的路由器原句（測試釘住）。
+- 分類函式第一條只認前綴；舊的 skipped 紀錄維持 `other`（畫面不列，已知且接受）。
+- 批次：`ErrGenerationItemNoTextSource` 包住 `ErrGenerationItemSkipped`；adapter 用分類函式決定包哪個；`markItem` skipped 分支由新的 `skippedFailureReason(err)` 依錯誤型別給 `no_text_source`／`asr_unconfigured`／`""`。`reason` 仍是 `skipped`、`fail_count` 照算（新測試釘住 3 失敗 1 成功）。`assertInvariants` 放寬成 skipped 項目只准帶這三種值。
+- 測試 harness 多記一份 progress 訊息（`progressMsg`），用來釘住 `StageSkipped` 訊息不帶前綴。
+- **Rule 20 下游掃描**：`grep 'confirmed against [@contract-vN]' … live-activity-failure-reasons-a AC #1` 只命中 `disc-2026-10-no-text-source-skip-b`（已照 v2 寫）。放寬成 `grep -rln live-activity-failure-reasons-a` 命中：`disc-2026-10-live-activity-failure-reasons-b`（done → 凍結不動）、`disc-2026-10-run-timeout-not-cancel`（done，上游單，不受影響）、`disc-2026-10-no-text-source-skip-b`（本單前端，已照 v2 寫）、sprint-status。`disc-2026-10-generation-queue-failure-reason` 雖沒直接引用，仍照 story 保守 stale-mark（ready-for-dev、未 done）：Dev Notes 開頭與 sprint-status 條目都加了 `⚠️ STALE [@contract-v1→v2] … see disc-2026-10-no-text-source-skip-a`；沒有碰它的分支 `feat/generation-queue-failure-reason`。
+- `disc-2026-10-generate-keeps-user-en-srt-b.md` 檔尾只附加「下游註記」一段，沒改其他內容。
+- 驗證：`go test ./...`（apps/api 全部）、`go vet ./...`、`~/go/bin/staticcheck ./...` 全綠；`pnpm run lint:all` → `✖ 170 problems (0 errors, 170 warnings)`（都是既有警告）；`pnpm run format:check` 通過。
+- 舊前端相容已確認：`failureCopyForReason` 不認得的代碼回「生成失敗」；`useGenerationJobsFeed.ts:524` 只保留 `reason === 'error'` 的代碼。
+
 ### File List
+
+- apps/api/internal/models/subtitle_run_failure.go
+- apps/api/internal/models/subtitle_run_failure_test.go
+- apps/api/internal/subtitle/process_item.go
+- apps/api/internal/subtitle/process_item_test.go
+- apps/api/internal/subtitle/process_item_asr_test.go
+- apps/api/internal/subtitle/process_item_solo_options_test.go
+- apps/api/internal/subtitle/solo_runner.go
+- apps/api/internal/subtitle/solo_runner_test.go
+- apps/api/internal/services/generation_batch.go
+- apps/api/internal/services/generation_batch_items_test.go
+- apps/api/internal/sse/hub.go
+- apps/api/cmd/api/generation_batch_runner_adapter.go
+- apps/api/cmd/api/generation_batch_runner_adapter_test.go
+- _bmad-output/implementation-artifacts/disc-2026-10-no-text-source-skip-a.md
+- _bmad-output/implementation-artifacts/disc-2026-10-live-activity-failure-reasons-a.md
+- _bmad-output/implementation-artifacts/disc-2026-10-generation-queue-failure-reason.md
+- _bmad-output/implementation-artifacts/disc-2026-10-generate-keeps-user-en-srt-b.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml

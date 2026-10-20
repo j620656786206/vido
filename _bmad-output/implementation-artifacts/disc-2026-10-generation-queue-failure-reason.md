@@ -131,6 +131,10 @@ Status: ready-for-dev（Sally 稿 `disc-2026-10-live-activity-row-layout-design`
 
 ## Dev Notes
 
+> ⚠️ STALE [@contract-v1→v2]: upstream disc-2026-10-live-activity-failure-reasons-a AC #1 bumped 2026-10-20; re-confirm against v2 before dev — see disc-2026-10-no-text-source-skip-a
+>
+> 上游變了什麼：`failure_reason` 多一個值 `no_text_source`（共十二個）；批次 `reason == "skipped"` 的項目現在也可能帶代碼（`no_text_source`／`asr_unconfigured`，其餘仍是 `""`）。本單只細分 `reason == "error"`，照字面不受影響，但 `FAILURE_COPY_BY_REASON` 的鍵清單／一致性測試若用 `Object.keys` 逐一比對，要確認 `no_text_source` 由誰加（`-b` 計畫在 `runFailureCopy.ts` 加）。
+
 ### 不要做的事
 
 - 不要改後端、不要改 `useGenerationBatchProgress`／`useGenerationJobsFeed` 的資料流。

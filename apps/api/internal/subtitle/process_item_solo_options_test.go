@@ -81,7 +81,12 @@ func TestProcessItem_TranscribeWhenSkippedWithoutASRStillRecordsSkipped(t *testi
 	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{TranscribeWhenSkipped: true})
 	require.NoError(t, err)
 
-	assert.Equal(t, models.SubtitleRunSkipped, h.runs.lastUpdate(t).Status)
+	final := h.runs.lastUpdate(t)
+	assert.Equal(t, models.SubtitleRunSkipped, final.Status)
+	// The click asked for speech recognition and none was there: the row says
+	// so under the no-text-source prefix (disc-2026-10-no-text-source-skip-a).
+	assert.Equal(t, NoTextSourceRunPrefix+skipDecision().Reason, final.ErrorMessage)
+	assert.Equal(t, models.SubtitleRunFailureNoTextSource, models.SubtitleRunFailureReason(final.ErrorMessage))
 	assert.Equal(t,
 		[]models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusSkipped},
 		h.media.statuses())
@@ -95,7 +100,11 @@ func TestProcessItem_RouteSkipWithoutTheOptionStillNeverTouchesASR(t *testing.T)
 	require.NoError(t, err)
 
 	assert.Empty(t, asr.calls, "batch / auto behaviour is unchanged: skipped stays skipped")
-	assert.Equal(t, models.SubtitleRunSkipped, h.runs.lastUpdate(t).Status)
+	final := h.runs.lastUpdate(t)
+	assert.Equal(t, models.SubtitleRunSkipped, final.Status)
+	assert.Equal(t, skipDecision().Reason, final.ErrorMessage,
+		"a deliberate skip never tried ASR — no no-text-source prefix")
+	assert.Equal(t, models.SubtitleRunFailureOther, models.SubtitleRunFailureReason(final.ErrorMessage))
 }
 
 // ─── AC #9 (guard half): the pool answers "is this item in flight?" ────────

@@ -40,7 +40,11 @@ const (
 	// items; the terminal event carries the whole queue and a null changed_item.
 	// Each entry (changed_item, items[]) carries failure_reason, always present:
 	// a models.SubtitleRunFailure* code when status is failed and reason is
-	// error, "" otherwise (disc-2026-10-live-activity-failure-reasons-a).
+	// error; when status is failed and reason is skipped, no_text_source (no
+	// usable subtitle and no speech recognition) or asr_unconfigured (legacy
+	// engine) or "" for any other skip; "" otherwise
+	// (disc-2026-10-live-activity-failure-reasons-a AC #1 [@contract-v2]; v2
+	// added the skipped cases — disc-2026-10-no-text-source-skip-a).
 	// transcription_failed carries the same key (every event; same codes).
 	// status ∈ running|complete|cancelled|error|budget_ceiling. Per-item STAGE
 	// detail is NOT duplicated here — FE joins the transcription_* events by

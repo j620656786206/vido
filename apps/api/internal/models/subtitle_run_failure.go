@@ -2,16 +2,24 @@ package models
 
 import "strings"
 
-// Failure-reason codes for a failed subtitle run, as the activity record sends
-// them (GET /api/v1/activity recent.events[].failure_reason —
-// disc-2026-10-activity-subtitle-run-time-a AC #1 [@contract-v2]; v2 added
-// queue_timeout — disc-2026-10-run-timeout-not-cancel) and as the live events
-// send them (transcription_failed and generation_batch_progress items'
-// failure_reason — disc-2026-10-live-activity-failure-reasons-a). Codes only:
-// the words live on the client (apps/web generationEventCopy.ts
-// FAILURE_COPY_BY_REASON), and the raw error_message never leaves the server —
-// it carries NAS paths and ffmpeg stderr.
+// Failure-reason codes for a subtitle run that did not produce a subtitle, as
+// the activity record sends them (GET /api/v1/activity
+// recent.events[].failure_reason — disc-2026-10-activity-subtitle-run-time-a
+// AC #1 [@contract-v2]; v2 added queue_timeout —
+// disc-2026-10-run-timeout-not-cancel) and as the live events send them
+// (transcription_failed and generation_batch_progress items' failure_reason —
+// disc-2026-10-live-activity-failure-reasons-a AC #1 [@contract-v2]; v2 added
+// no_text_source — disc-2026-10-no-text-source-skip-a). Codes only: the words
+// live on the client (apps/web generationEventCopy.ts FAILURE_COPY_BY_REASON),
+// and the raw error_message never leaves the server — it carries NAS paths and
+// ffmpeg stderr.
+//
+// no_text_source is the ONE code for a SKIPPED row (no usable subtitle in the
+// file and speech recognition could not be reached); every other code is the
+// cause of a FAILED row. The activity record lists only completed and failed
+// rows, so in practice no_text_source reaches the live events only.
 const (
+	SubtitleRunFailureNoTextSource      = "no_text_source"
 	SubtitleRunFailureQueueTimeout      = "queue_timeout"
 	SubtitleRunFailureCancelled         = "cancelled"
 	SubtitleRunFailureBudgetExceeded    = "budget_exceeded"
@@ -27,7 +35,15 @@ const (
 
 // subtitleRunFailureRules is checked top to bottom; the first rule that
 // matches wins. The order is load-bearing:
-//   - queue_timeout first, even before cancelled — rows written before
+//   - no_text_source first — it is the only rule for a SKIPPED row, whose
+//     stored text after the prefix is the router's explanation sentence
+//     (router.go). That sentence is free English and could one day contain a
+//     later rule's words ("timed out", "context canceled"); the prefix, decided
+//     at write time, must win. The rule matches the prefix ONLY — never the
+//     router's sentences — so skipped rows written before the prefix existed
+//     (disc-2026-10-no-text-source-skip-a) stay other, a known, accepted limit
+//     (no screen lists them);
+//   - queue_timeout next, even before cancelled — rows written before
 //     disc-2026-10-run-timeout-not-cancel recorded a queue timeout under the
 //     `cancelled: ` prefix, so an old row carries BOTH the cancelled prefix
 //     and the deadline words, and it is a timeout. A real cancel while queued
@@ -54,6 +70,9 @@ var subtitleRunFailureRules = []struct {
 	reason string
 	match  func(msg string) bool
 }{
+	{SubtitleRunFailureNoTextSource, func(m string) bool {
+		return strings.HasPrefix(m, SubtitleRunNoTextSourcePrefix)
+	}},
 	{SubtitleRunFailureQueueTimeout, isSubtitleRunQueueTimeout},
 	{SubtitleRunFailureCancelled, func(m string) bool {
 		return strings.HasPrefix(m, SubtitleRunCancelledPrefix) || strings.Contains(m, "context canceled")
@@ -90,6 +109,15 @@ const SubtitleRunCancelledPrefix = "cancelled: "
 // subtitle.QueueTimeoutRunPrefix is defined as this constant.
 const SubtitleRunQueueTimeoutPrefix = "queue-timeout: "
 
+// SubtitleRunNoTextSourcePrefix is the error_message prefix of a SKIPPED run
+// that found no usable text subtitle in the file AND could not fall back to
+// speech recognition (no ASR wired in, or ASR reported itself disabled — no
+// key, no ffmpeg). It is decided at write time (subtitle.transcribeFallback),
+// where both facts are known; the router's sentence after it cannot tell
+// "never tried ASR" (a deliberately skipped und track) from "ASR unavailable".
+// subtitle.NoTextSourceRunPrefix is defined as this constant.
+const SubtitleRunNoTextSourcePrefix = "no-text-source: "
+
 // subtitleExtractWaitAbortedSentinel is subtitle.ErrSubtitleExtractWaitAborted's
 // code, written out here because models cannot import subtitle (subtitle
 // imports models). A cross-package test in subtitle
@@ -124,17 +152,23 @@ func containsAny(needles ...string) func(string) bool {
 	}
 }
 
-// SubtitleRunFailureReason maps a failed run's raw error_message to one of the
-// eleven SubtitleRunFailure* codes. Pure: no I/O, no clock. An empty message or
+// SubtitleRunFailureReason maps a run's raw error_message to one of the twelve
+// SubtitleRunFailure* codes. Pure: no I/O, no clock. An empty message or
 // anything unrecognised (AI_INVALID_RESPONSE included — ⚖️ Sally 2026-10-19
 // 追認 4) is SubtitleRunFailureOther.
+//
+// It is meant for failed rows, with one exception: a SKIPPED row carrying the
+// no-text-source prefix is no_text_source — the only code for a skipped row.
+// Any other skipped row (its error_message is the router's reason, not a
+// failure) comes out other.
 //
 // error_message is stored truncated (~1000 bytes, process_item.go /
 // transcription_ledger.go) and may carry ffmpeg stderr: a cause written at the
 // very end of a long path can be cut off (→ other), and stderr text can
 // contain a later rule's words. The two cases decided at WRITE time — the
 // cancelled and queue-timeout prefixes, which failItem sets from the real
-// error type — survive truncation; for every other rule the stored text is
+// error type, and the no-text-source prefix, which transcribeFallback sets —
+// survive truncation; for every other rule the stored text is
 // all there is.
 //
 // The live events use this function too (subtitle.soloFailureReason, the
