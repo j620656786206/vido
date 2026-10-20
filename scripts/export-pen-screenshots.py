@@ -384,6 +384,8 @@ SCREENS = {
     "A85GFD": ("flow-f-subtitle-v2", "f7-d-v2"),
     "i9Nun1": ("flow-f-subtitle-v2", "f8-d-v2"),
     "H717g": ("flow-f-subtitle-v2", "f8-m-v2"),
+    # disc-2026-10-generation-queue-failure-reason — 佇列列兩行規格（失敗／已略過的原因在第二行）
+    "NfHKO": ("flow-f-subtitle-v2", "f8-spec-row"),
     # sub-7-6c — F8c 批次完成收據（F8 的完成態：收據行＋關閉）
     "gWFcx": ("flow-f-subtitle-v2", "f8c-d-v2"),
     "LAeqW": ("flow-f-subtitle-v2", "f8c-m-v2"),
