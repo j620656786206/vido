@@ -55,6 +55,7 @@ func TestChineseSubtitleVerdict(t *testing.T) {
 		{"region subtag zh-Hant-HK → zh_hant", "not_searched", "", `[{"language":"zh-Hant-HK","format":"srt","external":true,"stream_index":0}]`, ChineseSubtitleZhHant},
 		{"zh-SG → zh_hans", "not_searched", "", `[{"language":"zh-SG","format":"srt","external":true,"stream_index":0}]`, ChineseSubtitleZhHans},
 		{"eng.forced sidecar is still English → none", "not_searched", "", `[{"language":"eng.forced","format":"srt","external":true,"stream_index":0}]`, ChineseSubtitleNone},
+		{"Vido's own transcript (Movie.vido.en.srt) is English → none", "not_searched", "", `[{"language":"vido.en","format":"srt","external":true,"stream_index":0}]`, ChineseSubtitleNone},
 		{"bare flag sidecar (Movie.forced.srt) → unknown", "not_searched", "", `[{"language":"forced","format":"srt","external":true,"stream_index":0}]`, ChineseSubtitleUnknown},
 		{"a full word like 'Chinese' is not a code → unknown, never none", "not_searched", "", "Chinese", ChineseSubtitleUnknown},
 		{"zh-HK titled Cantonese → none", "not_searched", "", `[{"language":"zh-HK","format":"subrip","external":false,"title":"Cantonese","stream_index":2}]`, ChineseSubtitleNone},

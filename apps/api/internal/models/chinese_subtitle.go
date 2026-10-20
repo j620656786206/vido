@@ -149,7 +149,9 @@ var (
 	hansTags = map[string]bool{"zh-hans": true, "zh-cn": true, "zh-sg": true, "chs": true, "zh-hans-cn": true}
 	zhTags   = map[string]bool{"chi": true, "zho": true, "zh": true}
 	// Sidecar filename flags that are not languages (Movie.eng.forced.srt).
-	nonLanguageSegments = map[string]bool{"forced": true, "sdh": true, "cc": true, "default": true}
+	// "vido" is the tag of Vido's own English transcript, <base>.vido.en.srt
+	// (services.VidoTranscriptTag; models cannot import services).
+	nonLanguageSegments = map[string]bool{"forced": true, "sdh": true, "cc": true, "default": true, "vido": true}
 	// A language-code shape: 2–3 letters, optional subtags. A full word such as
 	// "Chinese" or "forced" does NOT qualify, so it cannot claim "known non-Chinese".
 	languageCodeShape = regexp.MustCompile(`^[a-z]{2,3}(-[a-z0-9]{1,8})*$`)
