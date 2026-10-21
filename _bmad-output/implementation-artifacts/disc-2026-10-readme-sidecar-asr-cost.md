@@ -1,6 +1,6 @@
 # Disc（文件）：README 跟上現況——片旁英文字幕、ElevenLabs 聽寫、實測價錢、看內容判斷繁簡
 
-Status: review
+Status: done
 
 **Source：**
 - 2026-10-21 Alexyu 問「#880 的內容要不要寫進 README」。founder-pm 和 founder-growth 的結論：PRD 不搬進 README，README 的「跟 Bazarr／Lingarr 差在哪」已經寫了 #880 大部分的重點；真正該改的是 4 個跟事實對不上的地方。
