@@ -37,7 +37,7 @@ project: 'Vido — Subtitle Pipeline'
 
 **Vision:** Every foreign-language film and episode in a self-hosted NAS library carries a correctly-timed Traditional-Chinese subtitle that the owner never had to hunt for or hand-fix.
 
-**Differentiator:** Vido leads with **embedded-subtitle extraction + LLM translation to 繁中** — directly attacking Bazarr's known Traditional-Chinese weakness (search-first, thin zh-TW sources) — and layers on **per-show glossary consistency** and **compute-aware hardware tiering**, tuned specifically for Traditional-Chinese self-hosters. Quality is guaranteed by a two-stage design: the LLM handles semantics, and a deterministic OpenCC pass guarantees Traditional script.
+**Differentiator:** Vido leads with **embedded-subtitle extraction + LLM translation to 繁中** — directly attacking Bazarr's known Traditional-Chinese weakness (search-first, thin zh-TW sources) — and layers on **per-show glossary consistency** and **compute-aware hardware tiering**, tuned specifically for Traditional-Chinese self-hosters. Quality is guaranteed by a two-stage design: the LLM handles semantics, and a deterministic OpenCC pass guarantees Traditional script. The translation engine itself is pluggable and not the moat; the moat is the layer around it — per-show glossary, content-based 繁/簡 detection, and library integration (see *Market Context & Competitive Landscape*).
 
 **Target users:** Owners of mainstream NAS boxes (Synology / QNAP) and self-built NAS (Unraid) whose libraries are English-first and who want reliable zh-TW subtitles without touching Bazarr or fixing timing.
 
@@ -139,7 +139,18 @@ Largely an excellent execution of existing concepts (LLM translation is not new)
 
 ### Market Context & Competitive Landscape
 
-Bazarr = search-first, weak zh-TW. Whisper-based auto-sub tools (whisper-subs / Jellyfin) = ASR-first, English-centric, heavy. Vido's differentiator = extract-first + LLM-translate-to-繁中 + glossary consistency, tuned for Traditional-Chinese self-hosters.
+Bazarr = search-first, weak zh-TW. Lingarr = translation-only (no search/download), with pluggable backends — LibreTranslate, DeepL, and LLM providers. Whisper-based auto-sub tools (whisper-subs / Jellyfin) = ASR-first, English-centric, heavy. Vido's differentiator = extract-first + LLM-translate-to-繁中 + glossary consistency, tuned for Traditional-Chinese self-hosters.
+
+**Where the differentiation actually lives (added 2026-10-20).** "Vido uses an LLM to translate" is **not** a differentiator on its own: Lingarr can already point at an LLM, and Bazarr can reach AI translation too. Consistent with the v4 replan (`subtitle-v4-replan-and-feasibility-audit-2026-06.md`: transcription and even basic translation are commodity, hidden behind a pluggable engine), the translation engine is swappable — a low-quality free backend such as a user-hosted LibreTranslate could sit behind the same provider interface. What Vido owns is the layer **around** the engine:
+
+| Layer | What it fixes | Bazarr / Lingarr today |
+|---|---|---|
+| **Per-show glossary** (FR18–FR20, auto-harvest closed loop) | Proper-noun drift across episodes and runs — the POC produced 隱形戰士/隱形特務 for the same name, and rendered the character "The Deep" as 深海怪物 for lack of a cast roster | No per-show term memory documented (Lingarr public docs as of 2026-10-20) |
+| **Content-based 繁/簡 detection** (FR6) | Simplified subtitles mislabeled as zh-TW by filename or track tag | Trusts the label — Bazarr's core zh-TW bug |
+| **Library integration** | Subtitle state as a first-class dimension of the library (poster badge, detail page, activity feed) | Bazarr is a standalone admin table; Lingarr is a separate service |
+| **Metadata localization** (zh-TW `.nfo`, additive parallel file) — *gated on spike S1, outside this PRD's scope* | The rest of the title (plot, episode titles, cast) stays foreign even once subtitles are 繁中 | Not attempted |
+
+**One-line positioning:** Bazarr and Lingarr get a subtitle translated; Vido keeps a whole show's Traditional Chinese — subtitles through metadata — consistent. **Messaging guardrail:** never pitch "AI translation" as the differentiator; competitors can match it by changing a backend setting.
 
 ### Robustness Pattern — Two-Stage Translation Guarantee
 
