@@ -52,8 +52,9 @@ multi-architecture Docker image，不需要在 NAS 上安裝 Node、Go 或 ffmpe
 ## 更新
 
 在 Application 頁面停止 Vido，重新拉取
-`ghcr.io/j620656786206/vido:latest` 後再啟動。`latest` 會隨主線更新；需要可回滾時，
-請改用指定版本 tag（格式是 `0.1.1`，**沒有 `v`**；也可以用 `0.1` 跟著小版本更新）。更新前請先備份
+`ghcr.io/j620656786206/vido:latest` 後再啟動。`latest` 是最新的正式版，作者發新版才會變，
+平常的程式修改不會影響你。需要可回滾時，請改用指定版本 tag（格式是 `0.2.0`，**沒有 `v`**；
+也可以用 `0.2` 跟著小版本更新）。`main` 是開發版、每次修改都會變，不建議使用。更新前請先備份
 `/share/Container/vido/data` 與 `/share/Container/vido/backups`。
 
 最簡單的備份方式是停止 Application 後，將這兩個資料夾複製到另一個儲存區；不要只備份容器本身。

@@ -1,6 +1,6 @@
 # Backlog：照安裝指南裝 Vido，拿到的是每次合併就變的開發版
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 2026-10-19 founder-growth 討論 Unraid Community Apps 時查到：`unraid-template/vido.xml` 的 Repository 指向 `:main`。2026-10-21 party mode（founder-pm、founder-growth、BMAD）盤點「新使用者第一次裝會撞到的問題」時再查，問題比原本記的大：
 
@@ -50,11 +50,11 @@ Alexyu 自己的正式機用的是 `:main`（`docker inspect Vido` → `ghcr.io/
 
 ## Tasks / Subtasks
 
-- [ ] T1：讀 metadata-action `flavor.latest` 文件，改 `docker.yml` 兩段，兩段要逐字相同（AC #1）
-- [ ] T2：改模板（AC #2）
-- [ ] T3：文件 grep，中英文一起改（AC #3）
-- [ ] T4：本機驗 YAML、lint、format（AC #5、#6）
-- [ ] T5：PR、CI 綠、合併，再查三個 tag 的 digest（AC #5）
+- [x] T1：讀 metadata-action `flavor.latest` 文件，改 `docker.yml` 兩段，兩段要逐字相同（AC #1）
+- [x] T2：改模板（AC #2）
+- [x] T3：文件 grep，中英文一起改（AC #3）
+- [x] T4：本機驗 YAML、lint、format（AC #5、#6）
+- [x] T5：PR、CI 綠、合併，再查三個 tag 的 digest（AC #5）
 
 ## Dev Notes
 
@@ -84,13 +84,40 @@ Alexyu 自己的正式機用的是 `:main`（`docker inspect Vido` → `ghcr.io/
 | 日期 | 變更 |
 |---|---|
 | 2026-10-21 | 建單（Bob）。party mode 盤點時查到 `:latest` 等於 `:main`，所以範圍從「模板改 `:latest`」擴大成「`:latest` 只跟正式版＋模板改 `:latest`＋文件說法」。Winston 選「`:latest` 跟正式版」，不選「指南改成 `:0.2`」。 |
+| 2026-10-21 | Amelia 實作完成 → done。CI 用 (b)：`flavor: latest=false`＋raw latest 只在正式版 tag 啟用；模板改 `:latest`；文件改說法並給 Unraid 補「更新」段。合併後查 digest 的結果記在 PR 留言。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia）
+
 ### Debug Log References
+
+- metadata-action v6 README（2026-10-21 讀）：`flavor` 的 `latest=auto` 會在 `type=semver`／`type=ref,event=tag`／`type=match` 遇到 tag 時自動產生 `latest`；預發佈版怎麼處理，文件前後不一致。所以選 (b)，把規則寫在一個地方。
+- 用 `js-yaml` 解析 `docker.yml`：兩段 metadata-action 的 `tags` 和 `flavor` 逐字相同。
 
 ### Completion Notes List
 
+- **AC #1：** 兩段 metadata-action 都加了 `flavor: latest=false`，raw latest 改成 `enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}`，並在那行上面寫註解說明為什麼。其他 tag 規則和 labels 沒動。
+- **AC #2：** `unraid-template/vido.xml` 的 Repository 改成 `:latest`，其他欄位沒動。
+- **AC #3：**
+  - `deployment.md`：`latest` 改說成最新正式版、`main` 是開發版；版本號更新到 0.2。
+  - Synology、QNAP：「隨主線更新」改成「作者發新版才會變」，版本號更新到 0.2，並補一句 `main` 不建議用。
+  - Unraid 中英文：新增「更新」段（Check for Updates、備份、固定版本）。
+  - 改完 grep：只剩 `:latest` 的正確用法，沒有「隨主線」或 `follows the main`。Synology、QNAP 只有中文版，沒有英文版可以改。
+- **AC #4：** 沒碰正式機，也沒碰記憶檔。
+- **AC #5：** 本機沒有 `actionlint`，改用 `js-yaml` 解析確認合法。合併後查 digest 的結果寫在 PR 留言。
+- **AC #6：** `format:check` 綠。這張單只改文件和 CI，沒跑 `lint:all`；CI 會跑。
+
 ### File List
+
+- .github/workflows/docker.yml
+- unraid-template/vido.xml
+- docs/deployment.md
+- docs/synology-installation-guide.zh-TW.md
+- docs/qnap-installation-guide.zh-TW.md
+- docs/unraid-installation-guide.md
+- docs/unraid-installation-guide.zh-TW.md
+- _bmad-output/implementation-artifacts/backlog-unraid-template-main-tag.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml

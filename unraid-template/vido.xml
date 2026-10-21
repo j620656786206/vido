@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>Vido</Name>
-  <Repository>ghcr.io/j620656786206/vido:main</Repository>
+  <Repository>ghcr.io/j620656786206/vido:latest</Repository>
   <Registry>https://github.com/j620656786206/vido/pkgs/container/vido</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>

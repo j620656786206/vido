@@ -412,10 +412,13 @@ docker compose -f docker-compose.nas.yml pull
 docker compose -f docker-compose.nas.yml up -d
 ```
 
-`latest` follows the main branch. To stay on a release, put its tag in the
-Compose file instead: the published tags are `0.1.1` (exact), `0.1` (follows
-patch releases), `0` and `latest` — there is **no `v` prefix** on image tags
-(the git tags are `v0.1.1`).
+`latest` is the newest release: it only moves when a new version is
+published, never on an ordinary merge. `main` is the development build and
+changes with every merge — it is meant for the author's own testing, not for
+other installs. To pin a release, put its tag in the Compose file instead: the
+published tags are `0.2.0` (exact), `0.2` (follows patch releases), `0` and
+`latest` — there is **no `v` prefix** on image tags (the git tags are
+`v0.2.0`).
 
 ### Rollback
 
