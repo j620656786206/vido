@@ -1,9 +1,9 @@
 # Vido
 
 **自架在 NAS 上的影音管理工具，專門幫沒有中文字幕的影片做出繁體中文字幕。**
-影片裡有英文字幕，就抽出來翻成繁中；完全沒有字幕，就先聽英文對白、再翻。翻出來用的是台灣用語。
+影片裡或影片旁邊有英文字幕，就拿來翻成繁中；完全沒有字幕，就先聽英文對白、再翻。翻出來用的是台灣用語。
 
-> **English**: Vido is a self-hosted media manager for your NAS, built around one problem: getting Traditional Chinese (Taiwan) subtitles for videos that don't have them. If a video carries an English subtitle track, Vido extracts and translates it; if it has no subtitles at all, Vido transcribes the English dialogue first and then translates. Translations use Taiwanese vocabulary and keep character names consistent.
+> **English**: Vido is a self-hosted media manager for your NAS, built around one problem: getting Traditional Chinese (Taiwan) subtitles for videos that don't have them. If a video carries an English subtitle track, or has an English `.srt` beside it whose timing matches the video, Vido translates that; if it has no subtitles at all, Vido transcribes the English dialogue first and then translates. Whether an existing Chinese subtitle is Traditional or Simplified is judged from its text, not its file name or tag. Translations use Taiwanese vocabulary and keep character names consistent.
 
 **給誰用**：家裡有 NAS、片庫裡一堆只有英文字幕或沒字幕的影片、想看繁中的人。
 
@@ -11,6 +11,7 @@
 
 - 翻出來是台灣的說法，不會出現「視頻」「質量」；陸劇只轉成繁體字、保留原本的講法
 - 角色名每一集都一樣：從 TMDb 演員表和你片庫裡已有的官方繁中字幕學人名
+- 看字幕內容判斷是繁體還是簡體，不信檔名或標籤：標成「中文」的簡體字幕不會被當成已經有繁中
 - 沒字幕的片也能做：先聽英文對白、再翻（Lingarr 只翻現成的字幕）
 - 花錢之前先報價：按下去前看得到金額、有上限，AI 帳號沒錢會整批停下來告訴你
 - 用你自己的金鑰：Claude 或 Gemini 擇一（Gemini 可以用你的免費額度）；Vido 本身不收錢
@@ -30,6 +31,7 @@
 ```
 影片裡已經有中文字幕  →  直接用，不花錢
 影片裡有英文字幕      →  抽出來，翻成繁中
+影片旁邊有英文字幕    →  先確認時間對得上，再翻成繁中
 完全沒有字幕          →  先聽英文對白轉成文字，再翻成繁中
 ```
 
@@ -40,7 +42,8 @@
 **字幕（核心）**
 
 - **翻譯影片裡的英文字幕** — 從 mkv／mp4 抽出英文字幕軌，翻成繁中。有好幾條英文軌時優先用一般版，畫面上的強制字幕也會一起翻。單部的「生成字幕」和批次都會先看片內有沒有字幕
-- **聽聲音生字幕** — 沒有字幕的電影和影集，先用語音辨識（OpenAI Whisper，或你自架的相容服務）轉成英文，再翻成繁中。音檔切成兩分鐘一段，並會過濾常見的幻聽，例如只有音樂符號的句子、重複的假台詞、假署名
+- **翻譯影片旁邊的英文字幕** — 影片旁邊放著 `片名.en.srt`（例如 Bazarr 下載的）時，先比對字幕和對白的時間，對得上才拿來翻，不用花錢聽聲音，中文字幕的時間也跟原本的英文字幕一樣。對不上（例如是別的版本的字幕）就改成聽聲音，按下去之前會先報價。旁邊的英文檔只讀不改
+- **聽聲音生字幕** — 沒有字幕的電影和影集，先用語音辨識轉成英文，再翻成繁中。填了 ElevenLabs 金鑰就用 Scribe（預設），也可以用 OpenAI Whisper 或你自架的相容服務。音檔切成兩分鐘一段，並會過濾常見的幻聽，例如只有音樂符號的句子、重複的假台詞、假署名
 - **台灣用語** — 內建台灣用語詞庫，有三種在地化程度可以選（「設定 → 字幕設定」）。中國大陸、香港、澳門的片子只把字轉成繁體，保留原本的說法
 - **角色名前後一致** — 比對到 TMDb 時，自動把演員與角色名放進詞彙表；也會從片庫裡已有的官方繁中字幕學人名譯法。詞彙表可以匯出、匯入
 - **花多少錢先講清楚** — 會花錢的按鈕按下去之前，先顯示預估金額；每次都可以挑翻譯模型，看得到價格與品質等級。每次執行有花費上限，超過會暫停，已經做好的部分會保留，下次只做剩下的；AI 帳號沒錢時會整批停下並告訴你。活動頁看得到「本月 AI 花費」
@@ -94,11 +97,11 @@ Vido 用 Docker 安裝，跑在你自己的 NAS 上。請照你的 NAS 平台看
 
 Vido 本身免費。AI 字幕的費用是付給你自己的 Claude 或 Gemini（聽聲音的話再加 ElevenLabs 或 OpenAI）帳號，按下去之前 Vido 會先顯示預估金額。以預設的翻譯模型為例，作者自己 NAS 上的實測：
 
-| 影片                                 | 大約花費                                  |
-| ------------------------------------ | ----------------------------------------- |
-| 影集一集（約一小時），片內有英文字幕 | US$0.15～0.3（對白多的片會在高的那頭）    |
-| 電影一部（約兩小時），片內有英文字幕 | US$0.3～0.6                               |
-| 影集一集，沒有字幕、要先聽聲音       | 約 US$0.8（依 10 分鐘片段推算，含聽寫費） |
+| 影片                                           | 大約花費                                                                      |
+| ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| 影集一集（約一小時），有英文字幕（片內或旁邊） | US$0.15～0.3（對白多的片會在高的那頭）                                        |
+| 電影一部（約兩小時），有英文字幕（片內或旁邊） | US$0.3～0.6                                                                   |
+| 影集一集，沒有字幕、要先聽聲音                 | 聽寫每小時約 US$0.26（2026-10-21 實測），再加上翻譯的費用；整集的總價還在補量 |
 
 （2026-10-15 重新量過：翻譯改成一次送 50 句、不讓模型「先想」之後，便宜了大約一半。）
 
