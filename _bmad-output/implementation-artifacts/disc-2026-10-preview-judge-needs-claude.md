@@ -103,7 +103,7 @@ Status: done
 | 日期 | 變更 |
 |---|---|
 | 2026-10-21 | 建單（Bob）。裁定：裁判改成「有 Claude 用 Claude，沒有就用 gemini-3.7-flash」，畫面不改；標出裁判另外立案給 Sally。 |
-| 2026-10-21 | 完成（Amelia）。裁判每次試跑依當下金鑰決定；報價、預算、報告共用同一個決定函式；JudgeNoteFor 的 Claude 版逐字不變。 |
+| 2026-10-21 | 完成（Amelia，PR #888）。裁判每次試跑依當下金鑰決定；報價、預算、報告共用同一個決定函式；JudgeNoteFor 的 Claude 版逐字不變。 |
 
 ## Dev Agent Record
 
