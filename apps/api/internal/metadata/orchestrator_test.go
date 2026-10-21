@@ -1160,6 +1160,48 @@ func TestOrchestrator_Search_WithKeywordRetry_GeneratorError(t *testing.T) {
 	assert.ErrorIs(t, status.KeywordError, ai.ErrKeywordGenerationFailed)
 }
 
+// backlog-ai-parse-reads-env-keys-only-a AC #3: the keyword generator is now
+// wired at boot even with no AI key (keys are resolved per call). While no key
+// resolves it must behave exactly like the unwired generator did: the phase is
+// skipped — no call, no warning, no KeywordError on the status.
+type unconfiguredKeywordGenerator struct {
+	MockKeywordGenerator
+	configured bool
+	calls      int
+}
+
+func (g *unconfiguredKeywordGenerator) GenerateKeywords(ctx context.Context, title string) (*KeywordVariants, error) {
+	g.calls++
+	return nil, errors.New("AI_NOT_CONFIGURED")
+}
+
+func (g *unconfiguredKeywordGenerator) IsConfigured() bool { return g.configured }
+
+func TestOrchestrator_Search_UnconfiguredKeywordGeneratorIsSkippedLikeAnUnwiredOne(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{FallbackDelay: 10 * time.Millisecond})
+	orch.RegisterProvider(&MockProvider{
+		name: "tmdb", source: models.MetadataSourceTMDb, available: true, status: ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceTMDb}, nil
+		},
+	})
+	generator := &unconfiguredKeywordGenerator{}
+	orch.SetKeywordGenerator(generator)
+
+	result, status := orch.Search(context.Background(), &SearchRequest{Query: "Test", MediaType: MediaTypeMovie})
+
+	assert.Nil(t, result)
+	require.NotNil(t, status)
+	assert.Zero(t, generator.calls, "no key → the generator is not asked")
+	assert.NoError(t, status.KeywordError, "same status as when no generator was wired")
+	assert.Empty(t, status.KeywordAttempts)
+
+	generator.configured = true
+	_, status = orch.Search(context.Background(), &SearchRequest{Query: "Test", MediaType: MediaTypeMovie})
+	assert.Equal(t, 1, generator.calls, "a saved key turns the phase on with no restart")
+	assert.ErrorIs(t, status.KeywordError, ai.ErrKeywordGenerationFailed)
+}
+
 func TestOrchestrator_Search_NoKeywordRetryIfFirstSucceeds(t *testing.T) {
 	orch := NewOrchestrator(OrchestratorConfig{
 		FallbackDelay: 10 * time.Millisecond,

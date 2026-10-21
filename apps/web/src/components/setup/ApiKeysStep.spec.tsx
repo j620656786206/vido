@@ -183,8 +183,10 @@ describe('ApiKeysStep — bundled TMDb key (sub-7-7b)', () => {
     expect(warning).toHaveTextContent(
       'Claude 和 Gemini 金鑰都沒填的話，就不能做 AI 字幕翻譯；電影和影集的元資料會使用內建的 TMDb 金鑰。'
     );
-    // AI filename parsing reads env keys only — a wizard key never enables it, so
-    // the warning must not imply it does (setup-wizard-byok CR M2).
+    // The skip warning is about translation. A wizard key DOES turn on AI
+    // filename parsing (backlog-ai-parse-reads-env-keys-only-a), but most
+    // filenames parse without AI, so naming it here would overstate what an
+    // empty field loses — the warning stays about subtitles.
     expect(warning).not.toHaveTextContent('檔名解析');
     expect(warning).not.toHaveTextContent('自動取得元資料');
   });

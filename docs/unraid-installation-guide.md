@@ -79,7 +79,7 @@ Vido serves both the web UI and API on a single port.
 | `VIDO_ASR_PROVIDER`           | `auto`       | Which speech recogniser to use when both keys are set: `auto` (ElevenLabs if present), `elevenlabs`, `openai`                    |
 | `ASR_BASE_URL` / `ASR_MODEL`  | (empty)      | Point at a self-hosted OpenAI-compatible speech recogniser (e.g. Speaches) instead of a cloud key                                |
 | `AI_RUN_BUDGET_USD`           | `5`          | Spend ceiling per run. Work done before the ceiling is kept; the next run only does the rest                                     |
-| `AI_PROVIDER`                 | `gemini`     | Provider for AI filename parsing: `gemini` or `claude`                                                                           |
+| `AI_PROVIDER`                 | `gemini`     | Which provider AI filename parsing prefers when both keys exist; if it has no key, the other one is used automatically           |
 | `VIDO_LOG_LEVEL`              | `info`       | Set to `debug` for troubleshooting                                                                                               |
 
 ## Post-Installation Verification

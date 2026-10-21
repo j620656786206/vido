@@ -167,6 +167,27 @@ type KeywordGenerator interface {
 	GenerateKeywords(ctx context.Context, title string) (*KeywordVariants, error)
 }
 
+// configurableKeywordGenerator is the OPTIONAL half a generator implements
+// when it can be wired with no AI key yet (backlog-ai-parse-reads-env-keys-only-a:
+// keys are resolved per call, so the generator is wired at boot
+// unconditionally). While it reports false the keyword phase is skipped
+// exactly as if no generator were wired — no call, no warning, no
+// KeywordError on the status.
+type configurableKeywordGenerator interface {
+	IsConfigured() bool
+}
+
+// keywordGeneratorReady reports whether the phase should run.
+func keywordGeneratorReady(g KeywordGenerator) bool {
+	if g == nil {
+		return false
+	}
+	if c, ok := g.(configurableKeywordGenerator); ok {
+		return c.IsConfigured()
+	}
+	return true
+}
+
 // ProgressCallback is called for each provider attempt
 type ProgressCallback func(attempt SourceAttempt)
 
@@ -345,7 +366,7 @@ func (o *Orchestrator) Search(ctx context.Context, req *SearchRequest, opts ...S
 	keywordGen := o.keywordGenerator
 	o.mu.RUnlock()
 
-	if keywordGen != nil {
+	if keywordGeneratorReady(keywordGen) {
 		slog.Debug("Starting AI keyword retry phase",
 			"original_query", req.Query,
 		)

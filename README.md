@@ -124,7 +124,7 @@ Vido 本身免費。AI 字幕的費用是付給你自己的 Claude 或 Gemini（
 | `AI_RUN_BUDGET_USD`                 | 選填，預設 `5`                  | 每次執行最多花幾美元。超過會暫停，已經做好的部分會保留，下次只做剩下的                       |
 | `VIDO_AUTH_PASSWORD`                | 建議填                          | 整個 Vido 的登入密碼，見上面的「存取控制」                                                   |
 | `PUID`、`PGID`                      | 依你的 NAS                      | 容器用哪個使用者身分執行，要能寫入媒體資料夾                                                 |
-| `AI_PROVIDER`                       | 只有 Claude key 的話填 `claude` | 讓檔名解析也用 Claude（預設是 Gemini）                                                       |
+| `AI_PROVIDER`                       | 不用填                          | 兩把都有時，檔名解析優先用哪家（預設 Gemini）；指定的那家沒有金鑰會自動用另一家              |
 | `TMDB_API_KEY`                      | 不用                            | 映像已經內建一把；想用自己的額度再填                                                         |
 | `ENABLE_WIKIPEDIA`、`ENABLE_DOUBAN` | 選填                            | 開啟片名、介紹的補充來源                                                                     |
 

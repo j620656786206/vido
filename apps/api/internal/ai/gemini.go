@@ -322,8 +322,9 @@ func (p *GeminiProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 	}
 
 	// sub-5-1 AC #2: meter token usage against the per-run budget (claude.go
-	// send precedent). Without a ctx Budget this is a no-op — the parse paths
-	// are ruled unmetered-by-design (AC #4, backlog-parse-path-ai-metering).
+	// send precedent). Without a ctx Budget this is a no-op. The parse paths
+	// attach their own uncapped Budget per call (AIService.meteredParse,
+	// backlog-ai-parse-reads-env-keys-only-a) and record it in ai_side_spend.
 	if b := BudgetFromContext(ctx); b != nil {
 		usage := geminiResp.UsageMetadata
 		// CR M4: a success with zero-value usage means the upstream omitted

@@ -9,6 +9,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 )
 
 // SubtitleSpendSummary is the GET /api/v1/subtitles/spend body (sub-7-6b).
@@ -28,6 +29,12 @@ import (
 //     renders as ≈ — Sally 2026-09-05);
 //   - `cache_saved_usd_estimate` is null (not 0) when no run in the period
 //     measured its cache split (`cache_measured_runs` = 0).
+//   - `parse_calls` / `parse_usd` (backlog-ai-parse-reads-env-keys-only-a) are
+//     the paid AI calls made OUTSIDE subtitle runs this month — filename
+//     parsing, fansub parsing and keyword generation together — read from
+//     ai_side_spend over the same [from, to) window. 0 calls means none; a
+//     row is only ever written when a call cost money. They are NOT in
+//     `by_model` (that table counts subtitle runs) and do not touch `by_batch`.
 type SubtitleSpendSummary struct {
 	Period string    `json:"period"`
 	From   time.Time `json:"from"`
@@ -48,6 +55,9 @@ type SubtitleSpendSummary struct {
 	CacheHitCues          int      `json:"cache_hit_cues"`
 	CacheMeasuredRuns     int      `json:"cache_measured_runs"`
 	CacheSavedUSDEstimate *float64 `json:"cache_saved_usd_estimate"`
+
+	ParseCalls int     `json:"parse_calls"`
+	ParseUSD   float64 `json:"parse_usd"`
 
 	ByModel []SpendByModel `json:"by_model"`
 	// ByBatch is present only when the request named a batch_id.
@@ -90,6 +100,7 @@ type spendRunSource interface {
 // it never calls a provider.
 type SubtitleSpendService struct {
 	runs     spendRunSource
+	side     sideSpendSource            // parse-path ledger (nil = parse_calls/parse_usd stay 0)
 	movies   SubtitleStateReader        // runtime ladder for skipped movies (nil-safe)
 	episodes EpisodeSubtitleStateReader // runtime ladder for skipped episodes (nil-safe)
 	logger   *slog.Logger
@@ -105,6 +116,17 @@ func NewSubtitleSpendService(runs spendRunSource, movies SubtitleStateReader, ep
 		logger = slog.Default()
 	}
 	return &SubtitleSpendService{runs: runs, movies: movies, episodes: episodes, logger: logger, now: time.Now}
+}
+
+// sideSpendSource is the ai_side_spend read this service needs; the concrete
+// AISideSpendRepository satisfies it.
+type sideSpendSource interface {
+	TotalsBetween(ctx context.Context, from, to time.Time) (repository.AISideSpendTotals, error)
+}
+
+// SetSideSpend wires the parse-path ledger behind parse_calls / parse_usd.
+func (s *SubtitleSpendService) SetSideSpend(src sideSpendSource) {
+	s.side = src
 }
 
 // SetClock overrides the clock (tests; Rule 23's backend twin).
@@ -135,6 +157,15 @@ func (s *SubtitleSpendService) MonthSummary(ctx context.Context, batchID string)
 	out := s.summarize(ctx, runs)
 	out.Period = "month"
 	out.From, out.To = from, to
+
+	if s.side != nil {
+		totals, err := s.side.TotalsBetween(ctx, from, to)
+		if err != nil {
+			return nil, err
+		}
+		out.ParseCalls = totals.Calls
+		out.ParseUSD = roundUSD(totals.Spent).InexactFloat64()
+	}
 
 	if batchID != "" {
 		receipt, err := s.BatchReceipt(ctx, batchID)

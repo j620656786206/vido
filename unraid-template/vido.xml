@@ -121,7 +121,7 @@
     Target="AI_PROVIDER"
     Default="gemini"
     Mode=""
-    Description="AI provider for filename parsing: 'gemini' (Google) or 'claude' (Anthropic). Requires the corresponding API key below."
+    Description="Which provider AI filename parsing prefers when both keys exist: 'gemini' (Google) or 'claude' (Anthropic). Optional - if it has no key, the other one is used automatically."
     Type="Variable"
     Display="advanced"
     Required="false"
