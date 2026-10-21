@@ -196,9 +196,10 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 	// they land under the names KeyResolver reads and obey the same
 	// ENCRYPTION_KEY gate. Before dsr-13 the wizard wrote "tmdb_api_key" /
 	// "ai_api_key" / "ai_provider", names nothing ever read, so a key typed here
-	// was silently discarded while the summary said 已設定. Claude is the only AI
-	// key collected: the only text-AI key the resolver reads back from the secret
-	// store (Gemini is env-only).
+	// was silently discarded while the summary said 已設定. Claude and Gemini
+	// keys both land in the secret store and are resolved per call: translation
+	// (the dispatcher) and AI filename parsing (ParseProviderHolder,
+	// backlog-ai-parse-reads-env-keys-only-a) read them without a restart.
 	if len(keyUpdates) > 0 {
 		if err := s.keyWriter.Save(ctx, keyUpdates); err != nil {
 			return fmt.Errorf("save api keys: %w", err)

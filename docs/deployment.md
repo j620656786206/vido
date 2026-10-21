@@ -140,12 +140,17 @@ Notes:
   or the user-approved `budget_usd`), the manual per-item trigger and the
   automatic pipeline (one ceiling per item). Self-hosted speech recognition
   (`ASR_BASE_URL` set) records `$0` per audio minute — the estimate and the
-  after-the-fact spend figure use the same rate by construction. **Deliberately
-  NOT covered:** filename parsing, fansub parsing and keyword generation (both
-  Gemini and Claude). These are background metadata calls with no user-consent
-  boundary and no "run" to attach a ceiling to; they are unmetered by design
-  (tracked as `backlog-parse-path-ai-metering` should observability counters
-  ever be wanted).
+  after-the-fact spend figure use the same rate by construction. **Metered but
+  never capped:** filename parsing, fansub parsing and keyword generation (both
+  Gemini and Claude). Every paid call is recorded (the `ai_side_spend` table)
+  and shows up in 「本月 AI 花費」 as `parse_calls` / `parse_usd` on
+  `GET /api/v1/subtitles/spend`, but `AI_RUN_BUDGET_USD` does not apply: these
+  are background metadata calls with no consent moment and no "run" to attach a
+  ceiling to, and a ceiling tripping mid-scan would leave the library
+  half-parsed with nothing on screen saying why. Each filename is asked about
+  once (the AI cache keeps answers 30 days). A parse that happens inside a
+  subtitle run is never added to that run's spend or ceiling (Alexyu
+  2026-10-21, backlog-ai-parse-reads-env-keys-only-a).
 - **API keys hot-reload (sub-5-2, TMDb since sub-7-7a, ElevenLabs since
   asr-scribe-b, Gemini since gemini-translation-dispatch).** `CLAUDE_API_KEY`,
   `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `OPENAI_API_KEY` and

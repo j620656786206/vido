@@ -1,13 +1,22 @@
-// Package-level metering ruling (sub-5-1 AC #4): the parse paths in this file
-// — ParseFilename, ParseFansubFilename, GenerateKeywords — run WITHOUT a
-// Budget on their ctx, for BOTH providers, so ai.RecordLLM is a deliberate
-// no-op here. This is unmetered-by-DESIGN, not an oversight: these are
-// background metadata calls fired by scans (no user-consent boundary, no
-// single "run" to attach a ceiling to), unlike subtitle generation where every
-// path carries a Budget. Documented in docs/deployment.md; a future
-// observability counter (non-capping) is tracked as
-// backlog-parse-path-ai-metering. Do NOT quietly attach a Budget here — a
-// capped scan would strand a library half-parsed with no screen to say why.
+// Package-level metering ruling — Alexyu 2026-10-21
+// (backlog-ai-parse-reads-env-keys-only-a), overturning the "unmetered" half
+// of sub-5-1 AC #4 and KEEPING its "uncapped" half.
+//
+// Every provider call in this file — ParseFilename, ParseFansubFilename,
+// GenerateKeywords, both providers — runs under its OWN ai.NewBudget(0) and
+// writes one ai_side_spend row when it cost money. The spend shows up in
+// 「本月 AI 花費」(/subtitles/spend parse_calls / parse_usd).
+//
+// Why still no ceiling: these are background metadata calls fired by scans —
+// there is no consent moment and no single "run" to attach a cap to, and a
+// cap tripping mid-scan would strand a library half-parsed with no screen to
+// say why. The ai_cache (30-day TTL) means one filename is asked about once;
+// the cost is handled by making it VISIBLE, not by stopping the scan.
+//
+// Why its own Budget and never the ctx's: a parse fired inside a subtitle run
+// must not be added to that run's spend (it would be counted twice) nor be
+// able to trip that run's ceiling. NewBudget(0) accrues but Exceeded is always
+// false (budget.go).
 package services
 
 import (
@@ -20,7 +29,14 @@ import (
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/config"
+	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 )
+
+// errAINotConfiguredHealth is the health row's message when no parse key
+// resolves — word for word what ServiceHealthChecker said when the service
+// used to be nil, so the status page reads exactly as before.
+const errAINotConfiguredHealth = "AI provider not configured"
 
 const (
 	// FansubParsingTimeout is the maximum time for fansub AI parsing (NFR-P14).
@@ -63,50 +79,92 @@ type AIServiceInterface interface {
 
 // AIService orchestrates AI parsing with caching.
 type AIService struct {
+	// source resolves the provider per call (production). nil falls back to
+	// the static provider below (NewAIServiceWithProvider, tests).
+	source *ParseProviderHolder
+	// provider is the fixed provider of NewAIServiceWithProvider. A zero
+	// AIService (neither set) is "not configured".
 	provider ai.Provider
 	cache    *ai.Cache
 	cfg      *config.Config
+	// spend records one row per paid provider call; nil = not recorded.
+	spend SideSpendRecorder
+}
+
+// SideSpendRecorder is where a paid parse-path call is written
+// (repository.AISideSpendRepository in production).
+type SideSpendRecorder interface {
+	Create(ctx context.Context, row *models.AISideSpend) error
 }
 
 // Compile-time interface verification.
 var _ AIServiceInterface = (*AIService)(nil)
 
-// NewAIService creates a new AI service with the configured provider and cache.
-// Returns nil if no AI provider is configured.
+// AIServiceOption tunes NewAIService.
+type AIServiceOption func(*aiServiceOptions)
+
+type aiServiceOptions struct {
+	resolver   KeyResolver
+	factory    ParseProviderFactory
+	spend      SideSpendRecorder
+	spendIsSet bool
+}
+
+// WithAIKeyResolver makes the service read keys through the app's resolver
+// (secrets store → env). main.go always passes it; without it the service
+// reads the env keys in cfg only.
+func WithAIKeyResolver(r KeyResolver) AIServiceOption {
+	return func(o *aiServiceOptions) { o.resolver = r }
+}
+
+// WithParseProviderFactory swaps the client constructor (tests).
+func WithParseProviderFactory(f ParseProviderFactory) AIServiceOption {
+	return func(o *aiServiceOptions) { o.factory = f }
+}
+
+// WithSideSpendRecorder replaces the default ai_side_spend repository (tests).
+func WithSideSpendRecorder(r SideSpendRecorder) AIServiceOption {
+	return func(o *aiServiceOptions) { o.spend, o.spendIsSet = r, true }
+}
+
+// NewAIService builds the filename-parse service. It ALWAYS returns a service
+// — with no key it is simply "not configured" until one is saved — and the
+// error is kept only for signature compatibility (always nil today).
+//
+// Keys are resolved per call (backlog-ai-parse-reads-env-keys-only-a): a key
+// saved in the setup wizard or settings page takes effect on the next parse,
+// and deleting it turns AI parsing back off, with no restart. AI_PROVIDER is a
+// preference, not a requirement — see NewParseProviderHolder.
 //
 // governor is the process-wide AI throttle (9R-11; nil = unthrottled). It is a
 // parameter — not read from cfg — because config carries values, not live
 // resources; main.go owns the single Governor instance (sub-5-1 CR H2: a
 // Governor field left unset made the factory wiring inert in production).
-func NewAIService(cfg *config.Config, db *sql.DB, governor *ai.Governor) (*AIService, error) {
-	if !cfg.HasAIProvider() {
-		slog.Info("AI service not configured - no API keys set")
-		return nil, nil
+func NewAIService(cfg *config.Config, db *sql.DB, governor *ai.Governor, opts ...AIServiceOption) (*AIService, error) {
+	o := aiServiceOptions{}
+	for _, opt := range opts {
+		opt(&o)
+	}
+	if o.resolver == nil {
+		o.resolver = NewKeyResolver(nil, EnvKeys{Claude: cfg.GetClaudeAPIKey(), Gemini: cfg.GetGeminiAPIKey()}, nil)
+	}
+	if !o.spendIsSet && db != nil {
+		o.spend = repository.NewAISideSpendRepository(db)
 	}
 
-	// Create provider using factory
-	factoryCfg := ai.FactoryConfig{
-		ProviderName: cfg.GetAIProvider(),
-		GeminiAPIKey: cfg.GetGeminiAPIKey(),
-		ClaudeAPIKey: cfg.GetClaudeAPIKey(),
-		ClaudeModel:  cfg.GetClaudeModel(),
-		GeminiModel:  cfg.GetGeminiModel(),
-		Governor:     governor,
+	svc := &AIService{
+		source: NewParseProviderHolder(o.resolver, cfg.GetAIProvider(), cfg.GetClaudeModel(), cfg.GetGeminiModel(),
+			governor, o.factory, nil),
+		cache: ai.NewCache(db),
+		cfg:   cfg,
+		spend: o.spend,
 	}
-
-	provider, err := ai.NewProvider(factoryCfg)
-	if err != nil {
-		return nil, err
+	if name := svc.GetProviderName(); name != "" {
+		slog.Info("AI parsing available", "provider", name)
+	} else {
+		slog.Info("AI parsing waiting for a key - no Gemini or Claude key yet (saving one in Settings turns it on, no restart)")
 	}
-
-	// Create cache
-	cache := ai.NewCache(db)
-
-	return &AIService{
-		provider: provider,
-		cache:    cache,
-		cfg:      cfg,
-	}, nil
+	return svc, nil
 }
 
 // NewAIServiceWithProvider creates an AI service with a specific provider (for testing).
@@ -117,10 +175,56 @@ func NewAIServiceWithProvider(provider ai.Provider, cache *ai.Cache) *AIService 
 	}
 }
 
+// resolve returns the provider for this call, or ai.ErrAINotConfigured.
+func (s *AIService) resolve(ctx context.Context) (ResolvedParseProvider, error) {
+	if s.source != nil {
+		return s.source.Resolve(ctx)
+	}
+	if s.provider == nil {
+		return ResolvedParseProvider{}, ai.ErrAINotConfigured
+	}
+	return ResolvedParseProvider{Provider: s.provider, Name: s.provider.Name()}, nil
+}
+
+// meteredParse makes ONE provider call under its own uncapped Budget and
+// records what it cost. The ctx's own Budget (a subtitle run's) is shadowed,
+// never charged — see the package comment. Usage that came back with an
+// error is recorded too: the money was spent.
+func (s *AIService) meteredParse(ctx context.Context, kind models.AISideSpendKind, p ResolvedParseProvider, req *ai.ParseRequest) (*ai.ParseResponse, error) {
+	budget := ai.NewBudget(0)
+	resp, err := p.Provider.Parse(ai.WithBudget(ctx, budget), req)
+	s.recordSideSpend(ctx, kind, p, budget)
+	return resp, err
+}
+
+// recordSideSpend writes the call's row when it cost money. A write failure
+// is a warning, never the parse's failure. The write ignores the call's
+// cancellation (fansub/keyword timeouts) — a timed-out call can still have
+// been billed.
+func (s *AIService) recordSideSpend(ctx context.Context, kind models.AISideSpendKind, p ResolvedParseProvider, budget *ai.Budget) {
+	snap := budget.Snapshot()
+	if s.spend == nil || !snap.Spent.IsPositive() {
+		return
+	}
+	row := &models.AISideSpend{
+		Kind:         kind,
+		Provider:     string(p.Name),
+		ModelID:      p.Model,
+		InputTokens:  snap.InputTokens,
+		OutputTokens: snap.OutputTokens,
+		SpentUSD:     snap.SpentUSD,
+	}
+	if err := s.spend.Create(context.WithoutCancel(ctx), row); err != nil {
+		slog.Warn("Failed to record AI parse spend — the parse itself is unaffected",
+			"error", err, "kind", kind, "provider", p.Name, "spent_usd", snap.SpentUSD)
+	}
+}
+
 // ParseFilename parses a filename using AI with cache-first strategy.
 func (s *AIService) ParseFilename(ctx context.Context, filename string) (*ai.ParseResponse, error) {
-	if s.provider == nil {
-		return nil, ai.ErrAINotConfigured
+	p, err := s.resolve(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check cache first
@@ -144,13 +248,13 @@ func (s *AIService) ParseFilename(ctx context.Context, filename string) (*ai.Par
 		Filename: filename,
 	}
 
-	response, err := s.provider.Parse(ctx, req)
+	response, err := s.meteredParse(ctx, models.AISideSpendKindParse, p, req)
 	if err != nil {
 		return nil, err
 	}
 
 	// Cache the result
-	if err := s.cache.Set(ctx, filename, s.provider.Name(), "", response); err != nil {
+	if err := s.cache.Set(ctx, filename, p.Name, "", response); err != nil {
 		slog.Warn("Failed to cache AI response",
 			"error", err,
 			"filename", filename,
@@ -167,8 +271,9 @@ func (s *AIService) ParseFilename(ctx context.Context, filename string) (*ai.Par
 func (s *AIService) ParseFansubFilename(ctx context.Context, filename string) (*ai.ParseResponse, error) {
 	start := time.Now()
 
-	if s.provider == nil {
-		return nil, ai.ErrAINotConfigured
+	p, err := s.resolve(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Use fansub-specific cache key prefix to avoid collisions
@@ -210,7 +315,7 @@ func (s *AIService) ParseFansubFilename(ctx context.Context, filename string) (*
 		"timeout_seconds", FansubParsingTimeout.Seconds(),
 	)
 
-	response, err := s.provider.Parse(ctx, req)
+	response, err := s.meteredParse(ctx, models.AISideSpendKindFansub, p, req)
 	if err != nil {
 		duration := time.Since(start)
 		slog.Error("AI fansub parsing failed",
@@ -235,7 +340,7 @@ func (s *AIService) ParseFansubFilename(ctx context.Context, filename string) (*
 	}
 
 	// Cache the result with fansub prefix
-	if err := s.cache.Set(ctx, cacheKey, s.provider.Name(), "fansub", response); err != nil {
+	if err := s.cache.Set(ctx, cacheKey, p.Name, "fansub", response); err != nil {
 		slog.Warn("Failed to cache fansub AI response",
 			"error", err,
 			"filename", filename,
@@ -260,8 +365,9 @@ func (s *AIService) ParseFansubFilename(ctx context.Context, filename string) (*
 func (s *AIService) GenerateKeywords(ctx context.Context, title, language string) (*ai.KeywordVariants, error) {
 	start := time.Now()
 
-	if s.provider == nil {
-		return nil, ai.ErrAINotConfigured
+	p, err := s.resolve(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Validate title
@@ -318,7 +424,7 @@ func (s *AIService) GenerateKeywords(ctx context.Context, title, language string
 		"timeout_seconds", KeywordGenerationTimeout.Seconds(),
 	)
 
-	response, err := s.provider.Parse(ctx, req)
+	response, err := s.meteredParse(ctx, models.AISideSpendKindKeywords, p, req)
 	if err != nil {
 		duration := time.Since(start)
 		slog.Error("AI keyword generation failed",
@@ -345,7 +451,7 @@ func (s *AIService) GenerateKeywords(ctx context.Context, title, language string
 
 	// Cache the result with keyword prefix
 	// Store the response for caching (with RawResponse containing the keyword JSON)
-	if err := s.cache.Set(ctx, cacheKey, s.provider.Name(), "keywords", response); err != nil {
+	if err := s.cache.Set(ctx, cacheKey, p.Name, "keywords", response); err != nil {
 		slog.Warn("Failed to cache keyword generation response",
 			"error", err,
 			"title", title,
@@ -378,13 +484,19 @@ func (s *AIService) GetCacheStats(ctx context.Context) (*ai.CacheStats, error) {
 	return s.cache.Stats(ctx)
 }
 
-// IsConfigured returns true if an AI provider is configured.
+// IsConfigured reports whether a parse key resolves RIGHT NOW (secrets store
+// → env). Asked per call by the parser and the keyword phase, so saving or
+// deleting a key in the settings page takes effect without a restart.
 func (s *AIService) IsConfigured() bool {
-	return s.provider != nil
+	return s.GetProviderName() != ""
 }
 
-// GetProviderName returns the name of the configured provider.
+// GetProviderName returns the provider the next call would use, "" when no
+// key resolves.
 func (s *AIService) GetProviderName() string {
+	if s.source != nil {
+		return s.source.ProviderName(context.Background())
+	}
 	if s.provider == nil {
 		return ""
 	}
@@ -392,10 +504,12 @@ func (s *AIService) GetProviderName() string {
 }
 
 // Ping checks if the AI service is accessible.
-// Implements health.Pingable interface for health monitoring.
+// Implements health.Pingable interface for health monitoring. Judged per call:
+// with no key it fails with the exact message the health row showed when the
+// service used to be nil at boot.
 func (s *AIService) Ping(ctx context.Context) error {
-	if s.provider == nil {
-		return errors.New("AI provider not configured")
+	if !s.IsConfigured() {
+		return errors.New(errAINotConfiguredHealth)
 	}
 	// AI service is considered healthy if it's configured
 	// Actual API connectivity is verified on first use

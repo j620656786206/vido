@@ -324,16 +324,17 @@ func main() {
 	aiGovernor := ai.NewGovernor(cfg.AIMaxConcurrent, cfg.AIRatePerSec, cfg.AIMaxConcurrent)
 	slog.Info("AI governor initialized", "max_concurrent", cfg.AIMaxConcurrent, "rate_per_sec", cfg.AIRatePerSec, "run_budget_usd", cfg.AIRunBudgetUSD)
 
-	// Initialize AI service for AI-powered filename parsing (Story 3.1)
-	aiService, err := services.NewAIService(cfg, db.Conn(), aiGovernor)
+	// Initialize AI service for AI-powered filename parsing (Story 3.1).
+	// backlog-ai-parse-reads-env-keys-only-a: ALWAYS built, keys resolved per
+	// call through keyResolver (secrets store → env), so a key saved in the
+	// setup wizard / settings page turns AI parsing on with no restart. It used
+	// to read the env keys once here and return nil without one — production
+	// (keys saved in the UI) never had AI parsing. Every paid call is recorded
+	// in ai_side_spend (metered, never capped).
+	aiService, err := services.NewAIService(cfg, db.Conn(), aiGovernor, services.WithAIKeyResolver(keyResolver))
 	if err != nil {
 		slog.Error("Failed to initialize AI service", "error", err)
 		os.Exit(1)
-	}
-	if aiService != nil {
-		slog.Info("AI service initialized", "provider", aiService.GetProviderName())
-	} else {
-		slog.Info("AI service not configured - AI parsing disabled")
 	}
 
 	// Initialize learning service for filename pattern learning (Story 3.9)
@@ -343,10 +344,9 @@ func main() {
 	// Initialize health monitoring for graceful degradation (Story 3.12)
 	// Use actual service health checks where available, config-based checks for optional services
 	var tmdbPingable health.Pingable = tmdbService
-	var aiPingable health.Pingable
-	if aiService != nil {
-		aiPingable = aiService
-	}
+	// Judged per check: with no key aiService.Ping returns the same
+	// "AI provider not configured" the nil Pingable used to produce.
+	var aiPingable health.Pingable = aiService
 	doubanPingable := health.NewConfigurablePingable("Douban", cfg.EnableDouban)
 	wikipediaPingable := health.NewConfigurablePingable("Wikipedia", cfg.EnableWikipedia)
 	healthChecker := health.NewServiceHealthChecker(tmdbPingable, doubanPingable, wikipediaPingable, aiPingable)
@@ -384,15 +384,10 @@ func main() {
 	retryService := services.NewRetryService(repos.Retry, nil, slog.Default())
 	slog.Info("Retry service initialized (executor pending)")
 
-	// Initialize parser service with AI and learning integration (Story 2.5, 3.1, 3.9)
-	// Note: must use a typed nil interface to avoid Go's nil interface gotcha.
-	// A nil *AIService assigned to AIServiceInterface creates a non-nil interface
-	// (has type but nil value), causing panics on method calls.
-	var parserAI services.AIServiceInterface
-	if aiService != nil {
-		parserAI = aiService
-	}
-	parserService := services.NewParserServiceWithLearning(parserAI, learningService)
+	// Initialize parser service with AI and learning integration (Story 2.5, 3.1, 3.9).
+	// The parser asks aiService.IsConfigured() for every file the regex cannot
+	// parse, so it follows the saved keys without a restart.
+	parserService := services.NewParserServiceWithLearning(aiService, learningService)
 
 	// Initialize metadata service with multi-source fallback chain (Story 3.3)
 	metadataService := services.NewMetadataService(services.MetadataServiceConfig{
@@ -416,12 +411,10 @@ func main() {
 	metadataService.SetPosterUploader(editService)
 	slog.Info("Metadata editor initialized", "poster_dir", posterDir)
 
-	// Initialize keyword service and wire to metadata service (Story 3.6)
-	if aiService != nil {
-		keywordService := services.NewKeywordService(aiService)
-		metadataService.SetKeywordGenerator(keywordService)
-		slog.Info("AI keyword retry phase enabled for metadata search")
-	}
+	// Initialize keyword service and wire to metadata service (Story 3.6).
+	// Wired unconditionally: the orchestrator skips the phase while
+	// keywordService.IsConfigured() is false, exactly as when it was unwired.
+	metadataService.SetKeywordGenerator(services.NewKeywordService(aiService))
 
 	// Wire up retry service with metadata service (Story 3.11)
 	// Create executor that can re-execute failed metadata searches
@@ -568,13 +561,11 @@ func main() {
 
 	// Initialize cache expiry sweep scheduler — sweeps up to 3 DB-table caches (cache_entries +
 	// offline_cache + ai_cache) on one shared ticker (infra-cache-entries-expiry-sweep +
-	// infra-ai-offline-cache-expiry-sweep). offline_cache is always constructed (:124); the ai_cache
-	// target is added only when an AI provider is configured (aiService is nil otherwise, :214).
+	// infra-ai-offline-cache-expiry-sweep). Both are always constructed — aiService exists
+	// with or without a key since backlog-ai-parse-reads-env-keys-only-a.
 	cacheSweepExtra := []services.CacheSweepTarget{
 		services.SweepTarget("offline_cache", offlineCache),
-	}
-	if aiService != nil {
-		cacheSweepExtra = append(cacheSweepExtra, services.SweepFunc("ai_cache", aiService.ClearExpiredCache))
+		services.SweepFunc("ai_cache", aiService.ClearExpiredCache),
 	}
 	// system_logs retention rides the same sweep ticker
 	// (bugfix-system-logs-no-retention); the startup prune above handled the
@@ -1390,8 +1381,11 @@ func main() {
 	// sub-7-6b: the monthly AI spend summary over the subtitle_runs ledger
 	// (sub-7-6a). Movies/episodes only feed the runtime ladder behind the
 	// "skipped saved" estimate.
-	subtitleSpendHandler := handlers.NewSubtitleSpendHandler(
-		services.NewSubtitleSpendService(repos.SubtitleRuns, repos.Movies, repos.Episodes, slog.Default()), slog.Default())
+	// backlog-ai-parse-reads-env-keys-only-a: parse_calls / parse_usd come from
+	// the ai_side_spend ledger aiService writes.
+	subtitleSpendService := services.NewSubtitleSpendService(repos.SubtitleRuns, repos.Movies, repos.Episodes, slog.Default())
+	subtitleSpendService.SetSideSpend(repository.NewAISideSpendRepository(db.Conn()))
+	subtitleSpendHandler := handlers.NewSubtitleSpendHandler(subtitleSpendService, slog.Default())
 	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
 	// batch-subtitle + generation-batch + solo-transcription progress, pending-parse
 	// count, download counts, and recent parse events. Wired after the processors
