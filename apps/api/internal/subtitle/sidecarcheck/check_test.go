@@ -84,15 +84,13 @@ func pcmFor(w window, line []bool) []byte {
 
 func newTestChecker(t *testing.T, cache Cache, seconds float64) (*Checker, *int, string, string) {
 	t.Helper()
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		t.Skip("ffmpeg not installed — Check refuses to run without it")
-	}
 	dir := t.TempDir()
 	media := filepath.Join(dir, "Film.mkv")
 	require.NoError(t, os.WriteFile(media, []byte("video"), 0o644))
 	sub := englishSRT(t, dir, 100)
 	c := NewChecker(fakeProber{seconds}, cache, nil)
 	c.hasCentre = func(context.Context, string, int) bool { return false }
+	c.hasFFmpeg = func() bool { return true } // decode is faked: runs where ffmpeg is not installed (CI)
 	calls := 0
 	c.decode = func(_ context.Context, _ string, _ int, w window, _ bool) ([]byte, error) {
 		calls++
@@ -126,10 +124,21 @@ func TestCheck_AlignedAndCached(t *testing.T) {
 	assert.False(t, v3.Cached)
 	assert.Greater(t, *calls, decoded)
 
-	// Another audio stream is another key.
-	_, err = c.Check(context.Background(), media, 2, sub)
+	// Another audio stream: the same key, but checked again.
+	before := *calls
+	v4, err := c.Check(context.Background(), media, 2, sub)
 	require.NoError(t, err)
-	assert.Len(t, cache.entries, 3)
+	assert.False(t, v4.Cached)
+	assert.Greater(t, *calls, before)
+
+	// Lookup reads the stored verdict without a stream and without ffmpeg.
+	before = *calls
+	got, ok := c.Lookup(context.Background(), media, sub)
+	require.True(t, ok)
+	assert.Equal(t, 2, got.AudioStream)
+	assert.Equal(t, before, *calls)
+	_, ok = c.Lookup(context.Background(), media, filepath.Join(t.TempDir(), "none.srt"))
+	assert.False(t, ok)
 }
 
 func TestCheck_UnusableNeedsNoAudio(t *testing.T) {
@@ -140,7 +149,7 @@ func TestCheck_UnusableNeedsNoAudio(t *testing.T) {
 	require.NoError(t, os.WriteFile(short, []byte("1\n00:00:01,000 --> 00:00:02,000\nHello\n"), 0o644))
 	v, err := c.Check(context.Background(), media, 1, short)
 	require.NoError(t, err)
-	assert.Equal(t, Verdict{Result: Unusable, Reason: "too_few_cues", ElapsedMS: v.ElapsedMS}, v)
+	assert.Equal(t, Verdict{Result: Unusable, Reason: "too_few_cues", AudioStream: 1, ElapsedMS: v.ElapsedMS}, v)
 
 	garbage := filepath.Join(dir, "garbage.srt")
 	require.NoError(t, os.WriteFile(garbage, []byte{0xff, 0xfe, 0x00}, 0o644))

@@ -157,6 +157,7 @@ type TechProber interface {
 - ❌ No OpenCC invocation, no `placer.go` call — the verdict instructs the caller (D3: placer stays sole writer, orchestrator sole automatic caller).
 - ❌ No Claude/LLM anything — 1.5a.
 - ❌ No external-sidecar handling (`DetectExternalSubtitles` untouched — M1 pipeline is embedded-only; sidecars remain the search engine's domain).
+  - ⚖️ **Overturned 2026-10-19 (Alexyu, party mode):** this was an M1 scope line, not a product decision. A subtitle the user placed is not a search result. Since `disc-2026-10-generate-keeps-user-en-srt-b2`, the router translates an English sidecar when the file has no usable embedded track **and** `sidecarcheck` finds that the sidecar's timing matches the film. See the umbrella story `disc-2026-10-generate-keeps-user-en-srt-b`.
 - ❌ No forced/disposition flag parsing (the cue-count heuristic covers it for M1; revisit if the pilot shows mis-selection).
 - ❌ No `batch.go`, no feature flag, no frontend, no `.pen`.
 

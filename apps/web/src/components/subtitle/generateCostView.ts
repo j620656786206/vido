@@ -61,6 +61,13 @@ export const TRANSLATION_KEY_MISSING_LINE = '尚未設定翻譯金鑰';
 // the embedded-track lane. No duration claim — a Chinese track is applied in
 // seconds. The verb 語音辨識 of DEFAULT_LINE stays correct for asr / skip.
 export const EXTRACT_LINE = '使用片內字幕：中文直接套用，英文由 AI 翻譯';
+// disc-2026-10-generate-keeps-user-en-srt-b2: the English subtitle beside the
+// file matches its timing and is translated. Sally finalizes the wording with
+// the offset / mismatch choices in -b3.
+export const SIDECAR_LINE = '用旁邊的英文字幕翻譯，約需 1～2 分鐘';
+// While it is checked, a library without a speech-recognition key must not
+// flash "需要 ASR 金鑰" only to turn into a translation price seconds later.
+export const SIDECAR_CHECKING_LINE = '正在檢查旁邊的英文字幕能不能直接翻譯…';
 export const EXTRACT_NO_KEY_LINE =
   '尚未設定翻譯金鑰：片內中文字幕可直接套用，英文字幕需金鑰才能翻譯';
 
@@ -120,11 +127,16 @@ export function deriveGenerateCostView(input: {
   // Pipeline mode only (`plan: 'extract'`): the file carries a usable text
   // track, so speech recognition is never needed — its absence blocks nothing.
   const extract = data.plan === 'extract';
+  // -b2: the matching English sidecar is translated — no speech recognition.
+  const sidecar = data.plan === 'sidecar';
 
-  if (!translateOnly && !extract && !data.asrAvailable) {
+  if (!translateOnly && !extract && !sidecar && !data.asrAvailable) {
+    if (data.sidecarCheck?.status === 'checking') {
+      return blocked(SIDECAR_CHECKING_LINE, false);
+    }
     return blocked(ASR_NOT_CONFIGURED_LINE, true); // J9-D ⑥
   }
-  if (translateOnly && !data.translationConfigured) {
+  if ((translateOnly || sidecar) && !data.translationConfigured) {
     // The run would resume, skip the translate leg and produce nothing — a
     // clickable $0.00 here would be a button that lies (SM supplement ②).
     return blocked(TRANSLATION_KEY_MISSING_LINE, true);
@@ -174,6 +186,9 @@ export function deriveGenerateCostView(input: {
   }
   if (extract) {
     return { cost, retryNote, helper: { text: EXTRACT_LINE, tone: 'muted', settingsLink: false } };
+  }
+  if (sidecar) {
+    return { cost, retryNote, helper: { text: SIDECAR_LINE, tone: 'muted', settingsLink: false } };
   }
   return { cost, retryNote, helper: { text: DEFAULT_LINE, tone: 'muted', settingsLink: false } };
 }

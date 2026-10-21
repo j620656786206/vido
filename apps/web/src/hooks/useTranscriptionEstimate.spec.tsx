@@ -1,7 +1,13 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { transcriptionEstimateKeys, useTranscriptionEstimate } from './useTranscriptionEstimate';
+import {
+  estimateRefetchInterval,
+  SIDECAR_CHECK_MAX_POLLS,
+  SIDECAR_CHECK_POLL_MS,
+  transcriptionEstimateKeys,
+  useTranscriptionEstimate,
+} from './useTranscriptionEstimate';
 import { transcriptionService, type TranscriptionEstimate } from '../services/transcriptionService';
 
 // Story dsr-6a AC #5 — the price query behind the paid 生成字幕 / 重試 buttons.
@@ -70,5 +76,43 @@ describe('useTranscriptionEstimate', () => {
       wrapper: Wrapper,
     });
     expect(mockedGet).not.toHaveBeenCalled();
+  });
+});
+
+// -b2: while the English subtitle beside the file is checked in the
+// background, the dialog asks again until the answer arrives.
+describe('estimateRefetchInterval', () => {
+  it('polls only while the sidecar check is running', () => {
+    expect(
+      estimateRefetchInterval({
+        ...ESTIMATE,
+        sidecarCheck: { status: 'checking', offsetSeconds: 0 },
+      })
+    ).toBe(SIDECAR_CHECK_POLL_MS);
+    for (const status of [
+      'none',
+      'aligned',
+      'offset',
+      'mismatch',
+      'unusable',
+      'unknown',
+    ] as const) {
+      expect(
+        estimateRefetchInterval({ ...ESTIMATE, sidecarCheck: { status, offsetSeconds: 0 } })
+      ).toBe(false);
+    }
+    expect(estimateRefetchInterval(ESTIMATE)).toBe(false);
+    expect(estimateRefetchInterval(undefined)).toBe(false);
+  });
+
+  it('gives up after SIDECAR_CHECK_MAX_POLLS answers — never polls forever', () => {
+    const checking = {
+      ...ESTIMATE,
+      sidecarCheck: { status: 'checking' as const, offsetSeconds: 0 },
+    };
+    expect(estimateRefetchInterval(checking, SIDECAR_CHECK_MAX_POLLS - 1)).toBe(
+      SIDECAR_CHECK_POLL_MS
+    );
+    expect(estimateRefetchInterval(checking, SIDECAR_CHECK_MAX_POLLS)).toBe(false);
   });
 });

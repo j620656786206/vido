@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -541,10 +542,34 @@ func TestSelectAndRoute_ExtractErrorPropagates(t *testing.T) {
 	assert.ErrorIs(t, err, ErrSubtitleExtractFailed)
 }
 
-// ─── Scope fence (AC #8) ───────────────────────────────────────────────────
+// ─── English sidecars (sub-1-4 AC #8 fence, overturned 2026-10-19 → -b2) ───
 
-func TestSelectAndRoute_ExternalSidecarsAreIgnored(t *testing.T) {
-	// M1's pipeline is embedded-only; sidecars remain the search engine's domain.
+// fakeSidecars answers FindAligned with a fixed path (or none).
+type fakeSidecars struct {
+	path  string
+	ok    bool
+	calls int
+}
+
+func (f *fakeSidecars) FindAligned(context.Context, string) (string, bool) {
+	f.calls++
+	return f.path, f.ok
+}
+
+func writeSidecar(t *testing.T, content string) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), "m.en.srt")
+	require.NoError(t, os.WriteFile(p, []byte(content), 0o644))
+	return p
+}
+
+const sidecarSRT = "1\n00:00:01,000 --> 00:00:03,000\nYou're a jerk, Thom.\n\n" +
+	"2\n00:00:04,000 --> 00:00:05,000\n[MUSIC PLAYING]\n\n" +
+	"3\n00:00:06,000 --> 00:00:08,000\nLook, Celia.\n"
+
+func TestSelectAndRoute_NoFinderKeepsSidecarsOut(t *testing.T) {
+	// Without a finder (legacy wiring, tests) the router is embedded-only, as
+	// M1 was.
 	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
 		{Language: "eng", Format: "srt", External: true},
 	}}}
@@ -556,6 +581,88 @@ func TestSelectAndRoute_ExternalSidecarsAreIgnored(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, RouteNoTextSource, got.Kind)
 	assert.Zero(t, ex.callCount)
+}
+
+func TestSelectAndRoute_AlignedSidecarIsTranslated(t *testing.T) {
+	path := writeSidecar(t, sidecarSRT)
+	before, err := os.ReadFile(path)
+	require.NoError(t, err)
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		{Language: "eng", Format: "srt", External: true},
+	}}}
+	r, tmp := newTestRouter(t, prober, &fakeExtractor{})
+	r.SetSidecarFinder(&fakeSidecars{path: path, ok: true})
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	assert.Equal(t, RouteTranslate, got.Kind)
+	require.NotNil(t, got.Track)
+	assert.Equal(t, path, got.Track.Path)
+	assert.Equal(t, -1, got.Track.StreamIndex, "not a stream of the file")
+	assert.Equal(t, "en", got.Track.Language)
+	require.Len(t, got.Track.Blocks, 2, "SDH-filtered like an extracted track")
+	assert.Equal(t, "You're a jerk, Thom.", got.Track.Blocks[0].Text)
+	after, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, before, after, "the user's file is only read")
+}
+
+func TestSelectAndRoute_SidecarAlsoRescuesAnUntaggedTextTrack(t *testing.T) {
+	// A file whose only embedded text track is `und` used to be skipped; a
+	// matching English sidecar now gives it a source.
+	path := writeSidecar(t, sidecarSRT)
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		embedded(2, "und", "subrip"),
+	}}}
+	r, tmp := newTestRouter(t, prober, &fakeExtractor{})
+	r.SetSidecarFinder(&fakeSidecars{path: path, ok: true})
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	assert.Equal(t, RouteTranslate, got.Kind)
+}
+
+func TestSelectAndRoute_SidecarThatDoesNotMatchRoutesAsBefore(t *testing.T) {
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		{Language: "eng", Format: "srt", External: true},
+	}}}
+	r, tmp := newTestRouter(t, prober, &fakeExtractor{})
+	r.SetSidecarFinder(&fakeSidecars{})
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	assert.Equal(t, RouteNoTextSource, got.Kind, "speech recognition, as before — the quote already said so")
+}
+
+func TestSelectAndRoute_EmbeddedEnglishStillWinsOverASidecar(t *testing.T) {
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		embedded(2, "eng", "subrip"),
+	}}}
+	ex := &fakeExtractor{contents: map[int]string{2: "1\n00:00:01,000 --> 00:00:02,000\nHello\n"}}
+	r, tmp := newTestRouter(t, prober, ex)
+	finder := &fakeSidecars{path: writeSidecar(t, sidecarSRT), ok: true}
+	r.SetSidecarFinder(finder)
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	assert.Equal(t, RouteTranslate, got.Kind)
+	assert.Equal(t, 2, got.Track.StreamIndex)
+	assert.Zero(t, finder.calls, "the sidecar is not even checked")
+}
+
+func TestSelectAndRoute_UnparseableAlignedSidecarFallsBack(t *testing.T) {
+	prober := &fakeProber{info: &services.MediaTechInfo{}}
+	r, tmp := newTestRouter(t, prober, &fakeExtractor{})
+	r.SetSidecarFinder(&fakeSidecars{path: writeSidecar(t, "not a subtitle"), ok: true})
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	assert.Equal(t, RouteNoTextSource, got.Kind)
 }
 
 func TestRouteForVariant_UnknownVariantFailsClosed(t *testing.T) {

@@ -100,3 +100,63 @@ Gap between the weakest real match and the strongest wrong one (positive = the t
   - A shorter window was not explored. It is the next thing to try if this matters.
 - **The margin is measured on 5 films, and the thresholds were tuned on the same cells.** Code review called this fitted, and I agree there is a risk. Before `-b2` relies on the check, about 10 more films should go through the same exam, especially quiet dramas and anime. The slow-drift row is the closest call (4.59 against 4.9).
 - The exam material (extracted subtitles, curve dumps, the test binary) is kept on the NAS at `/mnt/user/data/tmp-b1exam/`, so a rerun does not have to extract the subtitles again.
+
+## Second exam: 10 more films (disc-2026-10-generate-keeps-user-en-srt-b2, AC #0)
+
+Date: 2026-10-20 to 10-21. Same NAS, same throwaway-container setup, same test binary built from `main` (the algorithm and settings are unchanged from the first exam). Thresholds were not touched before or after this run.
+
+### Films
+
+| Label | Kind | English subtitle (the "original") |
+|---|---|---|
+| F | quiet drama, 4K | embedded SubRip track |
+| G | comedy-drama, 4K | embedded SubRip track |
+| H | drama, Blu-ray remux, 85 GB | embedded SubRip track |
+| I | animated feature | embedded SubRip track |
+| J | mystery film | embedded SubRip track |
+| K | action film whose only English subtitle is SDH | embedded SubRip track (SDH) |
+| L | Japanese anime episode, English dub on the second audio track | embedded SubRip track |
+| M | 30-minute comedy episode | embedded SubRip track |
+| N | documentary, remux, 7.1 audio | embedded SubRip track |
+| O | dialogue-heavy TV episode | embedded SubRip track |
+
+Each film got the same six variants as the first exam. "Other film" is the next film's original (O uses F's).
+
+### Result: 57 / 60
+
+| Film | original | +3s | −2s | fps | fps 24 | other film | first check |
+|---|---|---|---|---|---|---|---|
+| F | aligned 0.0 (11.6) | offset +3.0 (10.5) | offset −2.0 (11.2) | mismatch (2.43) | mismatch (4.28) | mismatch (2.85) | 25 s |
+| G | aligned +0.1 (11.7) | offset +3.1 (12.3) | offset −1.9 (11.1) | mismatch (2.38) | mismatch (3.68) | mismatch (2.45) | 45 s |
+| H | aligned 0.0 (8.2) | offset +3.0 (8.8) | offset −2.0 (7.6) | mismatch (1.89) | mismatch (2.70) | mismatch (1.89) | **196 s** |
+| I | aligned 0.0 (10.7) | offset +3.0 (10.7) | offset −2.0 (11.0) | mismatch (2.51) | mismatch (3.70) | mismatch (2.74) | 78 s |
+| J | aligned 0.0 (10.5) | offset +3.0 (10.0) | offset −2.0 (10.7) | mismatch (3.25) | mismatch (2.15) | mismatch (2.52) | 88 s |
+| K | aligned 0.0 (10.7) | offset +3.0 (10.6) | offset −2.0 (10.5) | mismatch (2.83) | mismatch (2.44) | mismatch (3.82) | 29 s |
+| L | aligned −0.1 (11.7) | offset +2.9 (9.8) | offset −2.1 (12.2) | mismatch (2.23) | **offset +0.7 (9.72) ✗** | mismatch (3.56) | 25 s |
+| M | aligned +0.1 (7.7) | offset +3.1 (7.8) | offset −1.9 (7.8) | mismatch (3.06) | **offset +1.1 (6.31) ✗** | mismatch (4.67) | 119 s |
+| N | aligned +0.1 (7.2) | offset +3.1 (7.1) | offset −1.9 (7.3) | mismatch (2.20) | **offset +1.8 (5.30) ✗** | mismatch (1.98) | 124 s (241 s for one later cell) |
+| O | aligned +0.1 (6.4) | offset +3.1 (6.5) | offset −1.9 (6.3) | mismatch (2.01) | mismatch (4.14) | mismatch (3.12) | 36 s |
+
+Later cells of the same film usually took 4–30 s, because the file was then in the page cache. The production Vido container was running at the same time (load average about 8), so the first-check times are pessimistic.
+
+- Every original was `aligned`. Every shift was found within ±0.2 s.
+- No wrong subtitle was judged `aligned`. The three errors all say `offset` where `mismatch` was expected.
+- Weakest real match: 6.25 (O, −2 s). Strongest wrong match that was not a slow drift: 4.67 (M, other film), 0.23 below the threshold.
+
+### Why the three "fps 24" cells failed
+
+The slow-drift check compares the first half of the film with the second half and calls it a drift when they disagree by more than 1 s (`agreeMS`), and only when each half on its own clears 4.9 (`minHalfPeak`).
+
+- L (an episode of about 24 min) drifts 0.7 s end to end. The two halves differ by well under 1 s, so the whole curve is one blurred peak at the average, +0.7 s.
+- M (30 min) drifts about 1.7 s. The halves differ by about 0.9 s, just under the 1 s line.
+- N (documentary) drifts about 2.8 s, but its windows are weak (quiet narration), so the halves do not each clear 4.9 and the drift check is skipped.
+
+### Ruling
+
+⚖️ Alexyu, 2026-10-21, chose A: wire it up as it is.
+
+- In `-b2`, `offset` and `mismatch` take the same path: the sidecar is not used and the estimate stays at the transcription price. So these three errors cost money but never translate a drifting subtitle.
+- The risk moves to `-b3`. The dialog would say "off by about 1 s" for a subtitle that actually drifts. If `-b3` ever auto-corrects an offset, shifting such a file by the average leaves it up to ±1.4 s off at the ends. That has to be fixed before any auto-correction ships.
+- First checks of large files took up to 4 minutes on a busy NAS. The estimate polls for about 3 minutes, then keeps the transcription price. Nothing is overcharged; the user just sees the higher price first.
+
+The exam material is kept on the NAS at `/mnt/user/data/tmp-b2exam/` (extracted subtitles, `exam.json`, `out.log`, the test binary).

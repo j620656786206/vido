@@ -69,6 +69,7 @@ type TrackExtractor interface {
 type Router struct {
 	prober    TechProber
 	extractor TrackExtractor
+	sidecars  SidecarFinder // nil = embedded tracks only
 	logger    *slog.Logger
 }
 
@@ -104,6 +105,9 @@ func (r *Router) SelectAndRoute(ctx context.Context, mediaPath, tmpDir string) (
 
 	candidates := SelectCandidates(tracks)
 	if len(candidates) == 0 {
+		if d, ok := r.sidecarVerdict(ctx, mediaPath); ok {
+			return d, nil
+		}
 		return r.verdictWithoutTrack(tracks), nil
 	}
 
@@ -181,6 +185,47 @@ func (r *Router) SelectAndRoute(ctx context.Context, mediaPath, tmpDir string) (
 	}, nil
 }
 
+// sidecarVerdict translates the first English sidecar whose timing matches
+// the film (-b2). The sidecar is parsed and SDH-filtered like an extracted
+// track; the user's file is only read — the translate route writes zh-Hant.
+func (r *Router) sidecarVerdict(ctx context.Context, mediaPath string) (RouteDecision, bool) {
+	if r.sidecars == nil || sidecarsDisabled(ctx) {
+		return RouteDecision{}, false
+	}
+	path, ok := r.sidecars.FindAligned(ctx, mediaPath)
+	if !ok {
+		return RouteDecision{}, false
+	}
+	raw, err := os.ReadFile(path) //nolint:gosec // a sidecar beside a library file
+	if err != nil {
+		r.logger.Warn("aligned sidecar unreadable — routing without it", "path", path, "error", err)
+		return RouteDecision{}, false
+	}
+	blocks, err := ParseSRT(string(raw))
+	if err != nil || len(blocks) == 0 {
+		r.logger.Warn("aligned sidecar did not parse — routing without it", "path", path, "error", err)
+		return RouteDecision{}, false
+	}
+	kept, removed := FilterSDH(blocks)
+	if len(kept) == 0 {
+		return RouteDecision{}, false
+	}
+	r.logger.Info("subtitle route: translating the English subtitle beside the file",
+		"media", mediaPath, "sidecar", path, "cues", len(kept), "sdh_removed", removed)
+	return RouteDecision{
+		Kind: RouteTranslate,
+		Track: &ExtractedTrack{
+			StreamIndex: -1, // not a stream: the file beside the video
+			Language:    "en",
+			Codec:       "subrip",
+			Path:        path,
+			Blocks:      kept,
+		},
+		DetectedVariant: "und",
+		Reason:          "English subtitle beside the file matches the film's timing",
+	}, true
+}
+
 // verdictWithoutTrack distinguishes FR9 (a text track exists but M1 refuses to
 // guess its language) from FR5 (there is no usable text source at all). Only the
 // former is a deliberate skip; the latter is what P2's ASR can later recover.
@@ -188,7 +233,9 @@ func (r *Router) verdictWithoutTrack(tracks []services.SubtitleTrack) RouteDecis
 	textTracks, imageTracks := 0, 0
 	for _, t := range tracks {
 		if t.External {
-			continue // M1 is embedded-only; sidecars stay the search engine's domain
+			// An English sidecar that matches the timing was already tried
+			// (sidecarVerdict); the rest stay out of this count.
+			continue
 		}
 		switch {
 		case IsTextSubtitleCodec(t.Format):
