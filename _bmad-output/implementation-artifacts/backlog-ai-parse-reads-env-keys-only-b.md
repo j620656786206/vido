@@ -1,6 +1,6 @@
 # Backlog -b：「本月 AI 花費」和首頁「本月 $x」把檔名解析花的錢算進去（設計稿＋前端）
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 從 `backlog-ai-parse-reads-env-keys-only` 拆出來，見 -a 的拆單說明。⚖️ Alexyu 2026-10-21 選 A：AI 檔名解析打開，花的錢要記進花費紀錄。-a 負責把錢逐筆記下來，並在 `/subtitles/spend` 回傳 `parse_calls`、`parse_usd`；本單負責讓使用者看得到。
 
@@ -48,11 +48,11 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] T0：確認設計稿、截圖、-a 都好了（AC #0）
-- [ ] T1：先寫測試，看它紅（AC #5）
-- [ ] T2：型別、K5 第三格、卡片出現條件、首頁總額（AC #1–#4）
-- [ ] T3：夾具與基準（AC #6）、UX 截圖（AC #7）
-- [ ] T4：全綠（AC #8），開 PR，合併
+- [x] T0：確認設計稿、截圖、-a 都好了（AC #0）
+- [x] T1：先寫測試，看它紅（AC #5）
+- [x] T2：型別、K5 第三格、卡片出現條件、首頁總額（AC #1–#4）
+- [x] T3：夾具與基準（AC #6）、UX 截圖（AC #7）
+- [x] T4：全綠（AC #8），開 PR，合併
 
 ## Dev Notes
 
@@ -93,14 +93,45 @@ Status: ready-for-dev
 | 日期 | 變更 |
 |---|---|
 | 2026-10-21 | 建單（Bob）。Sally 裁定：K5 頭條加第三格「檔名解析」，有呼叫才顯示；不進「依模型」；首頁總額算進去。等設計稿和 -a。 |
+| 2026-10-22 | dev（Amelia）→ done：K5 第三格、卡片出現條件、首頁總額、服務層預設 0；夾具 `parse-only`；PR #892。 |
 | 2026-10-22 | 解除 blocked → ready-for-dev：-a 已合併（#890）；Alexyu 跑完 Pen，K5-D-v2 加 `grp-檔名解析` `n64lI`（`lab-檔名解析` `P0zNh7`、`val-檔名解析` `lVds7`），K5-M-v2 加 `Z4ZUhQ`（`b8R4Jv`、`U4t0w`）；Sally MCP 唯讀複審字與樣式 token 跟語音辨識那格一致。截圖 `k5-d.png` 隨設計稿 PR 提交；`k5-m.png` 不變（手機稿卡片本來就在摺線下，畫面外）。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia, BMAD dev）
+
 ### Debug Log References
+
+- AC #0：Pencil MCP 唯讀 `Get`：`hbiao`（K5-D-v2，橫排）與 `VIUSX`（K5-M-v2，`layout: vertical`）的子節點依序是 grp-翻譯、grp-語音辨識、grp-檔名解析（`n64lI`／`Z4ZUhQ`），文字逐字「檔名解析」「37 次 · $0.18」。-a 已合併（#890），Go 端欄位名 `parse_calls`／`parse_usd`（`subtitle_spend_service.go:59-60`，非 omitempty）。
+- TDD：先寫測試，三支 spec 跑出 **7 failed / 56 passed**（紅）；實作後 **63 passed**（綠）。
+- 全綠：`web:test` 298 檔／4878 測試全過；`web:typecheck` 過；`lint:all`「✖ 170 problems (0 errors, 170 warnings)」（警告都是既有的）；`format:check` 過；`check-design-refs.py` 400 個檔頭節點都在。
+- 視覺：本機 `AI_PROVIDER=claude` 跑 `test:visual:update-missing` 重產兩張 darwin、新增一張，之後 `test:visual` 1 passed，沒有其他重產雜訊。
 
 ### Completion Notes List
 
+- **服務層：** `SubtitleSpendSummary` 加 `parseCalls`／`parseUsd`；`getMonthSummary` 在舊版 API 沒回這兩個欄位時補 0（E2E `activity-spend.spec.ts` 的 stub 正好就是舊形狀，順便覆蓋到）。
+- **K5 第三格：** 直接重用 `LaneStat`（跟「語音辨識」同一個子元件，字級／顏色／無障礙語意 `dt`／`dd` 都一樣），`parseCalls > 0` 才畫；`data-testid="activity-spend-parse"`；不進「依模型」。
+- **卡片出現條件：** `spendHasContent` 加 `parseCalls > 0`，只有解析的月份也會出卡片。
+- **首頁總額：** `monthSpendUsd` 把 `parseCalls` 算進「有沒有紀錄」、`parseUsd` 加進 `sumUsd`；0 次照舊回 null（不會從不顯示變成 $0）。
+- **「只有這一格」的解讀：** Sally 說只有解析花錢時「卡片也要出現（只有這一格）」，同一段又說翻譯／語音辨識「一定會出現」、沒紀錄要寫「—」。實作採後者：卡片照常顯示翻譯「—」、語音辨識「—」，再加檔名解析那格（夾具 `parse-only`）。如果要把兩條字幕線藏起來，是另一個設計決定。
+- **UX 對照：** 1440／390 實機截圖（gallery 夾具＋ `/activity` 實頁 stub API）。第三格的順序、文字、樣式跟語音辨識那格一致；手機直排在第三行，對照 `VIUSX` 節點結構。既有差異（非本單）：設計稿標籤和數值同一行、實作是標籤在上；設計稿寫「快取省下」、實作是「快取估算省下」——兩者都是 sub-7-6c 就有的。
+
 ### File List
+
+- apps/web/src/services/subtitleSpendService.ts
+- apps/web/src/services/subtitleSpendService.spec.ts
+- apps/web/src/components/activity/SpendSection.tsx
+- apps/web/src/components/activity/SpendSection.spec.tsx
+- apps/web/src/components/activity/ActivityHub.spec.tsx
+- apps/web/src/components/homepage/HomeReadoutBand.tsx
+- apps/web/src/components/homepage/HomeReadoutBand.spec.tsx
+- apps/web/src/routes/test/-gallery.fixtures.tsx
+- tests/visual/components.visual.spec.ts-snapshots/components/activity-spend-card/month-end/default-visual-darwin.png（重產）
+- tests/visual/components.visual.spec.ts-snapshots/components/activity-spend-card/month-end-mobile/default-visual-darwin.png（重產）
+- tests/visual/components.visual.spec.ts-snapshots/components/activity-spend-card/parse-only/default-visual-darwin.png（新增）
+- tests/visual/components.visual.spec.ts-snapshots/components/activity-spend-card/month-end/default-visual-linux.png（git rm，交給 CI bootstrap）
+- tests/visual/components.visual.spec.ts-snapshots/components/activity-spend-card/month-end-mobile/default-visual-linux.png（git rm，交給 CI bootstrap）
+- _bmad-output/implementation-artifacts/backlog-ai-parse-reads-env-keys-only-b.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml

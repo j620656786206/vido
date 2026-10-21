@@ -19,6 +19,8 @@ const WIRE = {
   cache_hit_cues: 0,
   cache_measured_runs: 0,
   cache_saved_usd_estimate: null,
+  parse_calls: 37,
+  parse_usd: 0.18,
   by_model: [{ model_id: 'claude-sonnet-5', runs: 9, usd: 4.2 }],
   by_batch: {
     batch_id: 'gb-1',
@@ -55,6 +57,29 @@ describe('subtitleSpendService (GET /subtitles/spend — sub-7-6b [@contract-v1]
     expect(out.byModel[0]).toEqual({ modelId: 'claude-sonnet-5', runs: 9, usd: 4.2 });
     expect(out.byBatch?.cueCount).toBe(844);
     expect(out.byBatch?.cacheHitCues).toBe(101);
+  });
+
+  it('maps parse_calls / parse_usd (filename parsing spend)', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: WIRE }),
+    });
+    const out = await subtitleSpendService.getMonthSummary();
+    expect(out.parseCalls).toBe(37);
+    expect(out.parseUsd).toBe(0.18);
+  });
+
+  it('an older API without parse_calls / parse_usd reads as 0, not undefined', async () => {
+    const { parse_calls: _calls, parse_usd: _usd, ...older } = WIRE;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: older }),
+    });
+    const out = await subtitleSpendService.getMonthSummary();
+    expect(out.parseCalls).toBe(0);
+    expect(out.parseUsd).toBe(0);
   });
 
   it('adds batch_id when a batch receipt is wanted', async () => {

@@ -1013,7 +1013,10 @@ const batchFxItem = (i: number, status: string, reason = '') => ({
  * `from` — the SERVER's month — so these fixtures never touch the wall clock
  * (Rule 23): `month-end` is the full K5 ledger, `month-start` a fresh month with
  * one lane, nothing measured yet (the 「—」 honesty rule, AC #4) and a runtime
- * that had to be assumed (the ≈).
+ * that had to be assumed (the ≈). `month-end` also carries the design's
+ * 檔名解析 cell (37 次 · $0.18, K5-D-v2 n64lI); `month-start` made no parse
+ * calls, so the cell is absent there; `parse-only` is a month where filename
+ * parsing was the only spend (backlog-ai-parse-reads-env-keys-only-b).
  */
 const SPEND_FX_MONTH_END = {
   period: 'month',
@@ -1036,6 +1039,8 @@ const SPEND_FX_MONTH_END = {
     { modelId: 'claude-sonnet-5', runs: 9, usd: 4.2 },
     { modelId: 'claude-haiku-4-5', runs: 5, usd: 1.18 },
   ],
+  parseCalls: 37,
+  parseUsd: 0.18,
 };
 const SPEND_FX_MONTH_START = {
   ...SPEND_FX_MONTH_END,
@@ -1053,6 +1058,23 @@ const SPEND_FX_MONTH_START = {
   cacheMeasuredRuns: 0,
   cacheSavedUsdEstimate: null,
   byModel: [{ modelId: 'claude-sonnet-5', runs: 1, usd: 0.29 }],
+  parseCalls: 0,
+  parseUsd: 0,
+};
+const SPEND_FX_PARSE_ONLY = {
+  ...SPEND_FX_MONTH_END,
+  translatedRuns: 0,
+  translatedUsd: 0,
+  asrRuns: 0,
+  asrUsd: 0,
+  skippedDeliverCount: 0,
+  skippedSavedUsdEstimate: 0,
+  cacheHitCues: 0,
+  cacheMeasuredRuns: 0,
+  cacheSavedUsdEstimate: null,
+  byModel: [],
+  parseCalls: 37,
+  parseUsd: 0.18,
 };
 
 /**
@@ -7191,7 +7213,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   // --- sub-7-6c 本月 AI 花費 (Screen K5-D-v2 xgYKA / K5-M-v2 ptNai) ---
   {
     id: 'activity-spend-card/month-end',
-    label: 'activity/SpendCard (本月 AI 花費 — 月底：兩條付費線、略過與快取估算、依模型)',
+    label:
+      'activity/SpendCard (本月 AI 花費 — 月底：翻譯、語音辨識、檔名解析、略過與快取估算、依模型)',
     component: SpendCard,
     props: { summary: SPEND_FX_MONTH_END },
     penNode: 'screen-section', // Screen K5-D-v2 (xgYKA) — sec-本月AI花費
@@ -7205,6 +7228,16 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: SpendCard,
     props: { summary: SPEND_FX_MONTH_START },
     penNode: 'screen-section', // Screen K5-D-v2 (xgYKA) — honesty-rule variant (AC #4)
+    statesOnly: ['default'],
+    width: 896,
+  },
+  {
+    id: 'activity-spend-card/parse-only',
+    label:
+      'activity/SpendCard (本月 AI 花費 — 只有檔名解析花了錢：翻譯／語音辨識「—」、檔名解析 37 次)',
+    component: SpendCard,
+    props: { summary: SPEND_FX_PARSE_ONLY },
+    penNode: 'screen-section', // Screen K5-D-v2 (xgYKA) — grp-檔名解析 n64lI, parse-only month
     statesOnly: ['default'],
     width: 896,
   },

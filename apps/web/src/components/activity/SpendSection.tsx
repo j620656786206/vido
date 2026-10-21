@@ -17,6 +17,11 @@
  *  - completed runs with no recorded amount and pre-ledger rows are listed in a
  *    footnote, kept out of the lane totals, so the headline never claims money
  *    nobody counted.
+ *  - 檔名解析 (backlog-ai-parse-reads-env-keys-only-b, ⚖️ Sally 2026-10-21) is
+ *    a third headline cell drawn ONLY when the month made parse calls — no
+ *    「—」: the two subtitle lanes always exist, parsing happens only with a
+ *    key and an unreadable filename, so a standing 「檔名解析 —」 would confuse.
+ *    It stays out of 依模型, which counts subtitle runs.
  *
  * The month label comes from the response's own `from`, not the browser clock:
  * the server defines the month it aggregated (its zone), and a wall-clock read
@@ -46,7 +51,9 @@ export function spendHasContent(summary: SubtitleSpendSummary): boolean {
     summary.unpricedRuns > 0 ||
     summary.unroutedRuns > 0 ||
     summary.skippedDeliverCount > 0 ||
-    summary.cacheMeasuredRuns > 0
+    summary.cacheMeasuredRuns > 0 ||
+    // A parse-only month spent money too — never hide it.
+    summary.parseCalls > 0
   );
 }
 
@@ -89,7 +96,8 @@ export function SpendCard({ summary }: { summary: SubtitleSpendSummary }) {
       data-testid="activity-spend-card"
       className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
     >
-      {/* Paid lanes — side by side on the desktop (K5-D), stacked on a phone (K5-M). */}
+      {/* Paid lanes — side by side on the desktop (K5-D), stacked on a phone (K5-M);
+          檔名解析 joins as the third cell only in a month that made parse calls. */}
       <dl className="flex flex-col gap-3 sm:flex-row sm:gap-8">
         <LaneStat
           label="翻譯"
@@ -103,6 +111,14 @@ export function SpendCard({ summary }: { summary: SubtitleSpendSummary }) {
           amount={summary.asrUsd}
           testId="activity-spend-asr"
         />
+        {summary.parseCalls > 0 && (
+          <LaneStat
+            label="檔名解析"
+            runs={summary.parseCalls}
+            amount={summary.parseUsd}
+            testId="activity-spend-parse"
+          />
+        )}
       </dl>
 
       {/* What the free lanes avoided. Both are estimates and say so; the

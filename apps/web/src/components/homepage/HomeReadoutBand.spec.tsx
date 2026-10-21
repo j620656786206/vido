@@ -52,6 +52,8 @@ function spendMonth(over: Partial<SubtitleSpendSummary> = {}): SubtitleSpendSumm
     cacheMeasuredRuns: 0,
     cacheSavedUsdEstimate: null,
     byModel: [],
+    parseCalls: 0,
+    parseUsd: 0,
     ...over,
   };
 }
@@ -584,6 +586,61 @@ describe('HomeReadoutBand — 需要注意 reads the month total when no batch i
     mockUseSpend.mockReturnValue(spendResult(undefined, { isError: true }));
     render(<HomeReadoutBand />);
     expect(screen.getByTestId('readout-attention-value')).toHaveTextContent(/^一切正常$/);
+  });
+
+  // backlog-ai-parse-reads-env-keys-only-b: the headline total is what the user
+  // actually spent this month, filename parsing included.
+  it('[P1] the month total includes filename parsing', () => {
+    mockUseHomeSummary.mockReturnValue(
+      result({ data: summary({ attention: { status: 'ok', failedCount: 0 } }) })
+    );
+    // 3.48 + 1.90 + 0.18 = 5.56 → H8-SPEC-v3 folding → $5.6
+    mockUseSpend.mockReturnValue(spendResult(spendMonth({ parseCalls: 37, parseUsd: 0.18 })));
+    render(<HomeReadoutBand />);
+    expect(screen.getByTestId('readout-attention-value')).toHaveTextContent('一切正常 · 本月 $5.6');
+  });
+
+  it('[P1] a parse-only month still shows its total', () => {
+    mockUseHomeSummary.mockReturnValue(
+      result({ data: summary({ attention: { status: 'ok', failedCount: 0 } }) })
+    );
+    mockUseSpend.mockReturnValue(
+      spendResult(
+        spendMonth({
+          translatedRuns: 0,
+          translatedUsd: 0,
+          asrRuns: 0,
+          asrUsd: 0,
+          parseCalls: 37,
+          parseUsd: 0.18,
+        })
+      )
+    );
+    render(<HomeReadoutBand />);
+    expect(screen.getByTestId('readout-attention-value')).toHaveTextContent('一切正常 · 本月 $0.2');
+  });
+
+  it('monthSpendUsd adds parse_usd, and 0 parse calls changes nothing', () => {
+    // 0.1 + 0.2 + 0.3 + 0.07 in doubles drifts; the ledger sum is exact.
+    expect(
+      monthSpendUsd(
+        spendMonth({
+          translatedUsd: 0.1,
+          asrUsd: 0.2,
+          unroutedRuns: 1,
+          unroutedUsd: 0.3,
+          parseCalls: 3,
+          parseUsd: 0.07,
+        })
+      )
+    ).toBe(0.67);
+    expect(monthSpendUsd(spendMonth({ parseCalls: 37, parseUsd: 0.18 }))).toBe(5.56);
+    // Only a measured call counts as "something recorded": 0 calls is still absent.
+    expect(
+      monthSpendUsd(spendMonth({ translatedRuns: 0, asrRuns: 0, parseCalls: 0, parseUsd: 0 }))
+    ).toBeNull();
+    expect(monthSpendUsd(spendMonth({ translatedRuns: 0, asrRuns: 0, parseCalls: 1 }))).toBe(5.38);
+    expect(monthSpendUsd(spendMonth())).toBe(5.38);
   });
 
   it('monthSpendUsd sums the two paid lanes AND the pre-ledger rows exactly (no float drift)', () => {
