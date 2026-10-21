@@ -80,9 +80,12 @@ var ErrPreviewTooSoon = errors.New("model preview: too soon")
 // ErrPreviewUnsupportedModel is returned for a model this deployment cannot run.
 var ErrPreviewUnsupportedModel = errors.New("model preview: unsupported model")
 
-// completerSource is the narrow slice of ClaudeProviderHolder the preview needs.
+// completerSource is the narrow slice of TranslationDispatcher the preview
+// needs: a completer per model, and "does this provider have a key right now"
+// to pick the judge (disc-2026-10-preview-judge-needs-claude).
 type completerSource interface {
 	GetFor(ctx context.Context, model string) (ai.TextCompleter, error)
+	ProviderConfigured(ctx context.Context, provider string) bool
 }
 
 // modelSupport is the narrow slice of ModelCatalogService the preview needs.
@@ -103,7 +106,6 @@ type Service struct {
 	catalog      modelSupport
 	localization localizationReader
 	settings     repository.SettingsRepositoryInterface
-	judgeModel   string
 	now          func() time.Time
 	logger       *slog.Logger
 
@@ -124,7 +126,7 @@ func NewService(completers completerSource, catalog modelSupport, localization l
 	}
 	s := &Service{
 		completers: completers, catalog: catalog, localization: localization, settings: settings,
-		judgeModel: eval.DefaultJudgeModel, now: time.Now,
+		now:      time.Now,
 		logger:   logger.With("service", "model_preview"),
 		lastRun:  map[string]time.Time{},
 		inFlight: map[string]bool{},
@@ -139,15 +141,52 @@ func (s *Service) WithClock(now func() time.Time) *Service {
 	return s
 }
 
+// judgeFor decides who judges a preview, from the keys in force NOW — read
+// through the same dispatcher/resolver the translation uses, so a key saved
+// on the settings page counts on the next call, no restart. The quote
+// (EstimateUSD/BudgetUSD) and the run (realRun) both call it, so the button
+// prices the judge the run will actually use.
+//
+//   - a Claude key → eval.DefaultJudgeModel, as before: the score stays
+//     comparable with the Claude-judged rating table;
+//   - no Claude key, a Gemini key → eval.GeminiFallbackJudgeModel, so a
+//     Gemini-only install can try before it spends;
+//   - neither → ai.ErrAINotConfigured (409 AI_NOT_CONFIGURED).
+func (s *Service) judgeFor(ctx context.Context) (string, error) {
+	if s.completers != nil {
+		for _, judge := range []string{eval.DefaultJudgeModel, eval.GeminiFallbackJudgeModel} {
+			if s.completers.ProviderConfigured(ctx, ai.ProviderOf(judge)) {
+				return judge, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("%w: no Claude or Gemini key for the preview judge", ai.ErrAINotConfigured)
+}
+
+// quoteJudge is judgeFor for the price on the button. With no key at all there
+// is nothing to run (the catalog lists no models), so the quote keeps the
+// historic Claude-judge price instead of failing the model list.
+func (s *Service) quoteJudge(ctx context.Context) string {
+	if judge, err := s.judgeFor(ctx); err == nil {
+		return judge
+	}
+	return eval.DefaultJudgeModel
+}
+
 // EstimateUSD is the figure for the button: PreviewCues through the model plus
-// the judge, from the published per-token rates. 0 when the model is unpriced.
-func (s *Service) EstimateUSD(model string) float64 {
+// the judge this box would use right now, from the published per-token rates.
+// 0 when the model is unpriced.
+func (s *Service) EstimateUSD(ctx context.Context, model string) float64 {
+	return s.estimateUSD(ctx, model, s.quoteJudge(ctx))
+}
+
+func (s *Service) estimateUSD(ctx context.Context, model, judgeModel string) float64 {
 	if !ai.HasPricing(model) {
 		return 0
 	}
 	level := prompts.DefaultLocalizationLevel
 	if s.localization != nil {
-		level = s.localization.Resolve(context.Background()).Level
+		level = s.localization.Resolve(ctx).Level
 	}
 	systemTokens := float64(len(prompts.ComposeInvariantSystemPrompt(level))) / estCharsPerToken
 	batchSize := prompts.SubtitleTranslatorBatchSizeFor(model)
@@ -157,16 +196,21 @@ func (s *Service) EstimateUSD(model string) float64 {
 	p := ai.PricingFor(model)
 	usd := inTokens*p.InputPer1M.InexactFloat64()/1e6 + outTokens*p.OutputPer1M.InexactFloat64()/1e6
 
-	j := ai.PricingFor(s.judgeModel)
+	j := ai.PricingFor(judgeModel)
 	judgeIn := float64(len(eval.JudgeSystemPrompt()))/estCharsPerToken + float64(PreviewCues*estJudgeTokensPerCueIn)
 	judgeOut := float64(PreviewCues * estJudgeTokensPerCueOu)
 	usd += judgeIn*j.InputPer1M.InexactFloat64()/1e6 + judgeOut*j.OutputPer1M.InexactFloat64()/1e6
 	return usd
 }
 
-// BudgetUSD is the ceiling a preview of this model runs under.
-func (s *Service) BudgetUSD(model string) float64 {
-	b := s.EstimateUSD(model) * 3
+// BudgetUSD is the ceiling a preview of this model runs under, with the judge
+// this box would use right now.
+func (s *Service) BudgetUSD(ctx context.Context, model string) float64 {
+	return s.budgetUSD(ctx, model, s.quoteJudge(ctx))
+}
+
+func (s *Service) budgetUSD(ctx context.Context, model, judgeModel string) float64 {
+	b := s.estimateUSD(ctx, model, judgeModel) * 3
 	if b < previewBudgetFloorUSD {
 		b = previewBudgetFloorUSD
 	}
@@ -280,7 +324,13 @@ func (s *Service) realRun(ctx context.Context, model string, cues []eval.Cue) (e
 	if err != nil {
 		return eval.Report{}, err
 	}
-	judge, err := s.completers.GetFor(ctx, s.judgeModel)
+	// Decided once per run and used for the judge, the budget and the report,
+	// so the three can never disagree.
+	judgeModel, err := s.judgeFor(ctx)
+	if err != nil {
+		return eval.Report{}, err
+	}
+	judge, err := s.completers.GetFor(ctx, judgeModel)
 	if err != nil {
 		return eval.Report{}, err
 	}
@@ -288,7 +338,7 @@ func (s *Service) realRun(ctx context.Context, model string, cues []eval.Cue) (e
 	if s.localization != nil {
 		level = s.localization.Resolve(ctx).Level
 	}
-	budget := ai.NewBudget(s.BudgetUSD(model))
+	budget := ai.NewBudget(s.budgetUSD(ctx, model, judgeModel))
 	ctx = ai.WithBudget(ctx, budget)
 	ctx = ai.WithModelID(ctx, model)
 
@@ -321,7 +371,7 @@ func (s *Service) realRun(ctx context.Context, model string, cues []eval.Cue) (e
 
 	return eval.Run(ctx, eval.Options{
 		Cues: cues, Translate: translate, Finalize: finalize,
-		Judge: judge, JudgeModel: s.judgeModel,
+		Judge: judge, JudgeModel: judgeModel,
 		ModelID: model, PromptVersion: prompts.PromptVersionFor(level), LexiconVersion: prompts.LexiconVersion(),
 		// The 20-cue preview sends no name glossary, so it is the v1 exam —
 		// not comparable to a golden-v2 rating (golden-v2-exam-with-name-glossary).

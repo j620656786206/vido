@@ -297,3 +297,33 @@ func TestRun_AlsoJudge_BudgetStopKeepsHeadline(t *testing.T) {
 		t.Fatalf("translate time is its own slice of the run: %v of %v", rep.TranslateMinutes, rep.Minutes)
 	}
 }
+
+// A report judged by Gemini carries the Gemini disclosure, not Claude's.
+func TestRun_JudgeNoteFollowsTheJudge(t *testing.T) {
+	raw := map[string]string{"c1": "嗨，湯姆。", "c2": "再見。", "c3": "軟體壞了。", "c4": "快跑！"}
+	opts := Options{
+		Cues:      sampleCues(),
+		Translate: func(context.Context, []Cue) (map[string]string, error) { return raw, nil },
+		Judge:     judgeAll(2),
+		ModelID:   "m",
+		Now:       fixedNow(),
+	}
+	opts.JudgeModel = GeminiFallbackJudgeModel
+	rep, err := Run(context.Background(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.JudgeModel != GeminiFallbackJudgeModel || !strings.HasPrefix(rep.JudgeNote, "裁判為 Gemini（gemini-3.7-flash）") {
+		t.Fatalf("judge %q note %q", rep.JudgeModel, rep.JudgeNote)
+	}
+
+	opts.JudgeModel = ""
+	opts.Now = fixedNow()
+	rep, err = Run(context.Background(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.JudgeModel != DefaultJudgeModel || rep.JudgeNote != JudgeNote {
+		t.Fatalf("default judge %q note %q", rep.JudgeModel, rep.JudgeNote)
+	}
+}

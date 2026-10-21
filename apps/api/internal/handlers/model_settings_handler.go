@@ -24,7 +24,7 @@ type ModelCatalogReader interface {
 type ModelPreviewer interface {
 	Preview(ctx context.Context, model string) (preview.LocalGrade, error)
 	LocalGrades(ctx context.Context) map[string]preview.LocalGrade
-	EstimateUSD(model string) float64
+	EstimateUSD(ctx context.Context, model string) float64
 }
 
 // ModelSettingsHandler serves the selectable-model list (story sub-6-8a AC #2).
@@ -108,7 +108,7 @@ func (h *ModelSettingsHandler) GetModels(c *gin.Context) {
 				g := g
 				e.LocalGrade = &g
 			}
-			e.PreviewEstimateUSD = h.preview.EstimateUSD(m.ID)
+			e.PreviewEstimateUSD = h.preview.EstimateUSD(ctx, m.ID)
 		}
 		entries = append(entries, e)
 	}
