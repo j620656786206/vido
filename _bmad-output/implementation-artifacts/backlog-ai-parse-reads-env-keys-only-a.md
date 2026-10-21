@@ -1,6 +1,6 @@
 # Backlog -a：AI 檔名解析改讀網頁上填的金鑰，花的錢記下來（後端）
 
-Status: ready-for-dev
+Status: done
 
 **Source:** `backlog-ai-parse-reads-env-keys-only`（2026-10-19 由 disc-2026-10-setup-wizard-byok 建單時查到）。⚖️ 2026-10-21 party mode（founder-pm、founder-growth、BMAD）把它列為「首次安裝修正」第 3 張，Alexyu 選 **A：打開，而且把這筆錢記進花費紀錄**。
 
@@ -108,12 +108,12 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] T1：先寫 AC #7 的測試，看它紅
-- [ ] T2：parse provider holder，每次呼叫解析金鑰，沿用 Governor（AC #1、#2）
-- [ ] T3：`AIService` 一律建立，`main.go` 接線改成呼叫時判斷（AC #3）
-- [ ] T4：migration 047 `ai_side_spend`、repository、AIService 每個呼叫點包 Budget 並寫紀錄（AC #4）
-- [ ] T5：spend API 加 `parse_calls`／`parse_usd`（AC #5）
-- [ ] T6：文件和註解（AC #6），全綠（AC #8），開 PR，合併
+- [x] T1：先寫 AC #7 的測試，看它紅
+- [x] T2：parse provider holder，每次呼叫解析金鑰，沿用 Governor（AC #1、#2）
+- [x] T3：`AIService` 一律建立，`main.go` 接線改成呼叫時判斷（AC #3）
+- [x] T4：migration 047 `ai_side_spend`、repository、AIService 每個呼叫點包 Budget 並寫紀錄（AC #4）
+- [x] T5：spend API 加 `parse_calls`／`parse_usd`（AC #5）
+- [x] T6：文件和註解（AC #6），全綠（AC #8），開 PR，合併
 
 ## Dev Notes
 
@@ -148,13 +148,76 @@ Status: ready-for-dev
 | 日期 | 變更 |
 |---|---|
 | 2026-10-21 | 建單（Bob）。Alexyu 選 A：打開，並記進花費紀錄。拆成 -a 後端、-b 設計稿＋前端。Winston：每次呼叫決定用哪一家、`ai_side_spend` 逐筆記、只記帳不設上限。 |
+| 2026-10-21 | 實作完成（Amelia），PR #890。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia，BMAD dev）
+
 ### Debug Log References
+
+- 開工前實測（main 19ecbf5e 編出的 binary）：
+  - 沒有金鑰時，`/api/v1/health/services` 的 ai 列是 `status: degraded`、`error_count: 1`、`message: "AI provider not configured"`。
+  - 只設 `CLAUDE_API_KEY`、沒設 `AI_PROVIDER` 時，**exit 1**，log 是 `Failed to initialize AI service error="AI_NOT_CONFIGURED: ... GEMINI_API_KEY not configured"`。story 的推論因此實際確認了。
+- 改完後實測：
+  - 沒有金鑰時，ai 列逐字相同；`/subtitles/spend` 回 `parse_calls: 0, parse_usd: 0`。
+  - 只有 Claude 環境變數時，正常開機，log 是 `AI parsing available provider=claude`，health 的 ai 列為 healthy。
+- TDD 紅→綠：
+  - `TestAIParseKeys_*` 共 17 個：先加只夠編譯的空殼，跑起來 15 紅、2 綠（2 綠的是 JSON 欄位名，以及沒有紀錄時回 0／0）。實作後 17 綠。
+  - `TestOrchestrator_Search_UnconfiguredKeywordGenerator…`：1 紅 → 綠。
+  - migration 047 的 4 個、repository 的 3 個：實作前編譯失敗 → 實作後綠。
+  - 自我審查後再加 `ParseProviderHolder` 單元測試 4 個（含 7 個子案例）。
 
 ### Completion Notes List
 
+- 新增 `ParseProviderHolder`（AC #1、#2）：
+  - 每次呼叫都透過 `KeyResolver` 選 provider。指紋是 `provider|key|model`。
+  - 沿用 main.go 的 `aiGovernor`；兩把金鑰都刪掉時清掉快取的 client。
+  - `AI_PROVIDER` 填了不認得的值時，記一行 warn，然後當成 gemini。以前有金鑰時會開不了機。
+- `AIService` 一律建立（AC #3）：
+  - `IsConfigured`／`GetProviderName`／`Ping` 改成每次呼叫時判斷。沒有金鑰時，`Ping` 的訊息跟以前 nil Pingable 的逐字相同。
+  - `NewAIServiceWithProvider` 和零值 `AIService` 的舊行為不變，既有測試不用改。
+- 記帳（AC #4）：三個呼叫點都改走 `meteredParse`。
+  - 用自己的 `ai.NewBudget(0)` 蓋掉 ctx 上原本的 Budget。
+  - `Spent > 0` 就寫 `ai_side_spend`。寫入用 `context.WithoutCancel`，逾時的呼叫也照記。
+  - 寫入失敗只記 warn。
+- migration 047：`created_at` 沒有 default，一律由 app 綁時間，用 sqlite-utc 的格式，避免 `CURRENT_TIMESTAMP` 的短格式跟月份區間比較時出錯。
+- spend API（AC #5）：`SetSideSpend` 接 repository。`parse_usd` 跟其他金額一樣四捨五入到美分。`by_model`／`by_batch` 不變。
+- `KeywordService` 在未設定時跳過（AC #3）：`metadata.Orchestrator` 會檢查 generator 有沒有 `IsConfigured()`，回 false 就整段跳過，不呼叫、不寫 log、不設 KeywordError。
+- 文件（AC #6）：
+  - `ai_service.go` 檔頭、`docs/deployment.md`（沒有 zh-TW 版）、README `AI_PROVIDER` 列。
+  - 順手改了 unraid 安裝指南（中英）、`.env.example`、`unraid-template/vido.xml` 裡 `AI_PROVIDER` 的說明。
+  - `setup_service.go`、`gemini.go`、`ApiKeysStep.spec.tsx` 的註解（斷言不變）。
+- 全綠（AC #8）：
+  - `go test ./...` 43 個 package 全過；`staticcheck`、`go vet` 乾淨。
+  - `web:test` 4869 個全過；`lint:all` 是 0 errors（170 個 warning 原本就有）；`format:check` 通過。
+- 不在範圍：之前「比對失敗」的片不會自動重新解析（Dev Notes 已寫明）。
+
 ### File List
+
+- apps/api/internal/services/parse_provider_holder.go（新）
+- apps/api/internal/services/parse_provider_holder_test.go（新）
+- apps/api/internal/services/ai_parse_key_resolution_integration_test.go（新）
+- apps/api/internal/services/ai_service.go
+- apps/api/internal/services/subtitle_spend_service.go
+- apps/api/internal/services/setup_service.go
+- apps/api/internal/models/ai_side_spend.go（新）
+- apps/api/internal/repository/ai_side_spend_repository.go（新）
+- apps/api/internal/repository/ai_side_spend_repository_test.go（新）
+- apps/api/internal/database/migrations/047_create_ai_side_spend_table.go（新）
+- apps/api/internal/database/migrations/047_create_ai_side_spend_table_test.go（新）
+- apps/api/internal/metadata/orchestrator.go
+- apps/api/internal/metadata/orchestrator_test.go
+- apps/api/internal/handlers/subtitle_spend_handler.go
+- apps/api/internal/ai/gemini.go
+- apps/api/cmd/api/main.go
+- apps/web/src/components/setup/ApiKeysStep.spec.tsx
+- docs/deployment.md
+- docs/unraid-installation-guide.md
+- docs/unraid-installation-guide.zh-TW.md
+- README.md
+- .env.example
+- unraid-template/vido.xml
+- _bmad-output/implementation-artifacts/sprint-status.yaml
