@@ -169,6 +169,8 @@ Or in CI: **Actions → Model Grade → Run workflow**, enter the model id. The 
 
 Only Claude models can be graded today because the translation path only dispatches to Claude. The judge is itself a Claude model, so every rating carries a bias note; the two eval-1 rows (human blind test, 2026-09) stay in the table until a golden run replaces them.
 
+The in-app 「試跑 20 句」 (`internal/preview`) judges the same way, with one difference: it uses the box's own keys, so the judge is `claude-sonnet-5` when a Claude key resolves and `gemini-3.7-flash` (`eval.GeminiFallbackJudgeModel`) on a Gemini-only install. A Gemini-judged score carries its own bias note and is not comparable with the Claude-judged table. `cmd/grade` and `model_ratings.json` always use the Claude judge.
+
 There is deliberately no remote ratings feed: a grade changes when the sample, prompt or model changes, and each of those ships as a release anyway.
 
 ## Configuration

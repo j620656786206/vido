@@ -150,3 +150,28 @@ func TestGenerationCandidates_PacedModelQuotesMoreMinutes(t *testing.T) {
 	wantGap := 9 + 60*(translationTimeShareAnchor-translationTimeShareByModel["claude-sonnet-5"])
 	assert.InDelta(t, wantGap, gemini-claude, 1, "claude %v gemini %v", claude, gemini)
 }
+
+// disc-2026-10-preview-judge-needs-claude: the preview asks "does THIS
+// provider have a key right now" to pick its judge without building a client.
+func TestDispatcher_ProviderConfigured_PerProviderAndHotReloaded(t *testing.T) {
+	ctx := context.Background()
+	geminiOnly := dispatcherWith(EnvKeys{Gemini: "gm"}, 0)
+	assert.False(t, geminiOnly.ProviderConfigured(ctx, ai.ProviderNameClaude))
+	assert.True(t, geminiOnly.ProviderConfigured(ctx, ai.ProviderNameGemini))
+	assert.False(t, geminiOnly.ProviderConfigured(ctx, "mistral"))
+
+	none := dispatcherWith(EnvKeys{}, 0)
+	assert.False(t, none.ProviderConfigured(ctx, ai.ProviderNameClaude))
+	assert.False(t, none.ProviderConfigured(ctx, ai.ProviderNameGemini))
+
+	noGeminiBuild := NewTranslationDispatcher(NewClaudeProviderHolder(NewKeyResolver(&fakeSecrets{}, EnvKeys{Claude: "sk-ant", Gemini: "gm"}, nil), "", nil), nil)
+	assert.True(t, noGeminiBuild.ProviderConfigured(ctx, ai.ProviderNameClaude))
+	assert.False(t, noGeminiBuild.ProviderConfigured(ctx, ai.ProviderNameGemini), "a build without Gemini cannot serve it")
+
+	secrets := &fakeSecrets{}
+	resolver := NewKeyResolver(secrets, EnvKeys{Gemini: "gm"}, nil)
+	d := NewTranslationDispatcher(NewClaudeProviderHolder(resolver, "", nil), NewGeminiProviderHolder(resolver, 0, nil, nil))
+	require.False(t, d.ProviderConfigured(ctx, ai.ProviderNameClaude))
+	require.NoError(t, secrets.Store(ctx, SecretNameClaude, "sk-ant-saved-later"))
+	assert.True(t, d.ProviderConfigured(ctx, ai.ProviderNameClaude), "a key saved on the settings page counts on the next call")
+}

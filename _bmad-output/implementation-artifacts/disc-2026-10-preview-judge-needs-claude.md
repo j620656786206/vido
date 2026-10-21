@@ -1,6 +1,6 @@
 # Disc：只填 Gemini 金鑰時，「試跑 20 句」一定失敗，畫面還說「尚未設定翻譯服務金鑰」
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 2026-10-14 gemini-translation-dispatch CR（Fable M2）填的 Rule 24 lane ③。⚖️ 2026-10-21 party mode（founder-pm、founder-growth、BMAD）盤點「新使用者第一次裝就會撞到的問題」，Alexyu 選 A「首次安裝修正」，本單是第 2 張（原列表的第 3 個；第 2 個「.ts／.mov 掃不到」Alexyu 說之後再做）。
 
@@ -64,12 +64,12 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] T1：先寫 AC #5 的測試，看它紅
-- [ ] T2：做一個決定裁判的函式，試跑和報價共用（AC #1、#3）
-- [ ] T3：`realRun` 和 `eval.Run` 傳實際的裁判（AC #2）
-- [ ] T4：`JudgeNoteFor`（AC #4）
-- [ ] T5：附帶立案、補註解（AC #7、#8）
-- [ ] T6：全綠（AC #6），開 PR，合併
+- [x] T1：先寫 AC #5 的測試，看它紅
+- [x] T2：做一個決定裁判的函式，試跑和報價共用（AC #1、#3）
+- [x] T3：`realRun` 和 `eval.Run` 傳實際的裁判（AC #2）
+- [x] T4：`JudgeNoteFor`（AC #4）
+- [x] T5：附帶立案、補註解（AC #7、#8）
+- [x] T6：全綠（AC #6），開 PR，合併
 
 ## Dev Notes
 
@@ -103,13 +103,41 @@ Status: ready-for-dev
 | 日期 | 變更 |
 |---|---|
 | 2026-10-21 | 建單（Bob）。裁定：裁判改成「有 Claude 用 Claude，沒有就用 gemini-3.7-flash」，畫面不改；標出裁判另外立案給 Sally。 |
+| 2026-10-21 | 完成（Amelia）。裁判每次試跑依當下金鑰決定；報價、預算、報告共用同一個決定函式；JudgeNoteFor 的 Claude 版逐字不變。 |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5.5（Amelia，BMAD dev）
+
 ### Debug Log References
+
+- 紅燈（先寫測試、加只有簽章的 stub 保留舊行為）：`TestPreview_GeminiOnlyInstall_JudgedByGemini` 失敗訊息就是使用者看到的那個——`AI_NOT_CONFIGURED: ... no Claude API key configured`。另外紅：`TestPreview_ClaudeKeySavedLater_NextPreviewJudgedByClaude`、`TestEstimateAndBudget_GeminiJudgePricesTheButton`（兩種報價一樣）、`TestJudgeNoteFor`、`TestRun_JudgeNoteFollowsTheJudge`、`TestDispatcher_ProviderConfigured_PerProviderAndHotReloaded`，共 6 條。`TestPreview_ClaudeKeyPresent_JudgeStaysClaude`、`TestPreview_NoKeys_NotConfigured` 在舊程式就綠（防退化用）。
+- 綠燈：上面 8 條全綠；`go test ./...`（apps/api）全綠、`staticcheck ./...`、`go vet ./...` 無輸出；`pnpm nx run web:test` 298/298 檔綠；`ModelPicker.spec.tsx`＋`useModelPreview.spec.ts` 19/19。
 
 ### Completion Notes List
 
+- **決定裁判只有一個函式**：`preview.Service.judgeFor(ctx)`。依序問 dispatcher「Claude 有沒有金鑰」「Gemini 有沒有金鑰」（新方法 `TranslationDispatcher.ProviderConfigured`，走跟翻譯一樣的 KeyResolver，網頁存的和環境變數都算，每次呼叫重讀），回 `claude-sonnet-5`／`gemini-3.7-flash`／`ErrAINotConfigured`。沒有用「先 GetFor 失敗再退」：報價不該為了算錢去建 client，而兩邊共用同一個函式是 AC #3 的要求。
+- **試跑**：`realRun` 一開始決定一次裁判，同一個值拿去取 completer、算預算、傳給 `eval.Run`，三者不會不一致。`LocalGrade.JudgeModel` 因此存的是實際裁判。
+- **報價**：`EstimateUSD`／`BudgetUSD` 加 ctx 參數（handler 介面與 stub 跟著改），用 `quoteJudge` = `judgeFor`，兩個金鑰都沒有時沿用 Claude 價（此時模型清單本來就是空的，不會顯示按鈕）。順手把報價裡讀在地化等級的 `context.Background()` 換成真的 ctx。
+- **偏誤說明**：`eval.JudgeNoteFor(judgeModel)`；Gemini 裁判出 Gemini 版文字，其他（Claude、空字串）回原本的 `JudgeNote` 常數，逐字不變。`eval.Run` 改用它。`cmd/grade` 預設 `--judge-model` 仍是 Claude，`--no-judge` 時 JudgeModel 為空也回原文字，行為不變。
+- `eval.GeminiFallbackJudgeModel = "gemini-3.7-flash"` 放在 eval（跟 `DefaultJudgeModel` 同處），註解寫明為什麼選它。
+- `docs/development.md` 的評分段落補一句：試跑在只有 Gemini 時用 Gemini 當裁判、分數不能跟等級表直接比；`cmd/grade` 仍固定 Claude 裁判。
+- 沒驗到的事：真的用 Gemini 當裁判打一次分（要真金鑰、真的錢）。合併部署後，經 Alexyu 同意，在只留 Gemini 金鑰的機器按一次試跑確認。風險點：Gemini 是會「思考」的模型，裁判回覆上限 4096 token；思考吃掉太多時會回 `ErrAIResponseTruncated`。既有的 `eval.Run` 會把裁判失敗的句子記成「未評、0 分」（`Report.Unjudged`），但 `LocalGrade` 沒帶這個數字，畫面會看到偏高的「不能用」比例。這是原本就有的行為（Claude 裁判也一樣），本單不改；寫在 PR 的「沒做的事」。
+
 ### File List
+
+- apps/api/internal/eval/judge.go
+- apps/api/internal/eval/judge_test.go
+- apps/api/internal/eval/run.go
+- apps/api/internal/eval/run_test.go
+- apps/api/internal/preview/service.go
+- apps/api/internal/preview/service_test.go
+- apps/api/internal/services/translation_dispatcher.go
+- apps/api/internal/services/translation_dispatcher_test.go
+- apps/api/internal/handlers/model_settings_handler.go
+- apps/api/internal/handlers/model_settings_handler_test.go
+- docs/development.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/implementation-artifacts/disc-2026-10-preview-judge-needs-claude.md

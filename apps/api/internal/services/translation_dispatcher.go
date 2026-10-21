@@ -179,6 +179,21 @@ func (d *TranslationDispatcher) IsConfigured(ctx context.Context) bool {
 	return (d.claude != nil && d.claude.IsConfigured(ctx)) || (d.gemini != nil && d.gemini.IsConfigured(ctx))
 }
 
+// ProviderConfigured reports whether ONE provider (ai.ProviderNameClaude /
+// ai.ProviderNameGemini) has a key right now — saved on the settings page or
+// in the environment, read per call through the same resolver GetFor uses.
+// It builds no client. The 「試跑 20 句」 judge choice reads it
+// (disc-2026-10-preview-judge-needs-claude).
+func (d *TranslationDispatcher) ProviderConfigured(ctx context.Context, provider string) bool {
+	switch provider {
+	case ai.ProviderNameClaude:
+		return d.claude != nil && d.claude.IsConfigured(ctx)
+	case ai.ProviderNameGemini:
+		return d.gemini != nil && d.gemini.IsConfigured(ctx)
+	}
+	return false
+}
+
 // GetFor returns the completer for model ("" = EffectiveModel).
 func (d *TranslationDispatcher) GetFor(ctx context.Context, model string) (ai.TextCompleter, error) {
 	if model == "" {

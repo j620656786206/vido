@@ -84,3 +84,26 @@ func TestJudgeSystemPrompt_IsStableRubric(t *testing.T) {
 		t.Errorf("bump JudgeVersion only with a rubric change")
 	}
 }
+
+// disc-2026-10-preview-judge-needs-claude AC #4: the disclosure follows the
+// judge, and the Claude wording every existing report and the CI rating feed
+// carry does not move by a single character.
+func TestJudgeNoteFor(t *testing.T) {
+	const claudeVerbatim = "裁判為 Claude（claude-sonnet-5），評 Claude 模型時有自評偏誤；人評校準落地前，分數宜打折看。"
+	if got := JudgeNoteFor(DefaultJudgeModel); got != claudeVerbatim {
+		t.Fatalf("Claude judge note changed:\n got %q\nwant %q", got, claudeVerbatim)
+	}
+	if JudgeNote != claudeVerbatim {
+		t.Fatalf("JudgeNote constant changed: %q", JudgeNote)
+	}
+	if got := JudgeNoteFor(""); got != claudeVerbatim {
+		t.Fatalf("an unnamed judge keeps the historic note, got %q", got)
+	}
+	const geminiWant = "裁判為 Gemini（gemini-3.7-flash），評 Gemini 模型時有自評偏誤；分數跟模型等級表（Claude 裁判）不能直接比。"
+	if got := JudgeNoteFor(GeminiFallbackJudgeModel); got != geminiWant {
+		t.Fatalf("Gemini judge note:\n got %q\nwant %q", got, geminiWant)
+	}
+	if GeminiFallbackJudgeModel != "gemini-3.7-flash" {
+		t.Fatalf("fallback judge is %q", GeminiFallbackJudgeModel)
+	}
+}

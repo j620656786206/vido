@@ -22,8 +22,31 @@ const DefaultJudgeModel = "claude-sonnet-5"
 // well inside one response while amortising the rubric over the batch.
 const JudgeBatchSize = 20
 
-// JudgeNote is the bias disclosure every report and rating carries (AC #3).
+// GeminiFallbackJudgeModel judges a box's 「試跑 20 句」 when it has NO Claude
+// key (disc-2026-10-preview-judge-needs-claude). Setup asks for Claude OR
+// Gemini, so a Gemini-only install is normal; without a fallback its preview
+// always failed with "no key". It is the newest balanced-tier Gemini in the
+// catalog — the closest Gemini reader to Sonnet — rather than the cheap
+// flash-lite the box translates with, so it is not grading its own sibling by
+// default. Model ratings (cmd/grade, model_ratings.json) stay Claude-judged;
+// only the per-box preview falls back.
+const GeminiFallbackJudgeModel = "gemini-3.7-flash"
+
+// JudgeNote is the bias disclosure every Claude-judged report and rating
+// carries (AC #3). model_ratings.json and the CI grade feed read it verbatim —
+// do not reword it.
 const JudgeNote = "裁判為 Claude（" + DefaultJudgeModel + "），評 Claude 模型時有自評偏誤；人評校準落地前，分數宜打折看。"
+
+// JudgeNoteFor is the disclosure for the judge that actually scored the
+// report. A Gemini judge says so, and that its scores do not line up with the
+// Claude-judged rating table; anything else (Claude, or unnamed) keeps the
+// historic JudgeNote word for word.
+func JudgeNoteFor(judgeModel string) string {
+	if ai.ProviderOf(judgeModel) == ai.ProviderNameGemini {
+		return "裁判為 Gemini（" + judgeModel + "），評 Gemini 模型時有自評偏誤；分數跟模型等級表（Claude 裁判）不能直接比。"
+	}
+	return JudgeNote
+}
 
 // JudgeItem is one cue as the judge sees it.
 type JudgeItem struct {

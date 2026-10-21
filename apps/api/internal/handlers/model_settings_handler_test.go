@@ -107,7 +107,9 @@ func (s *stubPreviewer) Preview(_ context.Context, model string) (preview.LocalG
 	return preview.LocalGrade{ModelID: model, Cues: 20, ZeroRate: 0.05, NaturalRate: 0.7, CostUSD: 0.0123, JudgeModel: "claude-sonnet-5"}, nil
 }
 func (s *stubPreviewer) LocalGrades(context.Context) map[string]preview.LocalGrade { return s.grades }
-func (s *stubPreviewer) EstimateUSD(model string) float64                          { return s.estimate[model] }
+func (s *stubPreviewer) EstimateUSD(_ context.Context, model string) float64 {
+	return s.estimate[model]
+}
 
 func previewRouter(catalog ModelCatalogReader, p ModelPreviewer) *gin.Engine {
 	gin.SetMode(gin.TestMode)

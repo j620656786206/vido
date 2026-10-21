@@ -158,12 +158,13 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 	rep := Report{
 		ModelID: opts.ModelID, SampleVersion: sampleVersion(opts.SampleVersion),
 		PromptVersion: opts.PromptVersion, LexiconVersion: opts.LexiconVersion, GlossaryVersion: opts.GlossaryVersion,
-		JudgeModel: opts.JudgeModel, JudgeVersion: JudgeVersion, JudgeNote: JudgeNote,
+		JudgeModel: opts.JudgeModel, JudgeVersion: JudgeVersion,
 		Cues: len(opts.Cues), RuleFailsByReason: map[string]int{},
 	}
 	if rep.JudgeModel == "" && opts.Judge != nil {
 		rep.JudgeModel = DefaultJudgeModel
 	}
+	rep.JudgeNote = JudgeNoteFor(rep.JudgeModel)
 
 	translateStarted := now()
 	raw, terr := opts.Translate(ctx, opts.Cues)
