@@ -246848,6 +246848,37 @@
                                       "fontWeight": "600"
                                     }
                                   ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "n64lI",
+                                  "name": "grp-檔名解析",
+                                  "gap": "$Space/sm",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "P0zNh7",
+                                      "name": "lab-檔名解析",
+                                      "fill": "$text-secondary",
+                                      "content": "檔名解析",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "lVds7",
+                                      "name": "val-檔名解析",
+                                      "fill": "$text-primary",
+                                      "content": "37 次 · $0.18",
+                                      "lineHeight": "$Type/BodyLg/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/BodyLg/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
                                 }
                               ]
                             },
@@ -248477,6 +248508,37 @@
                                       "name": "val-語音辨識",
                                       "fill": "$text-primary",
                                       "content": "2 次 · $1.90",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Z4ZUhQ",
+                                  "name": "grp-檔名解析",
+                                  "gap": "$Space/sm",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "b8R4Jv",
+                                      "name": "lab-檔名解析",
+                                      "fill": "$text-secondary",
+                                      "content": "檔名解析",
+                                      "lineHeight": "$Type/Body/Line",
+                                      "fontFamily": "$Type/Family/Primary",
+                                      "fontSize": "$Type/Body/Size",
+                                      "fontWeight": "$Type/Body/Weight"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "U4t0w",
+                                      "name": "val-檔名解析",
+                                      "fill": "$text-primary",
+                                      "content": "37 次 · $0.18",
                                       "lineHeight": "$Type/Body/Line",
                                       "fontFamily": "$Type/Family/Primary",
                                       "fontSize": "$Type/Body/Size",
