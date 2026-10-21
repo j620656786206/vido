@@ -1,6 +1,6 @@
 # Backlog -b：「本月 AI 花費」和首頁「本月 $x」把檔名解析花的錢算進去（設計稿＋前端）
 
-Status: blocked
+Status: ready-for-dev
 
 **Source:** 從 `backlog-ai-parse-reads-env-keys-only` 拆出來，見 -a 的拆單說明。⚖️ Alexyu 2026-10-21 選 A：AI 檔名解析打開，花的錢要記進花費紀錄。-a 負責把錢逐筆記下來，並在 `/subtitles/spend` 回傳 `parse_calls`、`parse_usd`；本單負責讓使用者看得到。
 
@@ -62,8 +62,8 @@ Status: blocked
 
 ### 設計稿 / Design ref
 
-- K5-D-v2 `xgYKA`：卡片 `m9wRx`、`row-用量` `hbiao`、範本格 `grp-語音辨識` `ie9uz`。
-- K5-M-v2 `ptNai`：卡片 `D847yg`、`row-用量` `VIUSX`（直排）、範本格 `grp-語音辨識` `jcUSq`。
+- K5-D-v2 `xgYKA`：卡片 `m9wRx`、`row-用量` `hbiao`、範本格 `grp-語音辨識` `ie9uz`、新格 `grp-檔名解析` `n64lI`。
+- K5-M-v2 `ptNai`：卡片 `D847yg`、`row-用量` `VIUSX`（直排）、範本格 `grp-語音辨識` `jcUSq`、新格 `grp-檔名解析` `Z4ZUhQ`。
 
 ### Pen 提示詞（Alexyu 貼給 Pen 的 Inline AI Agent）
 
@@ -93,6 +93,7 @@ Status: blocked
 | 日期 | 變更 |
 |---|---|
 | 2026-10-21 | 建單（Bob）。Sally 裁定：K5 頭條加第三格「檔名解析」，有呼叫才顯示；不進「依模型」；首頁總額算進去。等設計稿和 -a。 |
+| 2026-10-22 | 解除 blocked → ready-for-dev：-a 已合併（#890）；Alexyu 跑完 Pen，K5-D-v2 加 `grp-檔名解析` `n64lI`（`lab-檔名解析` `P0zNh7`、`val-檔名解析` `lVds7`），K5-M-v2 加 `Z4ZUhQ`（`b8R4Jv`、`U4t0w`）；Sally MCP 唯讀複審字與樣式 token 跟語音辨識那格一致。截圖 `k5-d.png` 隨設計稿 PR 提交；`k5-m.png` 不變（手機稿卡片本來就在摺線下，畫面外）。 |
 
 ## Dev Agent Record
 
