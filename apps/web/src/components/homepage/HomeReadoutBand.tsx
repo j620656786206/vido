@@ -99,14 +99,18 @@ type AttentionReadout =
     };
 
 /**
- * This month's total from the ledger (sub-7-6b): the two paid lanes plus the
- * pre-ledger rows — all real money, summed exactly. null = nothing recorded
- * this month (absent ≠ $0), or no summary yet.
+ * This month's total from the ledger (sub-7-6b): the two paid lanes, the
+ * pre-ledger rows and filename parsing (backlog-ai-parse-reads-env-keys-only-b)
+ * — all real money, summed exactly, so the total is what the user actually
+ * spent. null = nothing recorded this month (absent ≠ $0), or no summary yet;
+ * 0 parse calls is still "nothing recorded".
  */
 export function monthSpendUsd(summary: SubtitleSpendSummary | undefined): number | null {
   if (!summary) return null;
-  if (summary.translatedRuns + summary.asrRuns + summary.unroutedRuns === 0) return null;
-  return sumUsd([summary.translatedUsd, summary.asrUsd, summary.unroutedUsd]);
+  const recorded =
+    summary.translatedRuns + summary.asrRuns + summary.unroutedRuns + summary.parseCalls;
+  if (recorded === 0) return null;
+  return sumUsd([summary.translatedUsd, summary.asrUsd, summary.unroutedUsd, summary.parseUsd]);
 }
 
 /**

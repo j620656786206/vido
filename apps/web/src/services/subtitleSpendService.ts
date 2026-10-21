@@ -13,6 +13,11 @@
  *  - `skippedSavedRuntimeAssumed`: at least one skipped item's length was a
  *    guess, so that saving wears `≈` — the ONE meaning of ≈ in this product
  *    (lib/currency.ts usdWithEstimate).
+ *  - `parseCalls` / `parseUsd` (backlog-ai-parse-reads-env-keys-only-a/-b):
+ *    paid AI calls made OUTSIDE subtitle runs — filename parsing, fansub
+ *    parsing and keyword generation together. Not part of `byModel` (that
+ *    table counts subtitle runs). An older API that predates the two fields
+ *    reads as 0 calls, not undefined.
  */
 import { snakeToCamel } from '../utils/caseTransform';
 
@@ -64,6 +69,10 @@ export interface SubtitleSpendSummary {
   cacheSavedUsdEstimate: number | null;
   byModel: SpendByModel[];
   byBatch?: SubtitleBatchReceipt;
+  /** Paid filename-parsing AI calls this month (0 when none, or an older API). */
+  parseCalls: number;
+  /** What those calls cost, USD. */
+  parseUsd: number;
 }
 
 interface ApiResponse<T> {
@@ -97,7 +106,13 @@ export const subtitleSpendService = {
   async getMonthSummary(batchId?: string): Promise<SubtitleSpendSummary> {
     const params = new URLSearchParams({ period: 'month' });
     if (batchId) params.set('batch_id', batchId);
-    return fetchApi<SubtitleSpendSummary>(`/subtitles/spend?${params.toString()}`);
+    const summary = await fetchApi<
+      Omit<SubtitleSpendSummary, 'parseCalls' | 'parseUsd'> &
+        Partial<Pick<SubtitleSpendSummary, 'parseCalls' | 'parseUsd'>>
+    >(`/subtitles/spend?${params.toString()}`);
+    // An API older than backlog-ai-parse-reads-env-keys-only-a omits the two
+    // parse fields: that is "no parse calls recorded", i.e. 0.
+    return { ...summary, parseCalls: summary.parseCalls ?? 0, parseUsd: summary.parseUsd ?? 0 };
   },
 };
 

@@ -79,6 +79,8 @@ function spendMonth(over: Partial<SubtitleSpendSummary> = {}): SubtitleSpendSumm
     cacheMeasuredRuns: 12,
     cacheSavedUsdEstimate: 0.31,
     byModel: [{ modelId: 'claude-sonnet-5', runs: 9, usd: 4.2 }],
+    parseCalls: 0,
+    parseUsd: 0,
     ...over,
   };
 }

@@ -27,6 +27,8 @@ function month(over: Partial<SubtitleSpendSummary> = {}): SubtitleSpendSummary {
       { modelId: 'claude-sonnet-5', runs: 9, usd: 4.2 },
       { modelId: 'claude-haiku-4-5', runs: 5, usd: 1.18 },
     ],
+    parseCalls: 0,
+    parseUsd: 0,
     ...over,
   };
 }
@@ -101,6 +103,70 @@ describe('SpendCard — 本月 AI 花費 (sub-7-6c AC #1/#4, K5-D xgYKA)', () =>
     render(<SpendCard summary={month({ byModel: [] })} />);
     expect(screen.queryByTestId('activity-spend-by-model')).toBeNull();
     expect(screen.queryByText('依模型')).toBeNull();
+  });
+});
+
+// backlog-ai-parse-reads-env-keys-only-b (⚖️ Sally 2026-10-21): a third headline
+// cell 「檔名解析」 — drawn only when the month made parse calls, never 「—」, and
+// never mixed into 依模型 (that table counts subtitle runs).
+describe('SpendCard — 檔名解析 (K5-D-v2 n64lI / K5-M-v2 Z4ZUhQ)', () => {
+  /** A month where nothing but filename parsing spent money. */
+  const parseOnly = (): SubtitleSpendSummary =>
+    month({
+      translatedRuns: 0,
+      translatedUsd: 0,
+      asrRuns: 0,
+      asrUsd: 0,
+      skippedDeliverCount: 0,
+      skippedSavedUsdEstimate: 0,
+      cacheHitCues: 0,
+      cacheMeasuredRuns: 0,
+      cacheSavedUsdEstimate: null,
+      byModel: [],
+      parseCalls: 37,
+      parseUsd: 0.18,
+    });
+
+  it('[P1] parse + subtitle runs: the third cell sits after 語音辨識, kept out of 依模型', () => {
+    render(<SpendCard summary={month({ parseCalls: 37, parseUsd: 0.18 })} />);
+    const cell = screen.getByTestId('activity-spend-parse');
+    expect(cell).toHaveTextContent('檔名解析');
+    expect(cell).toHaveTextContent('37 次 · $0.18');
+    // Order in the headline row: 翻譯, 語音辨識, 檔名解析.
+    const lanes = Array.from(cell.parentElement?.children ?? []).map((el) =>
+      el.getAttribute('data-testid')
+    );
+    expect(lanes).toEqual([
+      'activity-spend-translated',
+      'activity-spend-asr',
+      'activity-spend-parse',
+    ]);
+    // 依模型 still counts subtitle runs only — the two model rows, nothing added.
+    const rows = screen.getAllByTestId('activity-spend-model-row');
+    expect(rows).toHaveLength(2);
+    expect(screen.getByTestId('activity-spend-by-model')).not.toHaveTextContent('37 次');
+  });
+
+  it('[P1] parse only: the cell shows; the subtitle lanes keep their 「—」', () => {
+    render(<SpendCard summary={parseOnly()} />);
+    expect(screen.getByTestId('activity-spend-parse')).toHaveTextContent('37 次 · $0.18');
+    expect(screen.getByTestId('activity-spend-translated')).toHaveTextContent(/—$/);
+    expect(screen.getByTestId('activity-spend-asr')).toHaveTextContent(/—$/);
+    expect(screen.queryByTestId('activity-spend-by-model')).toBeNull();
+  });
+
+  it('[P1] 0 parse calls: no cell at all — not 「檔名解析 —」', () => {
+    render(<SpendCard summary={month()} />);
+    expect(screen.queryByTestId('activity-spend-parse')).toBeNull();
+    expect(screen.queryByText('檔名解析')).toBeNull();
+  });
+
+  it('[P1] the section appears for a parse-only month — money spent is never hidden', () => {
+    expect(spendHasContent(parseOnly())).toBe(true);
+    expect(spendHasContent({ ...parseOnly(), parseCalls: 0, parseUsd: 0 })).toBe(false);
+    render(<SpendSectionView summary={parseOnly()} failed={false} onRetry={vi.fn()} />);
+    expect(screen.getByTestId('activity-spend-card')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-spend-parse')).toHaveTextContent('檔名解析');
   });
 });
 
