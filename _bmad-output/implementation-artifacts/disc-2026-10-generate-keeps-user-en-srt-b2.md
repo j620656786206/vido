@@ -1,6 +1,6 @@
 # Disc（後端）：影片旁邊的英文字幕對得上，就直接拿來翻，不再花錢聽寫
 
-Status: review（AC #0 考完，Alexyu 裁定 A；AC #8 正式機驗證要等合併、部署後做）
+Status: done
 
 **Source：** 傘狀單 `disc-2026-10-generate-keeps-user-en-srt-b` 拆出的第二張。
 - `-b1`（#868）做好了檢查器 `internal/subtitle/sidecarcheck`，這張把它接進路由和估價。
@@ -133,4 +133,17 @@ Status: review（AC #0 考完，Alexyu 裁定 A；AC #8 正式機驗證要等合
   - 風險移到 `-b3`：說明會寫「差約 1 秒」，其實是越走越歪。要做「自動修正時間軸」之前，一定要先修好漂移判斷（已補進 sprint-status 的 `-b3`）。
 - **速度：** 大檔第一次檢查最久 196～241 秒（考試時正式機也在跑，NAS 負載約 8）。前端最多輪詢約 3 分鐘，之後先顯示聽寫價；不會多收錢，只是先看到比較貴的價錢。
 - 細節在 `_bmad-output/audit/sidecar-alignment-exam-2026-10.md` 的「Second exam」；NAS 上的材料在 `/mnt/user/data/tmp-b2exam/`。
-- **還沒做：** AC #8（正式機驗證），合併、部署後用《Tears of Steel》做。
+- ~~**還沒做：** AC #8（正式機驗證），合併、部署後用《Tears of Steel》做。~~ 見第三段。
+
+**2026-10-21 第三段（AC #8 正式機驗證：通過）**
+
+- Alexyu 同意部署；跟 vido-dc 協調過。部署前備份 `pre-deploy-20261021-0919.db`；image revision 確認是 733284cb；部署後 `/health` healthy，筆數 subtitle_runs 36／series 87／movies 57 跟部署前一樣。
+- **估價：**
+  - 部署前（909eec33）：`plan: "full"`、`route: "asr"`、`estimated_usd: 0.19`。
+  - 部署後第一次（09:19:46）：還是 $0.19，多了 `sidecar_check: {status: "checking", file_name: "Tears of Steel (2012).en.srt"}`。
+  - 3 秒後第二次：`plan: "sidecar"`、`route: "sidecar"`、`estimated_usd: 0.06`、`sidecar_check: {status: "aligned", offset_seconds: -0.1}`。檢查花 1.6 秒（影片 12 分鐘，切 6 段）。
+  - 管理字幕對話框：按鈕是「生成字幕 $0.06」，旁邊寫「用旁邊的英文字幕翻譯，約需 1～2 分鐘」。
+- **按下生成字幕（09:20:23）：** 帳本新的一列是 `completed | translate | $0.0232 | 76 句 | claude-sonnet-5 | manual`，25 秒做完，沒有聽寫的花費。log 寫「subtitle route: translating the English subtitle beside the file」，片旁字幕的檢查結果讀快取（`cached=true`）。
+  - 對照前一次（10-20，聽寫路線）：`completed | asr | $0.0681 | 95 句`。
+- **官方英文字幕沒有被動到：** `.en.srt` 跑前跑後都是 4,764 bytes、sha256 `ce9578f6…`；`.vido.en.srt` 也沒變（`0730db75…`）。
+- **時間軸：** 新的 `.zh-Hant.srt` 有 76 句，每一句的時間跟官方 `.en.srt` 一模一樣（只差換行字元）。之前用聽寫稿翻的是 95 句。
