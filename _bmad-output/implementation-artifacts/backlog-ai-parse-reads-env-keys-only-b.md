@@ -93,7 +93,7 @@ Status: done
 | 日期 | 變更 |
 |---|---|
 | 2026-10-21 | 建單（Bob）。Sally 裁定：K5 頭條加第三格「檔名解析」，有呼叫才顯示；不進「依模型」；首頁總額算進去。等設計稿和 -a。 |
-| 2026-10-22 | dev（Amelia）→ done：K5 第三格、卡片出現條件、首頁總額、服務層預設 0；夾具 `parse-only`；PR #PRNUM。 |
+| 2026-10-22 | dev（Amelia）→ done：K5 第三格、卡片出現條件、首頁總額、服務層預設 0；夾具 `parse-only`；PR #892。 |
 | 2026-10-22 | 解除 blocked → ready-for-dev：-a 已合併（#890）；Alexyu 跑完 Pen，K5-D-v2 加 `grp-檔名解析` `n64lI`（`lab-檔名解析` `P0zNh7`、`val-檔名解析` `lVds7`），K5-M-v2 加 `Z4ZUhQ`（`b8R4Jv`、`U4t0w`）；Sally MCP 唯讀複審字與樣式 token 跟語音辨識那格一致。截圖 `k5-d.png` 隨設計稿 PR 提交；`k5-m.png` 不變（手機稿卡片本來就在摺線下，畫面外）。 |
 
 ## Dev Agent Record
