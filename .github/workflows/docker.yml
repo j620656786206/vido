@@ -127,7 +127,14 @@ jobs:
             type=semver,pattern={{major}}
             type=ref,event=branch
             type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
+            # :latest 是「最新正式版」，不是 main（backlog-unraid-template-main-tag）：
+            # 安裝指南和 Unraid 模板都叫外部使用者用 :latest，跟著 main 走的話，
+            # 他們每次合併就會拿到還沒發版的開發版。只有推 vX.Y.Z（沒有 -rc 這類
+            # 後綴）時才移動；作者自己的正式機用 :main。flavor 關掉 latest=auto，
+            # 讓 :latest 只從這一行來。
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}
+          flavor: |
+            latest=false
           labels: |
             org.opencontainers.image.title=Vido
             org.opencontainers.image.description=NAS Media Management Platform with Traditional Chinese metadata support
@@ -287,8 +294,14 @@ jobs:
             type=semver,pattern={{major}}
             type=ref,event=branch
             type=sha,prefix=sha-,format=short
-            # `docker pull ghcr.io/.../vido` 預設抓 :latest — 沒有這行就會失敗
-            type=raw,value=latest,enable={{is_default_branch}}
+            # :latest 是「最新正式版」，不是 main（backlog-unraid-template-main-tag）：
+            # 安裝指南和 Unraid 模板都叫外部使用者用 :latest，跟著 main 走的話，
+            # 他們每次合併就會拿到還沒發版的開發版。只有推 vX.Y.Z（沒有 -rc 這類
+            # 後綴）時才移動；作者自己的正式機用 :main。flavor 關掉 latest=auto，
+            # 讓 :latest 只從這一行來。
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}
+          flavor: |
+            latest=false
           labels: |
             org.opencontainers.image.title=Vido
             org.opencontainers.image.description=NAS Media Management Platform with Traditional Chinese metadata support
