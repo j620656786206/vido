@@ -1,6 +1,6 @@
 # Unraid Installation Guide
 
-> **Last Updated:** 2026-10-14
+> **Last Updated:** 2026-10-21
 
 ## Prerequisites
 
@@ -93,6 +93,12 @@ Vido serves both the web UI and API on a single port.
 ### Health Check
 
 The container includes a built-in health check that queries `GET /health` every 30 seconds. If the health check fails 3 times consecutively, Docker marks the container as unhealthy.
+
+## Updating
+
+`latest` is the newest release: it only changes when a new version is published, not on everyday code changes. To update, click **Check for Updates** on the **Docker** page, then **apply update** if one is offered. Back up `/mnt/user/appdata/vido` first.
+
+To stay on one version, set Repository to a version tag instead (for example `ghcr.io/j620656786206/vido:0.2.0` — **no `v`**; `0.2` follows patch releases). `main` is the development build and changes with every change; don't use it.
 
 ## Troubleshooting
 
