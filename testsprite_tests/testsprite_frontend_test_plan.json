@@ -2393,10 +2393,10 @@
   },
   {
     "id": "TC096",
-    "title": "Home renders Explore blocks below own-content",
+    "title": "Home without TMDb shows own content first and an honest explore-block notice below it",
     "category": "Homepage",
     "priority": "Medium",
-    "description": "Verifies the seeded Explore blocks render on Home beneath the own-content rows.",
+    "description": "The test env has no TMDb key, so Explore blocks cannot fetch content. Home must still render the own-content row first, and below it a warning line saying the explore blocks cannot load because TMDb is not configured or unreachable, with a link to connection settings. It must never look like the user has no explore blocks.",
     "steps": [
       {
         "type": "action",
@@ -2404,15 +2404,27 @@
       },
       {
         "type": "assertion",
-        "description": "Verify at least one Explore block section is visible"
+        "description": "Verify the own-content row titled 最近新增 is visible"
       },
       {
         "type": "assertion",
-        "description": "Verify Explore blocks are positioned after the own-content rows"
+        "description": "Verify an element with data-testid explore-degraded-notice is visible below the own-content row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the notice text contains 目前無法載入 and TMDb 未設定或無法連線"
+      },
+      {
+        "type": "action",
+        "description": "Click the 前往連線設定 link inside the notice"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL is /settings/connection"
       }
     ],
-    "v4_status": "NEW",
-    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_status": "REWRITTEN 2026-10-22",
+    "v4_reason": "Old version expected Explore blocks with content, which needs TMDb; the env has no TMDb key, so it could never pass here. Now asserts the honest degraded notice.",
     "v4_action": "generate+run in testsprite-v2-round3"
   },
   {
@@ -3253,8 +3265,8 @@
   },
   {
     "id": "TC122",
-    "title": "Service status page speaks Chinese and tells you where to fix a broken TMDB",
-    "description": "Settings service status lists each service with a Chinese name and role and a Chinese status pill. In the test env TMDb rejects the key, so TMDB is 錯誤 and a banner says TMDB 目前無法連線 with advice linking to 金鑰設定. Services never set up read 未設定. The backend's English service names must not appear.",
+    "title": "Service status page speaks Chinese and marks a key-less TMDB as not set up instead of broken",
+    "description": "Settings service status lists each service with a Chinese name and role and a Chinese status pill. The test env is a source build with no TMDb key at all (no built-in key since sub-7-7a), so TMDB reads 未設定 like the other never-configured services, and no service is shown as broken. The backend English service names must not appear.",
     "category": "Settings",
     "priority": "High",
     "steps": [
@@ -3272,25 +3284,19 @@
       },
       {
         "type": "assertion",
-        "description": "Verify the TMDB card status pill shows 錯誤 and the 豆瓣, 維基百科 and AI 解析 cards show 未設定"
+        "description": "Verify the TMDB, 豆瓣, 維基百科 and AI 解析 cards each show the status pill 未設定"
       },
       {
         "type": "assertion",
-        "description": "Verify the texts Douban Scraper, Wikipedia API and AI Parser are not visible"
+        "description": "Verify the texts Douban Scraper, Wikipedia API, AI Parser and TMDb API are not visible"
       },
       {
         "type": "assertion",
-        "description": "Verify a banner line containing TMDB and 目前無法連線 is visible with a link named 金鑰設定"
-      },
-      {
-        "type": "action",
-        "description": "Click the 金鑰設定 link in the banner"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify the URL is /settings/keys"
+        "description": "Verify no banner line containing 目前無法連線 is visible"
       }
-    ]
+    ],
+    "v4_status": "REWRITTEN 2026-10-22",
+    "v4_reason": "sub-7-7a (#625) made a key-less TMDb report unconfigured instead of error; the old 錯誤 + broken-banner expectation no longer applies to this env."
   },
   {
     "id": "TC123",
