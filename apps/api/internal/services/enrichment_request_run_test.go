@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/sse"
 )
 
 // disc-2026-09-batch-reparse-never-runs: a batch re-parse sets rows pending
@@ -133,4 +134,62 @@ func TestEnrichmentService_StartEnrichment_StillRefusesWhileRunning(t *testing.T
 
 	close(repo.gate)
 	<-done
+}
+
+// completeCounter counts enrich_complete events through the hub's observer —
+// what the re-parse dialog listens to.
+func completeCounter(hub *sse.Hub) func() int {
+	var mu sync.Mutex
+	n := 0
+	hub.AddObserver(func(e sse.Event) {
+		if e.Type == sse.EventEnrichComplete {
+			mu.Lock()
+			n++
+			mu.Unlock()
+		}
+	})
+	return func() int {
+		mu.Lock()
+		defer mu.Unlock()
+		return n
+	}
+}
+
+// disc-2026-10-reparse-dialog-empty-followup-pass: a mixed movie+series
+// re-parse sends two requests; the second queues a follow-up pass that finds
+// nothing (the first pass already took those rows). Its {total:0} completion
+// overwrote the real result with 「成功 0・失敗 0」 — an empty follow-up now
+// stays silent.
+func TestEnrichmentService_EmptyFollowUpPassIsNotAnnounced(t *testing.T) {
+	repo := &gatedMovieRepo{gate: make(chan struct{}), entered: make(chan struct{})}
+	hub := sse.NewHub()
+	completes := completeCounter(hub)
+	svc := NewEnrichmentService(repo, nil, nil, nil, nil, nil, hub, nil)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, err := svc.StartEnrichment(context.Background())
+		assert.NoError(t, err)
+	}()
+	<-repo.entered
+	assert.False(t, svc.RequestRun(), "queued behind the running pass")
+	close(repo.gate)
+	<-done
+
+	assert.Equal(t, 2, repo.passes(), "the follow-up still runs")
+	assert.Equal(t, 1, completes(), "only the first pass reports; the empty follow-up does not")
+}
+
+// An empty pass that is NOT a follow-up still reports: a re-parse whose rows
+// were already handled must still end its dialog.
+func TestEnrichmentService_EmptyFirstPassStillAnnounced(t *testing.T) {
+	repo := &gatedMovieRepo{}
+	hub := sse.NewHub()
+	completes := completeCounter(hub)
+	svc := NewEnrichmentService(repo, nil, nil, nil, nil, nil, hub, nil)
+
+	require.True(t, svc.RequestRun())
+	waitFor(t, "the pass to finish", func() bool { return !svc.IsEnrichmentActive() && repo.passes() == 1 })
+	assert.Equal(t, 1, completes())
 }

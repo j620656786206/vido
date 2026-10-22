@@ -187,8 +187,8 @@ func (s *EnrichmentService) runUntilSettled(ctx context.Context) (*EnrichmentRes
 		s.mu.Unlock()
 	}()
 
-	for {
-		result, cancelled, err := s.runPass(ctx)
+	for followUp := false; ; followUp = true {
+		result, cancelled, err := s.runPass(ctx, followUp)
 		if err != nil || cancelled || ctx.Err() != nil || s.cancelled() {
 			// A cancel means "stop", including whatever was queued. An empty
 			// pass never looks at the cancel signals, so check them here too.
@@ -223,7 +223,13 @@ func (s *EnrichmentService) cancelled() bool {
 
 // runPass is one sweep over every pending movie and series. cancelled reports
 // an early stop (cancel button or ctx), which also carries a partial result.
-func (s *EnrichmentService) runPass(ctx context.Context) (result *EnrichmentResult, cancelled bool, err error) {
+//
+// followUp marks the extra pass runUntilSettled queues when rows went pending
+// mid-pass. An empty follow-up is not announced: those rows were picked up by
+// the pass before it, and a {total:0} enrich_complete would overwrite that
+// pass's result in the re-parse dialog with 「成功 0・失敗 0」
+// (disc-2026-10-reparse-dialog-empty-followup-pass).
+func (s *EnrichmentService) runPass(ctx context.Context, followUp bool) (result *EnrichmentResult, cancelled bool, err error) {
 	startedAt := time.Now()
 
 	// Find all unenriched movies (parse_status="" or "pending")
@@ -349,7 +355,9 @@ func (s *EnrichmentService) runPass(ctx context.Context) (result *EnrichmentResu
 	}
 
 	result = s.buildResult(startedAt)
-	s.broadcastComplete(result)
+	if !followUp || result.Total > 0 {
+		s.broadcastComplete(result)
+	}
 
 	s.logger.Info("enrichment completed",
 		"total", result.Total,
