@@ -4333,5 +4333,1233 @@
     "v4_status": "NEW 2026-10-22",
     "v4_reason": "Regression guard for disc-2026-10-batch-mixed-selection-wrong-type (PR #900).",
     "v4_action": "ADD"
+  },
+  {
+    "id": "TC151",
+    "title": "Home readout cards and the 整理中 link each open the right place",
+    "description": "Every readout card on Home is a link. 繁中字幕 opens the library with the 產生字幕 dialog open; 今天處理, 需要注意 and 進行中 open the activity hub; the 整理中 count above the recently-added row opens the activity hub.",
+    "category": "Home",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the readout card whose text starts with 繁中字幕"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL path is /library and a dialog titled 產生字幕 is visible"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to / and click the readout card whose text starts with 今天處理"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL path is /activity"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to / and click the readout card whose text starts with 需要注意"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL path is /activity"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to / and click the readout card whose text starts with 進行中"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL path is /activity"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to / and click the link 整理中 · 3 next to the 最近新增 heading"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL path is /activity"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC152",
+    "title": "Home recently-added row scrolls with its arrow buttons",
+    "description": "The 最近新增 row on Home has 向右捲動 and 向左捲動 buttons. Clicking right moves the row so the first poster (Unknown.Show.S01) scrolls out of view; clicking left brings it back.",
+    "category": "Home",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to / and wait for the 最近新增 row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the poster Unknown.Show.S01 is visible in the row"
+      },
+      {
+        "type": "action",
+        "description": "Click the button named 向右捲動"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the poster Unknown.Show.S01 is no longer fully inside the visible part of the row"
+      },
+      {
+        "type": "action",
+        "description": "Click the button named 向左捲動"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the poster Unknown.Show.S01 is visible again"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC153",
+    "title": "Library genre filter 動畫 shows only animation titles and clicking it again clears it",
+    "description": "The seeded library has two animation titles: 神隱少女 and 進擊的巨人. Selecting 動畫 in the filter rail must show exactly those two; selecting it again restores the full list.",
+    "category": "Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the genre filter button 動畫"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify exactly two poster cards are shown and they are 神隱少女 and 進擊的巨人"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL contains genres="
+      },
+      {
+        "type": "action",
+        "description": "Click the genre filter button 動畫 again"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 教父 and 侏羅紀公園 are visible again"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC154",
+    "title": "Library decade filter narrows the list, and a combination with no match shows an honest empty state that can be cleared",
+    "description": "1990s alone shows 侏羅紀公園 and 駭客任務. Adding the 動畫 genre leaves nothing: the page must say no title matches the filters (not that the library is empty) and offer a way to clear the filters.",
+    "category": "Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the decade filter 1990s"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify exactly two poster cards are shown: 侏羅紀公園 and 駭客任務"
+      },
+      {
+        "type": "action",
+        "description": "Click the genre filter 動畫"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no poster card is shown and a message says no title matches the current filters, with a control to clear the filters"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the page does not say the library itself is empty"
+      },
+      {
+        "type": "action",
+        "description": "Use the clear-filters control"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 教父 is visible again"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC155",
+    "title": "Library Chinese-subtitle filters: 有中文字幕 and 不知道 show the right titles",
+    "description": "有中文字幕 includes titles with Traditional or Simplified Chinese (教父, 臥虎藏龍, 奧本海默, 怪奇物語, 駭客任務, 讓子彈飛) and excludes 侏羅紀公園 and 全面啟動. 不知道 shows titles never read, such as 媽的多重宇宙, and excludes 教父.",
+    "category": "Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library and click the filter 有中文字幕"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 教父, 怪奇物語 and 駭客任務 are visible and 侏羅紀公園 and 全面啟動 are not"
+      },
+      {
+        "type": "action",
+        "description": "Click 有中文字幕 again to clear it, then click the filter 不知道"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 媽的多重宇宙 is visible and 教父 is not"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC156",
+    "title": "Collapsing the library filter rail survives a reload and 篩選 brings it back",
+    "description": "收合篩選 hides the filter rail and shows a 篩選 button in the toolbar. The choice is remembered after a reload; clicking 篩選 shows the rail again.",
+    "category": "Library",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the button 收合篩選"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the filter rail with 類型 and 類別 is hidden and a button named 篩選 is visible"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the filter rail is still hidden"
+      },
+      {
+        "type": "action",
+        "description": "Click 篩選"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the filter rail is visible again"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC157",
+    "title": "Library list view rows show year, genre and subtitle status, and a row opens the detail page",
+    "description": "In list view (?view=list) each row shows the title with year, genre, subtitle status and rating. Clicking the row for 教父 opens /media/movie/seed-mv-001.",
+    "category": "Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library?view=list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the row for 教父 shows 1972, 犯罪, 繁中 and 8.7"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the row for 侏羅紀公園 shows 缺中文"
+      },
+      {
+        "type": "action",
+        "description": "Click the row for 教父"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL is /media/movie/seed-mv-001 and the heading 教父 is visible"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC158",
+    "title": "Deep link /library/tv shows only series with the 影集 tab active",
+    "description": "/library/tv must list the three series (怪奇物語, 進擊的巨人, Unknown.Show.S01) and no movie.",
+    "category": "Library",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library/tv"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 影集 type control is active"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 怪奇物語 and 進擊的巨人 are visible and 教父 is not"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC159",
+    "title": "Sorting the library by 評分 puts the highest-rated titles first",
+    "description": "Choosing 評分 in the sort selector orders by rating, highest first: the first two posters are 8.7 titles (教父, 駭客任務) and 媽的多重宇宙 (7.8) comes after every 8.0+ title.",
+    "category": "Library",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the 排序方式 button and choose the option 評分"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL contains sortBy=rating"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the first two poster cards are 教父 and 駭客任務 in either order"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 媽的多重宇宙 appears after 侏羅紀公園"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC160",
+    "title": "Discover filters show as active, are written to the URL and survive a reload",
+    "description": "With TMDb down Discover cannot load results, but its filters must still work: choosing 動作 and 台灣 marks them active and puts them in the URL; after a reload they are still active.",
+    "category": "Discover",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /discover"
+      },
+      {
+        "type": "action",
+        "description": "Click the genre filter 動作 and the region filter 台灣"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify both filters show as selected and the URL changed to include them"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 動作 and 台灣 are still shown as selected"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC161",
+    "title": "Discover 想要清單 opens the request list view",
+    "description": "The 想要清單 button on Discover switches to the request list (URL view=requests). With no requests it shows an empty state, not an error.",
+    "category": "Discover",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /discover"
+      },
+      {
+        "type": "action",
+        "description": "Click the button 想要清單"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL contains view=requests"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty-state message about having no requests is visible and no error message is shown"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC162",
+    "title": "Pressing Enter in the header search opens the search page whose type tabs and clear button work",
+    "description": "Typing 教父 in the header search and pressing Enter opens /search with q=教父. The 電影 and 影集 tabs update the URL type, and 清除搜尋 empties the box.",
+    "category": "Search",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /, type 教父 into the header search box and press Enter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL path is /search and contains q="
+      },
+      {
+        "type": "assertion",
+        "description": "Verify tabs 全部, 電影 and 影集 are visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the tab 影集"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL contains type=tv"
+      },
+      {
+        "type": "action",
+        "description": "Click the button 清除搜尋"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the search box on the page is empty"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC163",
+    "title": "Search page with TMDb down still lists the owned library title and never shows a raw error code",
+    "description": "Known gap check: the header instant search already lists owned titles when TMDb is down (TC111). The full search page must do the same for 教父 and must not show internal codes such as TMDB_UNAUTHORIZED to the user.",
+    "category": "Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search?q=教父"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the owned title 教父 is listed as a result from the library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text TMDB_UNAUTHORIZED is not visible anywhere on the page"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC164",
+    "title": "The back button on a detail page returns to the library",
+    "description": "Opening 教父 from the library and pressing 返回媒體庫 returns to /library with the grid visible.",
+    "category": "Media Detail",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library and click the poster 教父"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL is /media/movie/seed-mv-001"
+      },
+      {
+        "type": "action",
+        "description": "Click the button 返回媒體庫"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL path is /library and the poster grid is visible"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC165",
+    "title": "Editing a title with 修改資訊 saves it and the new title survives a reload",
+    "description": "On 奧本海默's detail page, 修改資訊 opens an edit dialog. Changing the title to 奧本海默（測試） and saving updates the heading, and the change is still there after a reload.",
+    "category": "Media Detail",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-011"
+      },
+      {
+        "type": "action",
+        "description": "Click 修改資訊"
+      },
+      {
+        "type": "action",
+        "description": "Replace the title field with 奧本海默（測試） and save"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the page heading shows 奧本海默（測試）"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the heading still shows 奧本海默（測試）"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC166",
+    "title": "在地化資訊 explains AI cost and that existing .nfo files are kept, and 取消 starts nothing",
+    "description": "The 在地化資訊 button opens a dialog titled 將資訊在地化為繁體中文 that says existing .nfo files are not overwritten and that AI translation credit is used. 取消 closes it without starting.",
+    "category": "Media Detail",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-001 and click 在地化資訊"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 將資訊在地化為繁體中文 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify it mentions 不會覆寫你現有的 .nfo and 會使用 AI 翻譯額度"
+      },
+      {
+        "type": "action",
+        "description": "Click 取消"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog is closed and no progress or success message appeared"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC167",
+    "title": "立即比對 on an unmatched movie with TMDb down ends in an honest no-match state with next steps",
+    "description": "Some.Obscure.Film.2023.1080p has no metadata. Pressing 立即比對 must end (never an endless spinner) in a state that says nothing was found and offers 手動選片 and 重新比對.",
+    "category": "Media Detail",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-101"
+      },
+      {
+        "type": "action",
+        "description": "Click 立即比對 and wait up to 15 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the no-metadata block says no matching title was found"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify buttons 手動選片 and 重新比對 are visible and no loading spinner remains"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC168",
+    "title": "A season header expands and, with TMDb down, offers a retry instead of an empty list",
+    "description": "On 進擊的巨人, clicking 第 1 季 expands it. Without TMDb the episode list cannot load: it must say 無法載入劇集列表，請稍後再試 with a 重試 button. Clicking the header again collapses it.",
+    "category": "Media Detail",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/tv/seed-sr-001"
+      },
+      {
+        "type": "action",
+        "description": "Click the season header 第 1 季"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 無法載入劇集列表，請稍後再試 and a 重試 button are visible under it"
+      },
+      {
+        "type": "action",
+        "description": "Click the season header 第 1 季 again"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the message is no longer visible"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC169",
+    "title": "想要更多集數 opens the request picker, says why seasons cannot load, and closes with Escape",
+    "description": "On 進擊的巨人, 想要更多集數 opens a dialog titled 選擇要請求的內容. Without TMDb it says 無法載入季資料 with 重試, and Escape closes it.",
+    "category": "Media Detail",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/tv/seed-sr-001 and click 想要更多集數"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 選擇要請求的內容 is visible and mentions 進擊的巨人"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify it shows 無法載入季資料 and a 重試 button"
+      },
+      {
+        "type": "action",
+        "description": "Press Escape"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog is closed"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC170",
+    "title": "A movie with an embedded Traditional Chinese track offers a free 生成字幕 even without any key",
+    "description": "教父 has an embedded Traditional Chinese track. Its 管理字幕 dialog must offer 生成字幕 at about $0.00 with a note that the Chinese track can be used directly, even though no translation key is set.",
+    "category": "Subtitles",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-001 and click 管理字幕"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 管理字幕 — 教父 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a button whose name starts with 生成字幕 is enabled and shows ≈ $0.00"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 片內中文字幕可直接套用 is visible"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC171",
+    "title": "Activity 批次生成字幕 opens the candidate list with an estimate, says which key is missing, and sorts",
+    "description": "The 批次生成字幕 button on /activity opens 產生字幕 with the 8 missing-Chinese candidates, an estimated total in US$, a notice that the Claude key is missing with 前往設定, and a sort control (金額高→低, 片名 A→Z). Nothing is generated.",
+    "category": "Activity",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /activity and click 批次生成字幕"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 產生字幕 shows 候選 8 部 and an estimate starting with ≈ $"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify it says the translation key is not set and shows a 前往設定 link"
+      },
+      {
+        "type": "action",
+        "description": "Choose the sort option 片名 A→Z"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the candidate list order changed and the dialog is still open"
+      },
+      {
+        "type": "action",
+        "description": "Close the dialog without starting"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC172",
+    "title": "The generation workspace 批次生成字幕 button opens the same candidate dialog",
+    "description": "/activity?view=generation has its own 批次生成字幕 button; it must open the 產生字幕 candidate dialog.",
+    "category": "Activity",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /activity?view=generation"
+      },
+      {
+        "type": "action",
+        "description": "Click 批次生成字幕"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 產生字幕 is visible with a candidate count"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC173",
+    "title": "In a build without a report receiver, the usage report switch is off, cannot be turned on, and says why",
+    "description": "The test env is a source build with no usage-report receiver (VIDO_USAGE_REPORT_URL empty). The 匿名使用回報 card in /settings/connection must show its switch off and disabled with the sentence 這個版本沒有設定接收端，無法開啟。 Release images carry a receiver, where the switch works (covered by the wizard case TC141).",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/connection and find the 匿名使用回報 card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify its switch is off and cannot be turned on"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the card says 這個版本沒有設定接收端，無法開啟。"
+      }
+    ],
+    "v4_status": "REWRITTEN 2026-10-22",
+    "v4_reason": "First version assumed the switch works; in a source build without a receiver it is disabled by design.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC174",
+    "title": "Clearing a saved Gemini key asks first and then shows it as not set",
+    "description": "With ENCRYPTION_KEY set, after saving a Gemini key, its 清除 button asks for confirmation (清除後將改用環境變數的金鑰…). Confirming returns the row to 尚未設定.",
+    "category": "Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/keys, type AIzaSyTestOnlyKeyForVido000000000000 into the Gemini input and click 儲存金鑰"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Gemini row shows 已設定"
+      },
+      {
+        "type": "action",
+        "description": "Click 清除 on the Gemini row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a confirmation says 清除後將改用環境變數的金鑰"
+      },
+      {
+        "type": "action",
+        "description": "Confirm"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Gemini row shows 尚未設定"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC175",
+    "title": "The 聽寫服務 choice is kept after a reload",
+    "description": "In /settings/keys the 聽寫服務 section offers 自動, ElevenLabs Scribe and OpenAI Whisper. Choosing OpenAI Whisper and saving keeps it selected after a reload.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/keys"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 自動 is selected in 聽寫服務"
+      },
+      {
+        "type": "action",
+        "description": "Select OpenAI Whisper and save the settings"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify OpenAI Whisper is selected"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC176",
+    "title": "Service status 重新檢查 TMDB refreshes its last-checked time without an error",
+    "description": "On /settings/status, clicking 重新檢查 TMDB re-runs the check: the TMDB card's 最後檢查 shows 剛剛 and no error banner appears.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/status"
+      },
+      {
+        "type": "action",
+        "description": "Click the button 重新檢查 TMDB"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the TMDB card shows 最後檢查 剛剛"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no error message about the check failing is shown"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC177",
+    "title": "新增媒體庫 refuses an empty name, and a folder that does not exist is saved but marked 無法存取",
+    "description": "The 新增媒體庫 dialog on /settings/scanner must not create a library without a name. A path that does not exist is accepted (a NAS share can be unmounted when you add it) but the new library card must say 無法存取 so the problem is visible. Unlike the setup wizard, which refuses such a path; whether settings should refuse too is an open product question.",
+    "category": "Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner and click 新增媒體庫"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 新增媒體庫 with 名稱, 類型 and 資料夾路徑 is visible"
+      },
+      {
+        "type": "action",
+        "description": "Leave 名稱 empty"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 建立 button is disabled while 名稱 is empty and the dialog stays open"
+      },
+      {
+        "type": "action",
+        "description": "Type 測試庫 as the name and /no/such/folder as the path, then click 建立"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a library card 測試庫 is listed with the path /no/such/folder and the status 無法存取"
+      }
+    ],
+    "v4_status": "REWRITTEN 2026-10-22",
+    "v4_reason": "First version expected settings to refuse a missing folder like the wizard does; settings accepts it and marks it 無法存取 (open question filed for Alexyu).",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC178",
+    "title": "重新從官方字幕學習 runs and updates its last-run time",
+    "description": "On /settings/subtitle, clicking 重新從官方字幕學習 runs the official-subtitle name learning; the line under it shows a 上次 time and a result sentence, with no error.",
+    "category": "Settings",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/subtitle"
+      },
+      {
+        "type": "action",
+        "description": "Click 重新從官方字幕學習 and wait up to 10 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text under the button starts with 上次 and includes a result sentence"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no error message is shown"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC179",
+    "title": "Moving an explore block down reorders the list and survives a reload",
+    "description": "On /settings/homepage, clicking 下移 熱門電影 swaps it with the block below; after a reload the new order is kept.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/homepage and note the order of the blocks"
+      },
+      {
+        "type": "action",
+        "description": "Click 下移 熱門電影"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 熱門電影 is now listed after 熱門影集"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 熱門電影 is still listed after 熱門影集"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC180",
+    "title": "Renaming an explore block saves and shows the new name",
+    "description": "Editing 近期新片 in /settings/homepage and changing 區塊名稱 to 近期新片（測試） then 儲存變更 shows the new name in the list, also after a reload.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/homepage and click 編輯 近期新片"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 編輯探索區塊 is visible"
+      },
+      {
+        "type": "action",
+        "description": "Change 區塊名稱 to 近期新片（測試） and click 儲存變更"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the list shows 近期新片（測試）"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 近期新片（測試） is still listed"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC181",
+    "title": "Logs: the ERROR filter shows only errors, a row expands to its details, and paging works",
+    "description": "On /settings/logs, ERROR narrows the list to ERROR rows (the count line changes to 符合條件 N 筆); 展開 on a row shows its details; 下一頁 moves to the next page and 上一頁 comes back.",
+    "category": "Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/logs"
+      },
+      {
+        "type": "action",
+        "description": "Click the filter ERROR"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify every visible row is labelled ERROR and the count line starts with 符合條件"
+      },
+      {
+        "type": "action",
+        "description": "Click 展開 on the first row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify extra details for that row become visible"
+      },
+      {
+        "type": "action",
+        "description": "Click 全部, then click 下一頁"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 上一頁 is now enabled"
+      },
+      {
+        "type": "action",
+        "description": "Click 上一頁"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 上一頁 is disabled again"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC182",
+    "title": "Creating a backup lists it with size and status, and the auto-backup schedule can be set",
+    "description": "On /settings/backup, 建立備份 adds a row with a file name, size, time and 完成. Turning on 自動備份 reveals 每日／每週 and a time; choosing 每週 and 儲存排程 keeps it after a reload.",
+    "category": "Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/backup and click 建立備份, waiting up to 20 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a row with a file name ending .tar.gz, a size and the status 完成 is listed"
+      },
+      {
+        "type": "action",
+        "description": "Turn on the 自動備份 switch"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify options 每日 and 每週 and a time choice appear"
+      },
+      {
+        "type": "action",
+        "description": "Choose 每週 and click 儲存排程"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 自動備份 is on and 每週 is selected"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC183",
+    "title": "Every sidebar item opens its page and is marked current",
+    "description": "The sidebar items 首頁, 媒體庫, 電影, 影集, 探索, 活動, 下載 and 設定 each open their page. The current page is marked on the item, or on its parent 媒體庫 for the 電影 and 影集 sub-items.",
+    "category": "Navigation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click each sidebar item in turn: 媒體庫, 電影, 影集, 探索, 活動, 下載, 設定, 首頁"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify after each click the URL matches that item: /library, /library/movies, /library/tv, /discover, /activity, /downloads, a path starting with /settings, and /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify on /discover the 探索 item has aria-current=page, and on /library/tv the 媒體庫 item has aria-current=page"
+      }
+    ],
+    "v4_status": "REWRITTEN 2026-10-22",
+    "v4_reason": "電影／影集 are sub-items: the parent 媒體庫 carries aria-current on those routes (checked locally); first version could not verify a marker on the sub-items.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC184",
+    "title": "The sidebar theme toggle switches between 夜行 and 日巡 and the choice survives a reload",
+    "description": "The sidebar footer has a 切換到日巡／切換到夜行 button. Clicking it changes the page colours and its label; after a reload the chosen theme is kept.",
+    "category": "Navigation",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library and note the label of the theme button in the sidebar footer (切換到…)"
+      },
+      {
+        "type": "action",
+        "description": "Click it"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the label changed to the other theme name and the page background colour changed"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the label and background stay as after the click"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC185",
+    "title": "An unknown address shows a Chinese not-found page with a way back",
+    "description": "Known gap check: /no-such-page should show a page in Chinese saying the page does not exist, with a link back to Home or the library — not the bare English text Not Found.",
+    "category": "Navigation",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /no-such-page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text Not Found is not visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a Chinese message says the page cannot be found and a link back to 首頁 or 媒體庫 is visible"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC186",
+    "title": "On a phone, the bottom bar reaches every section and 更多 holds 探索 and 設定",
+    "description": "At 390×844 the app shows a bottom bar with 首頁, 媒體庫, 活動, 下載 and 更多. 更多 opens a sheet with 探索 and 設定; choosing 設定 opens settings.",
+    "category": "Navigation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Set the viewport to 390 by 844 and navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a bottom bar with 首頁, 媒體庫, 活動, 下載 and 更多 is visible"
+      },
+      {
+        "type": "action",
+        "description": "Tap 活動"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL path is /activity"
+      },
+      {
+        "type": "action",
+        "description": "Tap 更多"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a sheet with 探索 and 設定 is visible"
+      },
+      {
+        "type": "action",
+        "description": "Tap 設定"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL path starts with /settings"
+      }
+    ],
+    "v4_status": "ENV-LIMITED",
+    "v4_reason": "TestSprite runs a fixed desktop viewport and cannot switch to 390x844 (both runs BLOCKED 2026-10-22). Phone layouts stay with the Playwright mobile project and visual baselines.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC187",
+    "title": "On a phone, the library 篩選 sheet filters the list",
+    "description": "At 390×844 the filter rail is behind a 篩選 button. Opening it and choosing 動畫 shows only 神隱少女 and 進擊的巨人.",
+    "category": "Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Set the viewport to 390 by 844 and navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Tap 篩選"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a sheet with the filter groups 類型 and 類別 is visible"
+      },
+      {
+        "type": "action",
+        "description": "Tap 動畫 and close or apply the sheet"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the list shows only 神隱少女 and 進擊的巨人"
+      }
+    ],
+    "v4_status": "ENV-LIMITED",
+    "v4_reason": "TestSprite runs a fixed desktop viewport and cannot switch to 390x844 (both runs BLOCKED 2026-10-22). Phone layouts stay with the Playwright mobile project and visual baselines.",
+    "v4_action": "ADD"
   }
 ]
