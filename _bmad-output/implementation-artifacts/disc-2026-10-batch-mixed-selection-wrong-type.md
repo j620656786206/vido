@@ -1,6 +1,6 @@
 # disc-2026-10-batch-mixed-selection-wrong-type：同時勾電影和影集再整批操作，兩種都照各自的類型處理，失敗原因講人話
 
-Status: review
+Status: done
 
 **Source:** 2026-10-22 `testsprite-2026-10-quota-run` 查 TC115 時本機重現（Rule 24 lane ③ 立案）。Alexyu 排序：三個 bug 裡第一個修。
 

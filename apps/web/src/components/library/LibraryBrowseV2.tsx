@@ -392,9 +392,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
   // runs in the background; from then on this page refetches whenever a pass
   // completes, so 整理中 flips to the real result without a reload — and the
   // dialog shows the pass (C24-D, disc-2026-09-batch-reparse-progress-in-dialog).
-  const [watchEnrichment, setWatchEnrichment] = useState(false);
-  const [reparseRun, setReparseRun] = useState(0);
-  const matching = useEnrichmentRefresh(watchEnrichment, reparseRun);
+  const { matching, watch: watchEnrichment, stop: stopEnrichment } = useEnrichmentRefresh();
   const [isBatchSubtitleOpen, setIsBatchSubtitleOpen] = useState(false);
   // Mixed movie+episode selection since sub-4-2 D1 — no client-side filtering.
   const [generationBatchSelection, setGenerationBatchSelection] = useState<string[]>([]);
@@ -527,12 +525,15 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
             errors: result.errors,
           }));
         } else if (action === 'reparse') {
-          const result = await runEach(batchReparseMutation.mutateAsync);
-          if (result.successCount > 0) {
-            // A new run id restarts the watch from 已排入 even if it was already on.
-            setReparseRun((n) => n + 1);
-            setWatchEnrichment(true);
-          }
+          // Listen FIRST, then ask: a pass that ends at once (TMDb unreachable)
+          // sent its 完成 before a stream opened after the POST could hear it,
+          // and the dialog sat on 等待開始 (disc-2026-10-reparse-dialog-misses-instant-pass).
+          await watchEnrichment();
+          const result = await runEach(batchReparseMutation.mutateAsync).catch((err) => {
+            stopEnrichment();
+            throw err;
+          });
+          if (result.successCount === 0) stopEnrichment();
           setBatchProgress((prev) => ({
             ...prev,
             // current = what was actually queued: the dialog says 含你勾的 N 部.
@@ -564,7 +565,15 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         }));
       }
     },
-    [selectedIds, selectedType, batchDeleteMutation, batchReparseMutation, batchExportMutation]
+    [
+      selectedIds,
+      selectedType,
+      batchDeleteMutation,
+      batchReparseMutation,
+      batchExportMutation,
+      watchEnrichment,
+      stopEnrichment,
+    ]
   );
 
   const handleBatchConfirm = useCallback(() => {
