@@ -1,6 +1,6 @@
 # disc-2026-10-spend-month-label-utc：「本月 AI 花費」標對月份，10 月不會再寫「9 月」
 
-Status: review
+Status: done
 
 **Source:** 2026-10-22 `testenv-seed-2026-10` 在本機 :8090 看活動頁時發現（Rule 24 lane ③ 立案）。Alexyu 排序：三個 bug 裡第三個修。
 
