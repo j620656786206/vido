@@ -1,6 +1,6 @@
 # testenv-seed-2026-10：測試用的假片庫補上「字幕狀態、生成紀錄、AI 花費」，十月的新畫面才測得到
 
-Status: ready-for-dev
+Status: done
 
 **Source:** 2026-10-22 Party Mode（Murat／John／Bob／Sally／Amelia）＋ founder-pm 判決，Alexyu 選 A：「先補假資料，同時先跑回歸」。上層任務是 `testsprite-2026-10-quota-run`。
 
@@ -44,17 +44,30 @@ Status: ready-for-dev
 
 ## Tasks
 
-- [ ] 讀上面三個「先確認」，把實際欄位名寫進 Dev Notes
-- [ ] 電影字幕狀態分布（AC 1）
-- [ ] 影集各集字幕軌（AC 2）
-- [ ] 本月 subtitle_runs 五種（AC 3）
-- [ ] ai_side_spend parse 一筆（AC 4）
-- [ ] `--with-encryption-key`（AC 5）
-- [ ] 舊案例不受影響，必要時同步改測試計畫（AC 6）
-- [ ] seed 測試（AC 8）
-- [ ] :8090 實際開起來，手動看一次媒體庫、季清單、活動、首頁
+- [x] 讀上面三個「先確認」，把實際欄位名寫進 Dev Notes
+- [x] 電影字幕狀態分布（AC 1）
+- [x] 影集各集字幕軌（AC 2）
+- [x] 本月 subtitle_runs 五種（AC 3）
+- [x] ai_side_spend parse 一筆（AC 4）
+- [x] `--with-encryption-key`（AC 5）
+- [x] 舊案例不受影響，必要時同步改測試計畫（AC 6）
+- [x] seed 測試（AC 8）
+- [x] :8090 實際開起來，手動看一次媒體庫、季清單、活動、首頁
 
 ## Dev Notes
+
+**動工前確認的實際欄位（2026-10-22）：**
+- 「有沒有中文字幕」＝ `models.ChineseSubtitleVerdict(subtitle_status, subtitle_language, subtitle_tracks)`；`subtitle_tracks` 是 `[]services.SubtitleTrack` 的 JSON（`language`、`title`、`detected_language`…）。`Movies.Create` 會寫 `subtitle_tracks`，但不寫 `subtitle_status` → 另外呼叫 `Movies.UpdateSubtitleStatus`。
+- 影集的結論是各集「最需要處理」的那個（`WorstChineseSubtitle`），**只看有影片檔的集數** → 假集數原本沒有 `file_path`，這次補上（指向原本就會寫出的佔位檔）。
+- 各集字幕軌用 sweep 自己的窄寫入 `UpdateSubtitleTracks`（不在 `EpisodeRepositoryInterface` 上，用 `services.EpisodeSubtitleTracksRepo` 取用），並蓋上佔位檔真正的 `FileSignature`，sweep 就會跳過、不會去 ffprobe 佔位檔。
+- 失敗原因字串照 `SubtitleRunFailureReason` 的規則：`SUBTITLE_TARGET_NOT_WRITABLE`、`queue-timeout: ` 前綴、`AI_CREDIT_EXHAUSTED`。
+- `ai_side_spend` 已有 `repository.NewAISideSpendRepository`，不用新增方法（AC 7）。
+
+**跟原本 AC 不一樣的地方（照實記）：**
+- AC 2「季清單的標記」：季清單要先跟 TMDb 拿集數清單（`GetSeasonEpisodes`），測試環境沒有 TMDb，**季清單打不開**。這次只做到影集層級的結論（媒體庫標籤、篩選），季清單每集標記仍要 TMDb，十月不用 TestSprite 測。
+- AC 3「已略過」：活動記錄只列完成與失敗（`RecentTerminalRuns`），已略過的 run 本來就不會出現在活動記錄；灰色「已略過」改由電影 `seed-mv-012`（`subtitle_status=skipped`）在媒體庫呈現。活動記錄有 2 筆完成＋3 筆失敗（資料夾寫不進、處理逾時、AI 帳號沒有額度）。
+- AC 4：真實的檔名解析一次不到 1 分錢，畫面四捨五入會顯示 $0.00 → 假資料改成兩筆 Claude Haiku 共 US$0.021，畫面看得到「2 次 · $0.02」。
+- 預設 seed 現在會有 3 筆失敗的 run → 首頁「需要注意」從 0 變成「3 部失敗」。9 月的舊案例沒有斷言這一格（TC093 等重跑都過）。
 
 - 檔案：`apps/api/cmd/seed/main.go`、`scripts/serve-test-env.sh`
 - 相關規則：`models.ChineseSubtitleVerdict`、`models.SubtitleTriageRank`、`models.SubtitleRunFailureReason`
@@ -64,6 +77,22 @@ Status: ready-for-dev
 
 ### Agent Model Used
 
+Claude Opus 5.5（claude-opus-5-5），2026-10-22。
+
 ### Completion Notes List
 
+- 假片庫現在：繁中 3 部、簡中 2 部、缺中文 4 部、無字幕源 1 部、已略過 1 部、不知道 1 部＋未匹配 3 部；進擊的巨人整部「缺中文」（S01E02 只有英文）、怪奇物語「繁中」。媒體庫標題旁顯示「7 部缺中文」（篩選用同一個結論，所以算進無字幕源與已略過那兩部）。
+- 活動頁：本月 AI 花費「翻譯 1 次 · $0.24、語音辨識 1 次 · $0.31、檔名解析 2 次 · $0.02」；活動記錄 5 筆，每筆有花了多久與中文原因；首頁「本月 $0.6」。
+- `--with-encryption-key`：伺服器記錄「Using encryption key from ENCRYPTION_KEY」；不帶時跟以前一樣 unset。
+- 背景 sweep 實測：電影 backfill 對沒讀過的 4 部 ffprobe 失敗 → 維持「不知道」，沒有蓋掉任何假資料。
+- 驗證：`go test ./...`、`staticcheck ./...` 全綠；seed 新增 6 條測試；TestSprite 在新假資料上重跑 8 條舊案例（TC012、TC092、TC093、TC101、TC103、TC105、TC114、TC135）全過（約 4 點）。
+- **順便抓到的 bug（範圍外，已立案 `disc-2026-10-spend-month-label-utc`）**：活動頁「本月 AI 花費」在 10 月顯示「9 月」。後端 `monthWindow()` 把月初轉成 UTC 回傳（`from: 2026-09-30T16:00:00Z`），前端 `spendMonthLabel` 直接讀字串裡的月份。伺服器時區不是 UTC（例如 NAS 設 `TZ=Asia/Taipei`）就會標成上個月。正式機時區這次連不到 NAS 沒查。
+
+- 對抗式審查（換模型 Sonnet）：0 高／0 中／4 低，全修：腳本註解寫明「不帶旗標就 unset 你 shell 裡的 ENCRYPTION_KEY」；每月 1 號前半小時跑 seed 時，完成時間不會超過現在；電影 12 部的結論全部有測；`--failure-fixtures` 跟新 run 一起用的組合補測試（那筆舊的失敗 run 沒有完成時間，本來就不進活動記錄）。
+
 ### File List
+
+- `apps/api/cmd/seed/main.go`
+- `apps/api/cmd/seed/main_test.go`（新）
+- `scripts/serve-test-env.sh`
+- `_bmad-output/implementation-artifacts/testenv-seed-2026-10.md`、`sprint-status.yaml`

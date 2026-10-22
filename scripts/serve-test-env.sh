@@ -12,6 +12,14 @@
 #   scripts/serve-test-env.sh --skip-build   # reuse existing dist/apps/web
 #   scripts/serve-test-env.sh --keep-db      # keep the current seeded DB
 #   scripts/serve-test-env.sh --failure-fixtures # add homepage failure-state data
+#   scripts/serve-test-env.sh --with-encryption-key # let 金鑰設定 save keys
+#
+# Without --with-encryption-key the server has no ENCRYPTION_KEY, so 金鑰設定
+# is read-only (TC132 relies on that). With it, a fixed 32-character test-only
+# key is set, so the "only a Gemini key" journeys can save a key. The key is
+# a constant on purpose: the seeded DB is rebuilt every run, nothing real is
+# ever encrypted with it. Without the flag ENCRYPTION_KEY is unset even if your
+# shell exported one, so the default run is always the read-only case.
 #
 # Env overrides:
 #   VIDO_TEST_ENV_DIR  (default: <repo>/.vido-test-env)
@@ -25,11 +33,13 @@ PORT="${VIDO_TEST_PORT:-8090}"
 SKIP_BUILD=0
 KEEP_DB=0
 FAILURE_FIXTURES=0
+WITH_ENCRYPTION_KEY=0
 for arg in "$@"; do
   case "$arg" in
     --skip-build) SKIP_BUILD=1 ;;
     --keep-db) KEEP_DB=1 ;;
     --failure-fixtures) FAILURE_FIXTURES=1 ;;
+    --with-encryption-key) WITH_ENCRYPTION_KEY=1 ;;
     *)
       echo "unknown option: $arg" >&2
       exit 1
@@ -73,6 +83,12 @@ fi
 
 echo "==> Serving Vido test env on http://localhost:$PORT (Ctrl-C to stop)"
 cd "$ROOT/apps/api"
+if [[ "$WITH_ENCRYPTION_KEY" == 1 ]]; then
+  echo "==> ENCRYPTION_KEY set (test-only key) — 金鑰設定 can save keys"
+  export ENCRYPTION_KEY="vido-local-test-env-key-00000000"
+else
+  unset ENCRYPTION_KEY
+fi
 DB_PATH="$ENV_DIR/data/vido.db" \
   VIDO_DATA_DIR="$ENV_DIR/data" \
   VIDO_MEDIA_DIRS="$ENV_DIR/media/movies,$ENV_DIR/media/tv" \
