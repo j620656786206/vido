@@ -1095,7 +1095,8 @@ func TestLibraryService_BatchErrors_CarryTitle(t *testing.T) {
 		res, err := service.BatchReparse(context.Background(), []string{"m1"}, "movie")
 		require.NoError(t, err)
 		require.Len(t, res.Errors, 1)
-		assert.Equal(t, BatchError{ID: "m1", Message: "database is locked", Title: "寄生上流"}, res.Errors[0])
+		// disc-2026-10-batch-mixed-selection-wrong-type AC #4: the raw error stays in the log.
+		assert.Equal(t, BatchError{ID: "m1", Message: "處理失敗，詳細原因記在系統日誌", Title: "寄生上流"}, res.Errors[0])
 	})
 
 	t.Run("reparse: the row is gone → no title, id stays", func(t *testing.T) {
@@ -1108,6 +1109,28 @@ func TestLibraryService_BatchErrors_CarryTitle(t *testing.T) {
 		require.Len(t, res.Errors, 1)
 		assert.Equal(t, "", res.Errors[0].Title)
 		assert.Equal(t, "ghost", res.Errors[0].ID)
+		assert.Equal(t, "找不到這個項目（可能已被刪除）", res.Errors[0].Message)
+	})
+
+	// disc-2026-10-batch-mixed-selection-wrong-type AC #4/#5: the two ways the
+	// repositories say "missing" both read 找不到; nothing raw reaches the dialog.
+	t.Run("messages never carry the raw error", func(t *testing.T) {
+		movieRepo := new(testutil.MockMovieRepository)
+		service := NewLibraryService(movieRepo, new(testutil.MockSeriesRepository), nil, nil)
+		movieRepo.On("FindByID", mock.Anything, "seed-sr-101").
+			Return(nil, fmt.Errorf("movie with id seed-sr-101 not found: %w", sql.ErrNoRows))
+		movieRepo.On("Delete", mock.Anything, "gone").Return(errors.New("movie with id gone not found"))
+		movieRepo.On("FindByID", mock.Anything, "gone").Return(nil, fmt.Errorf("movie with id gone not found: %w", sql.ErrNoRows))
+
+		reparse, err := service.BatchReparse(context.Background(), []string{"seed-sr-101"}, "movie")
+		require.NoError(t, err)
+		del, err := service.BatchDelete(context.Background(), []string{"gone"}, "movie")
+		require.NoError(t, err)
+		for _, e := range append(reparse.Errors, del.Errors...) {
+			assert.Equal(t, "找不到這個項目（可能已被刪除）", e.Message)
+			assert.NotContains(t, e.Message, "sql")
+			assert.NotContains(t, e.Message, "not found")
+		}
 	})
 
 	t.Run("delete: the delete failed → title looked up for the entry", func(t *testing.T) {
