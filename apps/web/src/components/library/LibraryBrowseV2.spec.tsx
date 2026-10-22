@@ -71,13 +71,31 @@ vi.mock('../../hooks/useLibrary', () => ({
   useBatchExport: () => ({ mutateAsync: h.batchExport, isPending: false }),
 }));
 // disc-2026-09-batch-reparse-never-runs: the post-reparse SSE refresh — record
-// whether the page asked for it (jsdom has no EventSource).
-const enrichmentRefresh = vi.fn();
-vi.mock('../../hooks/useEnrichmentRefresh', () => ({
-  useEnrichmentRefresh: (enabled: boolean, runId: number) => {
-    enrichmentRefresh(enabled, runId);
-    return enabled ? h.matching : null;
+// whether the page asked for it (jsdom has no EventSource). Since
+// disc-2026-10-reparse-dialog-misses-instant-pass the page calls watch() and awaits
+// it BEFORE the POST; stop() when nothing was queued.
+const enrichment = vi.hoisted(() => ({
+  watching: false,
+  watch: undefined as unknown as ReturnType<typeof vi.fn>,
+  stop: undefined as unknown as ReturnType<typeof vi.fn>,
+  reset() {
+    this.watching = false;
+    this.watch = vi.fn(() => {
+      this.watching = true;
+      return Promise.resolve();
+    });
+    this.stop = vi.fn(() => {
+      this.watching = false;
+    });
   },
+}));
+enrichment.reset();
+vi.mock('../../hooks/useEnrichmentRefresh', () => ({
+  useEnrichmentRefresh: () => ({
+    matching: enrichment.watching ? h.matching : null,
+    watch: enrichment.watch,
+    stop: enrichment.stop,
+  }),
 }));
 // ux3-cutover-2: the generation-batch dialog pulls SSE plumbing — stub it out.
 vi.mock('../subtitle/GenerationBatchDialogV2', () => ({
@@ -326,6 +344,7 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     h.batchReparse = vi.fn().mockResolvedValue({ successCount: 1, errors: [] });
     h.batchExport = vi.fn().mockResolvedValue({ items: [] });
     h.matching = null;
+    enrichment.reset();
   });
 
   it('選取 enters selection mode: toolbar swaps in, cards stop navigating and toggle', async () => {
@@ -396,7 +415,7 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
   // tells the user the match is running in the background and starts
   // listening for its completion so the list refreshes by itself.
   it('batch 重新解析: starts the SSE watch and the dialog shows the pass (C24-D)', async () => {
-    enrichmentRefresh.mockClear();
+    enrichment.reset();
     h.matching = {
       phase: 'running',
       total: 20,
@@ -408,17 +427,41 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     };
     renderBrowse();
     await userEvent.click(await screen.findByTestId('enter-selection-btn'));
-    expect(enrichmentRefresh).toHaveBeenLastCalledWith(false, 0); // lazy until asked
+    expect(enrichment.watch).not.toHaveBeenCalled(); // lazy until asked
     await userEvent.click(screen.getByTestId('poster-v2-a'));
     await userEvent.click(screen.getByTestId('batch-reparse-btn'));
     await userEvent.click(screen.getByTestId('confirm-action-btn'));
     expect(h.batchReparse).toHaveBeenCalledWith({ ids: ['a'], type: 'movie' });
-    expect(enrichmentRefresh).toHaveBeenLastCalledWith(true, 1);
+    expect(enrichment.watch).toHaveBeenCalledTimes(1);
+    expect(enrichment.stop).not.toHaveBeenCalled();
     expect(await screen.findByTestId('progress-text')).toHaveTextContent(
       '本輪整理 20 部（含你勾的 1 部）'
     );
     expect(screen.getByTestId('matching-current')).toHaveTextContent('目前：你的名字');
     expect(screen.getByTestId('matching-count')).toHaveTextContent('3 / 20');
+  });
+
+  // disc-2026-10-reparse-dialog-misses-instant-pass AC #1: no POST until the stream is open.
+  it('[P0] batch 重新解析 waits for the progress stream before posting', async () => {
+    enrichment.reset();
+    let connect!: () => void;
+    enrichment.watch = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          enrichment.watching = true;
+          connect = resolve;
+        })
+    );
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.click(screen.getByTestId('poster-v2-a'));
+    await userEvent.click(screen.getByTestId('batch-reparse-btn'));
+    await userEvent.click(screen.getByTestId('confirm-action-btn'));
+    await waitFor(() => expect(enrichment.watch).toHaveBeenCalledTimes(1));
+    expect(h.batchReparse).not.toHaveBeenCalled();
+
+    connect();
+    await waitFor(() => expect(h.batchReparse).toHaveBeenCalledTimes(1));
   });
 
   it('batch 刪除 never shows the matching states even while a pass is running', async () => {
@@ -441,7 +484,7 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
   });
 
   it('batch 重新解析 that queued nothing shows no background note and no SSE watch', async () => {
-    enrichmentRefresh.mockClear();
+    enrichment.reset();
     h.batchReparse = vi.fn().mockResolvedValue({
       successCount: 0,
       errors: [{ id: 'a', message: 'not found' }],
@@ -454,7 +497,9 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     expect(await screen.findByTestId('progress-close-btn')).toBeInTheDocument();
     expect(screen.getByTestId('progress-text')).toHaveTextContent('已完成 0 / 1');
     expect(screen.queryByTestId('matching-note')).not.toBeInTheDocument();
-    expect(enrichmentRefresh).not.toHaveBeenCalledWith(true, expect.anything());
+    // it listened before asking (it could not know nothing would queue) — then let go
+    expect(enrichment.stop).toHaveBeenCalledTimes(1);
+    expect(enrichment.watching).toBe(false);
   });
 
   it('批次生成字幕 opens the generation-batch dialog with the movie selection', async () => {
@@ -486,6 +531,7 @@ describe('LibraryBrowseV2 — mixed movie + series selection', () => {
     h.batchReparse = vi.fn().mockResolvedValue({ successCount: 1, failedCount: 0, errors: [] });
     h.batchExport = vi.fn().mockResolvedValue([]);
     h.matching = null;
+    enrichment.reset();
   });
 
   async function pickAll(action: 'batch-reparse-btn' | 'batch-delete-btn' | 'batch-export-btn') {
@@ -500,13 +546,13 @@ describe('LibraryBrowseV2 — mixed movie + series selection', () => {
   }
 
   it('[P0] 重新解析 sends movies as movie and the series as series, then sums the result', async () => {
-    enrichmentRefresh.mockClear();
+    enrichment.reset();
     await pickAll('batch-reparse-btn');
     expect(await screen.findByTestId('progress-close-btn')).toBeInTheDocument();
     expect(h.batchReparse).toHaveBeenCalledTimes(2);
     expect(h.batchReparse).toHaveBeenCalledWith({ ids: ['m1', 'm2'], type: 'movie' });
     expect(h.batchReparse).toHaveBeenCalledWith({ ids: ['s1'], type: 'series' });
-    expect(enrichmentRefresh).toHaveBeenLastCalledWith(true, 1);
+    expect(enrichment.watch).toHaveBeenCalledTimes(1);
   });
 
   it('[P0] 刪除 splits by type and lists the failures of both calls', async () => {
