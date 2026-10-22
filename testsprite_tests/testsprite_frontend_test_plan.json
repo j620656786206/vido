@@ -2187,8 +2187,8 @@
         "description": "Verify a grid of media poster cards is still visible (core feature unaffected by degradation)"
       }
     ],
-    "v4_status": "NEW",
-    "v4_reason": "TC047 asserts the degraded state renders; this adds the graceful-degradation slice of P0 journey #4. The degrade→recover TRANSITION is routed to Playwright (mock health API), out of TestSprite scope.",
+    "v4_status": "ENV-LIMITED",
+    "v4_reason": "Since sub-7-7a (#625) a key-less TMDb reports unconfigured, not degraded, so the test env no longer produces any degraded service; status summary reads ok. Needs a fixture that makes a configured service fail.",
     "v4_action": "ADD — Tier 1 P0 gap (needs health API in degraded state)"
   },
   {
@@ -2343,9 +2343,9 @@
         "description": "Verify poster cards render in the 最近新增 row from the seeded library"
       }
     ],
-    "v4_status": "NEW",
-    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
-    "v4_action": "generate+run in testsprite-v2-round3"
+    "v4_status": "RETIRE",
+    "v4_reason": "Needs Explore blocks with TMDb content; the env has no TMDb key. The ordering it guarded (own content first, explore below) is asserted by the rewritten TC096.",
+    "v4_action": "retire-2026-10"
   },
   {
     "id": "TC094",
@@ -3400,18 +3400,24 @@
         "description": "Verify the dialog shows the note 系統會在還原前自動建立目前資料的快照"
       },
       {
+        "type": "action",
+        "description": "Without clicking anything, press the Enter key once (the focused button is the one Enter activates)"
+      },
+      {
         "type": "assertion",
-        "description": "Verify the 取消 button in the dialog has keyboard focus"
+        "description": "Verify the 確認還原 dialog closed and no message starting with 還原完成 or 還原中 is visible, which proves the focused button was 取消"
       },
       {
         "type": "action",
-        "description": "Press Escape"
+        "description": "Open the restore dialog of the same backup again and press Escape"
       },
       {
         "type": "assertion",
         "description": "Verify the 確認還原 dialog is closed, the backup is still listed, and no message starting with 還原完成 is visible"
       }
-    ]
+    ],
+    "v4_status": "REWRITTEN 2026-10-22",
+    "v4_reason": "TestSprite could not read keyboard focus (inconclusive twice in October); pressing Enter right after opening proves the safe button has focus through behaviour. Focus verified with local Playwright 2026-10-22."
   },
   {
     "id": "TC126",
@@ -3732,13 +3738,13 @@
   {
     "id": "TC134",
     "title": "Generating subtitles with no speech recognition key disables the button, says what is missing and links to key settings",
-    "description": "The test env has no ASR or AI key. In the 管理字幕 dialog of the seeded movie 教父, the 生成字幕 button must end up disabled (never a spinner that never ends, never a crash) with the reason 生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。 and a 前往設定 link that opens /settings/keys. Read-only; the case never starts a generation.",
+    "description": "The test env has no ASR or AI key. 全面啟動 (seed-mv-006) has no text subtitle at all, so only speech recognition could make one. In the 管理字幕 dialog of the seeded movie 全面啟動, the 生成字幕 button must end up disabled (never a spinner that never ends, never a crash) with the reason 生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存後即可使用。 and a 前往設定 link that opens /settings/keys. Read-only; the case never starts a generation.",
     "category": "Subtitle Generation",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /media/movie/seed-mv-001 and wait for the detail page of 教父 to load"
+        "description": "Navigate to /media/movie/seed-mv-006 and wait for the detail page of 全面啟動 to load"
       },
       {
         "type": "action",
@@ -3746,7 +3752,7 @@
       },
       {
         "type": "assertion",
-        "description": "Verify a dialog whose title contains 管理字幕 and 教父 is visible"
+        "description": "Verify a dialog whose title contains 管理字幕 and 全面啟動 is visible"
       },
       {
         "type": "assertion",
@@ -3764,7 +3770,9 @@
         "type": "assertion",
         "description": "Verify the URL is /settings/keys and the heading 金鑰設定 is visible"
       }
-    ]
+    ],
+    "v4_status": "REWRITTEN 2026-10-22",
+    "v4_reason": "testenv-seed-2026-10 gave 教父 an embedded Traditional Chinese track, so its dialog now (correctly) offers a free 直接套用 instead of asking for an ASR key. Moved to 全面啟動, which has no text source."
   },
   {
     "id": "TC135",
@@ -3909,5 +3917,361 @@
         "description": "Verify the page still shows 無法載入這部影片 (not a blank page and not an endless loading skeleton)"
       }
     ]
+  },
+  {
+    "id": "TC139",
+    "title": "Wizard API keys step says AI costs go to your own Claude or Gemini account and both keys can wait",
+    "category": "Setup Wizard",
+    "priority": "High",
+    "description": "Fresh install path. On the API keys step the wizard must say Vido charges nothing and AI subtitle costs go straight to the user's own Claude or Gemini account, label the Gemini key as optional, and when both AI keys are left empty warn what will not work.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /setup"
+      },
+      {
+        "type": "action",
+        "description": "Proceed from the welcome step, press skip on the qBittorrent step, and on the media library step press skip or proceed until the API keys step (heading API 金鑰) is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text Vido 不收錢 is visible and the text 費用直接記在你的 Claude 或 Gemini 帳號 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a field labelled Gemini 金鑰（選填） is visible"
+      },
+      {
+        "type": "action",
+        "description": "Leave every key field empty"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an element with data-testid skip-warning is visible and contains 就不能做 AI 字幕翻譯"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: setup_completed=false",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC140",
+    "title": "Wizard finishes with only a Gemini key and the summary says Gemini set, Claude not set",
+    "category": "Setup Wizard",
+    "priority": "High",
+    "description": "A user without a Claude key can still finish setup with only a Gemini key. The summary on the last step must list Gemini 金鑰 as 已設定 and Claude 金鑰 as 未設定, and finishing lands in the app.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /setup and walk to the API keys step (skip qBittorrent and the media library step)"
+      },
+      {
+        "type": "action",
+        "description": "Type AIzaSyTestOnlyKeyForVido000000000000 into the Gemini key field and leave the Claude key empty"
+      },
+      {
+        "type": "action",
+        "description": "Press next until the final step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the summary row Gemini 金鑰 shows 已設定 and the summary row Claude 金鑰 shows 未設定"
+      },
+      {
+        "type": "action",
+        "description": "Press 完成設定"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the setup wizard is gone and the main navigation is visible"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: setup_completed=false, --with-encryption-key",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC141",
+    "title": "Wizard usage report step is off by default, shows what is and is not sent, and the choice carries into settings",
+    "category": "Setup Wizard",
+    "priority": "High",
+    "description": "The anonymous usage report step must start switched off, list what would be sent and what is never sent, and a choice made here must be the one shown later in settings.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /setup and walk to the step whose heading is 匿名使用回報"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the switch with data-testid usage-report-step-switch is off"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the texts Vido 版本 and 最近 7 天 Vido 自己做出的字幕數 are visible, and the texts 片名、檔名、資料夾路徑 and API 金鑰與任何設定 are visible"
+      },
+      {
+        "type": "action",
+        "description": "Turn the switch on, then press next until the final step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the summary row 匿名使用回報 shows 開啟"
+      },
+      {
+        "type": "action",
+        "description": "Press 完成設定, then navigate to /settings/connection"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the anonymous usage report setting on that page is on"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: setup_completed=false",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC142",
+    "title": "Library missing-Chinese count filters the list to exactly that many titles",
+    "category": "Library Subtitle Triage",
+    "priority": "High",
+    "description": "Next to the library title a line says how many titles lack Chinese subtitles. Clicking it must filter the list to exactly that many titles, including 侏羅紀公園 and 進擊的巨人 and excluding 教父, which has Traditional Chinese.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a button whose text contains 部缺中文 is visible next to the 媒體庫 heading, and note the number before 部缺中文"
+      },
+      {
+        "type": "action",
+        "description": "Click that button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the number of poster cards shown equals the noted number"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 侏羅紀公園 and 進擊的巨人 are visible and 教父 is not visible"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: default seed",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC143",
+    "title": "Sorting the library by subtitle status puts missing-Chinese titles first and Traditional Chinese last",
+    "category": "Library Subtitle Triage",
+    "priority": "High",
+    "description": "Choosing 字幕狀態 in the sort selector must order the library so titles badged 缺中文 come first and titles with Traditional Chinese (教父, 臥虎藏龍, 奧本海默, 怪奇物語) come last.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Open the sort selector and choose the option labelled 字幕狀態"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL contains sortBy=subtitle_status"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the first poster card shows the badge 缺中文"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 教父 appears after every title that shows the badge 缺中文"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: default seed",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC144",
+    "title": "Library badges tell missing Chinese, no text source, skipped and Simplified apart",
+    "category": "Library Subtitle Triage",
+    "priority": "Medium",
+    "description": "Each title's subtitle badge names its own situation: 侏羅紀公園 缺中文, 全面啟動 無字幕源, 沙丘:第二部 已略過, 駭客任務 簡中; 教父 with Traditional Chinese shows none of these.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the card for 侏羅紀公園 shows 缺中文"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the card for 全面啟動 shows 無字幕源"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the card for 沙丘:第二部 shows 已略過"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the card for 駭客任務 shows 簡中"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the card for 教父 shows none of 缺中文, 無字幕源, 已略過 or 簡中"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: default seed",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC145",
+    "title": "Activity record lists each subtitle run with how long it took, what it cost and a plain Chinese reason",
+    "category": "Activity",
+    "priority": "High",
+    "description": "The seeded month has two finished and three failed subtitle runs. The activity record must list them with the time each took and, for failures, a plain Chinese reason instead of a generic failure.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /activity"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an entry for 奧本海默 says 字幕完成 and 翻譯 1830 句 with US$0.24"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an entry for 怪奇物語 S01E01 says 字幕完成"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an entry for 侏羅紀公園 says 字幕沒做成 and 影片所在的資料夾寫不進字幕"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an entry for 星際效應 says 處理逾時"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an entry for 神隱少女 says AI 帳號沒有額度"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the text 生成失敗 is not visible anywhere on the page"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: default seed",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC146",
+    "title": "This month's AI spend shows translation, speech recognition and filename parsing, and Home shows the same total",
+    "category": "Activity",
+    "priority": "High",
+    "description": "The 本月 AI 花費 card must show translation 1 run 0.24 USD, speech recognition 1 run 0.31 USD and filename parsing 2 calls 0.02 USD. The Home readout 本月 must show the rounded total 0.6 USD.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /activity"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 本月 AI 花費 section shows 翻譯 with 1 次 and $0.24"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify it shows 語音辨識 with 1 次 and $0.31"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify it shows 檔名解析 with 2 次 and $0.02"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Home readout contains 本月 $0.6"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: default seed",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC147",
+    "title": "API keys page with an encryption key saves a Gemini key and it stays saved after a reload",
+    "category": "Settings",
+    "priority": "High",
+    "description": "With ENCRYPTION_KEY set, saving a Gemini key in 金鑰設定 must store it: the row changes from 尚未設定 to a set state and stays that way after reloading. The key value itself must never be shown in full.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/keys"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Gemini（選填） row shows 尚未設定"
+      },
+      {
+        "type": "action",
+        "description": "Type AIzaSyTestOnlyKeyForVido000000000000 into the Gemini key input and press its save button"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Gemini row no longer shows 尚未設定"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the full text AIzaSyTestOnlyKeyForVido000000000000 is not visible"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: --with-encryption-key",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC148",
+    "title": "With only a Gemini key, Manage Subtitles offers generation for an English-track movie with a price shown first",
+    "category": "Subtitle Generation",
+    "priority": "High",
+    "description": "侏羅紀公園 has an English text track and no Chinese. With only a Gemini key saved, its 管理字幕 dialog must offer 生成字幕 as enabled and show an estimated cost before anything is spent. The case never presses the button.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/keys, type AIzaSyTestOnlyKeyForVido000000000000 into the Gemini key input and save it"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-002 and click 管理字幕"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog whose title contains 管理字幕 and 侏羅紀公園 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a button whose name starts with 生成字幕 is visible and enabled"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a cost estimate in US$ is visible in the dialog"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: --with-encryption-key, Gemini key saved",
+    "v4_action": "ADD"
   }
 ]

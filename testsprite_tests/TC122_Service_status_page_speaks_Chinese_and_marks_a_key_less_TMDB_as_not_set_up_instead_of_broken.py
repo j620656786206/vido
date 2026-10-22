@@ -40,12 +40,12 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Open Settings from the sidebar to reach the service-status page.
+        # -> Open the Settings page using the visible “設定” navigation link.
         # 設定 link
         elem = page.get_by_test_id("nav-settings")
         await elem.click(timeout=10000)
         
-        # -> Open the “服務狀態” page from the Settings navigation.
+        # -> Open the Settings “服務狀態” page to inspect the service cards and their status labels.
         # 連線：服務狀態 link
         elem = page.get_by_test_id("settings-tab-status")
         await elem.click(timeout=10000)
@@ -54,19 +54,21 @@ async def run_test():
         
         # --> The 服務狀態 heading is visible.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The service-status heading is visible.
-        await expect(page.locator("#root").nth(0)).to_contain_text("\u670d\u52d9\u72c0\u614b", timeout=15000), "The service-status heading is visible."
+        # Assert: The page shows the 服務狀態 heading.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u670d\u52d9\u72c0\u614b", timeout=15000), "The page shows the \u670d\u52d9\u72c0\u614b heading."
         
-        # --> The service-status cards for TMDB, 豆瓣, 維基百科, AI 解析, and qBittorrent are visible.
-        await page.get_by_test_id("service-cards-list").nth(0).scroll_into_view_if_needed()
+        # --> The service list shows TMDB（中繼資料與海報）, 豆瓣, 維基百科, AI 解析, and qBittorrent.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The service-status cards are visible.
-        await expect(page.get_by_test_id("service-cards-list").nth(0)).to_be_visible(timeout=15000), "The service-status cards are visible."
+        # Assert: The service list includes TMDB.
+        await expect(page.get_by_test_id("service-cards-list").nth(0)).to_contain_text("TMDB", timeout=15000), "The service list includes TMDB."
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: The service list includes 豆瓣.
+        await expect(page.get_by_test_id("service-cards-list").nth(0)).to_contain_text("\u8c46\u74e3", timeout=15000), "The service list includes \u8c46\u74e3."
         
-        # --> The TMDB, 豆瓣, 維基百科, and AI 解析 cards show 未設定.
+        # --> The service list displays the status 未設定.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The service-status cards show the unconfigured status.
-        await expect(page.get_by_test_id("service-cards-list").nth(0)).to_contain_text("\u672a\u8a2d\u5b9a", timeout=15000), "The service-status cards show the unconfigured status."
+        # Assert: The service list displays 未設定.
+        await expect(page.get_by_test_id("service-cards-list").nth(0)).to_contain_text("\u672a\u8a2d\u5b9a", timeout=15000), "The service list displays \u672a\u8a2d\u5b9a."
         await asyncio.sleep(5)
 
     finally:

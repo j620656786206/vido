@@ -40,32 +40,35 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Open the movie detail page for 教父 by navigating to /media/movie/seed-mv-001
-        await page.goto("http://localhost:8090/media/movie/seed-mv-001")
-        try:
-            await page.wait_for_load_state("domcontentloaded", timeout=5000)
-        except Exception:
-            pass
+        # -> Open the 電影 library and locate 全面啟動.
+        # 電影 15 link
+        elem = page.get_by_test_id("nav-movies")
+        await elem.click(timeout=10000)
         
-        # -> Click the '管理字幕' button to open the 管理字幕 dialog.
+        # -> Open the 全面啟動 movie page from the visible movie library result.
+        # 無字幕源 8.4 全面啟動 2010 link
+        elem = page.get_by_test_id("poster-v2-seed-mv-006")
+        await elem.click(timeout=10000)
+        
+        # -> Open the 管理字幕 dialog for 全面啟動 and inspect the generation control and ASR-key explanation.
         # 管理字幕 button
         elem = page.get_by_test_id("action-manage-subtitle")
         await elem.click(timeout=10000)
         
-        # -> Click the '前往設定' button next to the ASR key message to open the keys settings page
+        # -> Click “前往設定” and verify the 金鑰設定 page opens at /settings/keys.
         # 前往設定 button
         elem = page.get_by_test_id("helper-goto-settings")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> 點擊「前往設定」後已導向金鑰設定頁面 /settings/keys，且頁面顯示「金鑰設定」
-        # Assert-outcome: passed
-        # Assert: The browser navigated to a URL containing /settings/keys.
-        await expect(page).to_have_url(re.compile("/settings/keys"), timeout=15000), "The browser navigated to a URL containing /settings/keys."
-        # Assert-outcome: passed
-        # Assert: The settings page shows the '金鑰設定' heading/link.
-        await expect(page.get_by_test_id("settings-tab-keys").nth(0)).to_have_text("\u91d1\u9470\u8a2d\u5b9a", timeout=15000), "The settings page shows the '\u91d1\u9470\u8a2d\u5b9a' heading/link."
+        # --> 金鑰設定頁面已於 /settings/keys 開啟。
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: The URL is /settings/keys.
+        await expect(page).to_have_url(re.compile("/settings/keys"), timeout=15000), "The URL is /settings/keys."
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: The page displays 金鑰設定.
+        await expect(page.locator("#root").nth(0)).to_contain_text("\u91d1\u9470\u8a2d\u5b9a", timeout=15000), "The page displays \u91d1\u9470\u8a2d\u5b9a."
         await asyncio.sleep(5)
 
     finally:
