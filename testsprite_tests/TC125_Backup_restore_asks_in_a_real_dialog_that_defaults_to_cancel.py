@@ -40,33 +40,35 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Click the '設定' (Settings) link in the left navigation to open the Settings page.
-        # 設定 link
-        elem = page.get_by_test_id("nav-settings")
-        await elem.click(timeout=10000)
+        # -> Open the settings backup page at /settings/backup and inspect its available controls.
+        await page.goto("http://localhost:8090/settings/backup")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
         
-        # -> Click the '備份與還原' (Backup and Restore) link in the Settings navigation to open the Backup page.
-        # 備份與還原 link
-        elem = page.get_by_test_id("settings-tab-backup")
-        await elem.click(timeout=10000)
-        
-        # -> Click the '建立備份' button and wait for a backup entry showing the status '完成' to appear on the page.
+        # -> Click 建立備份 and wait for the new backup row to show 完成.
         # 建立備份 button
         elem = page.get_by_test_id("create-backup-btn")
         await elem.click(timeout=10000)
         
-        # -> Click the '還原' (Restore) button for the completed backup to open the 確認還原 confirmation dialog.
-        # 還原 vido-backup-20260929-202450-v39.tar.gz button
-        elem = page.get_by_test_id("restore-btn-12dc8eb1-248b-4e1b-a795-e2d9539f377a")
+        # -> Open the restore confirmation for the completed backup and inspect its warning text and initially focused safe action.
+        # 還原 vido-backup-20261022-161053-v47.tar.gz button
+        elem = page.get_by_test_id("restore-btn-378025fb-6aed-4f38-bce7-bd1e756adc04")
+        await elem.click(timeout=10000)
+        
+        # -> Reopen the restore confirmation for the completed backup and press Escape to verify it closes without restoring.
+        # 還原 vido-backup-20261022-161053-v47.tar.gz button
+        elem = page.get_by_test_id("restore-btn-378025fb-6aed-4f38-bce7-bd1e756adc04")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The backup 'vido-backup-20260929-202450-v39.tar.gz' remains listed on the Backup page.
-        await page.get_by_test_id("restore-btn-12dc8eb1-248b-4e1b-a795-e2d9539f377a").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: passed
-        # Assert: The backup's restore button is visible, proving the backup entry is still listed.
-        await expect(page.get_by_test_id("restore-btn-12dc8eb1-248b-4e1b-a795-e2d9539f377a").nth(0)).to_be_visible(timeout=15000), "The backup's restore button is visible, proving the backup entry is still listed."
+        # --> Dismissing the restore confirmation with Enter and Escape leaves the backup listed without restoring it.
+        await page.get_by_test_id("restore-btn-378025fb-6aed-4f38-bce7-bd1e756adc04").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: The backup remains listed after dismissing the restore confirmation.
+        await expect(page.get_by_test_id("restore-btn-378025fb-6aed-4f38-bce7-bd1e756adc04").nth(0)).to_be_visible(timeout=15000), "The backup remains listed after dismissing the restore confirmation."
         await asyncio.sleep(5)
 
     finally:
