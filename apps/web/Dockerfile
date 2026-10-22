@@ -16,7 +16,7 @@
 
 # Stage 1: Build
 # ------------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git

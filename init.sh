@@ -57,13 +57,13 @@ echo ""
 print_header "Checking Node.js"
 if ! command_exists node; then
     print_error "Node.js is not installed"
-    print_info "Please install Node.js 20.x or higher (LTS Iron)"
+    print_info "Please install Node.js 20.x or higher (LTS Krypton)"
     print_info "Visit: https://nodejs.org/ or use nvm: https://github.com/nvm-sh/nvm"
     exit 1
 fi
 
 NODE_VERSION=$(node --version | sed 's/v//')
-REQUIRED_NODE_VERSION="20.0.0"
+REQUIRED_NODE_VERSION="24.0.0"
 
 print_info "Found Node.js version: $NODE_VERSION"
 
@@ -71,8 +71,8 @@ if version_ge "$NODE_VERSION" "$REQUIRED_NODE_VERSION"; then
     print_success "Node.js version is compatible (>= $REQUIRED_NODE_VERSION)"
 else
     print_error "Node.js version $NODE_VERSION is too old"
-    print_info "Required: Node.js >= $REQUIRED_NODE_VERSION (LTS Iron)"
-    print_info "Please upgrade Node.js or use nvm: nvm install lts/iron"
+    print_info "Required: Node.js >= $REQUIRED_NODE_VERSION (LTS Krypton)"
+    print_info "Please upgrade Node.js or use nvm: nvm install lts/krypton"
     exit 1
 fi
 
