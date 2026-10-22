@@ -1,6 +1,6 @@
 # testenv-seed-2026-10：測試用的假片庫補上「字幕狀態、生成紀錄、AI 花費」，十月的新畫面才測得到
 
-Status: review
+Status: done
 
 **Source:** 2026-10-22 Party Mode（Murat／John／Bob／Sally／Amelia）＋ founder-pm 判決，Alexyu 選 A：「先補假資料，同時先跑回歸」。上層任務是 `testsprite-2026-10-quota-run`。
 
