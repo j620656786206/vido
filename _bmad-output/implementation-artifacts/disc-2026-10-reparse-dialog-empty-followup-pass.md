@@ -1,6 +1,6 @@
 # disc-2026-10-reparse-dialog-empty-followup-pass：混選重新解析的視窗不會再以「成功 0・失敗 0」收尾
 
-Status: review
+Status: done
 
 **Source:** 2026-10-22 `release-0-3-1-tag-and-notes` 發版前實測（正式映像 main-2917eaf、TZ=Asia/Taipei）。Alexyu 選 B：先修再發 v0.3.1。
 
