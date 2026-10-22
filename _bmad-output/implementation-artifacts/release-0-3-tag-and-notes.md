@@ -1,6 +1,6 @@
 # Release 0.3：tag `v0.3.0`、release notes
 
-Status: in-progress
+Status: done
 
 **Source:** 2026-10-22。Alexyu 問「要不要發 0.3.0」，選 A：先部署正式機驗證，再發 v0.3.0；release notes 用 founder-growth 的初稿（Alexyu 再選 A 照發）。
 
@@ -31,6 +31,10 @@ Status: in-progress
 Claude Opus 5.5（claude-opus-5-5），2026-10-22。
 
 ### Completion Notes List
+
+- 2026-10-22：#895 合併（`29cb7db8`）→ `git tag -a v0.3.0` 推上去 → Docker workflow（run 39713115149）成功。
+- ghcr.io 查 digest：`latest`、`0.3.0`、`0.3`、`0` 都是 `sha256:41715c1d430dadee28b5f01a1f4d9b49cb89898ccc76f87c90a8566bbd6d546c`；`0.2` 仍是 `sha256:86086d90…`（沒動）；`main` 是 `sha256:0a243c64…`。AC #1、#2 ✅。
+- `gh release create v0.3.0 --latest`，內文＝核可草稿。Release：https://github.com/j620656786206/vido/releases/tag/v0.3.0（API `releases/latest` 回 v0.3.0）。AC #3 ✅。
 
 ### File List
 
