@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -190,8 +191,15 @@ func TestSpendSummary_MonthWindowIsTheServerZoneCalendarMonth(t *testing.T) {
 	assert.Equal(t, "month", got.Period)
 	assert.Equal(t, time.Date(2026, 9, 30, 16, 0, 0, 0, time.UTC), src.gotFrom, "Oct 1 00:00 Taipei = Sep 30 16:00 UTC — half an hour into the month is STILL this month")
 	assert.Equal(t, time.Date(2026, 10, 31, 16, 0, 0, 0, time.UTC), src.gotTo)
-	assert.Equal(t, src.gotFrom, got.From)
-	assert.Equal(t, src.gotTo, got.To)
+	// disc-2026-10-spend-month-label-utc: same instants as the query, but worded
+	// in the server's zone — the card reads 「10 月」 off this text.
+	assert.True(t, src.gotFrom.Equal(got.From))
+	assert.True(t, src.gotTo.Equal(got.To))
+	assert.Equal(t, taipei, got.From.Location())
+	raw, err := json.Marshal(got)
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"from":"2026-10-01T00:00:00+08:00"`)
+	assert.Contains(t, string(raw), `"to":"2026-11-01T00:00:00+08:00"`)
 }
 
 func TestBatchReceipt_SumsEveryStatusButCountsCuesOnCompleted(t *testing.T) {

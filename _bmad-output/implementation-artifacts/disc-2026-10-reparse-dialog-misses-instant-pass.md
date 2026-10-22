@@ -1,6 +1,6 @@
 # disc-2026-10-reparse-dialog-misses-instant-pass：重新解析的視窗不會再卡在「等待開始…」
 
-Status: review
+Status: done
 
 **Source:** 2026-10-22 `testsprite-2026-10-quota-run`：TC115 兩次 FAIL（Rule 24 lane ③ 立案）。Alexyu 排序：三個 bug 裡第二個修。
 
@@ -51,6 +51,7 @@ Claude Opus 5.5（claude-opus-5-5），2026-10-22。
 - `LibraryBrowseV2`：重新解析先 `await watch()` 再送出；一部都沒排入或請求丟例外就 `stop()`。刪除、匯出不開連線。
 - 測試：hook 8 條（連上才 resolve、逾時與出錯也會 resolve、連上後立刻來的「完成」收得到、第二次重新開始、stop 清空、壞資料不當機…）；頁面新增「連線還沒好之前不會送出請求」，並把 mock 換成新的介面。library＋hook vitest 23 檔 321 條全綠。
 - 本機 :8090（重新 build）：用 Playwright 把進度連線故意延遲 2 秒（模擬慢連線）。請求在連線之後才送出（`GET /events` → 2 秒後 `POST /library/batch/reparse`），視窗走到「比對完成 成功 2・失敗 1 — 清單已更新」。
+- CI 第一輪 Unit Tests 紅：`routes/library.spec.tsx` 也 mock 了這個 hook（舊介面回 `undefined`），同一個 PR 改成新介面後全綠；本機整套 web vitest 298 檔 4,887 條全綠。
 - 已知小事：連線慢時，按下確認到開始比對之間最多會多等 3 秒（等連線）；視窗這段時間顯示「重新解析中…」。
 
 ### File List
