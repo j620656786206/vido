@@ -1,6 +1,6 @@
 # Release 0.2：README 第一段說清楚「給誰用、跟 Bazarr／Lingarr 差在哪」
 
-Status: review
+Status: done
 
 **Source:** 2026-10-14 party mode。Mary：FB 招募文第一則留言就是對手（Toby Wong 推 Lingarr）；Alexyu 在留言裡回的三個差異（台灣用語、角色名統一、沒字幕可以聽）只在留言裡，README 第一段沒有。founder-growth 寫初稿，Alexyu 2026-10-14 選 **A：直接用這版**。v0.2 發版單 ③。
 

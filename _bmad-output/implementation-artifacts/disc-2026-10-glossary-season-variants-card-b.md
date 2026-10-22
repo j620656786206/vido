@@ -1,6 +1,6 @@
 # Disc：各季寫法卡片 B（前端）——名詞對照表一個原文一張卡片
 
-Status: review
+Status: done
 
 **Source:** 同 A 單；Bob 依 Story Splitting Rule 拆出。設計稿：F6s-D-v2 `mHJar`、F6s-M-v2 `o40M1M`、元件 `Component/GlossaryRow-v2/Seasons`（`QkRiY`）／`…/Seasons/Mobile`（`lcSkQ`）、規則 F6s Note `QMmMg`。
 
