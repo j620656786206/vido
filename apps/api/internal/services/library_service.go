@@ -2,10 +2,12 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -692,6 +694,18 @@ func (s *LibraryService) batchTitle(ctx context.Context, id, mediaType string) s
 	return ""
 }
 
+// batchErrorMessage is what the batch dialog shows for one failed item. The
+// raw error carries SQL text and ids, so it stays in the log line next to it
+// (disc-2026-10-batch-mixed-selection-wrong-type AC #4). The repositories
+// word "missing" two ways — a wrapped sql.ErrNoRows from FindByID and a plain
+// "… not found" from Delete — so both are read as 找不到.
+func batchErrorMessage(err error) string {
+	if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "not found") {
+		return "找不到這個項目（可能已被刪除）"
+	}
+	return "處理失敗，詳細原因記在系統日誌"
+}
+
 // BatchDelete deletes multiple items by IDs and type
 func (s *LibraryService) BatchDelete(ctx context.Context, ids []string, mediaType string) (*BatchResult, error) {
 	if len(ids) == 0 {
@@ -708,7 +722,7 @@ func (s *LibraryService) BatchDelete(ctx context.Context, ids []string, mediaTyp
 		}
 		if err != nil {
 			result.FailedCount++
-			result.Errors = append(result.Errors, BatchError{ID: id, Message: err.Error(), Title: s.batchTitle(ctx, id, mediaType)})
+			result.Errors = append(result.Errors, BatchError{ID: id, Message: batchErrorMessage(err), Title: s.batchTitle(ctx, id, mediaType)})
 			s.logger.Error("Batch delete failed for item", "id", id, "type", mediaType, "error", err)
 		} else {
 			result.SuccessCount++
@@ -751,7 +765,7 @@ func (s *LibraryService) BatchReparse(ctx context.Context, ids []string, mediaTy
 		}
 		if err != nil {
 			result.FailedCount++
-			result.Errors = append(result.Errors, BatchError{ID: id, Message: err.Error(), Title: title})
+			result.Errors = append(result.Errors, BatchError{ID: id, Message: batchErrorMessage(err), Title: title})
 			s.logger.Error("Batch reparse failed for item", "id", id, "type", mediaType, "error", err)
 		} else {
 			result.SuccessCount++

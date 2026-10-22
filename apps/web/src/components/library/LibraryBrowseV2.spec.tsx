@@ -119,6 +119,22 @@ const movie = (id: string, title: string): LibraryItem => ({
   },
 });
 
+const series = (id: string, title: string): LibraryItem =>
+  ({
+    type: 'series',
+    series: {
+      id,
+      title,
+      firstAirDate: '2019-01-01',
+      genres: ['劇情'],
+      parseStatus: 'success',
+      voteAverage: 8,
+      posterPath: null,
+      createdAt: '',
+      updatedAt: '',
+    },
+  }) as unknown as LibraryItem;
+
 function renderBrowse(initial = '/library', type?: 'all' | 'movie' | 'tv') {
   const rootRoute = createRootRoute();
   const libraryRoute = createRoute({
@@ -455,6 +471,106 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     await userEvent.click(screen.getByTestId('list-row-v2-b'));
     expect(screen.getByTestId('selected-count')).toHaveTextContent('已選取 1 項');
     expect(screen.getByTestId('list-row-v2-b')).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+// disc-2026-10-batch-mixed-selection-wrong-type: 「全部」 mixes movies and series; each
+// type must reach the batch endpoint with its own ids, never tagged with the last click.
+describe('LibraryBrowseV2 — mixed movie + series selection', () => {
+  beforeEach(() => {
+    h.infinite = infinite({
+      items: [movie('m1', '電影甲'), series('s1', '影集乙'), movie('m2', '電影丙')],
+      totalItems: 3,
+    });
+    h.batchDelete = vi.fn().mockResolvedValue({ successCount: 1, failedCount: 0, errors: [] });
+    h.batchReparse = vi.fn().mockResolvedValue({ successCount: 1, failedCount: 0, errors: [] });
+    h.batchExport = vi.fn().mockResolvedValue([]);
+    h.matching = null;
+  });
+
+  async function pickAll(action: 'batch-reparse-btn' | 'batch-delete-btn' | 'batch-export-btn') {
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    // the series is clicked LAST — the old code tagged the whole batch 'series'
+    await userEvent.click(screen.getByTestId('poster-v2-m1'));
+    await userEvent.click(screen.getByTestId('poster-v2-m2'));
+    await userEvent.click(screen.getByTestId('poster-v2-s1'));
+    await userEvent.click(screen.getByTestId(action));
+    await userEvent.click(screen.getByTestId('confirm-action-btn'));
+  }
+
+  it('[P0] 重新解析 sends movies as movie and the series as series, then sums the result', async () => {
+    enrichmentRefresh.mockClear();
+    await pickAll('batch-reparse-btn');
+    expect(await screen.findByTestId('progress-close-btn')).toBeInTheDocument();
+    expect(h.batchReparse).toHaveBeenCalledTimes(2);
+    expect(h.batchReparse).toHaveBeenCalledWith({ ids: ['m1', 'm2'], type: 'movie' });
+    expect(h.batchReparse).toHaveBeenCalledWith({ ids: ['s1'], type: 'series' });
+    expect(enrichmentRefresh).toHaveBeenLastCalledWith(true, 1);
+  });
+
+  it('[P0] 刪除 splits by type and lists the failures of both calls', async () => {
+    h.batchDelete = vi
+      .fn()
+      .mockResolvedValueOnce({
+        successCount: 1,
+        failedCount: 1,
+        errors: [{ id: 'm2', title: '電影丙', message: '處理失敗，詳細原因記在系統日誌' }],
+      })
+      .mockResolvedValueOnce({
+        successCount: 0,
+        failedCount: 1,
+        errors: [{ id: 's1', title: '影集乙', message: '找不到這個項目（可能已被刪除）' }],
+      });
+    await pickAll('batch-delete-btn');
+    expect(await screen.findByTestId('progress-close-btn')).toBeInTheDocument();
+    expect(h.batchDelete).toHaveBeenCalledWith({ ids: ['m1', 'm2'], type: 'movie' });
+    expect(h.batchDelete).toHaveBeenCalledWith({ ids: ['s1'], type: 'series' });
+    expect(screen.getByText('2 個項目失敗：')).toBeInTheDocument();
+    expect(screen.getByText(/電影丙: 處理失敗/)).toBeInTheDocument();
+    expect(screen.getByText(/影集乙: 找不到這個項目/)).toBeInTheDocument();
+  });
+
+  it('匯出 writes one file holding both types, named library', async () => {
+    h.batchExport = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: 'm1' }, { id: 'm2' }])
+      .mockResolvedValueOnce([{ id: 's1' }]);
+    const createObjectURL = vi.fn().mockReturnValue('blob:x');
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const clicked: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement
+    ) {
+      clicked.push(this.download);
+    });
+    onTestFinished(() => click.mockRestore());
+
+    await pickAll('batch-export-btn');
+    expect(await screen.findByTestId('progress-close-btn')).toBeInTheDocument();
+    expect(h.batchExport).toHaveBeenCalledWith({ ids: ['m1', 'm2'], type: 'movie' });
+    expect(h.batchExport).toHaveBeenCalledWith({ ids: ['s1'], type: 'series' });
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    const text = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsText(blob);
+    });
+    expect(JSON.parse(text)).toEqual([{ id: 'm1' }, { id: 'm2' }, { id: 's1' }]);
+    expect(clicked[0]).toMatch(/^vido-export-library-\d{4}-\d{2}-\d{2}\.json$/);
+  });
+
+  it('a single-type selection still sends exactly one call', async () => {
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.click(screen.getByTestId('poster-v2-m1'));
+    await userEvent.click(screen.getByTestId('poster-v2-m2'));
+    await userEvent.click(screen.getByTestId('batch-reparse-btn'));
+    await userEvent.click(screen.getByTestId('confirm-action-btn'));
+    expect(await screen.findByTestId('progress-close-btn')).toBeInTheDocument();
+    expect(h.batchReparse).toHaveBeenCalledTimes(1);
+    expect(h.batchReparse).toHaveBeenCalledWith({ ids: ['m1', 'm2'], type: 'movie' });
   });
 });
 

@@ -58,6 +58,7 @@ import { EmptyNoFolder } from './EmptyNoFolder';
 import { EmptyReadyForScan } from './EmptyReadyForScan';
 import type { FilterValues } from './FilterPanel';
 import type {
+  BatchResult,
   LibraryItem,
   LibraryMediaType,
   SortField,
@@ -485,6 +486,28 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     async (action: 'delete' | 'reparse' | 'export') => {
       const ids = Array.from(selectedIds);
       const total = ids.length;
+      // disc-2026-10-batch-mixed-selection-wrong-type: 「全部」 mixes movies and
+      // series, and the batch endpoints take ONE type per call — send each type
+      // its own ids instead of tagging the whole batch with the last-clicked one.
+      const groups = new Map<'movie' | 'series', string[]>();
+      for (const id of ids) {
+        const t = selectionTypesRef.current.get(id) ?? selectedType;
+        groups.set(t, [...(groups.get(t) ?? []), id]);
+      }
+      const perType = Array.from(groups.entries());
+      const runEach = async (
+        mutate: (v: { ids: string[]; type: 'movie' | 'series' }) => Promise<BatchResult>
+      ): Promise<BatchResult> => {
+        const merged: BatchResult = { successCount: 0, failedCount: 0, errors: [] };
+        for (const [type, typeIds] of perType) {
+          const r = await mutate({ ids: typeIds, type });
+          merged.successCount += r.successCount ?? 0;
+          merged.failedCount += r.failedCount ?? 0;
+          merged.errors = [...(merged.errors ?? []), ...(r.errors ?? [])];
+        }
+        if (merged.errors?.length === 0) merged.errors = undefined;
+        return merged;
+      };
       setBatchProgress({
         isOpen: true,
         current: 0,
@@ -496,7 +519,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
       });
       try {
         if (action === 'delete') {
-          const result = await batchDeleteMutation.mutateAsync({ ids, type: selectedType });
+          const result = await runEach(batchDeleteMutation.mutateAsync);
           setBatchProgress((prev) => ({
             ...prev,
             current: total,
@@ -504,7 +527,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
             errors: result.errors,
           }));
         } else if (action === 'reparse') {
-          const result = await batchReparseMutation.mutateAsync({ ids, type: selectedType });
+          const result = await runEach(batchReparseMutation.mutateAsync);
           if (result.successCount > 0) {
             // A new run id restarts the watch from 已排入 even if it was already on.
             setReparseRun((n) => n + 1);
@@ -518,12 +541,16 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
             errors: result.errors,
           }));
         } else {
-          const result = await batchExportMutation.mutateAsync({ ids, type: selectedType });
+          const result: unknown[] = [];
+          for (const [type, typeIds] of perType) {
+            result.push(...(await batchExportMutation.mutateAsync({ ids: typeIds, type })));
+          }
           const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `vido-export-${selectedType}-${new Date().toISOString().slice(0, 10)}.json`;
+          const label = perType.length === 1 ? perType[0][0] : 'library';
+          a.download = `vido-export-${label}-${new Date().toISOString().slice(0, 10)}.json`;
           a.click();
           URL.revokeObjectURL(url);
           setBatchProgress((prev) => ({ ...prev, current: total, isComplete: true }));
