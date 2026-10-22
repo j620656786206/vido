@@ -156,7 +156,12 @@ func (s *SubtitleSpendService) MonthSummary(ctx context.Context, batchID string)
 	}
 	out := s.summarize(ctx, runs)
 	out.Period = "month"
-	out.From, out.To = from, to
+	// The window is queried in UTC, but reported in the server's zone: the
+	// activity card reads the month straight off `from`, and Oct 1 00:00 in
+	// Taipei is "2026-09-30T16:00:00Z" — it said 9 月 all October
+	// (disc-2026-10-spend-month-label-utc). Same instants, local wording.
+	loc := s.now().Location()
+	out.From, out.To = from.In(loc), to.In(loc)
 
 	if s.side != nil {
 		totals, err := s.side.TotalsBetween(ctx, from, to)
