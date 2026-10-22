@@ -4273,5 +4273,65 @@
     "v4_status": "NEW 2026-10-22",
     "v4_reason": "testsprite-2026-10-quota-run phase 2 (new-user first week). Env: --with-encryption-key, Gemini key saved",
     "v4_action": "ADD"
+  },
+  {
+    "id": "TC149",
+    "title": "This month's AI spend card is labelled with the current month",
+    "category": "Activity",
+    "priority": "High",
+    "description": "The 本月 AI 花費 card on /activity carries a month label. It must name the month of today's date (for example 10 月 during October), not the previous month. Before disc-2026-10-spend-month-label-utc a server outside UTC labelled October as 9 月.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /activity"
+      },
+      {
+        "type": "action",
+        "description": "Read today's date from the browser (new Date()) and note its month number"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the element with data-testid activity-spend-month shows that month number followed by 月, for example 10 月 in October"
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Regression guard for disc-2026-10-spend-month-label-utc (PR #902).",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC150",
+    "title": "Re-parsing a movie and a series together in the All view fails neither",
+    "category": "Library Subtitle Triage",
+    "priority": "High",
+    "description": "In the merged /library view a selection can hold movies and series at once. Re-parsing [FanSub] 未知電影 (2021) together with Unknown.Show.S01 must not list any failed item and must never show raw text such as not found or sql. Before disc-2026-10-batch-mixed-selection-wrong-type the series was sent as a movie and failed with an English database error. With TMDb unreachable the background match itself still ends with 失敗 in its result line (成功 0・失敗 N) - that is the match result, not a rejected item, and is expected.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the 選取 button, then click the card [FanSub] 未知電影 (2021) and the card Unknown.Show.S01"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selection toolbar shows 已選取 2 項"
+      },
+      {
+        "type": "action",
+        "description": "Click 重新解析 in the selection toolbar and confirm with the 重新解析 button in the dialog"
+      },
+      {
+        "type": "action",
+        "description": "Wait up to 30 seconds for the dialog title to become 比對完成"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog has NO line of the form 'N 個項目失敗：' followed by item names (that list means the request rejected an item), and does not contain the texts not found or sql. A result line like 成功 0・失敗 1 — 清單已更新 is the background match result and is allowed."
+      }
+    ],
+    "v4_status": "NEW 2026-10-22",
+    "v4_reason": "Regression guard for disc-2026-10-batch-mixed-selection-wrong-type (PR #900).",
+    "v4_action": "ADD"
   }
 ]
