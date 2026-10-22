@@ -54,4 +54,13 @@ Sally 的驗收原則：新案例要斷言「畫面說人話」（例如已略�
 
 ### Completion Notes List
 
+- 2026-10-22 階段 1 完成：7 批、55 次執行，額度 150 → 122.5。47 過、6 FAIL，6 條都不是產品 bug（本機 Playwright／API 逐條重現）：TC085 已立案的案例過期；TC096、TC122 案例過期 → 已改寫並重跑通過；TC098、TC110 是同一批互相干擾（加上 TC110 的 `select_option("")` 空洞操作），本機在乾淨資料上都正常；TC125 工具確認不了焦點，本機確認焦點在「取消」。TC068／TC136 空洞 PASS，本機確認掃描排程存得起來。AC 1、AC 2 ✅（精靈 TC106–108 沒過期）。
+- 學到：會改資料的案例一批只放一條，或每條之間重新 seed。
+- 階段 2 等 `testenv-seed-2026-10`。
+
 ### File List
+
+- `testsprite_tests/testsprite_frontend_test_plan.json`（TC096、TC122 改寫）
+- `testsprite_tests/TC096_Home_without_TMDb_shows_own_content_first_and_an_honest_explore_block_notice_below_it.py`（新）、舊 `TC096_Home_renders_Explore_blocks_below_own_content.py`（刪）
+- `testsprite_tests/TC122_Service_status_page_speaks_Chinese_and_tells_you_where_to_fix_a_broken_TMDB.py`（重新生成）
+- `testsprite_tests/testsprite-mcp-test-report.md`（十月一節）
