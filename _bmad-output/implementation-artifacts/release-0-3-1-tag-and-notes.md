@@ -1,6 +1,6 @@
 # Release 0.3.1：tag `v0.3.1`、release notes
 
-Status: in-progress
+Status: done
 
 **Source:** 2026-10-22。修完 TestSprite 十月抓到的三個 bug 之後，Alexyu 選 A：發 v0.3.1，讓照指南裝的人拿到修正。
 
@@ -30,7 +30,16 @@ Status: in-progress
 
 ## Dev Agent Record
 
+### Agent Model Used
+
+Claude Opus 5.5（claude-opus-5-5），2026-10-22。
+
 ### Completion Notes List
+
+- 2026-10-22：#905 合併（`0275b6fe`）→ `git tag -a v0.3.1` 推上去 → Docker workflow（run 39777602024）成功。
+- 打 tag 前用 main 的正式映像（`8f1d9381`）在本機拋棄式容器（TZ=Asia/Taipei）再測一次四個修正：活動頁「10 月」；進度連線延遲 1.5 秒、混選 2 部電影＋1 部影集重新解析，送出兩個類型正確的請求，視窗停在「比對完成 成功 2・失敗 2」（log 有補跑 0 筆，沒有蓋掉）。容器與資料已刪。
+- ghcr.io digest：`latest`、`0.3.1`、`0.3`、`0` 都是 `sha256:b8ced20a1630f9da13ed60432d3a49a563b5e364fada00a839bdf4ac67a795f8`；`0.3.0` 仍是 `sha256:41715c1d…`（沒動）。AC #1、#2 ✅。
+- `gh release create v0.3.1 --latest`，內文＝founder-growth 初稿，依 Alexyu「B，先修再發」拿掉「還沒修好的」一節，第一點補一句「視窗也會顯示實際的處理結果」。Release：https://github.com/j620656786206/vido/releases/tag/v0.3.1（API `releases/latest` 回 v0.3.1）。AC #3 ✅。
 
 ### File List
 
