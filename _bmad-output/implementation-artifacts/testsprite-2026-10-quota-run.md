@@ -62,6 +62,8 @@ Sally 的驗收原則：新案例要斷言「畫面說人話」（例如已略�
 - 額度 150 → 69。剩下的留給上面的 bug 修好後重跑；AC 6（月底前 ≤ 10 點）還沒到。
 - 2026-10-22 晚：三個 bug 修完合併（PR #900、#901、#902），用 main 重新打包重跑。TC115 3／3 過（修之前 2 次 FAIL），新增 TC149（月份）、TC150（混選重新解析）各 3／3 過，其他跟批次操作有關的 7 條全過。額度 → 60.5。
 
+- 2026-10-22 晚：Alexyu「逐一點擊每個頁面的詳細操作，補齊任何情境」。用 Playwright 盤點 25 個頁面的每個按鈕／連結／輸入框，對照既有 120 條找出沒點過的操作，新增 TC151–TC187（37 條），各跑 1 次（改寫的再跑 1 次）：33 過；TC163（搜尋頁 TMDb 斷線露出內部代碼、不列片庫結果）與 TC185（不存在網址只顯示英文 Not Found）是真 bug，已立案；TC186／TC187 手機版 TestSprite 不能改視窗→環境限制。TC173、TC177、TC183 第一版預期寫錯，改寫後過；TC159、TC175 本機核對過不是空洞 PASS。另立 `disc-2026-10-add-library-missing-path-and-duplicates`（要 Alexyu 決定）與 `disc-2026-10-ci-playwright-deps-hang`。額度 → 41.5。
+
 ### File List
 
 - `testsprite_tests/testsprite_frontend_test_plan.json`（TC096、TC122 改寫）
