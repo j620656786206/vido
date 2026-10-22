@@ -50,7 +50,9 @@ vi.mock('../hooks/useLibrary', () => ({
 }));
 // disc-2026-09-batch-reparse-never-runs: the post-reparse SSE refresh needs a
 // QueryClient this route spec does not mount — and this spec is about routing.
-vi.mock('../hooks/useEnrichmentRefresh', () => ({ useEnrichmentRefresh: () => undefined }));
+vi.mock('../hooks/useEnrichmentRefresh', () => ({
+  useEnrichmentRefresh: () => ({ matching: null, watch: () => Promise.resolve(), stop: () => {} }),
+}));
 vi.mock('../components/subtitle/GenerationBatchDialogV2', () => ({
   GenerationBatchDialogV2: () => null,
 }));
