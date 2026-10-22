@@ -16,6 +16,12 @@
 // seasons/episodes. Downloads are NOT seedable here (they live in qBittorrent,
 // not the DB) — the downloads page shows its empty/fail-soft state.
 //
+// Since testenv-seed-2026-10 it also carries what the October screens read:
+// a spread of "has Chinese subtitles" verdicts (movies and episodes, so the
+// 缺中文 count, the subtitle-status sort and the series rollup have something
+// to tell apart), this month's subtitle runs with time, cost and failure
+// reasons (activity record, 本月 AI 花費) and one filename-parse side spend.
+//
 // tmdbID/posterPath are LIVE references — TMDb retires ids and re-cuts artwork,
 // so they rot silently and the grid renders broken images. If a seeded poster is
 // blank, re-verify against the API rather than assuming a frontend bug.
@@ -23,6 +29,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -35,6 +42,7 @@ import (
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/services"
 )
 
 func main() {
@@ -111,6 +119,10 @@ func run(dataDir, mediaRoot string, reset bool, failureFixtures bool) error {
 	if err != nil {
 		return fmt.Errorf("seed series: %w", err)
 	}
+	runCount, err := seedSubtitleActivity(ctx, repos, repository.NewAISideSpendRepository(db.Conn()), time.Now())
+	if err != nil {
+		return fmt.Errorf("seed subtitle activity: %w", err)
+	}
 	if failureFixtures {
 		if err := seedFailureFixtures(ctx, repos, mediaRoot); err != nil {
 			return fmt.Errorf("seed failure fixtures: %w", err)
@@ -131,6 +143,7 @@ func run(dataDir, mediaRoot string, reset bool, failureFixtures bool) error {
 		"movies", movieCount,
 		"series", seriesCount,
 		"episodes", episodeCount,
+		"subtitle_runs", runCount,
 		"failure_fixtures", failureFixtures,
 	)
 	return nil
@@ -207,23 +220,29 @@ type movieFixture struct {
 	fileName      string
 	fileSizeMB    int64
 	isRemoved     bool
+	// tracks is the stored subtitle_tracks JSON ("" = never read → 不知道);
+	// subtitleStatus, when set, is written after Create (Create does not take it).
+	tracks         string
+	subtitleStatus models.SubtitleStatus
 }
 
 func seedMovies(ctx context.Context, repos *repository.Repositories, libraryID, movieDir string) (int, error) {
 	fixtures := []movieFixture{
 		// Matched, decade spread 更早→2020s, zh-TW genres (bugfix-d guard: NEVER 简体).
-		{id: "seed-mv-001", title: "教父", originalTitle: "The Godfather", releaseDate: "1972-03-14", genres: []string{"犯罪", "劇情"}, tmdbID: 238, posterPath: "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg", voteAverage: 8.7, parseStatus: models.ParseStatusSuccess, fileName: "The.Godfather.1972.1080p.mkv", fileSizeMB: 4200},
-		{id: "seed-mv-002", title: "侏羅紀公園", originalTitle: "Jurassic Park", releaseDate: "1993-06-11", genres: []string{"冒險", "科幻"}, tmdbID: 329, posterPath: "/oU7Oq2kFAAlGqbU4VoAE36g4hoI.jpg", voteAverage: 8.2, parseStatus: models.ParseStatusSuccess, fileName: "Jurassic.Park.1993.1080p.mkv", fileSizeMB: 3800},
-		{id: "seed-mv-003", title: "駭客任務", originalTitle: "The Matrix", releaseDate: "1999-03-31", genres: []string{"動作", "科幻"}, tmdbID: 603, posterPath: "/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg", voteAverage: 8.7, parseStatus: models.ParseStatusSuccess, fileName: "The.Matrix.1999.1080p.mkv", fileSizeMB: 4100},
-		{id: "seed-mv-004", title: "臥虎藏龍", originalTitle: "Crouching Tiger, Hidden Dragon", releaseDate: "2000-07-06", genres: []string{"動作", "劇情"}, tmdbID: 146, posterPath: "/28FX5rCNo6p602DzgPOTNZjyMPh.jpg", voteAverage: 8.0, parseStatus: models.ParseStatusSuccess, fileName: "Crouching.Tiger.2000.1080p.mkv", fileSizeMB: 3500},
-		{id: "seed-mv-005", title: "神隱少女", originalTitle: "千と千尋の神隠し", releaseDate: "2001-07-20", genres: []string{"動畫", "奇幻"}, tmdbID: 129, posterPath: "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg", voteAverage: 8.5, parseStatus: models.ParseStatusSuccess, fileName: "Spirited.Away.2001.1080p.mkv", fileSizeMB: 3200},
-		{id: "seed-mv-006", title: "全面啟動", originalTitle: "Inception", releaseDate: "2010-07-16", genres: []string{"動作", "科幻", "懸疑"}, tmdbID: 27205, posterPath: "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg", voteAverage: 8.4, parseStatus: models.ParseStatusSuccess, fileName: "Inception.2010.2160p.mkv", fileSizeMB: 8200},
-		{id: "seed-mv-007", title: "讓子彈飛", originalTitle: "让子弹飞", releaseDate: "2010-12-16", genres: []string{"動作", "喜劇"}, tmdbID: 51533, posterPath: "/vUvrjRRmC1BeI8QyMaRBdtIqHHn.jpg", voteAverage: 8.0, parseStatus: models.ParseStatusSuccess, countriesJSON: `[{"iso_3166_1":"CN","name":"China"}]`, fileName: "Let.The.Bullets.Fly.2010.1080p.mkv", fileSizeMB: 3900},
-		{id: "seed-mv-008", title: "星際效應", originalTitle: "Interstellar", releaseDate: "2014-11-07", genres: []string{"科幻", "劇情"}, tmdbID: 157336, posterPath: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", voteAverage: 8.4, parseStatus: models.ParseStatusSuccess, fileName: "Interstellar.2014.2160p.mkv", fileSizeMB: 9100},
-		{id: "seed-mv-009", title: "寄生上流", originalTitle: "기생충", releaseDate: "2019-05-30", genres: []string{"劇情", "驚悚"}, tmdbID: 496243, posterPath: "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", voteAverage: 8.5, parseStatus: models.ParseStatusSuccess, fileName: "Parasite.2019.1080p.mkv", fileSizeMB: 4000},
+		// Subtitle verdicts: 繁中 001/004/011, 簡中 003/007, 缺中文 002/005/008/009,
+		// 無字幕源 006, 已略過 012, 不知道 010 (never read).
+		{id: "seed-mv-001", title: "教父", originalTitle: "The Godfather", releaseDate: "1972-03-14", genres: []string{"犯罪", "劇情"}, tmdbID: 238, posterPath: "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg", voteAverage: 8.7, parseStatus: models.ParseStatusSuccess, fileName: "The.Godfather.1972.1080p.mkv", fileSizeMB: 4200, tracks: tracksJSON(engTrack, hantTrack)},
+		{id: "seed-mv-002", title: "侏羅紀公園", originalTitle: "Jurassic Park", releaseDate: "1993-06-11", genres: []string{"冒險", "科幻"}, tmdbID: 329, posterPath: "/oU7Oq2kFAAlGqbU4VoAE36g4hoI.jpg", voteAverage: 8.2, parseStatus: models.ParseStatusSuccess, fileName: "Jurassic.Park.1993.1080p.mkv", fileSizeMB: 3800, tracks: tracksJSON(engTrack)},
+		{id: "seed-mv-003", title: "駭客任務", originalTitle: "The Matrix", releaseDate: "1999-03-31", genres: []string{"動作", "科幻"}, tmdbID: 603, posterPath: "/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg", voteAverage: 8.7, parseStatus: models.ParseStatusSuccess, fileName: "The.Matrix.1999.1080p.mkv", fileSizeMB: 4100, tracks: tracksJSON(engTrack, hansTrack)},
+		{id: "seed-mv-004", title: "臥虎藏龍", originalTitle: "Crouching Tiger, Hidden Dragon", releaseDate: "2000-07-06", genres: []string{"動作", "劇情"}, tmdbID: 146, posterPath: "/28FX5rCNo6p602DzgPOTNZjyMPh.jpg", voteAverage: 8.0, parseStatus: models.ParseStatusSuccess, fileName: "Crouching.Tiger.2000.1080p.mkv", fileSizeMB: 3500, tracks: tracksJSON(hantTrack)},
+		{id: "seed-mv-005", title: "神隱少女", originalTitle: "千と千尋の神隠し", releaseDate: "2001-07-20", genres: []string{"動畫", "奇幻"}, tmdbID: 129, posterPath: "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg", voteAverage: 8.5, parseStatus: models.ParseStatusSuccess, fileName: "Spirited.Away.2001.1080p.mkv", fileSizeMB: 3200, tracks: tracksJSON(engTrack)},
+		{id: "seed-mv-006", title: "全面啟動", originalTitle: "Inception", releaseDate: "2010-07-16", genres: []string{"動作", "科幻", "懸疑"}, tmdbID: 27205, posterPath: "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg", voteAverage: 8.4, parseStatus: models.ParseStatusSuccess, fileName: "Inception.2010.2160p.mkv", fileSizeMB: 8200, tracks: tracksJSON(), subtitleStatus: models.SubtitleStatusNoTextSource},
+		{id: "seed-mv-007", title: "讓子彈飛", originalTitle: "让子弹飞", releaseDate: "2010-12-16", genres: []string{"動作", "喜劇"}, tmdbID: 51533, posterPath: "/vUvrjRRmC1BeI8QyMaRBdtIqHHn.jpg", voteAverage: 8.0, parseStatus: models.ParseStatusSuccess, countriesJSON: `[{"iso_3166_1":"CN","name":"China"}]`, fileName: "Let.The.Bullets.Fly.2010.1080p.mkv", fileSizeMB: 3900, tracks: tracksJSON(hansTrack)},
+		{id: "seed-mv-008", title: "星際效應", originalTitle: "Interstellar", releaseDate: "2014-11-07", genres: []string{"科幻", "劇情"}, tmdbID: 157336, posterPath: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", voteAverage: 8.4, parseStatus: models.ParseStatusSuccess, fileName: "Interstellar.2014.2160p.mkv", fileSizeMB: 9100, tracks: tracksJSON(engTrack)},
+		{id: "seed-mv-009", title: "寄生上流", originalTitle: "기생충", releaseDate: "2019-05-30", genres: []string{"劇情", "驚悚"}, tmdbID: 496243, posterPath: "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", voteAverage: 8.5, parseStatus: models.ParseStatusSuccess, fileName: "Parasite.2019.1080p.mkv", fileSizeMB: 4000, tracks: tracksJSON(korTrack, engTrack)},
 		{id: "seed-mv-010", title: "媽的多重宇宙", originalTitle: "Everything Everywhere All at Once", releaseDate: "2022-03-24", genres: []string{"動作", "科幻", "喜劇"}, tmdbID: 545611, posterPath: "/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg", voteAverage: 7.8, parseStatus: models.ParseStatusSuccess, fileName: "EEAAO.2022.1080p.mkv", fileSizeMB: 4300},
-		{id: "seed-mv-011", title: "奧本海默", originalTitle: "Oppenheimer", releaseDate: "2023-07-19", genres: []string{"劇情", "歷史"}, tmdbID: 872585, posterPath: "/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg", voteAverage: 8.1, parseStatus: models.ParseStatusSuccess, fileName: "Oppenheimer.2023.2160p.mkv", fileSizeMB: 11000},
-		{id: "seed-mv-012", title: "沙丘:第二部", originalTitle: "Dune: Part Two", releaseDate: "2024-02-27", genres: []string{"科幻", "冒險"}, tmdbID: 693134, posterPath: "/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg", voteAverage: 8.2, parseStatus: models.ParseStatusSuccess, fileName: "Dune.Part.Two.2024.2160p.mkv", fileSizeMB: 10400},
+		{id: "seed-mv-011", title: "奧本海默", originalTitle: "Oppenheimer", releaseDate: "2023-07-19", genres: []string{"劇情", "歷史"}, tmdbID: 872585, posterPath: "/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg", voteAverage: 8.1, parseStatus: models.ParseStatusSuccess, fileName: "Oppenheimer.2023.2160p.mkv", fileSizeMB: 11000, tracks: tracksJSON(engTrack, hantTrack)},
+		{id: "seed-mv-012", title: "沙丘:第二部", originalTitle: "Dune: Part Two", releaseDate: "2024-02-27", genres: []string{"科幻", "冒險"}, tmdbID: 693134, posterPath: "/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg", voteAverage: 8.2, parseStatus: models.ParseStatusSuccess, fileName: "Dune.Part.Two.2024.2160p.mkv", fileSizeMB: 10400, tracks: tracksJSON(engTrack), subtitleStatus: models.SubtitleStatusSkipped},
 		// No metadata yet — no tmdb id, no source, no poster. The two pending rows
 		// read 整理中; only the failed one is 未匹配 (failed AND no metadata source,
 		// disc-2026-09-unmatched-filter-vs-parse-status).
@@ -275,8 +294,16 @@ func seedMovies(ctx context.Context, repos *repository.Repositories, libraryID, 
 		if f.countriesJSON != "" {
 			m.ProductionCountriesJSON = models.NewNullString(f.countriesJSON)
 		}
+		if f.tracks != "" {
+			m.SubtitleTracks = models.NewNullString(f.tracks)
+		}
 		if err := repos.Movies.Create(ctx, m); err != nil {
 			return 0, fmt.Errorf("movie %s: %w", f.id, err)
+		}
+		if f.subtitleStatus != "" {
+			if err := repos.Movies.UpdateSubtitleStatus(ctx, f.id, f.subtitleStatus, "", "", 0); err != nil {
+				return 0, fmt.Errorf("movie %s subtitle status: %w", f.id, err)
+			}
 		}
 	}
 	return len(fixtures), nil
@@ -299,6 +326,13 @@ func seedSeries(ctx context.Context, repos *repository.Repositories, libraryID, 
 		{id: "seed-sr-001", title: "進擊的巨人", original: "進撃の巨人", firstAirDate: "2013-04-07", genres: []string{"動畫", "動作"}, tmdbID: 1429, posterPath: "/hTP1DtLGFamjfu8WqjnuQdP1n4i.jpg", parseStatus: models.ParseStatusSuccess, seasons: 2, epsPerSeason: 3},
 		{id: "seed-sr-002", title: "怪奇物語", original: "Stranger Things", firstAirDate: "2016-07-15", genres: []string{"科幻", "懸疑"}, tmdbID: 66732, posterPath: "/49WJfeN0moxb9IPfGn8AIqMGskD.jpg", parseStatus: models.ParseStatusSuccess, seasons: 1, epsPerSeason: 4},
 		{id: "seed-sr-101", title: "Unknown.Show.S01", firstAirDate: "", genres: nil, parseStatus: models.ParseStatusPending, seasons: 1, epsPerSeason: 2},
+	}
+
+	// The sweep's narrow write is not on EpisodeRepositoryInterface; it is the
+	// one EpisodeSubtitleTracksService itself uses.
+	tracksRepo, ok := repos.Episodes.(services.EpisodeSubtitleTracksRepo)
+	if !ok {
+		return 0, 0, fmt.Errorf("episode repository cannot store subtitle tracks")
 	}
 
 	episodeTotal := 0
@@ -353,15 +387,148 @@ func seedSeries(ctx context.Context, repos *repository.Repositories, libraryID, 
 					SeasonNumber:  sn,
 					EpisodeNumber: en,
 					Title:         models.NewNullString(fmt.Sprintf("第 %d 集", en)),
+					FilePath:      models.NewNullString(epPath),
 				}
 				if err := repos.Episodes.Create(ctx, ep); err != nil {
 					return 0, 0, fmt.Errorf("episode %s: %w", ep.ID, err)
+				}
+				if tracks := episodeTracks(f.id, sn, en); tracks != "" {
+					// Stamped with the dummy file's real signature, so the
+					// background sweep treats the episode as already read and
+					// never re-probes the placeholder.
+					info, err := os.Stat(epPath)
+					if err != nil {
+						return 0, 0, err
+					}
+					if err := tracksRepo.UpdateSubtitleTracks(ctx, ep.ID, tracks, services.FileSignature(info)); err != nil {
+						return 0, 0, fmt.Errorf("episode %s subtitle tracks: %w", ep.ID, err)
+					}
 				}
 				episodeTotal++
 			}
 		}
 	}
 	return len(fixtures), episodeTotal, nil
+}
+
+// The subtitle tracks the fixtures store, in the shape the ffprobe sweep writes.
+var (
+	engTrack  = services.SubtitleTrack{Language: "eng", Format: "subrip", Title: "English"}
+	hantTrack = services.SubtitleTrack{Language: "chi", Format: "subrip", Title: "繁體中文", DetectedLanguage: "zh-Hant"}
+	hansTrack = services.SubtitleTrack{Language: "chi", Format: "subrip", Title: "简体中文", DetectedLanguage: "zh-Hans"}
+	korTrack  = services.SubtitleTrack{Language: "kor", Format: "subrip", Title: "한국어"}
+)
+
+func tracksJSON(tracks ...services.SubtitleTrack) string {
+	if tracks == nil {
+		tracks = []services.SubtitleTrack{}
+	}
+	raw, err := json.Marshal(tracks)
+	if err != nil {
+		panic(err) // static fixture data — cannot fail
+	}
+	return string(raw)
+}
+
+// episodeTracks gives 進擊的巨人 one English-only episode (S01E02), so the series
+// rolls up to 缺中文, and 怪奇物語 Traditional Chinese throughout (繁中). The
+// unmatched show stays unread (不知道).
+func episodeTracks(seriesID string, season, episode int) string {
+	switch seriesID {
+	case "seed-sr-001":
+		if season == 1 && episode == 2 {
+			return tracksJSON(engTrack)
+		}
+		return tracksJSON(engTrack, hantTrack)
+	case "seed-sr-002":
+		return tracksJSON(engTrack, hantTrack)
+	}
+	return ""
+}
+
+// seedSubtitleActivity writes this month's subtitle runs — one of each kind
+// the activity record words differently — and two filename-parse calls in the
+// ai_side_spend ledger, so 本月 AI 花費 has a 檔名解析 cell and the home 本月 $x
+// a total. Times are offsets back from now, clamped into the current month so
+// a seed on the 1st still lands in "this month".
+func seedSubtitleActivity(ctx context.Context, repos *repository.Repositories, sideSpend repository.AISideSpendRepositoryInterface, now time.Time) (int, error) {
+	at := func(ago time.Duration) time.Time { return thisMonthAgo(now, ago) }
+	// Never in the future: on the 1st, starts clamp to the first minute of
+	// the month and a long run would otherwise "finish" after now.
+	took := func(start time.Time, d time.Duration) *time.Time {
+		end := start.Add(d)
+		if end.After(now) {
+			end = now.UTC()
+		}
+		return &end
+	}
+	usd := func(v float64) *float64 { return &v }
+
+	type runFixture struct {
+		run      models.SubtitleRun
+		duration time.Duration
+	}
+	fixtures := []runFixture{
+		{models.SubtitleRun{
+			ID: "seed-run-001", MediaID: "seed-mv-011", MediaType: models.SubtitleRunMediaMovie,
+			ModelID: "claude-sonnet-5", Status: models.SubtitleRunCompleted, SourceLanguage: "en",
+			CueCount: 1830, Route: models.SubtitleRunRouteTranslate, SpentUSD: usd(0.24), BudgetUSD: usd(1.00),
+			TriggeredBy: models.SubtitleRunTriggeredManual, StartedAt: at(5 * time.Hour),
+		}, 4 * time.Minute},
+		{models.SubtitleRun{
+			ID: "seed-run-002", MediaID: "seed-sr-002-s01e01", MediaType: models.SubtitleRunMediaEpisode,
+			ModelID: "scribe_v2", Status: models.SubtitleRunCompleted, SourceLanguage: "en",
+			CueCount: 612, Route: models.SubtitleRunRouteASR, SpentUSD: usd(0.31), BudgetUSD: usd(1.00),
+			TriggeredBy: models.SubtitleRunTriggeredAuto, StartedAt: at(4 * time.Hour),
+		}, 12 * time.Minute},
+		{models.SubtitleRun{
+			ID: "seed-run-003", MediaID: "seed-mv-002", MediaType: models.SubtitleRunMediaMovie,
+			Status: models.SubtitleRunFailed, ErrorMessage: "SUBTITLE_TARGET_NOT_WRITABLE: target directory is not writable",
+			SpentUSD: usd(0.18), TriggeredBy: models.SubtitleRunTriggeredManual, StartedAt: at(3 * time.Hour),
+		}, 3 * time.Minute},
+		{models.SubtitleRun{
+			ID: "seed-run-004", MediaID: "seed-mv-008", MediaType: models.SubtitleRunMediaMovie,
+			Status:       models.SubtitleRunFailed,
+			ErrorMessage: models.SubtitleRunQueueTimeoutPrefix + "subtitle extraction did not start before the deadline",
+			TriggeredBy:  models.SubtitleRunTriggeredAuto, StartedAt: at(2 * time.Hour),
+		}, 30 * time.Minute},
+		{models.SubtitleRun{
+			ID: "seed-run-005", MediaID: "seed-mv-005", MediaType: models.SubtitleRunMediaMovie,
+			Status: models.SubtitleRunFailed, ErrorMessage: "AI_CREDIT_EXHAUSTED: anthropic: credit balance too low",
+			TriggeredBy: models.SubtitleRunTriggeredManual, StartedAt: at(time.Hour),
+		}, time.Minute},
+	}
+	for _, f := range fixtures {
+		run := f.run
+		run.CompletedAt = took(run.StartedAt, f.duration)
+		if err := repos.SubtitleRuns.Create(ctx, &run); err != nil {
+			return 0, fmt.Errorf("subtitle run %s: %w", run.ID, err)
+		}
+	}
+
+	for _, row := range []models.AISideSpend{
+		// Sized to survive the screens' cent rounding — real parse calls are
+		// fractions of a cent and would read US$0.00.
+		{Kind: models.AISideSpendKindParse, Provider: "claude", ModelID: "claude-haiku-4-5", InputTokens: 8200, OutputTokens: 960, SpentUSD: 0.012, CreatedAt: at(6 * time.Hour)},
+		{Kind: models.AISideSpendKindParse, Provider: "claude", ModelID: "claude-haiku-4-5", InputTokens: 6400, OutputTokens: 880, SpentUSD: 0.009, CreatedAt: at(6 * time.Hour)},
+	} {
+		if err := sideSpend.Create(ctx, &row); err != nil {
+			return 0, err
+		}
+	}
+	return len(fixtures), nil
+}
+
+// thisMonthAgo is now minus ago, but never before the first minute of now's
+// month — the spend screens read "this month", and a seed run on the 1st must
+// still land in it.
+func thisMonthAgo(now time.Time, ago time.Duration) time.Time {
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	t := now.Add(-ago)
+	if t.Before(monthStart) {
+		t = monthStart.Add(time.Minute)
+	}
+	return t.UTC()
 }
 
 // writeDummyFile creates a tiny placeholder so seeded file_path values point at
