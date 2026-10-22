@@ -78,7 +78,7 @@ jobs:
         uses: actions/checkout@v4
 
       # 這裡不 push 到 Docker Hub，只是為了「有帳號地拉 base image」：
-      # node:20-alpine / golang:1.25-alpine / alpine:3.21 / buildkit-syft-scanner
+      # node:24-alpine / golang:1.25-alpine / alpine:3.21 / buildkit-syft-scanner
       # 匿名拉會撞 rate limit。必須排在 setup-buildx 之前，連 buildkit
       # builder image 的拉取也才是已登入狀態。兩個 arch job 都要各自登入。
       - name: Login to Docker Hub

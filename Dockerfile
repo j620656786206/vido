@@ -14,11 +14,11 @@
 
 # Stage 1: Build frontend
 # ------------------------------------------------------------------------------
-FROM node:20-alpine AS web-builder
+FROM node:24-alpine AS web-builder
 
-# Pin pnpm — do NOT use @latest: pnpm 11.x requires Node >=22.13 and breaks on
-# node:20-alpine (ERR_UNKNOWN_BUILTIN_MODULE). 10.34.5 supports Node >=18.12 and
-# reads lockfileVersion 9.0. Bump deliberately alongside the base image.
+# Pin pnpm — do NOT use @latest. 10.34.5 reads lockfileVersion 9.0 and matches
+# what CI resolves. (pnpm 11.x needs Node >=22.13; it broke on the old
+# node:20-alpine with ERR_UNKNOWN_BUILTIN_MODULE.) Bump deliberately.
 RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
 
 WORKDIR /app
