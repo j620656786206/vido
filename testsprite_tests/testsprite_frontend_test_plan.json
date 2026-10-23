@@ -4764,10 +4764,10 @@
   },
   {
     "id": "TC163",
-    "title": "Search page with TMDb down still lists the owned library title and never shows a raw error code",
-    "description": "Known gap check: the header instant search already lists owned titles when TMDb is down (TC111). The full search page must do the same for 教父 and must not show internal codes such as TMDB_UNAUTHORIZED to the user.",
+    "title": "Search page with TMDb down still lists the owned library title",
+    "description": "Known deferred gap: the header instant search lists owned titles when TMDb is down (TC111); the full search page does not yet list 教父. Deferred to the omnisearch work.",
     "category": "Search",
-    "priority": "High",
+    "priority": "Low",
     "steps": [
       {
         "type": "action",
@@ -4776,14 +4776,10 @@
       {
         "type": "assertion",
         "description": "Verify the owned title 教父 is listed as a result from the library"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify the text TMDB_UNAUTHORIZED is not visible anywhere on the page"
       }
     ],
-    "v4_status": "NEW 2026-10-22",
-    "v4_reason": "Page-by-page sweep (Alexyu: 逐一點擊每個頁面的詳細操作) - interaction not covered by any earlier case.",
+    "v4_status": "KNOWN-DEFERRED",
+    "v4_reason": "Expected FAIL until /search is replaced by the global omnisearch (ADR D4-5, ux3-system-settings). Only reachable when TMDb is down; release images ship a bundled TMDb key, the local test env does not. The error-code pill is the dsr-8 design, so only the library-listing assertion is a real gap.",
     "v4_action": "ADD"
   },
   {
