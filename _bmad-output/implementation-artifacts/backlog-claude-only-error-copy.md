@@ -1,6 +1,6 @@
 # backlog-claude-only-error-copy：沒放金鑰時，提示說「Claude 或 Gemini 都可以」，不再只叫人去拿 Claude 金鑰
 
-Status: in-progress
+Status: review
 
 <!-- SM Bob create-story 2026-10-23；行號為 main `3e476650`；.pen 節點 id 由 Sally 用 Pencil MCP 唯讀讀取。 -->
 
@@ -34,7 +34,7 @@ FB 招募文的留言告訴我們：多數人沒有 Claude 金鑰，想用自己
 
 ## Tasks
 
-- [ ] **Task 0（設計，Alexyu 執行）**— 把下方提示詞貼給 Pencil 的 Inline AI Agent；⌘S；`python3 scripts/export-pen-screenshots.py`；只留 `f28-d-v2.png` 和 J10 的截圖；回報完成。**不要切分支、不要 commit，存檔後跟我說。**
+- [x] **Task 0（設計，Alexyu 執行）**— 把下方提示詞貼給 Pencil 的 Inline AI Agent；⌘S；`python3 scripts/export-pen-screenshots.py`；只留 `f28-d-v2.png` 和 J10 的截圖；回報完成。**不要切分支、不要 commit，存檔後跟我說。**
 - [x] Task 1 — 後端三處文字＋測試（AC 2、3、5）
 - [x] Task 2 — 前端兩處文字＋測試（AC 1、2、5）
 - [x] Task 3 — 畫廊基準；lint、typecheck、相關測試（AC 4）
@@ -76,7 +76,8 @@ Claude Opus 5.5（claude-opus-5-5，Amelia），2026-10-23。
 
 ### Completion Notes List
 
-- 程式改完，等 Task 0（設計稿）。
+- 設計：Alexyu 用 Pencil 改好（F28 `pMCK7`、J10 `vl0KX`）；Sally 用 MCP 唯讀逐字核對與程式一致，`pMCK7` 寬 541／欄位 744、沒有截字。只 commit `f28-d-v2.png`、`j10-d.png`。
+- 🎨 UX Verification: PASS — 畫廊 `generation-consent/not-configured` 的說明句與 F28-D-v2 一致。
 - 後端：pipeline 的建議同時寫 Claude 或 Gemini 和兩個環境變數；試跑的 hint 跟前端同一句；NFO 兩處改成兩個環境變數。RED → GREEN：把兩個 handler 改回舊字，`TestRunPipeline_409AndNoEnqueueWhenTranslationKeyMissing`、`TestPreviewModel_StatusMapping` 會紅。
 - 前端：F28 兩種說明、試跑提示換字；`CandidateListPanel.spec.tsx`、`useModelPreview.spec.ts` 130 條綠。
 - 畫廊：刪舊 `-darwin`／`-linux`，`test:visual:update-missing` 重產 `-darwin`，畫面上是新句子、其他沒變。
@@ -91,6 +92,7 @@ Claude Opus 5.5（claude-opus-5-5，Amelia），2026-10-23。
 - apps/web/src/components/subtitle/consent/CandidateListPanel.tsx、CandidateListPanel.spec.tsx
 - apps/web/src/hooks/useModelPreview.ts、useModelPreview.spec.ts
 - tests/visual/components.visual.spec.ts-snapshots/components/generation-consent/not-configured/default-visual-darwin.png（更新；刪 `-linux` 讓 CI 重產）
+- ux-design.pen、_bmad-output/screenshots/flow-f-subtitle-v2/f28-d-v2.png、flow-j-specs/j10-d.png、pen-node-ids.json、pen-tokens.json
 - 本檔、sprint-status.yaml
 
 ## Change Log
@@ -98,3 +100,4 @@ Claude Opus 5.5（claude-opus-5-5，Amelia），2026-10-23。
 | 日期 | 內容 |
 |---|---|
 | 2026-10-23 | create-story（SM Bob）＋ Sally 的 Pencil 提示詞（節點用 MCP 唯讀確認）。 |
+| 2026-10-23 | 程式（Amelia）＋設計稿（Alexyu）→ review。 |
