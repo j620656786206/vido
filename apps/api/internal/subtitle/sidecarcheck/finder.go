@@ -265,6 +265,28 @@ func (f *Finder) Peek(ctx context.Context, mediaPath string) services.SidecarAli
 	return *first
 }
 
+// MayRoute answers the click's gate: might the router translate a sidecar of
+// mediaPath instead of running speech recognition? It reads the stored checks
+// like Peek (and, like Peek, starts a missing one in the background) and says
+// no only when that answer is final — nothing beside the file, or every
+// candidate checked and rejected. A check still running or one that could not
+// run says yes: the run's FindAligned joins or retries it, and a gate that
+// cannot judge must not refuse (disc-2026-10-solo-gate-en-sidecar).
+func (f *Finder) MayRoute(ctx context.Context, mediaPath string) bool {
+	return SidecarMayRoute(f.Peek(ctx, mediaPath).Status)
+}
+
+// SidecarMayRoute is MayRoute's rule over one Peek status.
+func SidecarMayRoute(status string) bool {
+	switch status {
+	case services.SidecarStatusNone, services.SidecarStatusOffset,
+		services.SidecarStatusMismatch, services.SidecarStatusUnusable:
+		return false
+	default: // aligned, checking, unknown
+		return true
+	}
+}
+
 func (f *Finder) recentlyFailed(mediaPath string) bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()

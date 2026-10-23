@@ -169,14 +169,19 @@ func TestSoloRunner_Gate(t *testing.T) {
 		predictErr   error
 		asrAvailable bool
 		resumable    bool
+		sidecar      bool
 		wantErr      error
 	}{
-		{"asr route, no ASR, no resume → 503", PredictASR, nil, false, false, services.ErrTranscriptionDisabled},
-		{"skip route, no ASR, no resume → 503", PredictSkip, nil, false, false, services.ErrTranscriptionDisabled},
-		{"asr route, no ASR, resumable → proceeds", PredictASR, nil, false, true, nil},
-		{"asr route, ASR present → proceeds", PredictASR, nil, true, false, nil},
-		{"extract route, no ASR → proceeds (routing is free)", PredictExtract, nil, false, false, nil},
-		{"probe failed → proceeds (never 503 on a read error)", "", errors.New("ffprobe: boom"), false, false, nil},
+		{"asr route, no ASR, no resume → 503", PredictASR, nil, false, false, false, services.ErrTranscriptionDisabled},
+		{"skip route, no ASR, no resume → 503", PredictSkip, nil, false, false, false, services.ErrTranscriptionDisabled},
+		{"asr route, no ASR, resumable → proceeds", PredictASR, nil, false, true, false, nil},
+		{"asr route, ASR present → proceeds", PredictASR, nil, true, false, false, nil},
+		{"extract route, no ASR → proceeds (routing is free)", PredictExtract, nil, false, false, false, nil},
+		{"probe failed → proceeds (never 503 on a read error)", "", errors.New("ffprobe: boom"), false, false, false, nil},
+		// disc-2026-10-solo-gate-en-sidecar: the router translates the English
+		// subtitle beside the file before it would need speech recognition.
+		{"asr route, no ASR, usable sidecar → proceeds", PredictASR, nil, false, false, true, nil},
+		{"skip route, no ASR, usable sidecar → proceeds", PredictSkip, nil, false, false, true, nil},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -184,6 +189,7 @@ func TestSoloRunner_Gate(t *testing.T) {
 				WithSoloRoutePredictor(func(context.Context, string) (RoutePrediction, error) { return tc.predicted, tc.predictErr }),
 				WithSoloASRAvailability(func() bool { return tc.asrAvailable }),
 				WithSoloResumeCheck(func(context.Context, MediaRef) bool { return tc.resumable }),
+				WithSoloSidecarCheck(func(context.Context, string) bool { return tc.sidecar }),
 			)
 			_, err := s.runner.Start(context.Background(), s.ref, "")
 			s.runner.waitIdle()
@@ -196,6 +202,36 @@ func TestSoloRunner_Gate(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, 1, s.router.calls)
+		})
+	}
+}
+
+// disc-2026-10-solo-gate-en-sidecar AC #5: the sidecar is asked only when the
+// run would otherwise need speech recognition it cannot have.
+func TestSoloRunner_GateAsksTheSidecarOnlyWhenItMatters(t *testing.T) {
+	cases := []struct {
+		name         string
+		predicted    RoutePrediction
+		asrAvailable bool
+		resumable    bool
+	}{
+		{"extract route", PredictExtract, false, false},
+		{"ASR present", PredictASR, true, false},
+		{"translate-only resume", PredictASR, false, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			asked := 0
+			s := newSoloHarness(t, translateDecision("Hi"), nil,
+				WithSoloRoutePredictor(func(context.Context, string) (RoutePrediction, error) { return tc.predicted, nil }),
+				WithSoloASRAvailability(func() bool { return tc.asrAvailable }),
+				WithSoloResumeCheck(func(context.Context, MediaRef) bool { return tc.resumable }),
+				WithSoloSidecarCheck(func(context.Context, string) bool { asked++; return false }),
+			)
+			_, err := s.runner.Start(context.Background(), s.ref, "")
+			s.runner.waitIdle()
+			require.NoError(t, err)
+			assert.Zero(t, asked)
 		})
 	}
 }
