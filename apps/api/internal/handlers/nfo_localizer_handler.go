@@ -133,7 +133,7 @@ func (h *NFOLocalizerHandler) LocalizeSeries(c *gin.Context) {
 	if h.localizer == nil || !h.localizer.IsAvailable() {
 		ErrorResponse(c, http.StatusServiceUnavailable, "NFO_LOCALIZE_DISABLED",
 			"Metadata localization is not available",
-			"Ensure a translation provider (CLAUDE_API_KEY) is configured.")
+			"Ensure a translation key (CLAUDE_API_KEY or GEMINI_API_KEY) is configured.")
 		return
 	}
 	if !requireReplaceConfirmation(c) {
@@ -180,7 +180,7 @@ func (h *NFOLocalizerHandler) LocalizeEpisode(c *gin.Context) {
 	if h.localizer == nil || !h.localizer.IsAvailable() {
 		ErrorResponse(c, http.StatusServiceUnavailable, "NFO_LOCALIZE_DISABLED",
 			"Metadata localization is not available",
-			"Ensure a translation provider (CLAUDE_API_KEY) is configured.")
+			"Ensure a translation key (CLAUDE_API_KEY or GEMINI_API_KEY) is configured.")
 		return
 	}
 	if !requireReplaceConfirmation(c) {
@@ -225,7 +225,7 @@ func (h *NFOLocalizerHandler) LocalizeMovie(c *gin.Context) {
 	if h.localizer == nil || !h.localizer.IsAvailable() {
 		ErrorResponse(c, http.StatusServiceUnavailable, "NFO_LOCALIZE_DISABLED",
 			"Metadata localization is not available",
-			"Ensure a translation provider (CLAUDE_API_KEY) is configured.")
+			"Ensure a translation key (CLAUDE_API_KEY or GEMINI_API_KEY) is configured.")
 		return
 	}
 

@@ -41,7 +41,11 @@ export function previewFailureMessage(err: unknown): {
       case 'AI_PREVIEW_TOO_SOON':
         return { message: '剛剛試跑過，稍後再試', unpaid: true, code: err.code };
       case 'AI_NOT_CONFIGURED':
-        return { message: '先到 設定 → API 金鑰 存一組 Claude 金鑰', unpaid: true, code: err.code };
+        return {
+          message: '先到 設定 → API 金鑰 存一組 Claude 或 Gemini 金鑰',
+          unpaid: true,
+          code: err.code,
+        };
       case 'AI_UNAUTHORIZED':
         return { message: '金鑰無效，請到 設定 → API 金鑰 檢查', unpaid: true, code: err.code };
       default:

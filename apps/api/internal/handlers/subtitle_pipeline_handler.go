@@ -109,7 +109,7 @@ func (h *SubtitlePipelineHandler) RunPipeline(c *gin.Context) {
 			"尚未設定翻譯服務金鑰",
 			// sub-2-1a: keys hot-reload now — saving one takes effect immediately,
 			// so this suggestion must NOT tell the user to restart.
-			"請於金鑰設定儲存 Claude API 金鑰（PUT /api/v1/settings/keys），或設定 CLAUDE_API_KEY 環境變數。")
+			"請到 設定 → API 金鑰 儲存 Claude 或 Gemini 金鑰，或設定 CLAUDE_API_KEY／GEMINI_API_KEY 環境變數。")
 		return
 	}
 	if h.queue == nil || !h.queue.IsRunning() {

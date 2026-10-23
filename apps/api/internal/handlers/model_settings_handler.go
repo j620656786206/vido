@@ -144,7 +144,7 @@ func (h *ModelSettingsHandler) PreviewModel(c *gin.Context) {
 			"這個模型剛剛才試跑過", "同一個模型 60 秒內只會試跑一次，免得重複扣款。")
 	case errors.Is(err, ai.ErrAINotConfigured):
 		ErrorResponse(c, http.StatusConflict, "AI_NOT_CONFIGURED",
-			"尚未設定翻譯服務金鑰", "先到 設定 → API 金鑰 存一組 Claude 金鑰。")
+			"尚未設定翻譯服務金鑰", "先到 設定 → API 金鑰 存一組 Claude 或 Gemini 金鑰。")
 	case errors.Is(err, ai.ErrAIUnauthorized):
 		ErrorResponse(c, http.StatusConflict, "AI_UNAUTHORIZED", "翻譯服務金鑰無效", "請到 設定 → API 金鑰 檢查金鑰。")
 	default:

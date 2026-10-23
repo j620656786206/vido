@@ -1598,11 +1598,14 @@ describe('CandidateListPanel — generation not configured', () => {
   // disc-2026-09-not-configured-copy-self-hosted-asr AC #2: name only the key
   // the server's gate is waiting for; no answer → the both-keys sentence.
   it.each([
-    ['claude', '批次產生字幕需要翻譯（Claude）金鑰。到金鑰設定儲存後就能開始；清單可以先看。'],
+    [
+      'claude',
+      '批次產生字幕需要一把翻譯金鑰（Claude 或 Gemini）。到金鑰設定儲存後就能開始；清單可以先看。',
+    ],
     ['asr', '批次產生字幕需要語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。'],
     [
       undefined,
-      '批次產生字幕需要翻譯（Claude）與語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。',
+      '批次產生字幕需要翻譯金鑰（Claude 或 Gemini）與語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。',
     ],
   ] as const)('missing key %s → the matching sentence', (missingKey, sentence) => {
     renderPanel({ candidates: FOUR, notConfigured: true, notConfiguredKey: missingKey });
@@ -1620,7 +1623,7 @@ describe('CandidateListPanel — generation not configured', () => {
     const notice = screen.getByTestId('consent-not-configured');
     expect(notice).toHaveTextContent('字幕生成尚未設定');
     expect(notice).toHaveTextContent(
-      '批次產生字幕需要翻譯（Claude）與語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。'
+      '批次產生字幕需要翻譯金鑰（Claude 或 Gemini）與語音辨識（ASR）金鑰。到金鑰設定儲存後就能開始；清單可以先看。'
     );
     expect(screen.getByTestId('consent-controls').firstElementChild).toBe(notice);
     fireEvent.click(screen.getByRole('button', { name: '前往設定' }));
