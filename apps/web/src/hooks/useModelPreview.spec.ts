@@ -11,7 +11,7 @@ describe('previewFailureMessage (sub-7-8c J10 ④ / C)', () => {
     });
     expect(
       previewFailureMessage(new ModelPreviewError('x', 409, 'AI_NOT_CONFIGURED')).message
-    ).toBe('先到 設定 → API 金鑰 存一組 Claude 金鑰');
+    ).toBe('先到 設定 → API 金鑰 存一組 Claude 或 Gemini 金鑰');
     expect(
       previewFailureMessage(new ModelPreviewError('x', 400, 'VALIDATION_INVALID_FORMAT'))
     ).toEqual({

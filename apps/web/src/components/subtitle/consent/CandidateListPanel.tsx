@@ -722,14 +722,15 @@ function GroupHeaderRow({
 
 /**
  * F28 notice body: name only the key the server's gate is waiting for — in
- * pipeline mode that is Claude alone, in legacy mode the ASR key alone
+ * pipeline mode that is a translation key (Claude or Gemini — either one opens
+ * the gate), in legacy mode the ASR key alone
  * (disc-2026-09-not-configured-copy-self-hosted-asr). Unknown → both.
  */
 function notConfiguredBody(key: GenerationMissingKey | undefined): string {
   const tail = '到金鑰設定儲存後就能開始；清單可以先看。';
-  if (key === 'claude') return `批次產生字幕需要翻譯（Claude）金鑰。${tail}`;
+  if (key === 'claude') return `批次產生字幕需要一把翻譯金鑰（Claude 或 Gemini）。${tail}`;
   if (key === 'asr') return `批次產生字幕需要語音辨識（ASR）金鑰。${tail}`;
-  return `批次產生字幕需要翻譯（Claude）與語音辨識（ASR）金鑰。${tail}`;
+  return `批次產生字幕需要翻譯金鑰（Claude 或 Gemini）與語音辨識（ASR）金鑰。${tail}`;
 }
 
 export function CandidateListPanel({

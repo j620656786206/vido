@@ -211,6 +211,10 @@ func TestRunPipeline_409AndNoEnqueueWhenTranslationKeyMissing(t *testing.T) {
 	assert.Equal(t, "AI_NOT_CONFIGURED", body.Error.Code, "reuse — this story adds ZERO Rule 7 codes")
 	assert.Equal(t, "尚未設定翻譯服務金鑰", body.Error.Message)
 	assert.Contains(t, body.Error.Suggestion, "CLAUDE_API_KEY")
+	// Either key opens the gate (translationDispatcher), so the hint names both —
+	// a Gemini-only user must not be sent off to buy a Claude key.
+	assert.Contains(t, body.Error.Suggestion, "GEMINI_API_KEY")
+	assert.Contains(t, body.Error.Suggestion, "Claude 或 Gemini")
 
 	assert.Empty(t, queue.calls, "the gate short-circuits BEFORE enqueue — no queued work that can only fail")
 	assert.Empty(t, lookup.refs, "and before the lookup: an unconfigured install should not touch the DB per request")

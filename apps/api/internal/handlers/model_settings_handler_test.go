@@ -197,5 +197,10 @@ func TestPreviewModel_StatusMapping(t *testing.T) {
 		if tc.code != "" {
 			assert.Equal(t, tc.code, body["error"].(map[string]any)["code"], tc.err.Error())
 		}
+		if tc.code == "AI_NOT_CONFIGURED" {
+			// Either key opens translation, so the hint must not name Claude alone.
+			assert.Equal(t, "先到 設定 → API 金鑰 存一組 Claude 或 Gemini 金鑰。",
+				body["error"].(map[string]any)["suggestion"])
+		}
 	}
 }
