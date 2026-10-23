@@ -229,6 +229,63 @@ func (r *SeriesRepository) FindByFilePath(ctx context.Context, filePath string) 
 	return &series, nil
 }
 
+// SeriesFolderRef is one series the scanner's removed-folder pass checks: its
+// folder and library (disc-2026-10-series-wrong-version-c).
+type SeriesFolderRef struct {
+	ID        string
+	FilePath  string
+	LibraryID string
+}
+
+// seriesHasNoEpisodeFile is true when no episode of series `s` holds a file.
+const seriesHasNoEpisodeFile = `NOT EXISTS (SELECT 1 FROM episodes e
+	WHERE e.series_id = series.id AND e.file_path IS NOT NULL AND e.file_path != '')`
+
+// FindFoldersForRemovalCheck lists the series still shown in the library whose
+// episodes all lost their files — the only ones a missing folder can retire
+// (disc-2026-10-series-wrong-version-c).
+func (r *SeriesRepository) FindFoldersForRemovalCheck(ctx context.Context) ([]SeriesFolderRef, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, file_path, COALESCE(library_id, '')
+		FROM series
+		WHERE `+notRemovedSeries+` AND file_path IS NOT NULL AND file_path != ''
+		AND `+seriesHasNoEpisodeFile+`
+		ORDER BY id`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query series folders: %w", err)
+	}
+	defer rows.Close()
+	var refs []SeriesFolderRef
+	for rows.Next() {
+		var ref SeriesFolderRef
+		if err := rows.Scan(&ref.ID, &ref.FilePath, &ref.LibraryID); err != nil {
+			return nil, fmt.Errorf("failed to scan series folder: %w", err)
+		}
+		refs = append(refs, ref)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating series folders: %w", err)
+	}
+	return refs, nil
+}
+
+// MarkRemovedIfNoFiles hides a series whose folder is gone — only while none
+// of its episodes holds a file, re-checked in the same statement, so an episode
+// ingested while the scan stat-ed keeps its show. Only is_removed and
+// updated_at move. Returns whether it marked.
+func (r *SeriesRepository) MarkRemovedIfNoFiles(ctx context.Context, id string) (bool, error) {
+	result, err := r.db.ExecContext(ctx, `UPDATE series SET is_removed = 1, updated_at = ?
+		WHERE id = ? AND `+notRemovedSeries+` AND `+seriesHasNoEpisodeFile,
+		time.Now(), id)
+	if err != nil {
+		return false, fmt.Errorf("failed to mark series %s removed: %w", id, err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	return n > 0, nil
+}
+
 // Update modifies an existing series in the database
 func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) error {
 	if series == nil {

@@ -1,6 +1,6 @@
 # disc-2026-10-series-wrong-version-a：影集會讀資料夾裡的 tvshow.nfo，也會用檔名年份挑版本，不再把 2026 動畫版認成 2018 真人版
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-23；行號為 main `65a795f1`。傘狀條目 disc-2026-10-series-wrong-version 拆成 -a（比對，本單）／-b（已比對的片也能手動選片，要先畫稿）／-c（資料夾改名後舊影集不消失）。 -->
 

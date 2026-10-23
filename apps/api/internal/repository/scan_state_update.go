@@ -115,6 +115,14 @@ func (r *SeriesRepository) UpdateFileSize(ctx context.Context, id string, fileSi
 		fileSize, time.Now(), id)
 }
 
+// RestoreRemoved clears the removed flag on a series whose folder holds
+// episodes again. (media ingest UpsertSeries — disc-2026-10-series-wrong-version-c)
+func (r *SeriesRepository) RestoreRemoved(ctx context.Context, id string) error {
+	return execNarrow(ctx, r.db, "series", id,
+		`UPDATE series SET is_removed = 0, updated_at = ? WHERE id = ?`,
+		time.Now(), id)
+}
+
 // UpdateParseStatus queues or settles a parse without touching anything
 // else. (BatchReparse)
 func (r *SeriesRepository) UpdateParseStatus(ctx context.Context, id string, status models.ParseStatus) error {
