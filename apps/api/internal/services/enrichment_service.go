@@ -60,6 +60,11 @@ type EnrichmentService struct {
 	glossaryCredits GlossaryCreditsFetcher
 	glossaryScopes  GlossaryScopeResolverInterface
 
+	// libraryRoots lists the library root folders, so a flat layout's shared
+	// folder is never read as one show's (disc-2026-10-series-wrong-version-a).
+	// nil = no roots known: the series folder is trusted as its own.
+	libraryRoots func(ctx context.Context) ([]string, error)
+
 	mu          sync.Mutex
 	isEnriching bool
 	cancelChan  chan struct{}
@@ -397,16 +402,28 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 		return s.refreshManualSeries(ctx, series)
 	}
 
+	// disc-2026-10-series-wrong-version-a: the show's own tvshow.nfo names
+	// its TMDb id — that beats any search.
+	dir := s.seriesOwnDir(ctx, series)
+	nfo := s.readSeriesNFO(series.ID, dir)
+	if handled, err := s.enrichSeriesFromNFO(ctx, series, nfo); handled || err != nil {
+		return err
+	}
+
 	title := series.Title
 	// With ctx: the AI parse underneath must be cancellable, or a single
 	// re-match's deadline (dsr-2b-a AC #2) means nothing for series.
 	if parseResult := s.parserService.ParseFilenameWithContext(ctx, title); parseResult != nil && parseResult.CleanedTitle != "" {
 		title = parseResult.CleanedTitle
 	}
+	// "Ever Night 2026": search for the name, keep the year to pick the hit.
+	title, titleYear := parser.SplitTrailingYear(title)
+	year := s.seriesYearHint(dir, nfo, titleYear)
 
 	searchResult, _, err := s.metadataService.SearchMetadata(ctx, &SearchMetadataRequest{
 		Query:     title,
 		MediaType: "tv",
+		Year:      year,
 	})
 	if err != nil {
 		if s.userTookOverSeries(ctx, series.ID) {
@@ -433,7 +450,7 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 	}
 
 	previousSource := currentMetadataSource(series.MetadataSource)
-	s.applyMetadataToSeries(series, searchResult.Items[0], searchResult.Source)
+	s.applyMetadataToSeries(series, pickSeriesMatch(searchResult.Items, year), searchResult.Source)
 	// sub-7-2b: same as the movie path — genres and production countries live
 	// on the details call, never on a search hit.
 	if searchResult.Source == models.MetadataSourceTMDb {

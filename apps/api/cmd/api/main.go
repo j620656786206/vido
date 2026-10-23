@@ -530,6 +530,20 @@ func main() {
 	// parse_status=pending. Without a series repo the enrichment pass would leave them
 	// unmatched forever.
 	enrichmentService.SetSeriesRepo(repos.Series)
+	// disc-2026-10-series-wrong-version-a: a series folder that is a library
+	// root (flat layout) is never read as one show's tvshow.nfo or year. The
+	// VIDO_MEDIA_DIRS fallback dirs are scan roots too.
+	enrichmentService.SetLibraryRoots(func(ctx context.Context) ([]string, error) {
+		paths, err := repos.MediaLibraries.GetAllPaths(ctx)
+		if err != nil {
+			return nil, err
+		}
+		roots := append(make([]string, 0, len(paths)+len(cfg.MediaDirs)), cfg.MediaDirs...)
+		for _, p := range paths {
+			roots = append(roots, p.Path)
+		}
+		return roots, nil
+	})
 
 	// Wire post-scan auto-enrichment: after scan completes with new/updated files,
 	// automatically trigger metadata enrichment in background.
