@@ -955,6 +955,10 @@ func main() {
 				return ""
 			}),
 			subtitle.WithSoloRunBudgetUSD(cfg.AIRunBudgetUSD),
+			// The router tries the English subtitle beside the file before
+			// speech recognition; the gate asks the same finder, stored
+			// checks only (disc-2026-10-solo-gate-en-sidecar).
+			subtitle.WithSoloSidecarCheck(sidecarFinder.MayRoute),
 		)
 		// sub-4-1 AC #1: a completed scan does NOT enqueue subtitle generation.
 		// sub-1-6 AC #2 (FR13) wired the library-wide sweep here; the first

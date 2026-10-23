@@ -204,3 +204,50 @@ func TestFinder_ConcurrentCallersShareOneCheck(t *testing.T) {
 	assert.LessOrEqual(t, fx.decodes.Load(), 2*windows,
 		"at most the run and one background check — not one per caller (got %d decodes)", fx.decodes.Load())
 }
+
+// ─── disc-2026-10-solo-gate-en-sidecar ──────────────────────────────────────
+
+func TestSidecarMayRoute_OnlyAFinalNoRefuses(t *testing.T) {
+	cases := map[string]bool{
+		services.SidecarStatusAligned:  true,
+		services.SidecarStatusChecking: true, // the run's FindAligned joins the check
+		services.SidecarStatusUnknown:  true, // a gate that cannot judge never refuses
+		services.SidecarStatusNone:     false,
+		services.SidecarStatusOffset:   false,
+		services.SidecarStatusMismatch: false,
+		services.SidecarStatusUnusable: false,
+	}
+	for status, want := range cases {
+		assert.Equal(t, want, SidecarMayRoute(status), status)
+	}
+}
+
+func TestMayRoute_ReadsStoredChecksWithoutWaiting(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("nothing beside the file", func(t *testing.T) {
+		fx := newFinderFixture(t)
+		assert.False(t, fx.finder.MayRoute(ctx, fx.media))
+		assert.Zero(t, fx.audio.calls.Load())
+	})
+
+	t.Run("not checked yet: yes, and the check starts in the background", func(t *testing.T) {
+		fx := newFinderFixture(t)
+		fx.write(t, "Film.en.srt", 0)
+		assert.True(t, fx.finder.MayRoute(ctx, fx.media))
+		require.Eventually(t, func() bool {
+			return fx.finder.Peek(ctx, fx.media).Status == services.SidecarStatusAligned
+		}, 5*time.Second, 10*time.Millisecond)
+		assert.True(t, fx.finder.MayRoute(ctx, fx.media))
+	})
+
+	t.Run("checked and rejected", func(t *testing.T) {
+		fx := newFinderFixture(t)
+		fx.write(t, "Film.en.srt", 40_000)
+		_, ok := fx.finder.FindAligned(ctx, fx.media)
+		require.False(t, ok)
+		decodes := fx.decodes.Load()
+		assert.False(t, fx.finder.MayRoute(ctx, fx.media))
+		assert.Equal(t, decodes, fx.decodes.Load(), "a stored answer never decodes again")
+	})
+}

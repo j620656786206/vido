@@ -58,6 +58,10 @@ type SoloRunner struct {
 	// canResume answers "would the ASR leg resume translate-only?" — such a
 	// run needs no ASR, so the gate must not refuse it (CR sub-2-2a M2).
 	canResume func(ctx context.Context, ref MediaRef) bool
+	// sidecarUsable answers "might routing translate the English subtitle
+	// beside the file?" — the router tries it before speech recognition, so
+	// the gate must not refuse such a run either. nil = no sidecar lane.
+	sidecarUsable func(ctx context.Context, mediaPath string) bool
 	// title names the job for the Activity row and the events. Defaults to the
 	// loaded item's TranslateContext.Title.
 	title        func(ctx context.Context, ref MediaRef, item *MediaItem) string
@@ -101,6 +105,12 @@ func WithSoloASRAvailability(fn func() bool) SoloRunnerOption {
 // WithSoloResumeCheck wires the translate-only resume answer.
 func WithSoloResumeCheck(fn func(ctx context.Context, ref MediaRef) bool) SoloRunnerOption {
 	return func(s *SoloRunner) { s.canResume = fn }
+}
+
+// WithSoloSidecarCheck wires the English-sidecar answer. It must not wait for
+// ffmpeg: it runs inside the click's HTTP request.
+func WithSoloSidecarCheck(fn func(ctx context.Context, mediaPath string) bool) SoloRunnerOption {
+	return func(s *SoloRunner) { s.sidecarUsable = fn }
 }
 
 // WithSoloTitle overrides how a job is named (e.g. 「劇名 S01E02」 for episodes).
@@ -161,7 +171,8 @@ func NewSoloRunner(pipeline *Pipeline, guard SoloGuard, hub ProgressBroadcaster,
 //   - services.ErrTranscriptionInProgress — the item is in flight elsewhere
 //     (pool worker, batch, or an earlier click): 409;
 //   - services.ErrTranscriptionDisabled — the file would need speech
-//     recognition and none is configured (and no translate-only resume): 503;
+//     recognition and none is configured (no translate-only resume, and no
+//     English sidecar the router could translate instead): 503;
 //   - ErrSubtitleTargetNotWritable — the media folder refused the write probe,
 //     before anything was paid: 409.
 //
@@ -200,7 +211,10 @@ func (s *SoloRunner) Start(ctx context.Context, ref MediaRef, modelID string) (j
 	// story, for the same files. A probe that cannot be read never refuses:
 	// "語音辨識尚未設定" would be the wrong diagnosis for an unreadable file,
 	// and the pipeline reports the real failure. ONE probe: the same answer
-	// rides the start event as predicted_route (CR L1).
+	// rides the start event as predicted_route (CR L1). A file with no usable
+	// embedded track still routes to the English subtitle beside it first
+	// (-b2), so one the stored check calls aligned — or has not settled — is
+	// not refused either (disc-2026-10-solo-gate-en-sidecar).
 	predicted := ""
 	if s.predict != nil {
 		route, perr := s.predict(ctx, item.FilePath)
@@ -208,7 +222,8 @@ func (s *SoloRunner) Start(ctx context.Context, ref MediaRef, modelID string) (j
 		case perr != nil:
 			s.logger.Debug("solo run: route prediction failed — proceeding to routing",
 				"media_id", ref.ID, "media_type", ref.MediaType, "error", perr)
-		case route != PredictExtract && !s.asrOK() && !s.resumable(ctx, ref):
+		case route != PredictExtract && !s.asrOK() && !s.resumable(ctx, ref) &&
+			!s.sidecarOK(ctx, item.FilePath):
 			return "", services.ErrTranscriptionDisabled
 		default:
 			predicted = string(route)
@@ -338,6 +353,10 @@ func (s *SoloRunner) asrOK() bool {
 
 func (s *SoloRunner) resumable(ctx context.Context, ref MediaRef) bool {
 	return s.canResume != nil && s.canResume(ctx, ref)
+}
+
+func (s *SoloRunner) sidecarOK(ctx context.Context, mediaPath string) bool {
+	return s.sidecarUsable != nil && s.sidecarUsable(ctx, mediaPath)
 }
 
 // ─── Events ────────────────────────────────────────────────────────────────
