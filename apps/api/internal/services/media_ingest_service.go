@@ -116,6 +116,11 @@ func TitleFromSeriesDir(seriesDir string) string {
 	return strings.TrimSpace(filepath.Base(seriesDir))
 }
 
+// seriesRestorer un-hides a series; *repository.SeriesRepository satisfies it.
+type seriesRestorer interface {
+	RestoreRemoved(ctx context.Context, id string) error
+}
+
 // UpsertSeries finds an existing series or creates one, and returns its ID.
 func (s *MediaIngestService) UpsertSeries(ctx context.Context, in SeriesInput) (string, error) {
 	if in.TMDbID > 0 {
@@ -131,6 +136,16 @@ func (s *MediaIngestService) UpsertSeries(ctx context.Context, in SeriesInput) (
 			return "", fmt.Errorf("look up series by dir: %w", err)
 		}
 		if existing != nil {
+			// Its folder holds episodes again, so a "removed" flag from an
+			// earlier scan no longer holds (disc-2026-10-series-wrong-version-c).
+			if existing.IsRemoved {
+				if r, ok := s.seriesRepo.(seriesRestorer); ok {
+					if err := r.RestoreRemoved(ctx, existing.ID); err != nil {
+						return "", fmt.Errorf("restore removed series: %w", err)
+					}
+					s.logger.Info("restored series whose folder is back", "series_id", existing.ID, "dir", in.SeriesDir)
+				}
+			}
 			return existing.ID, nil
 		}
 	}

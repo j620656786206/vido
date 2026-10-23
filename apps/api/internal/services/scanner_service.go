@@ -447,6 +447,11 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 	if err != nil {
 		s.logger.Error("failed to detect removed episode files", "error", err)
 	}
+	// disc-2026-10-series-wrong-version-c: a show whose folder is gone and
+	// whose episodes all lost their files leaves the library too.
+	if _, err := s.detectRemovedSeries(ctx, untrustedRoots, untrustedLibraries); err != nil {
+		s.logger.Error("failed to detect removed series", "error", err)
+	}
 	if total := removedCount + removedEpisodes; total > 0 {
 		s.mu.Lock()
 		s.progress.FilesRemoved = total
@@ -980,6 +985,65 @@ func (s *ScannerService) detectRemovedEpisodeFiles(ctx context.Context, untruste
 			"episodes_kept", protected, "folders", untrustedRoots)
 	}
 	return cleared, nil
+}
+
+// seriesRemovalRepo is the slice of the series repository the removed-folder
+// pass needs; asserted like episodeRemovalRepo, so the wide interface (and
+// every mock of it) does not grow.
+type seriesRemovalRepo interface {
+	FindFoldersForRemovalCheck(ctx context.Context) ([]repository.SeriesFolderRef, error)
+	MarkRemovedIfNoFiles(ctx context.Context, id string) (bool, error)
+}
+
+// detectRemovedSeries hides a series whose folder no longer exists once none
+// of its episodes holds a file (disc-2026-10-series-wrong-version-c: a renamed
+// show folder left its old row in the library beside the new one). A folder
+// that still exists keeps its show, even empty; the mount protection is the
+// one movies and episodes use.
+func (s *ScannerService) detectRemovedSeries(ctx context.Context, untrustedRoots []string, untrustedLibraries map[string]bool) (int, error) {
+	repo, ok := s.seriesRepo.(seriesRemovalRepo)
+	if !ok {
+		return 0, nil
+	}
+	refs, err := repo.FindFoldersForRemovalCheck(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query series folders: %w", err)
+	}
+
+	marked, protected := 0, 0
+	for _, ref := range refs {
+		if ctx.Err() != nil {
+			return marked, ctx.Err()
+		}
+		_, err := os.Stat(ref.FilePath)
+		if err == nil {
+			continue
+		}
+		if !os.IsNotExist(err) {
+			s.logger.Warn("error checking series folder existence", "path", ref.FilePath, "error", err)
+			continue
+		}
+		if underAnyRoot(ref.FilePath, untrustedRoots) || (ref.LibraryID != "" && untrustedLibraries[ref.LibraryID]) {
+			protected++
+			continue
+		}
+		done, err := repo.MarkRemovedIfNoFiles(ctx, ref.ID)
+		if err != nil {
+			s.logger.Error("failed to mark series removed", "id", ref.ID, "path", ref.FilePath, "error", err)
+			continue
+		}
+		if !done {
+			continue // an episode came back while we looked — keep the show
+		}
+		marked++
+		s.logger.Info("series folder gone — removed from the library", "id", ref.ID, "path", ref.FilePath)
+	}
+
+	if protected > 0 {
+		s.logger.Warn("SCANNER_ROOT_UNTRUSTED: kept series whose folder was unreachable or empty this scan — not marking them removed",
+			"series_kept", protected, "folders", untrustedRoots)
+	}
+	return marked, nil
 }
 
 // rootForms returns the spellings a movie's stored (symlink-resolved,

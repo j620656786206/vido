@@ -1,6 +1,6 @@
 # disc-2026-10-solo-gate-en-sidecar：只有翻譯金鑰、片旁有英文字幕時，按「生成字幕」不會再被擋成「語音辨識尚未設定」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-23；行號為 main `4b81b30a`。 -->
 
