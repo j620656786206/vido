@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"regexp"
 	"sort"
@@ -41,6 +42,10 @@ type GlossarySeeder struct {
 	// state into a map hit and holds the back-off after a failure.
 	mu        sync.Mutex
 	attempted map[string]time.Time
+
+	// wiki looks Chinese character names up on zh.wikipedia when TMDb has
+	// only pinyin. nil = TMDb only.
+	wiki WikiCastSource
 }
 
 // GlossaryCreditsClient is the narrow TMDb surface the seeder needs — the
@@ -234,7 +239,8 @@ func (s *GlossarySeeder) FetchCredits(ctx context.Context, mediaType string, tmd
 		if err != nil {
 			return credits, nil, err
 		}
-		return credits, s.keepActorsOnlyWhenUnscripted(ctx, mediaType, id, pairTVCredits(en, zh)), nil
+		pairs, actors := pairTVCredits(en, zh)
+		return credits, s.refinePairs(ctx, mediaType, id, pairs, actors), nil
 	default:
 		zh, err := s.credits.GetMovieCreditsWithLanguage(ctx, id, glossarySeedTargetLanguage)
 		if err != nil {
@@ -245,7 +251,8 @@ func (s *GlossarySeeder) FetchCredits(ctx context.Context, mediaType string, tmd
 		if err != nil {
 			return credits, nil, err
 		}
-		return credits, s.keepActorsOnlyWhenUnscripted(ctx, mediaType, id, pairMovieCredits(en, zh)), nil
+		pairs, actors := pairMovieCredits(en, zh)
+		return credits, s.refinePairs(ctx, mediaType, id, pairs, actors), nil
 	}
 }
 
@@ -339,18 +346,34 @@ var _ glossaryGenreClient = (*tmdb.CacheService)(nil)
 // screen: Reality, Talk, News (TV) and Documentary (both).
 var unscriptedGenreIDs = map[int]bool{10764: true, 10767: true, 10763: true, 99: true}
 
+// refinePairs adjusts the TMDb pairs with what the title's details say:
+// Chinese character names TMDb lacks are filled from zh.wikipedia, then the
+// actor pairs of a scripted title are dropped.
+func (s *GlossarySeeder) refinePairs(ctx context.Context, mediaType string, id int, pairs []CastPair, actors []string) []CastPair {
+	if len(pairs) == 0 {
+		return pairs
+	}
+	facts := s.titleFacts(ctx, mediaType, id)
+	pairs = s.fillCharactersFromWiki(ctx, id, facts, pairs, actors)
+	return keepActorsOnlyWhenUnscripted(facts, pairs)
+}
+
+// titleFacts is what the seeder needs from the title's TMDb details.
+type titleFacts struct {
+	known      bool     // the details were read
+	unscripted bool     // a reality, talk, news or documentary genre
+	chinese    bool     // originally in Chinese
+	names      []string // titles to look the page up by, most specific first
+}
+
 // keepActorsOnlyWhenUnscripted drops the actor pairs of a scripted title: a
 // drama's dialogue never says its actors' names, so they were noise in the
 // glossary and in the speech-recognition hints (《百花殺》 seeded 10 actors and
 // no characters — disc-2026-10-glossary-seeds-actor-names-and-fan-surname-a).
 // A reality, talk, news or documentary title keeps them (《種地吧》 calls its
 // cast by name). When the genre cannot be read, nothing is dropped.
-func (s *GlossarySeeder) keepActorsOnlyWhenUnscripted(ctx context.Context, mediaType string, id int, pairs []CastPair) []CastPair {
-	if len(pairs) == 0 {
-		return pairs
-	}
-	unscripted, known := s.isUnscripted(ctx, mediaType, id)
-	if !known || unscripted {
+func keepActorsOnlyWhenUnscripted(facts titleFacts, pairs []CastPair) []CastPair {
+	if !facts.known || facts.unscripted {
 		return pairs
 	}
 	kept := pairs[:0:0]
@@ -362,35 +385,70 @@ func (s *GlossarySeeder) keepActorsOnlyWhenUnscripted(ctx context.Context, media
 	return kept
 }
 
-// isUnscripted reads the title's TMDb genres; known is false when they could
+// titleFacts reads the title's TMDb details; known is false when they could
 // not be read.
-func (s *GlossarySeeder) isUnscripted(ctx context.Context, mediaType string, id int) (unscripted, known bool) {
+func (s *GlossarySeeder) titleFacts(ctx context.Context, mediaType string, id int) titleFacts {
 	details, ok := s.credits.(glossaryGenreClient)
 	if !ok {
-		return false, false
+		return titleFacts{}
 	}
-	var genres []tmdb.Genre
+	var (
+		genres       []tmdb.Genre
+		language     string
+		name, orig   string
+		year, suffix string
+	)
 	if mediaType == "tv" {
 		show, err := details.GetTVShowDetails(ctx, id)
 		if err != nil || show == nil {
-			s.logger.Warn("glossary seed: TMDb genres unavailable; keeping actor names", "tmdb_id", id, "error", err)
-			return false, false
+			s.logger.Warn("glossary seed: TMDb details unavailable; keeping actor names", "tmdb_id", id, "error", err)
+			return titleFacts{}
 		}
-		genres = show.Genres
+		genres, language, name, orig, suffix = show.Genres, show.OriginalLanguage, show.Name, show.OriginalName, "電視劇"
+		year = yearOf(show.FirstAirDate)
 	} else {
 		movie, err := details.GetMovieDetails(ctx, id)
 		if err != nil || movie == nil {
-			s.logger.Warn("glossary seed: TMDb genres unavailable; keeping actor names", "tmdb_id", id, "error", err)
-			return false, false
+			s.logger.Warn("glossary seed: TMDb details unavailable; keeping actor names", "tmdb_id", id, "error", err)
+			return titleFacts{}
 		}
-		genres = movie.Genres
+		genres, language, name, orig, suffix = movie.Genres, movie.OriginalLanguage, movie.Title, movie.OriginalTitle, "電影"
+		year = yearOf(movie.ReleaseDate)
 	}
+	facts := titleFacts{known: true, chinese: language == "zh" || language == "cn"}
 	for _, g := range genres {
 		if unscriptedGenreIDs[g.ID] {
-			return true, true
+			facts.unscripted = true
 		}
 	}
-	return false, true
+	// zh.wikipedia names a remake "將夜 (2026年電視劇)" and a unique title
+	// just "百花殺"; converttitles finds 百花杀 too.
+	seen := map[string]bool{}
+	for _, n := range []string{name, orig} {
+		n = strings.TrimSpace(n)
+		if n == "" {
+			continue
+		}
+		var candidates []string
+		if year != "" {
+			candidates = append(candidates, fmt.Sprintf("%s (%s年%s)", n, year, suffix))
+		}
+		candidates = append(candidates, fmt.Sprintf("%s (%s)", n, suffix), n)
+		for _, c := range candidates {
+			if !seen[c] {
+				seen[c] = true
+				facts.names = append(facts.names, c)
+			}
+		}
+	}
+	return facts
+}
+
+func yearOf(date string) string {
+	if len(date) >= 4 {
+		return date[:4]
+	}
+	return ""
 }
 
 // surnameMisconversions are surnames OpenCC s2twp turns into another word
@@ -454,9 +512,12 @@ func (s *GlossarySeeder) toTaiwan(scope string, in []string) []string {
 // person can appear twice under different credits) and expands each cast
 // row into an actor pair and a character pair. Only the first
 // prompts.MetadataCastLimit rows by TMDb order are considered (AC #2).
-func pairMovieCredits(en, zh *tmdb.MovieCredits) []CastPair {
+//
+// actors holds, per pair, the actor's zh-TW name — what a cast table
+// elsewhere (zh.wikipedia) is matched by.
+func pairMovieCredits(en, zh *tmdb.MovieCredits) (pairs []CastPair, actors []string) {
 	if en == nil || zh == nil {
-		return nil
+		return nil, nil
 	}
 	zhByCredit := make(map[string]tmdb.CreditCast, len(zh.Cast))
 	for _, c := range zh.Cast {
@@ -467,7 +528,7 @@ func pairMovieCredits(en, zh *tmdb.MovieCredits) []CastPair {
 	if len(cast) > prompts.MetadataCastLimit {
 		cast = cast[:prompts.MetadataCastLimit]
 	}
-	var pairs []CastPair
+
 	for _, c := range cast {
 		z, ok := zhByCredit[c.CreditID]
 		if !ok {
@@ -477,16 +538,18 @@ func pairMovieCredits(en, zh *tmdb.MovieCredits) []CastPair {
 			CastPair{Kind: "actor", Src: c.Name, Zh: z.Name},
 			CastPair{Kind: "character", Src: c.Character, Zh: z.Character},
 		)
+		actors = append(actors, z.Name, z.Name)
 	}
-	return pairs
+	return pairs, actors
 }
 
 // pairTVCredits is the aggregate-credits twin: rows are ranked by how many
 // episodes the actor is in (a recurring guest with 40 episodes matters more
 // than a season-one regular with 8), and every role is paired by credit id.
-func pairTVCredits(en, zh *tmdb.TVAggregateCredits) []CastPair {
+// actors is as in pairMovieCredits.
+func pairTVCredits(en, zh *tmdb.TVAggregateCredits) (pairs []CastPair, actors []string) {
 	if en == nil || zh == nil {
-		return nil
+		return nil, nil
 	}
 	zhName := make(map[int]string, len(zh.Cast))
 	zhRole := make(map[string]string)
@@ -506,18 +569,20 @@ func pairTVCredits(en, zh *tmdb.TVAggregateCredits) []CastPair {
 	if len(cast) > prompts.MetadataCastLimit {
 		cast = cast[:prompts.MetadataCastLimit]
 	}
-	var pairs []CastPair
+
 	for _, c := range cast {
 		if name, ok := zhName[c.ID]; ok {
 			pairs = append(pairs, CastPair{Kind: "actor", Src: c.Name, Zh: name})
+			actors = append(actors, name)
 		}
 		for _, r := range c.Roles {
 			if character, ok := zhRole[r.CreditID]; ok {
 				pairs = append(pairs, CastPair{Kind: "character", Src: r.Character, Zh: character})
+				actors = append(actors, zhName[c.ID])
 			}
 		}
 	}
-	return pairs
+	return pairs, actors
 }
 
 // ---- storage shape -------------------------------------------------------

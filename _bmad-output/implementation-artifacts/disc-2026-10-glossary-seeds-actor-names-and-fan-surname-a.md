@@ -1,6 +1,6 @@
 # disc-2026-10-glossary-seeds-actor-names-and-fan-surname-a：名詞對照表不再塞用不到的演員名，「范」「于」等姓氏不會被轉錯
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-27；行號為 main `ec7c…` 之後。傘狀條目 disc-2026-10-glossary-seeds-actor-names-and-fan-surname 拆成 -a（本單：演員名＋姓氏）／-b（TMDb 沒有中文角色名時改從中文維基補）。拆的理由：-b 要新接一個外部來源並解析維基表格，規模跟 -a 不同級。 -->
 

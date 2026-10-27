@@ -23,6 +23,7 @@ const (
 // and proper User-Agent headers (NFR-I13, NFR-I14).
 type Client struct {
 	httpClient  *http.Client
+	baseURL     string // BaseURL; tests point it at a local server
 	rateLimiter *rate.Limiter
 	config      ClientConfig
 	logger      *slog.Logger
@@ -69,6 +70,7 @@ func NewClient(config ClientConfig, logger *slog.Logger) *Client {
 		httpClient: &http.Client{
 			Timeout: config.Timeout,
 		},
+		baseURL:     BaseURL,
 		rateLimiter: rate.NewLimiter(rate.Limit(config.RequestsPerSecond), 1),
 		config:      config,
 		logger:      logger,
@@ -103,7 +105,7 @@ func (c *Client) doRequest(ctx context.Context, params url.Values) ([]byte, erro
 	}
 
 	// Build request URL
-	reqURL := BaseURL + "?" + params.Encode()
+	reqURL := c.baseURL + "?" + params.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {

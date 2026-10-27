@@ -40,6 +40,7 @@ import (
 	"github.com/vido/api/internal/subtitle/sidecarcheck"
 	"github.com/vido/api/internal/tmdb"
 	"github.com/vido/api/internal/usagereport"
+	"github.com/vido/api/internal/wikipedia"
 	// Media config is loaded during service initialization
 	// and validates directories from VIDO_MEDIA_DIRS env var
 	//
@@ -759,6 +760,11 @@ func main() {
 	// on phrase choices. Enrichment additionally stores the cast on the row.
 	if creditsClient := tmdbService.CreditsClient(); creditsClient != nil {
 		glossarySeeder := services.NewGlossarySeeder(creditsClient, repos.Glossary, subtitleConverter, slog.Default())
+		// disc-2026-10-glossary-seeds-actor-names-and-fan-surname-b: a Chinese
+		// title whose TMDb characters are only pinyin gets their Chinese names
+		// from zh.wikipedia's cast table (one request a second; independent of
+		// ENABLE_WIKIPEDIA, which is about metadata matching).
+		glossarySeeder.SetWikiCastSource(wikipedia.NewClient(wikipedia.DefaultConfig(), slog.Default()))
 		glossaryScopes.SetSeeder(glossarySeeder)
 		enrichmentService.SetGlossarySeeder(glossarySeeder, glossaryScopes)
 		// disc-2026-10-series-credits-empty: rows matched before sub-7-3
