@@ -60,10 +60,13 @@ const (
 // which is the quality gate's whole point.
 // The harvested-terms return (sub-5-5) is the chunk's optional trailer yield —
 // the proper-noun renderings the model reported for this chunk; nil when none.
+// established is the renderings earlier chunks of THIS track settled on
+// (prompts.EstablishedNames), sent in the per-chunk user message so the cached
+// system prefix stays shared (disc-2026-10-movie-name-drift-in-one-run).
 // This port is unstamped, so the widening syncs implementations and fakes in
 // the same change with no Rule 20 bump.
 type ChunkTranslator interface {
-	TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error)
+	TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock, established []prompts.GlossaryEntry) (map[int]string, map[string]string, ai.CompletionUsage, error)
 }
 
 // VariantConverter is the narrow port over *Converter. Injected once and reused
@@ -962,7 +965,10 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 					ErrSubtitleTranslateFailed, err)
 			}
 
-			got, chunkTerms, chunkUsage, requests, err := p.translateSplitting(chunkCtx, sys, contextBlocks, pending)
+			// Names earlier chunks already rendered ride along, so Celia keeps
+			// the first chunk's rendering (disc-2026-10-movie-name-drift-in-one-run).
+			established := prompts.EstablishedNames(harvested, tctx.Glossary)
+			got, chunkTerms, chunkUsage, requests, err := p.translateSplitting(chunkCtx, sys, contextBlocks, pending, established)
 			// The gate is released as WARM only when the request actually
 			// returned. A failed first request never wrote the provider-side
 			// prefix, so marking the show warm would open the whole 50-minute
@@ -1405,8 +1411,8 @@ func metadataOf(tctx TranslateContext) prompts.MediaMetadata {
 // (disc-2026-10-translation-batch-truncation; Ming Jwo's 「缺行切半重翻」).
 // Every other error is returned as before. requests is the number of requests
 // actually sent, for countRequest.
-func (p *Pipeline) translateSplitting(ctx context.Context, sys []ai.SystemBlock, contextBlocks []prompts.SubtitleTranslatorBlock, pending []SubtitleBlock) (map[int]string, map[string]string, ai.CompletionUsage, int, error) {
-	got, terms, usage, err := p.translator.TranslateChunk(ctx, sys, contextBlocks, promptBlocksOf(pending))
+func (p *Pipeline) translateSplitting(ctx context.Context, sys []ai.SystemBlock, contextBlocks []prompts.SubtitleTranslatorBlock, pending []SubtitleBlock, established []prompts.GlossaryEntry) (map[int]string, map[string]string, ai.CompletionUsage, int, error) {
+	got, terms, usage, err := p.translator.TranslateChunk(ctx, sys, contextBlocks, promptBlocksOf(pending), established)
 	requests := 1
 	if err == nil || !errors.Is(err, ai.ErrAIResponseTruncated) {
 		return got, terms, usage, requests, err
@@ -1422,7 +1428,7 @@ func (p *Pipeline) translateSplitting(ctx context.Context, sys []ai.SystemBlock,
 	merged := make(map[int]string, len(pending))
 	var mergedTerms map[string]string
 	for _, half := range [][]SubtitleBlock{pending[:mid], pending[mid:]} {
-		g, t, u, n, herr := p.translateSplitting(ctx, sys, contextBlocks, half)
+		g, t, u, n, herr := p.translateSplitting(ctx, sys, contextBlocks, half, established)
 		usage = addUsage(usage, u)
 		requests += n
 		if herr != nil {

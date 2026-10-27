@@ -1088,7 +1088,7 @@ type ctxBudgetSpy struct {
 	onChunk func(b *ai.Budget) error
 }
 
-func (s *ctxBudgetSpy) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
+func (s *ctxBudgetSpy) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock, established []prompts.GlossaryEntry) (map[int]string, map[string]string, ai.CompletionUsage, error) {
 	b := ai.BudgetFromContext(ctx)
 	s.budgets = append(s.budgets, b)
 	if s.onChunk != nil {
@@ -1096,7 +1096,7 @@ func (s *ctxBudgetSpy) TranslateChunk(ctx context.Context, sys []ai.SystemBlock,
 			return nil, nil, ai.CompletionUsage{}, err
 		}
 	}
-	return s.inner.TranslateChunk(ctx, sys, contextBlocks, blocks)
+	return s.inner.TranslateChunk(ctx, sys, contextBlocks, blocks, established)
 }
 
 func TestProcessItem_AttachesPerItemBudgetWithTheConfiguredCeiling(t *testing.T) {
@@ -1418,9 +1418,9 @@ type modelSpyTranslator struct {
 	seen  *[]string
 }
 
-func (m *modelSpyTranslator) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
+func (m *modelSpyTranslator) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock, established []prompts.GlossaryEntry) (map[int]string, map[string]string, ai.CompletionUsage, error) {
 	*m.seen = append(*m.seen, ai.ModelIDFromContext(ctx))
-	return m.inner.TranslateChunk(ctx, sys, contextBlocks, blocks)
+	return m.inner.TranslateChunk(ctx, sys, contextBlocks, blocks, established)
 }
 
 func TestProcessItem_ExplicitModelChoiceDoesNotSkipOnAnUnattributableSidecar(t *testing.T) {

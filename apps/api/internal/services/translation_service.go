@@ -505,8 +505,12 @@ func (s *TranslationService) TranslateWithGlossaryHarvest(ctx context.Context, b
 			})
 		}
 
+		// The run's glossary plus the names earlier batches settled on, so a
+		// name keeps its first rendering (disc-2026-10-movie-name-drift-in-one-run).
+		batchGlossary := append(append([]prompts.GlossaryEntry(nil), promptGlossary...), prompts.EstablishedNames(harvested, promptGlossary)...)
+
 		// Call the model; a reply truncated before any text is re-sent as halves.
-		translations, batchTerms, err := s.completeSplitting(ctx, systemPrompt, promptBlocks, contextBlocks, promptGlossary)
+		translations, batchTerms, err := s.completeSplitting(ctx, systemPrompt, promptBlocks, contextBlocks, batchGlossary)
 
 		if err != nil {
 			// 9R-16 AC 6c: the per-run budget sentinel must escape the
@@ -671,7 +675,7 @@ func (s *TranslationService) TranslateRequest(ctx context.Context, req Translati
 // proper-noun renderings the model reported in its optional trailer; nil when
 // the response carried none. Widening the ChunkTranslator port (unstamped) in
 // the same change; fakes sync alongside.
-func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
+func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock, established []prompts.GlossaryEntry) (map[int]string, map[string]string, ai.CompletionUsage, error) {
 	if len(blocks) == 0 {
 		return nil, nil, ai.CompletionUsage{}, nil
 	}
@@ -682,7 +686,9 @@ func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.System
 	for i, b := range blocks {
 		indices[i] = b.Index
 	}
-	userPrompt := prompts.BuildSubtitleTranslatorPrompt(blocks, contextBlocks)
+	// The names earlier chunks settled on go in the user message, not the
+	// cached system blocks: every chunk keeps sharing one prompt prefix.
+	userPrompt := prompts.BuildSubtitleTranslatorPromptWithGlossary(blocks, contextBlocks, established)
 
 	// Claude implements CachingCompleter, so usage — including both cache
 	// dimensions — flows back to the caller. Gemini deliberately does not:

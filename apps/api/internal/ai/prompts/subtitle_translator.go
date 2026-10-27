@@ -3,6 +3,7 @@ package prompts
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -161,6 +162,32 @@ func BuildGlossarySection(glossary []GlossaryEntry) string {
 	}
 	sb.WriteString("\n")
 	return sb.String()
+}
+
+// EstablishedNames is the proper-noun renderings an earlier batch of THIS
+// translation settled on (its ===TERMS=== trailer), minus terms the run's own
+// glossary already fixes, sorted so the same harvest builds the same prompt.
+// Fed to every later batch so a name keeps the rendering it was first given —
+// without it each batch re-guessed: Tears of Steel's Celia came out 席莉亞,
+// 希莉亞 and 西莉亞 in one run (disc-2026-10-movie-name-drift-in-one-run).
+func EstablishedNames(harvested map[string]string, glossary []GlossaryEntry) []GlossaryEntry {
+	if len(harvested) == 0 {
+		return nil
+	}
+	fixed := make(map[string]bool, len(glossary))
+	for _, e := range glossary {
+		fixed[strings.ToLower(strings.TrimSpace(e.Source))] = true
+	}
+	out := make([]GlossaryEntry, 0, len(harvested))
+	for src, zh := range harvested {
+		src, zh = strings.TrimSpace(src), strings.TrimSpace(zh)
+		if src == "" || zh == "" || fixed[strings.ToLower(src)] {
+			continue
+		}
+		out = append(out, GlossaryEntry{Source: src, Target: zh})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Source < out[j].Source })
+	return out
 }
 
 // MetadataCastLimit caps how many cast names are rendered into the media

@@ -366,8 +366,8 @@ type narratingTranslator struct {
 	notices []ai.RetryNotice
 }
 
-func (n *narratingTranslator) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
-	got, terms, usage, err := n.inner.TranslateChunk(ctx, sys, contextBlocks, blocks)
+func (n *narratingTranslator) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock, established []prompts.GlossaryEntry) (map[int]string, map[string]string, ai.CompletionUsage, error) {
+	got, terms, usage, err := n.inner.TranslateChunk(ctx, sys, contextBlocks, blocks, established)
 	if err != nil {
 		if observer := ai.RetryObserverFrom(ctx); observer != nil {
 			for _, notice := range n.notices {
