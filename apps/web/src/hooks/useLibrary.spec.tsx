@@ -346,6 +346,34 @@ describe('useReparseItem', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: detailKeys.localSeries('series-1') });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
   });
+
+  // disc-2026-10-rematch-keeps-old-season-rows: a re-parse can turn the series
+  // into a different show (將夜: 60 episodes → 20); its season list is cached
+  // for an hour.
+  it.each([
+    ['series', 'series-1', true],
+    ['movie', 'movie-1', false],
+  ] as const)('a %s re-parse refreshes the season list: %s', async (type, id, refreshes) => {
+    const answer = { id, parseStatus: 'success', title: '將夜', tmdbId: 282136 };
+    vi.mocked(libraryService.reparseSeries).mockResolvedValue(answer);
+    vi.mocked(libraryService.reparseMovie).mockResolvedValue(answer);
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useReparseItem(), { wrapper: wrapperWith(queryClient) });
+    result.current.mutate({ type, id });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const seasons = { queryKey: detailKeys.seasons(id) };
+    const episodes = { queryKey: [...detailKeys.all, 'season-episodes', id] };
+    if (refreshes) {
+      expect(invalidate).toHaveBeenCalledWith(seasons);
+      expect(invalidate).toHaveBeenCalledWith(episodes);
+    } else {
+      expect(invalidate).not.toHaveBeenCalledWith(seasons);
+      expect(invalidate).not.toHaveBeenCalledWith(episodes);
+    }
+  });
 });
 
 describe('useExportItem', () => {

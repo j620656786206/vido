@@ -119,6 +119,7 @@ func (s *EnrichmentService) ApplyTMDbMatch(ctx context.Context, kind MediaKind, 
 			return nil, fmt.Errorf("TMDb returned no details for series %d", tmdbID)
 		}
 		previous := currentMetadataSource(series.MetadataSource)
+		previousTMDbID := series.TMDbID
 		applyTMDbSeriesDetails(series, details)
 		series.MetadataSource = models.NewNullString(string(models.MetadataSourceManual))
 		series.ParseStatus = models.ParseStatusSuccess
@@ -126,7 +127,7 @@ func (s *EnrichmentService) ApplyTMDbMatch(ctx context.Context, kind MediaKind, 
 		if credits == nil {
 			credits = &models.Credits{} // same as movies: never keep the old match's cast
 		}
-		if err := s.persistSeriesMatch(ctx, series, credits); err != nil {
+		if err := s.persistSeriesMatch(ctx, series, previousTMDbID, credits); err != nil {
 			return nil, err
 		}
 	default:
@@ -434,11 +435,14 @@ func (s *EnrichmentService) persistMovieMatch(ctx context.Context, movie *models
 	return nil
 }
 
-func (s *EnrichmentService) persistSeriesMatch(ctx context.Context, series *models.Series, credits *models.Credits) error {
+// persistSeriesMatch writes a match onto the series row. previousTMDbID is the
+// row's TMDb id before the match: when it changed, the season rows follow.
+func (s *EnrichmentService) persistSeriesMatch(ctx context.Context, series *models.Series, previousTMDbID models.NullInt64, credits *models.Credits) error {
 	series.UpdatedAt = time.Now()
 	if err := s.seriesRepo.UpdateEnrichedMetadata(ctx, series); err != nil {
 		return fmt.Errorf("%w: update series: %w", ErrEnrichPersist, err)
 	}
+	s.resetSeasonsForNewShow(ctx, series.ID, previousTMDbID, series.TMDbID)
 	s.persistCountries(ctx, s.seriesRepo, series.ID, series.ProductionCountriesJSON)
 	s.persistCredits(ctx, s.seriesRepo.UpdateCredits, series.ID, credits)
 	s.touchGlossaryScope(ctx, series.ID)

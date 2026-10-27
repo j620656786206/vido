@@ -133,7 +133,7 @@ func (s *EnrichmentService) enrichSeriesFromNFO(ctx context.Context, series *mod
 	if s.userTookOverSeries(ctx, series.ID) {
 		return true, nil
 	}
-	if err := s.persistSeriesMatch(ctx, series, credits); err != nil {
+	if err := s.persistSeriesMatch(ctx, series, oldID, credits); err != nil {
 		return true, err
 	}
 	s.logger.Info("series matched from tvshow.nfo", "id", series.ID, "tmdb_id", tmdbID)
