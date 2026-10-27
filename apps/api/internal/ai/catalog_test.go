@@ -59,6 +59,19 @@ func TestCatalog_ExcludesRetiredModelsButKeepsPricingThem(t *testing.T) {
 	assert.Equal(t, price("0.10", "0.40"), PricingFor("gemini-2.0-flash"))
 }
 
+// disc-2026-10-gemini-parse-model-retired-again: the 2.5 models are closed to
+// new users — a fresh key would 404 after the user agreed to pay.
+func TestCatalog_DoesNotOfferModelsClosedToNewUsers(t *testing.T) {
+	for _, id := range []string{"gemini-2.5-flash", "gemini-2.5-flash-lite"} {
+		for _, m := range Catalog() {
+			assert.NotEqual(t, id, m.ID)
+		}
+		assert.False(t, IsSelectableModel(id), id)
+		assert.NotEqual(t, fallbackLLMPricing, PricingFor(id), "%s still meters at its own rate", id)
+	}
+	assert.True(t, IsSelectableModel("gemini-3.5-flash-lite"), "the current Flash-Lite stays on offer")
+}
+
 func TestCatalog_CarriesPricesAndMeasuredGrades(t *testing.T) {
 	byID := map[string]ModelInfo{}
 	for _, m := range Catalog() {

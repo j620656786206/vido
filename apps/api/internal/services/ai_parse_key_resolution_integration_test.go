@@ -205,8 +205,8 @@ func TestAIParseKeys_SavedGeminiKey_ParsesWithGeminiAndRecordsSpend(t *testing.T
 	assert.Equal(t, ai.DefaultGeminiModel, rows[0].model)
 	assert.Equal(t, int64(1000), rows[0].in)
 	assert.Equal(t, int64(200), rows[0].out)
-	// gemini-2.5-flash-lite: 1000 × $0.10/M + 200 × $0.40/M = $0.00018
-	assert.InDelta(t, 0.00018, rows[0].usd, 1e-12)
+	// gemini-3.5-flash-lite: 1000 × $0.30/M + 200 × $2.50/M = $0.0008
+	assert.InDelta(t, 0.0008, rows[0].usd, 1e-12)
 }
 
 func TestAIParseKeys_PreferredProviderWinsOnceItsKeyArrives_AndDeleteRevertsToNoAI(t *testing.T) {

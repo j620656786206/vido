@@ -172,6 +172,28 @@ func TestGeminiProvider_Parse_QuotaExceeded(t *testing.T) {
 	assert.ErrorIs(t, err, ErrAIQuotaExceeded)
 }
 
+// disc-2026-10-gemini-parse-model-retired-again: a model closed to this key
+// 404s. Name it and the way around it, and do not retry — it will not change.
+func TestGeminiProvider_Parse_ModelNotFoundSaysWhichAndHow(t *testing.T) {
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"error":{"code":404,"message":"This model models/gemini-2.5-flash-lite is no longer available to new users."}}`))
+	}))
+	defer server.Close()
+
+	p := NewGeminiProvider("test-api-key", WithGeminiBaseURL(server.URL), WithGeminiModel("gemini-2.5-flash-lite"))
+	_, err := p.Parse(context.Background(), &ParseRequest{Filename: "S01E01.mkv"})
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAIModelNotFound)
+	assert.ErrorIs(t, err, ErrAIProviderError)
+	assert.Contains(t, err.Error(), `"gemini-2.5-flash-lite"`)
+	assert.Contains(t, err.Error(), "GEMINI_MODEL")
+	assert.Equal(t, 1, calls, "a 404 is not transient")
+}
+
 func TestGeminiProvider_Parse_ServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -407,9 +429,9 @@ func TestGeminiProvider_Parse_MetersUsageIntoCtxBudget(t *testing.T) {
 	assert.Equal(t, int64(1_000_000), snap.InputTokens, "promptTokenCount → input tokens")
 	assert.Equal(t, int64(2_000_000), snap.OutputTokens, "candidatesTokenCount → output tokens")
 	assert.Equal(t, 1, snap.LLMCalls)
-	// Priced at the gemini-2.0-flash row ($0.10 in / $0.40 out per 1M) — NOT
-	// the Haiku fallback, which would fabricate $1 + $10 here.
-	assert.InDelta(t, 0.10+0.80, snap.SpentUSD, 1e-9)
+	// Priced at the default model's row (gemini-3.5-flash-lite: $0.30 in /
+	// $2.50 out per 1M) — NOT the Haiku fallback, which would fabricate $1 + $10.
+	assert.InDelta(t, 0.30+5.00, snap.SpentUSD, 1e-9)
 }
 
 func TestGeminiProvider_Parse_NoCtxBudgetIsNoOp(t *testing.T) {
