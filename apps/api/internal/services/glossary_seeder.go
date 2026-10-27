@@ -234,7 +234,7 @@ func (s *GlossarySeeder) FetchCredits(ctx context.Context, mediaType string, tmd
 		if err != nil {
 			return credits, nil, err
 		}
-		return credits, pairTVCredits(en, zh), nil
+		return credits, s.keepActorsOnlyWhenUnscripted(ctx, mediaType, id, pairTVCredits(en, zh)), nil
 	default:
 		zh, err := s.credits.GetMovieCreditsWithLanguage(ctx, id, glossarySeedTargetLanguage)
 		if err != nil {
@@ -245,7 +245,7 @@ func (s *GlossarySeeder) FetchCredits(ctx context.Context, mediaType string, tmd
 		if err != nil {
 			return credits, nil, err
 		}
-		return credits, pairMovieCredits(en, zh), nil
+		return credits, s.keepActorsOnlyWhenUnscripted(ctx, mediaType, id, pairMovieCredits(en, zh)), nil
 	}
 }
 
@@ -283,6 +283,9 @@ func (s *GlossarySeeder) SeedFromCredits(ctx context.Context, scope, mediaID str
 		zhs[i] = c.zh
 	}
 	zhs = s.toTaiwan(scope, zhs)
+	for i, c := range cands {
+		zhs[i] = restoreSurname(c.zh, zhs[i])
+	}
 
 	// Pass 3: insert-if-absent.
 	for i, c := range cands {
@@ -320,6 +323,91 @@ func (s *GlossarySeeder) SeedFromCredits(ctx context.Context, scope, mediaID str
 		"failed", res.Failed,
 	)
 	return res
+}
+
+// glossaryGenreClient is the (cached) details surface of the TMDb cache
+// service main wires in; asserted rather than added to GlossaryCreditsClient
+// so the test doubles need not grow. Genre ids do not depend on language.
+type glossaryGenreClient interface {
+	GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVShowDetails, error)
+	GetMovieDetails(ctx context.Context, movieID int) (*tmdb.MovieDetails, error)
+}
+
+var _ glossaryGenreClient = (*tmdb.CacheService)(nil)
+
+// unscriptedGenreIDs are the TMDb genres whose dialogue names the people on
+// screen: Reality, Talk, News (TV) and Documentary (both).
+var unscriptedGenreIDs = map[int]bool{10764: true, 10767: true, 10763: true, 99: true}
+
+// keepActorsOnlyWhenUnscripted drops the actor pairs of a scripted title: a
+// drama's dialogue never says its actors' names, so they were noise in the
+// glossary and in the speech-recognition hints (《百花殺》 seeded 10 actors and
+// no characters — disc-2026-10-glossary-seeds-actor-names-and-fan-surname-a).
+// A reality, talk, news or documentary title keeps them (《種地吧》 calls its
+// cast by name). When the genre cannot be read, nothing is dropped.
+func (s *GlossarySeeder) keepActorsOnlyWhenUnscripted(ctx context.Context, mediaType string, id int, pairs []CastPair) []CastPair {
+	if len(pairs) == 0 {
+		return pairs
+	}
+	unscripted, known := s.isUnscripted(ctx, mediaType, id)
+	if !known || unscripted {
+		return pairs
+	}
+	kept := pairs[:0:0]
+	for _, p := range pairs {
+		if p.Kind != "actor" {
+			kept = append(kept, p)
+		}
+	}
+	return kept
+}
+
+// isUnscripted reads the title's TMDb genres; known is false when they could
+// not be read.
+func (s *GlossarySeeder) isUnscripted(ctx context.Context, mediaType string, id int) (unscripted, known bool) {
+	details, ok := s.credits.(glossaryGenreClient)
+	if !ok {
+		return false, false
+	}
+	var genres []tmdb.Genre
+	if mediaType == "tv" {
+		show, err := details.GetTVShowDetails(ctx, id)
+		if err != nil || show == nil {
+			s.logger.Warn("glossary seed: TMDb genres unavailable; keeping actor names", "tmdb_id", id, "error", err)
+			return false, false
+		}
+		genres = show.Genres
+	} else {
+		movie, err := details.GetMovieDetails(ctx, id)
+		if err != nil || movie == nil {
+			s.logger.Warn("glossary seed: TMDb genres unavailable; keeping actor names", "tmdb_id", id, "error", err)
+			return false, false
+		}
+		genres = movie.Genres
+	}
+	for _, g := range genres {
+		if unscriptedGenreIDs[g.ID] {
+			return true, true
+		}
+	}
+	return false, true
+}
+
+// surnameMisconversions are surnames OpenCC s2twp turns into another word
+// (范帅琦 → 範帥琦, 于正 → 於正; checked against the CLI 2026-10-27). 叶→葉,
+// 钟→鍾, 郑→鄭 are right and not listed.
+var surnameMisconversions = map[rune]rune{'范': '範', '于': '於', '党': '黨', '种': '種', '涂': '塗'}
+
+// restoreSurname puts a name's first character back when the conversion
+// turned that surname into a different word. Only the first character: the
+// rest of the name follows OpenCC.
+func restoreSurname(before, after string) string {
+	b, bSize := utf8.DecodeRuneInString(before)
+	a, aSize := utf8.DecodeRuneInString(after)
+	if wrong, ok := surnameMisconversions[b]; ok && a == wrong && bSize > 0 && aSize > 0 {
+		return string(b) + after[aSize:]
+	}
+	return after
 }
 
 // toTaiwan runs every string through OpenCC s2twp in ONE subprocess call
