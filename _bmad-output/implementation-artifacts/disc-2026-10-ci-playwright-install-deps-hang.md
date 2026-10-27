@@ -51,6 +51,7 @@ Claude Opus 5.5（claude-opus-5-5），2026-10-27。
 
 - `test.yml`：`Restore apt packages for Playwright`（cache/restore）→ `Seed apt with the cached packages`（`APT::Keep-Downloaded-Packages "true"`、刪 `docker-clean`、把快取的 `.deb` 複製進 `/var/cache/apt/archives/`）→ 兩個安裝步驟改成 `timeout 6m` × 2 次＋`timeout-minutes: 13` → 沒命中時 `Keep the apt packages for the next run`（複製回 `~/apt-cache`）＋`Save apt packages`（cache/save）。
 - `actionlint`：新加的部分沒有警告（檔案裡原有的 SC2064／SC2034 不是這次的）。
+- **PR 第二次 CI（run 40466441121，有快取）**：4 個分片都 `seeded 189 packages from the cache`、`Need to get 0 B/119 MB of archives`，「Install Playwright system deps」分別 21／28／34／21 秒，全部通過（數字貼在 PR 留言）。
 - **PR 第一次 CI（run 40465402227）學到的兩件事**：
   - 分片 1、2、4 都在 **30 秒左右**抓完同樣的 119 MB，只有分片 3 那台 runner 的 azure 鏡像每秒約 70 KB（`fonts-wqy-zenhei` 7.4 MB 抓了 1 分 33 秒）——是**某一台 runner 的網路**，不是鏡像整個慢。快取已由分片 1 存好（`apt-playwright-Linux-1.58.0-chromium-webkit`，119 MB），另外兩個分片「Unable to reserve cache」只是警告，照預期。
   - 第一版的重試沒用：`timeout` 停掉了 `npx`，但它透過 `sudo` 開的 `apt-get`（pid 2745）還在、握著 dpkg 鎖，第二次一開始就「Could not get lock」。改成：逾時後 `sudo pkill -x apt-get`、`dpkg --configure -a`，第二次換 `archive.ubuntu.com`；兩個安裝步驟共用 `scripts/ci-playwright-deps.sh`。
