@@ -1,6 +1,6 @@
 # disc-2026-10-reparse-dialog-stuck-over-tunnel：從外網按「重新解析」，對話框不會再卡在「處理中 0 / 1」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-27；行號為 main `3207a7d1`。Rule 24 lane ③，Alexyu 10/27 要求開票並指定做這張。 -->
 
@@ -77,7 +77,8 @@ Claude Opus 5.5（claude-opus-5-5），2026-10-27。
 - 反向驗證：拿掉逾時的 `close()` 與輪詢的排程 → 新的 5 個測試紅。
 - 試著用瀏覽器工具從外網量串流，被 Cloudflare Access 擋下（要信箱驗證碼），沒有登入，改用 log 的時間點推論（見上表）。
 - 測試：`useEnrichmentRefresh.spec`、`LibraryBrowseV2.spec`、`routes/library.spec`、`BatchProgress` 共 99 個全過；`go test ./internal/sse/ -race`、`./internal/handlers/` 全過；vet、staticcheck 乾淨。
-- **部署後要 Alexyu 驗**：從外網勾一部→重新解析，對話框幾秒內走到「完成」。若 `no-transform` 生效，串流本身就會通；若沒有，輪詢也會在 2～4 秒內收尾。
+- **部署後驗證（2026-10-27 13:30，`main-58e710e`）**：Alexyu 從外網勾一部→重新解析，回報「成功了」。log：`SSE client registered` 13:30:26.345 → POST 同一秒（**不再等滿 3 秒**，代表串流當場就打開了）→ `enrichment completed` 26.488 → `GET /scanner/enrich/status` 13:30:28（track 收尾）→ 串流 30.1 秒由頁面關掉（3.8 秒）。串流這次通了，可能是 `no-transform` 的功勞，也可能是那時 Jellyfin 沒在吃頻寬（沒確認），兩者沒分開驗。
+- 原本的驗證計畫：從外網勾一部→重新解析，對話框幾秒內走到「完成」。若 `no-transform` 生效，串流本身就會通；若沒有，輪詢也會在 2～4 秒內收尾。
 
 ### File List
 
