@@ -51620,6 +51620,69 @@
                     },
                     {
                       "type": "frame",
+                      "id": "RhXQl",
+                      "name": "rematch-row",
+                      "width": "fill_container",
+                      "stroke": "$border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": "$Space/2xs",
+                      "padding": [
+                        "$Space/md",
+                        "$Space/xl"
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "khGfW",
+                          "name": "rematch-line",
+                          "gap": "$Space/xs",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Ct7sL",
+                              "name": "rematch-q",
+                              "fill": "$text-secondary",
+                              "content": "認錯片了？",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            },
+                            {
+                              "type": "text",
+                              "id": "kRB5H",
+                              "name": "rematch-link",
+                              "fill": "$accent-text",
+                              "content": "重新選片",
+                              "lineHeight": "$Type/Body/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Body/Size",
+                              "fontWeight": "$Type/Body/Weight"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "pFQHx",
+                          "name": "rematch-hint",
+                          "fill": "$text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "海報、簡介、演員會換成你選的那一部；這裡還沒儲存的修改不會留下。",
+                          "lineHeight": "$Type/Label/Line",
+                          "fontFamily": "$Type/Family/Primary",
+                          "fontSize": "$Type/Label/Size",
+                          "fontWeight": "$Type/Label/Weight"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "XFSXY",
                       "name": "body",
                       "width": "fill_container",
@@ -57568,6 +57631,62 @@
                         "$Space/lg"
                       ],
                       "children": [
+                        {
+                          "type": "frame",
+                          "id": "do1eP",
+                          "name": "rematch-row",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": "$Space/none",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "CW0T9",
+                              "name": "rematch-hit",
+                              "width": "fill_container",
+                              "height": 44,
+                              "gap": "$Space/xs",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "oWDd0",
+                                  "name": "rematch-q",
+                                  "fill": "$text-secondary",
+                                  "content": "認錯片了？",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "IrdlK",
+                                  "name": "rematch-link",
+                                  "fill": "$accent-text",
+                                  "content": "重新選片",
+                                  "lineHeight": "$Type/Body/Line",
+                                  "fontFamily": "$Type/Family/Primary",
+                                  "fontSize": "$Type/Body/Size",
+                                  "fontWeight": "$Type/Body/Weight"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "lr46T",
+                              "name": "rematch-hint",
+                              "fill": "$text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "海報、簡介、演員會換成你選的那一部；這裡還沒儲存的修改不會留下。",
+                              "lineHeight": "$Type/Label/Line",
+                              "fontFamily": "$Type/Family/Primary",
+                              "fontSize": "$Type/Label/Size",
+                              "fontWeight": "$Type/Label/Weight"
+                            }
+                          ]
+                        },
                         {
                           "type": "frame",
                           "id": "wEAPO",
