@@ -65,6 +65,11 @@ type EnrichmentService struct {
 	// nil = no roots known: the series folder is trusted as its own.
 	libraryRoots func(ctx context.Context) ([]string, error)
 
+	// seasons: a series that becomes a different show gets that show's
+	// seasons too (disc-2026-10-rematch-keeps-old-season-rows). nil = the
+	// season rows are left alone.
+	seasons seasonRowsRepo
+
 	mu          sync.Mutex
 	isEnriching bool
 	cancelChan  chan struct{}
@@ -450,6 +455,7 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 	}
 
 	previousSource := currentMetadataSource(series.MetadataSource)
+	previousTMDbID := series.TMDbID
 	s.applyMetadataToSeries(series, pickSeriesMatch(searchResult.Items, year), searchResult.Source)
 	// sub-7-2b: same as the movie path — genres and production countries live
 	// on the details call, never on a search hit.
@@ -468,7 +474,7 @@ func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Ser
 	if s.userTookOverSeries(ctx, series.ID) {
 		return nil
 	}
-	return s.persistSeriesMatch(ctx, series, credits)
+	return s.persistSeriesMatch(ctx, series, previousTMDbID, credits)
 }
 
 // applyMetadataToSeries copies a metadata match onto the series row.

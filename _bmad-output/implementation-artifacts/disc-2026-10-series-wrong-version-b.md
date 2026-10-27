@@ -1,6 +1,6 @@
 # disc-2026-10-series-wrong-version-b：已經比對到的電影／影集，也能在「修改資訊」裡「重新選片」
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-23；行號為 main `2dfc100c`；.pen 節點 id 由 Sally 用 Pencil MCP 唯讀讀取。傘狀條目 disc-2026-10-series-wrong-version 的第二張。 -->
 

@@ -530,6 +530,9 @@ func main() {
 	// parse_status=pending. Without a series repo the enrichment pass would leave them
 	// unmatched forever.
 	enrichmentService.SetSeriesRepo(repos.Series)
+	// disc-2026-10-rematch-keeps-old-season-rows: a series that becomes a
+	// different show gets that show's seasons, not the old show's 60 episodes.
+	enrichmentService.SetSeasonRepository(repos.Seasons)
 	// disc-2026-10-series-wrong-version-a: a series folder that is a library
 	// root (flat layout) is never read as one show's tvshow.nfo or year. The
 	// VIDO_MEDIA_DIRS fallback dirs are scan roots too.

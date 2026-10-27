@@ -107,6 +107,12 @@ export function useReparseItem() {
         queryKey: type === 'movie' ? detailKeys.localMovie(id) : detailKeys.localSeries(id),
       });
       queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+      // disc-2026-10-rematch-keeps-old-season-rows: a re-match can make the
+      // series a different show, and its seasons with it.
+      if (type === 'series') {
+        queryClient.invalidateQueries({ queryKey: detailKeys.seasons(id) });
+        queryClient.invalidateQueries({ queryKey: [...detailKeys.all, 'season-episodes', id] });
+      }
     },
   });
 }
