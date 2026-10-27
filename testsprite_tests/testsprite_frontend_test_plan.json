@@ -2003,9 +2003,9 @@
         "description": "Verify the empty-state text \"沒有發生錯誤的任務\" is visible when no error tasks exist"
       }
     ],
-    "v4_status": "NEW",
-    "v4_reason": "Status filtering (DownloadFilterTabs: all/downloading/paused/completed/seeding/error) had no coverage.",
-    "v4_action": "ADD — Tier 1 P0 gap"
+    "v4_status": "ENV-LIMITED",
+    "v4_reason": "2026-10-27: the test environment has no qBittorrent on purpose, so the downloads page correctly says it is not set up and has no rows to filter, expand or inspect.",
+    "v4_action": "KEEP-SKIP"
   },
   {
     "id": "TC081",
@@ -2027,9 +2027,9 @@
         "description": "Verify element with data-testid \"download-details\" is visible"
       }
     ],
-    "v4_status": "NEW",
-    "v4_reason": "Download detail expansion (DownloadDetails) had no coverage. Part of P0 journey #3 (expand detail).",
-    "v4_action": "ADD — Tier 1 P0 gap"
+    "v4_status": "ENV-LIMITED",
+    "v4_reason": "2026-10-27: the test environment has no qBittorrent on purpose, so the downloads page correctly says it is not set up and has no rows to filter, expand or inspect.",
+    "v4_action": "KEEP-SKIP"
   },
   {
     "id": "TC083",
@@ -2055,9 +2055,9 @@
         "description": "Verify element with data-testid \"parse-failed-actions\" is visible"
       }
     ],
-    "v4_status": "NEW",
-    "v4_reason": "Parse-failed recovery (ParseFailedActions, DownloadParseStatusBadge) had no coverage. Connects download monitoring to the parse→match journey.",
-    "v4_action": "ADD — Tier 1 P0 gap (needs parse-failed seed fixture)"
+    "v4_status": "ENV-LIMITED",
+    "v4_reason": "2026-10-27: the test environment has no qBittorrent on purpose, so the downloads page correctly says it is not set up and has no rows to filter, expand or inspect.",
+    "v4_action": "KEEP-SKIP"
   },
   {
     "id": "TC084",
@@ -5556,6 +5556,150 @@
     ],
     "v4_status": "ENV-LIMITED",
     "v4_reason": "TestSprite runs a fixed desktop viewport and cannot switch to 390x844 (both runs BLOCKED 2026-10-22). Phone layouts stay with the Playwright mobile project and visual baselines.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC188",
+    "title": "A matched movie's 修改資訊 offers 重新選片, which swaps the editor for 手動選片 and leaves the page usable",
+    "description": "奧本海默 is matched. Its 修改資訊 dialog must show a row 認錯片了？ with the link 重新選片 and the note that the poster, overview and cast are replaced. Clicking 重新選片 closes 修改資訊 and opens the 手動選片 dialog with the search box already filled from the file name. Escape closes it, and 修改資訊 can be opened again afterwards. Nothing is saved.",
+    "category": "Media Detail",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-011"
+      },
+      {
+        "type": "action",
+        "description": "Click the 修改資訊 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 修改資訊 dialog shows the text 認錯片了？ and a 重新選片 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog shows the text 海報、簡介、演員會換成你選的那一部"
+      },
+      {
+        "type": "action",
+        "description": "Click the 重新選片 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 手動選片 is open and no dialog titled 修改資訊 is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the search box in the 手動選片 dialog contains the text Oppenheimer"
+      },
+      {
+        "type": "action",
+        "description": "Press Escape"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 手動選片 dialog is closed"
+      },
+      {
+        "type": "action",
+        "description": "Click the 修改資訊 button again"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 修改資訊 dialog is open again"
+      }
+    ],
+    "v4_status": "NEW 2026-10-27",
+    "v4_reason": "2026-10-27 disc-2026-10-series-wrong-version-b (PR #915): a matched item can be re-matched from 修改資訊.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC189",
+    "title": "An unmatched movie's 修改資訊 has no 重新選片 row, because its page already leads with 手動選片",
+    "description": "[FanSub] 未知電影 (2021) failed to match. Its detail page shows the 比對失敗 block with 手動選片. Its 修改資訊 dialog must NOT show 認錯片了？ or 重新選片. The dialog is cancelled so nothing changes.",
+    "category": "Media Detail",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-102"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a 手動選片 button is visible on the page"
+      },
+      {
+        "type": "action",
+        "description": "Click the 修改資訊 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 修改資訊 is open"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog does not contain the text 認錯片了？ and has no 重新選片 button"
+      },
+      {
+        "type": "action",
+        "description": "Click 取消"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 修改資訊 dialog is closed"
+      }
+    ],
+    "v4_status": "NEW 2026-10-27",
+    "v4_reason": "2026-10-27 disc-2026-10-series-wrong-version-b (PR #915): a matched item can be re-matched from 修改資訊.",
+    "v4_action": "ADD"
+  },
+  {
+    "id": "TC190",
+    "title": "Unsaved edits in 修改資訊 are dropped when the user chooses 重新選片 instead",
+    "description": "On 沙丘:第二部, typing a new title into 修改資訊 and then choosing 重新選片 must not save the typed title: after closing 手動選片 the page heading is still 沙丘:第二部, and reopening 修改資訊 shows the original title.",
+    "category": "Media Detail",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /media/movie/seed-mv-012"
+      },
+      {
+        "type": "action",
+        "description": "Click the 修改資訊 button"
+      },
+      {
+        "type": "action",
+        "description": "Replace the title field with 不該被存下來的片名"
+      },
+      {
+        "type": "action",
+        "description": "Click the 重新選片 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog titled 手動選片 is open"
+      },
+      {
+        "type": "action",
+        "description": "Press Escape"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the page heading shows 沙丘:第二部 and does not show 不該被存下來的片名"
+      },
+      {
+        "type": "action",
+        "description": "Click the 修改資訊 button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the title field contains 沙丘:第二部"
+      }
+    ],
+    "v4_status": "NEW 2026-10-27",
+    "v4_reason": "2026-10-27 disc-2026-10-series-wrong-version-b (PR #915): a matched item can be re-matched from 修改資訊.",
     "v4_action": "ADD"
   }
 ]
