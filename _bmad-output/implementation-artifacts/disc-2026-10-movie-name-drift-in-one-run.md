@@ -1,6 +1,6 @@
 # disc-2026-10-movie-name-drift-in-one-run：同一次翻譯裡，前面定好的人名譯法會帶給後面每一批，不再一部片三種譯名
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-27；行號為 main（#930 之後）。Rule 24 lane ③，2026-10-23 Vido vs Lingarr 比較時立案；Alexyu 10-27 選 A。 -->
 
