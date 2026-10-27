@@ -16,7 +16,7 @@ Status: review
 
 1. **系統套件快取**：E2E 分片把 install-deps 抓到的 `.deb` 存進 Actions 快取（key 綁 OS＋Playwright 版本＋瀏覽器組合，跟瀏覽器快取同一套規則）；下次先把快取的 `.deb` 放進 apt 的下載資料夾，apt 只會去鏡像抓快取裡沒有的新版套件。
 2. **抓過的檔留下來**：明確設定 apt 保留下載的套件，存快取才有東西。
-3. **卡住時快一點失敗、試第二次**：安裝那一步每次最多 6 分鐘、試兩次（第二次接著抓，中途被打斷的 dpkg 先收尾），整步最多 13 分鐘；不會再拖到 job 的 20 分鐘上限才知道。
+3. **卡住時快一點失敗、換鏡像試第二次**：安裝那一步每次最多 6 分鐘、試兩次；第一次逾時就停掉還在跑的 `apt-get`（它握著 dpkg 鎖）、收尾被打斷的 dpkg，第二次改用 Canonical 的 `archive.ubuntu.com`。整步最多 13 分鐘；不會再拖到 job 的 20 分鐘上限才知道。
 4. **快取只存一次**：快取沒命中時才存；四個分片搶同一個 key，只有一個會存成功，其他只是警告，不算失敗。
 5. **其他不變**：瀏覽器快取、測試本身、其他 job 都不動。
 
@@ -28,7 +28,7 @@ Status: review
 ## Tasks
 
 - [x] Task 1 — `test.yml` E2E 分片：還原／種入／保留／存 apt 套件快取（AC 1、2、4）
-- [x] Task 2 — 安裝步驟加每次 6 分鐘、兩次的重試與步驟上限（AC 3）
+- [x] Task 2 — 安裝步驟加每次 6 分鐘、兩次的重試與步驟上限，第二次換鏡像（`scripts/ci-playwright-deps.sh`）（AC 3）
 - [x] Task 3 — actionlint；PR 的 CI 跑一次（快取沒命中、存起來），再重跑 E2E 確認命中（AC 1、5）
 
 ## Dev Notes
@@ -51,8 +51,12 @@ Claude Opus 5.5（claude-opus-5-5），2026-10-27。
 
 - `test.yml`：`Restore apt packages for Playwright`（cache/restore）→ `Seed apt with the cached packages`（`APT::Keep-Downloaded-Packages "true"`、刪 `docker-clean`、把快取的 `.deb` 複製進 `/var/cache/apt/archives/`）→ 兩個安裝步驟改成 `timeout 6m` × 2 次＋`timeout-minutes: 13` → 沒命中時 `Keep the apt packages for the next run`（複製回 `~/apt-cache`）＋`Save apt packages`（cache/save）。
 - `actionlint`：新加的部分沒有警告（檔案裡原有的 SC2064／SC2034 不是這次的）。
+- **PR 第一次 CI（run 40465402227）學到的兩件事**：
+  - 分片 1、2、4 都在 **30 秒左右**抓完同樣的 119 MB，只有分片 3 那台 runner 的 azure 鏡像每秒約 70 KB（`fonts-wqy-zenhei` 7.4 MB 抓了 1 分 33 秒）——是**某一台 runner 的網路**，不是鏡像整個慢。快取已由分片 1 存好（`apt-playwright-Linux-1.58.0-chromium-webkit`，119 MB），另外兩個分片「Unable to reserve cache」只是警告，照預期。
+  - 第一版的重試沒用：`timeout` 停掉了 `npx`，但它透過 `sudo` 開的 `apt-get`（pid 2745）還在、握著 dpkg 鎖，第二次一開始就「Could not get lock」。改成：逾時後 `sudo pkill -x apt-get`、`dpkg --configure -a`，第二次換 `archive.ubuntu.com`；兩個安裝步驟共用 `scripts/ci-playwright-deps.sh`。
 
 ### File List
 
 - `.github/workflows/test.yml`
+- `scripts/ci-playwright-deps.sh`（新）
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`

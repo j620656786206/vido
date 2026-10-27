@@ -420,29 +420,18 @@ jobs:
             echo "seeded $(find "$HOME/apt-cache" -name '*.deb' | wc -l) packages from the cache"
           fi
 
-      # 每次最多 6 分鐘、試兩次：鏡像卡住時第二次接著抓（apt 留著抓到一半的檔），
-      # 真的不行也在 12 分鐘內失敗，不會拖到 job 的 20 分鐘上限。
+      # 每次最多 6 分鐘、試兩次，第二次改用 Canonical 的鏡像（某一台 runner 的 azure
+      # 鏡像每秒只有 70 KB 時，其他分片 30 秒就抓完同樣的 119 MB）。真的不行也在
+      # 13 分鐘內失敗，不會拖到 job 的 20 分鐘上限。見 scripts/ci-playwright-deps.sh。
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         timeout-minutes: 13
-        run: |
-          for attempt in 1 2; do
-            timeout 6m npx playwright install --with-deps chromium webkit && exit 0
-            sudo dpkg --configure -a || true  # an apt run cut off mid-install
-            echo "::warning::playwright install --with-deps attempt $attempt did not finish in 6 minutes"
-          done
-          exit 1
+        run: scripts/ci-playwright-deps.sh install --with-deps chromium webkit
 
       - name: Install Playwright system deps (browsers from cache)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         timeout-minutes: 13
-        run: |
-          for attempt in 1 2; do
-            timeout 6m npx playwright install-deps chromium webkit && exit 0
-            sudo dpkg --configure -a || true  # an apt run cut off mid-install
-            echo "::warning::playwright install-deps attempt $attempt did not finish in 6 minutes"
-          done
-          exit 1
+        run: scripts/ci-playwright-deps.sh install-deps chromium webkit
 
       - name: Keep the apt packages for the next run
         if: steps.apt-cache.outputs.cache-hit != 'true'
