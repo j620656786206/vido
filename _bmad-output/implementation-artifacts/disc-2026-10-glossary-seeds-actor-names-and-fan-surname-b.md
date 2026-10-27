@@ -1,6 +1,6 @@
 # disc-2026-10-glossary-seeds-actor-names-and-fan-surname-b：華語劇的角色中文名，TMDb 沒有就從中文維基補
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-27；行號為 main `b7d10094`（-a #928 之後）。傘狀條目 disc-2026-10-glossary-seeds-actor-names-and-fan-surname 的第二張；Alexyu 2026-10-27 選 A：TMDb 沒有中文角色名時改從中文維基補，豆瓣、Google 不做。 -->
 
@@ -60,6 +60,7 @@ Claude Opus 5.5（claude-opus-5-5），2026-10-27。
   - 《百花殺》286506：頁面「百花殺」，10 個角色補上 8 個（沈汐和、蕭華雍、蕭長卿、蕭長旻、蕭長贏、崔晉百、步疏林、珍珠）；另 2 個演員不在維基表裡，維持拼音（之後被種子過濾）。
   - 《將夜》2018 版 83612：「將夜 (電視劇)」導到「将夜 (网络剧)」（表頭是粗體一般列），補上 5 個（桑桑、宁缺、李渔、李仲易、夏侯；簡體會在寫入時轉繁）。
   - 《將夜》2026 動畫 282136：TMDb 已有中文角色名 → 不查。
+- **正式機（2026-10-27，`main-07339c5`）**：Alexyu 選擇把所有影片的舊種子重洗：先備份資料庫（`backups/pre-glossary-reseed-20261027-172813.db`），刪掉 28 部的 141 條「中繼資料、未確認」種子與 31 個種子記號（字幕學到的 1,201 條、確認過的 5 條不動），重開 Vido。Alexyu 打開《百花殺》對照表：log `character names filled from zh.wikipedia … page=百花殺 filled=8 of=10`、`seeded=8`，畫面 8 條角色名、沒有演員名。
 - `go test ./internal/services/ ./internal/wikipedia/ ./internal/metadata/ ./cmd/...` 全過；`go vet`、`staticcheck` 乾淨。
 
 ### File List
