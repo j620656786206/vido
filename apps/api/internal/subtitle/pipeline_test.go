@@ -25,6 +25,7 @@ type translatorCall struct {
 	sys           []ai.SystemBlock
 	contextBlocks []prompts.SubtitleTranslatorBlock
 	blocks        []prompts.SubtitleTranslatorBlock
+	established   []prompts.GlossaryEntry
 }
 
 // indexes returns the cue Index values this call asked the LLM to translate.
@@ -48,8 +49,8 @@ type fakeTranslator struct {
 	terms func(call int) map[string]string
 }
 
-func (f *fakeTranslator) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, map[string]string, ai.CompletionUsage, error) {
-	f.calls = append(f.calls, translatorCall{ctx: ctx, sys: sys, contextBlocks: contextBlocks, blocks: blocks})
+func (f *fakeTranslator) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock, established []prompts.GlossaryEntry) (map[int]string, map[string]string, ai.CompletionUsage, error) {
+	f.calls = append(f.calls, translatorCall{ctx: ctx, sys: sys, contextBlocks: contextBlocks, blocks: blocks, established: established})
 	if f.order != nil {
 		*f.order = append(*f.order, "translate")
 	}
@@ -314,6 +315,48 @@ func TestTranslateTrack_HarvestedTermsMergeFirstWinsAcrossChunks(t *testing.T) {
 		"Demogorgon": "魔王獸",
 		"Eleven":     "十一",
 	}, res.HarvestedTerms)
+}
+
+// disc-2026-10-movie-name-drift-in-one-run: the names an earlier chunk
+// settled on are handed to every later chunk. Without it Tears of Steel's Celia
+// came out 席莉亞, 希莉亞 and 西莉亞 across four Gemini chunks of one run.
+func TestTranslateTrack_LaterChunksGetTheNamesEarlierChunksSettledOn(t *testing.T) {
+	texts := make([]string, 0, 25)
+	for i := 1; i <= 25; i++ {
+		texts = append(texts, fmt.Sprintf("Look Celia %d.", i))
+	}
+	tr := &fakeTranslator{
+		fn: func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+			out := make(map[int]string, len(blocks))
+			for _, b := range blocks {
+				out[b.Index] = fmt.Sprintf("聽著西莉亞%d", b.Index)
+			}
+			return out, ai.CompletionUsage{}, nil
+		},
+		terms: func(call int) map[string]string {
+			switch call {
+			case 1:
+				return map[string]string{"Celia": "西莉亞", "Thom": "湯姆"}
+			case 2:
+				return map[string]string{"Barley": "巴利"}
+			}
+			return nil
+		},
+	}
+
+	_, err := NewPipeline(tr, &recordingConverter{}, nil).TranslateTrack(batch10Ctx(), trackOf(cues(texts...)),
+		TranslateContext{Glossary: []prompts.GlossaryEntry{{Source: "thom", Target: "湯姆"}}})
+	require.NoError(t, err)
+	require.Len(t, tr.calls, 3)
+
+	assert.Empty(t, tr.calls[0].established, "nothing settled yet: the first chunk's prompt is unchanged")
+	assert.Equal(t, []prompts.GlossaryEntry{{Source: "Celia", Target: "西莉亞"}}, tr.calls[1].established,
+		"Thom is already in the run's glossary and is not listed twice")
+	assert.Equal(t, []prompts.GlossaryEntry{{Source: "Barley", Target: "巴利"}, {Source: "Celia", Target: "西莉亞"}}, tr.calls[2].established,
+		"everything earlier chunks settled on, sorted")
+	for _, c := range tr.calls {
+		assert.Equal(t, tr.calls[0].sys, c.sys, "the cached system prefix stays the same for every chunk")
+	}
 }
 
 // CR sub-5-5 M1: an attempt the quality gate rejected WHOLESALE contributes no

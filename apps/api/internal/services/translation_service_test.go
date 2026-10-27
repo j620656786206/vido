@@ -541,6 +541,7 @@ func TestTranslationService_TranslateChunk_HappyPath(t *testing.T) {
 	got, terms, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(),
 		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "早安"}},
 		[]prompts.SubtitleTranslatorBlock{{Index: 4, Text: "Good morning."}, {Index: 9, Text: "See you later."}},
+		nil,
 	)
 	require.NoError(t, err)
 
@@ -569,7 +570,7 @@ func TestTranslationService_TranslateChunk_NonCachingProviderDegrades(t *testing
 	svc := NewTranslationService(mock, nil)
 
 	got, terms, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil,
-		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Good morning."}})
+		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Good morning."}}, nil)
 	require.NoError(t, err, "a non-caching provider degrades, it does not fail")
 
 	assert.Equal(t, map[int]string{1: "早安"}, got)
@@ -588,7 +589,7 @@ func TestTranslationService_TranslateChunk_PropagatesProviderError(t *testing.T)
 	svc := NewTranslationService(&cachingTranslationMock{err: sentinel}, nil)
 
 	got, terms, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil,
-		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Good morning."}})
+		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Good morning."}}, nil)
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, sentinel, "the cause is chained, not flattened (Rule 13)")
@@ -601,7 +602,7 @@ func TestTranslationService_TranslateChunk_EmptyBlocksIsANoOp(t *testing.T) {
 	mock := &cachingTranslationMock{}
 	svc := NewTranslationService(mock, nil)
 
-	got, terms, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil, nil)
+	got, terms, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil, nil, nil)
 
 	require.NoError(t, err)
 	assert.Empty(t, got)
@@ -1001,7 +1002,7 @@ func (c *thinkingProbeCompleter) CompleteTextWithUsage(ctx context.Context, _ ai
 // The extract leg's TranslateChunk asks for no reasoning tokens too.
 func TestTranslateChunk_AsksForNoThinking(t *testing.T) {
 	c := &thinkingProbeCompleter{}
-	_, _, _, err := NewTranslationService(c, nil).TranslateChunk(context.Background(), nil, nil, []prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Hi."}})
+	_, _, _, err := NewTranslationService(c, nil).TranslateChunk(context.Background(), nil, nil, []prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Hi."}}, nil)
 	require.NoError(t, err)
 	assert.True(t, c.off)
 }
