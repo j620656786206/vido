@@ -1,6 +1,6 @@
 # disc-2026-10-bare-episode-filename-uses-folder-title：檔名只有 `S01E03.mkv` 的集數也收得進來，劇名用資料夾名
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-27；行號為 main `25be6c4d`。Rule 24 lane ③，由 disc-2026-10-gemini-parse-model-retired-again 立案；Alexyu 10/27 選 A 接著做。 -->
 
@@ -60,6 +60,7 @@ Claude Opus 5.5（claude-opus-5-5），2026-10-27。
 - `repository.EpisodeRepository.ReleaseFileFromOtherEpisodes`（同影集、同路徑、不是這一列 → 清路徑與字幕軌快取）；`MediaIngestService.UpsertEpisode` 寫入後呼叫（窄介面斷言 `episodeFileReleaser`，失敗只記 log）。
 - 測試：`parser/tv_parser_bare_episode_test.go`（6 種純季集檔名、有劇名的照走標準格式、`S01.mkv`／`E03.mkv` 等不算）、`services/bare_episode_ingest_test.go`（真的 SQLite：資料夾當劇名、舊的第 0 集那列讓出檔案而別的檔不動、重掃不重複）。反向驗證：關掉解析 → 4 個測試紅；只關掉讓出檔案 → `TestIngest_FileLeavesTheOldEpisodeZeroRow` 紅。
 - **NAS 實測（2026-10-27 14:29，正式資料庫備份＋臨時容器；拿掉所有 AI 金鑰，只留 TMDb，媒體唯讀）**：掃描後《魔戒：力量之戒》第 1 季 E01～E08 **8 集全進**（之前 0 集；換了 Gemini 模型後也只有 4 集），log 沒有任何「delegating to generic AI」；舊的第 0 集那列讓出 `S01E08.mkv`（`file moved to its real episode … released=1`）。掃描的未比對數 6 → 2。剩下兩個：《仙逆》劇場版（放在影集資料夾的電影）、《種地吧》`S01E00`（第 0 集特別篇，掃描器不收集數 0——既有規則，不在這張範圍）。測完容器與資料夾都刪了。
+- **正式機（2026-10-27 14:5x，`main-f19cf73`）**：Alexyu 手動掃描後確認《魔戒：力量之戒》第 1 季 8 集都在。
 - `go test ./internal/services/ ./internal/parser/ ./internal/repository/ ./internal/handlers/ ./cmd/...` 全過；`go vet`、`staticcheck` 乾淨。
 
 ### File List
