@@ -15,8 +15,10 @@ import (
 func TestDefaultGeminiModelIsNotTheRetiredOne(t *testing.T) {
 	assert.NotEqual(t, "gemini-2.0-flash", DefaultGeminiModel,
 		"gemini-2.0-flash was shut down 2026-06-01 — a default pointing at it 404s every call")
-	assert.Equal(t, "gemini-2.5-flash-lite", DefaultGeminiModel,
-		"verified present on ai.google.dev/gemini-api/docs/pricing on 2026-08-24, at the same price tier as the retired default")
+	assert.NotEqual(t, "gemini-2.5-flash-lite", DefaultGeminiModel,
+		"gemini-2.5-flash-lite is closed to new users — a fresh key 404s every parse")
+	assert.Equal(t, "gemini-3.5-flash-lite", DefaultGeminiModel,
+		"verified on ai.google.dev 2026-10-27: no shutdown date, no new-project restriction, free tier")
 }
 
 func TestDefaultGeminiModelIsPricedNotFallenBackOn(t *testing.T) {

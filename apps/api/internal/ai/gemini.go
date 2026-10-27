@@ -16,14 +16,17 @@ const (
 	DefaultGeminiBaseURL = "https://generativelanguage.googleapis.com/v1beta"
 	// DefaultGeminiModel is the default model to use.
 	//
-	// Keep this pointing at a model that still exists. The previous value,
-	// gemini-2.0-flash, was shut down by Google on 2026-06-01 and stayed the
-	// default for ~3 months, so every Gemini deployment 404'd on every call with
-	// no way to route around it. gemini-2.5-flash-lite was verified present on
-	// ai.google.dev/gemini-api/docs/pricing on 2026-08-24 and carries the same
-	// $0.10/$0.40 per-1M rate the retired model had, so the bump is cost-neutral.
-	// Override per deployment with GEMINI_MODEL (mirrors CLAUDE_MODEL, story 9R-1).
-	DefaultGeminiModel = "gemini-2.5-flash-lite"
+	// Keep this pointing at a model a NEW key can call. gemini-2.0-flash was
+	// shut down on 2026-06-01; its successor here, gemini-2.5-flash-lite, was
+	// then closed to new users ("no longer available to new users" — every
+	// file the regex could not parse 404'd on a fresh key and was never
+	// imported, disc-2026-10-gemini-parse-model-retired-again).
+	// gemini-3.5-flash-lite: verified 2026-10-27 on ai.google.dev — no shutdown
+	// date, no new-project restriction, a free tier, $0.30/$2.50 per 1M paid
+	// (a filename parse is a few hundred tokens). Also the Gemini translation
+	// default. Override per deployment with GEMINI_MODEL (mirrors CLAUDE_MODEL,
+	// story 9R-1).
+	DefaultGeminiModel = "gemini-3.5-flash-lite"
 )
 
 // GeminiProvider implements the Provider interface for Google's Gemini AI.
@@ -299,6 +302,11 @@ func (p *GeminiProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 				)
 				if resp.StatusCode == http.StatusTooManyRequests {
 					return nil, true, ErrAIQuotaExceeded
+				}
+				if resp.StatusCode == http.StatusNotFound {
+					// The model is gone or closed to this key — say which, and
+					// how to route around it (claude.go's 404 does the same).
+					return nil, false, fmt.Errorf("%w: %w: status 404: model %q not found (retired or not available to this key — set GEMINI_MODEL to a current model)", ErrAIProviderError, ErrAIModelNotFound, p.model)
 				}
 				return nil, isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
 			}

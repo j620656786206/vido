@@ -84,7 +84,7 @@ func TestParseFlags(t *testing.T) {
 	if _, err := parseFlags([]string{"--model", "gpt-9"}); err == nil {
 		t.Fatal("unknown model must be refused at the flag")
 	}
-	if _, err := parseFlags([]string{"--model", "gemini-2.5-flash"}); err == nil || !strings.Contains(err.Error(), "Claude") {
+	if _, err := parseFlags([]string{"--model", "gemini-3.5-flash-lite"}); err == nil || !strings.Contains(err.Error(), "Claude") {
 		t.Fatalf("gemini must be refused with the dispatch reason, got %v", err)
 	}
 	if _, err := parseFlags([]string{"--model", "claude-haiku-4-5", "--level", "spicy"}); err == nil {

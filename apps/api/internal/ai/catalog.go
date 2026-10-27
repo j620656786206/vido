@@ -73,8 +73,11 @@ var modelMetadata = map[string]struct {
 	"gemini-3.7-flash":      {provider: ProviderNameGemini, displayName: "Gemini 3.7 Flash", tier: TierBalanced},
 	"gemini-3.6-flash":      {provider: ProviderNameGemini, displayName: "Gemini 3.6 Flash", tier: TierBalanced},
 	"gemini-3.5-flash-lite": {provider: ProviderNameGemini, displayName: "Gemini 3.5 Flash Lite", tier: TierFast},
-	"gemini-2.5-flash":      {provider: ProviderNameGemini, displayName: "Gemini 2.5 Flash", tier: TierBalanced},
-	"gemini-2.5-flash-lite": {provider: ProviderNameGemini, displayName: "Gemini 2.5 Flash Lite", tier: TierFast},
+	// Closed to new users (only keys that already used them keep access; a
+	// fresh key 404s after the user agreed to pay). Priced, never offered —
+	// disc-2026-10-gemini-parse-model-retired-again.
+	"gemini-2.5-flash":      {provider: ProviderNameGemini, displayName: "Gemini 2.5 Flash", tier: TierBalanced, retired: true},
+	"gemini-2.5-flash-lite": {provider: ProviderNameGemini, displayName: "Gemini 2.5 Flash Lite", tier: TierFast, retired: true},
 	// Shut down by Google 2026-06-01. Priced (so old runs still meter
 	// correctly), never offered.
 	"gemini-2.0-flash": {provider: ProviderNameGemini, displayName: "Gemini 2.0 Flash (retired)", tier: TierFast, retired: true},
