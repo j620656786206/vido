@@ -4013,6 +4013,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         posterUrl: '',
       },
       onSuccess: noop,
+      // A matched item (B13p-D draws the 認錯片了？ row).
+      onRematch: noop,
     },
     penNode: 'AFuPx', // B13p-D
     statesOnly: ['default'],
@@ -4041,6 +4043,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         posterUrl: SAME_ORIGIN_POSTER,
       },
       onSuccess: noop,
+      onRematch: noop,
     },
     penNode: 'oktn2', // B13p-M
     statesOnly: ['default'],

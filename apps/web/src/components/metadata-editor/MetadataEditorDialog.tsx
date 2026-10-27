@@ -1,5 +1,6 @@
 // Design ref: ux-design.pen Screen B13p-D 修改資訊 (AFuPx)
 // Design ref: ux-design.pen Screen B13p-M 修改資訊 (oktn2)
+// Design ref: ux-design.pen 認錯片了？ row — desktop (RhXQl), mobile (do1eP)
 /**
  * MetadataEditorDialog — 修改資訊 (Story 3.8 AC1/AC4; rebuilt by poster-upload-a).
  *
@@ -61,6 +62,13 @@ export interface MetadataEditorDialogProps {
   mediaType: 'movie' | 'series';
   initialData: MediaMetadata;
   onSuccess: () => void;
+  /**
+   * The item is matched: offer 重新選片 at the top (disc-2026-10-series-wrong-version-b).
+   * The caller closes this dialog — unsaved edits are dropped, like 取消 — and
+   * opens 手動選片. Left out for an unmatched item, whose page already leads with
+   * 手動選片.
+   */
+  onRematch?: () => void;
 }
 
 const FORM_ID = 'metadata-editor-form';
@@ -89,6 +97,7 @@ export function MetadataEditorDialog({
   mediaType,
   initialData,
   onSuccess,
+  onRematch,
 }: MetadataEditorDialogProps) {
   // Radix returns focus to a DialogTrigger; 修改資訊 is a plain button on the
   // detail page, so remember what had focus and go back to it.
@@ -146,6 +155,7 @@ export function MetadataEditorDialog({
           initialData={initialData}
           onClose={onClose}
           onSuccess={onSuccess}
+          onRematch={onRematch}
         />
       </DialogContent>
     </Dialog>
@@ -158,6 +168,7 @@ function EditorBody({
   initialData,
   onClose,
   onSuccess,
+  onRematch,
 }: Omit<MetadataEditorDialogProps, 'isOpen'>) {
   const updateMutation = useUpdateMetadata();
   const {
@@ -242,139 +253,163 @@ function EditorBody({
         </Tooltip>
       </div>
 
-      <form
-        id={FORM_ID}
-        // zod owns the messages (片名為必填…) — not the browser's own bubbles.
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:flex-row sm:gap-6 sm:p-6"
-      >
-        {/* Poster column (B′13 left, B′14 states). */}
-        <PosterField
-          currentPoster={initialData.posterUrl ?? null}
-          choice={posterChoice}
-          onChoiceChange={(next) => {
-            setPosterChoice(next);
-            setPosterPhase('idle');
-            posterUploaded.current = false;
-            setPosterSavedFieldsFailed(false);
-          }}
-          phase={posterPhase}
-        />
-
-        {/* Fields (B′13 right). DOM order is the desktop order; the phone moves
-            導演 up beside 年份 (B13p-M) with `order`. */}
-        <fieldset
-          disabled={busy}
-          className="grid min-w-0 flex-1 grid-cols-2 content-start gap-x-3 gap-y-4 sm:grid-cols-[1fr_120px]"
+      {/* One scroll area: on the phone the 認錯片了？ row is the sheet body's
+          first item (B13p-M) and scrolls away with it. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {onRematch && (
+          <div
+            data-testid="metadata-editor-rematch"
+            className="shrink-0 px-4 pt-4 sm:border-b sm:border-[var(--border-subtle)] sm:px-6 sm:py-3"
+          >
+            <p className="flex h-11 items-center gap-1 text-sm text-[var(--text-secondary)] sm:h-auto">
+              認錯片了？
+              <button
+                type="button"
+                onClick={onRematch}
+                className="flex h-11 items-center text-[var(--accent-text)] underline underline-offset-2 hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:h-auto"
+              >
+                重新選片
+              </button>
+            </p>
+            <p className="text-xs text-[var(--text-muted)] sm:mt-0.5">
+              海報、簡介、演員會換成你選的那一部；這裡還沒儲存的修改不會留下。
+            </p>
+          </div>
+        )}
+        <form
+          id={FORM_ID}
+          // zod owns the messages (片名為必填…) — not the browser's own bubbles.
+          noValidate
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex shrink-0 flex-col gap-4 p-4 sm:flex-row sm:gap-6 sm:p-6"
         >
-          <div className="order-1 col-span-2 sm:col-span-1">
-            <label htmlFor="metadata-title" className={LABEL}>
-              片名 <span className="text-[var(--error-text)]">*</span>
-            </label>
-            <input
-              id="metadata-title"
-              type="text"
-              {...register('title')}
-              aria-invalid={errors.title ? true : undefined}
-              aria-describedby={errors.title ? 'metadata-title-error' : undefined}
-              className={cn(
-                INPUT,
-                errors.title ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
+          {/* Poster column (B′13 left, B′14 states). */}
+          <PosterField
+            currentPoster={initialData.posterUrl ?? null}
+            choice={posterChoice}
+            onChoiceChange={(next) => {
+              setPosterChoice(next);
+              setPosterPhase('idle');
+              posterUploaded.current = false;
+              setPosterSavedFieldsFailed(false);
+            }}
+            phase={posterPhase}
+          />
+
+          {/* Fields (B′13 right). DOM order is the desktop order; the phone moves
+            導演 up beside 年份 (B13p-M) with `order`. */}
+          <fieldset
+            disabled={busy}
+            className="grid min-w-0 flex-1 grid-cols-2 content-start gap-x-3 gap-y-4 sm:grid-cols-[1fr_120px]"
+          >
+            <div className="order-1 col-span-2 sm:col-span-1">
+              <label htmlFor="metadata-title" className={LABEL}>
+                片名 <span className="text-[var(--error-text)]">*</span>
+              </label>
+              <input
+                id="metadata-title"
+                type="text"
+                {...register('title')}
+                aria-invalid={errors.title ? true : undefined}
+                aria-describedby={errors.title ? 'metadata-title-error' : undefined}
+                className={cn(
+                  INPUT,
+                  errors.title ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
+                )}
+              />
+              {errors.title && (
+                <p id="metadata-title-error" className="mt-1 text-xs text-[var(--error-text)]">
+                  {errors.title.message}
+                </p>
               )}
-            />
-            {errors.title && (
-              <p id="metadata-title-error" className="mt-1 text-xs text-[var(--error-text)]">
-                {errors.title.message}
-              </p>
-            )}
-          </div>
+            </div>
 
-          <div className="order-2">
-            <label htmlFor="metadata-year" className={LABEL}>
-              年份
-            </label>
-            <input
-              id="metadata-year"
-              type="number"
-              {...register('year', { valueAsNumber: true })}
-              aria-invalid={errors.year ? true : undefined}
-              aria-describedby={errors.year ? 'metadata-year-error' : undefined}
-              min={1900}
-              max={2100}
-              placeholder="不知道"
-              className={cn(
-                INPUT,
-                errors.year ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
+            <div className="order-2">
+              <label htmlFor="metadata-year" className={LABEL}>
+                年份
+              </label>
+              <input
+                id="metadata-year"
+                type="number"
+                {...register('year', { valueAsNumber: true })}
+                aria-invalid={errors.year ? true : undefined}
+                aria-describedby={errors.year ? 'metadata-year-error' : undefined}
+                min={1900}
+                max={2100}
+                placeholder="不知道"
+                className={cn(
+                  INPUT,
+                  errors.year ? 'border-[var(--error)]' : 'border-[var(--border-subtle)]'
+                )}
+              />
+              {errors.year && (
+                <p id="metadata-year-error" className="mt-1 text-xs text-[var(--error-text)]">
+                  {errors.year.message}
+                </p>
               )}
-            />
-            {errors.year && (
-              <p id="metadata-year-error" className="mt-1 text-xs text-[var(--error-text)]">
-                {errors.year.message}
-              </p>
-            )}
-          </div>
+            </div>
 
-          <div className="order-4 col-span-2 sm:order-3">
-            <label htmlFor="metadata-title-english" className={LABEL}>
-              英文片名
-            </label>
-            <input
-              id="metadata-title-english"
-              type="text"
-              {...register('titleEnglish')}
-              className={cn(INPUT, 'border-[var(--border-subtle)]')}
-            />
-          </div>
+            <div className="order-4 col-span-2 sm:order-3">
+              <label htmlFor="metadata-title-english" className={LABEL}>
+                英文片名
+              </label>
+              <input
+                id="metadata-title-english"
+                type="text"
+                {...register('titleEnglish')}
+                className={cn(INPUT, 'border-[var(--border-subtle)]')}
+              />
+            </div>
 
-          <div className="order-5 col-span-2 sm:order-4">
-            <span id="metadata-genres-label" className={LABEL}>
-              類型
-            </span>
-            <GenreSelector
-              labelId="metadata-genres-label"
-              selected={genres}
-              options={genreNamesFor(mediaType)}
-              onChange={(next) => setValue('genres', next, { shouldDirty: true })}
-            />
-          </div>
+            <div className="order-5 col-span-2 sm:order-4">
+              <span id="metadata-genres-label" className={LABEL}>
+                類型
+              </span>
+              <GenreSelector
+                labelId="metadata-genres-label"
+                selected={genres}
+                options={genreNamesFor(mediaType)}
+                onChange={(next) => setValue('genres', next, { shouldDirty: true })}
+              />
+            </div>
 
-          <div className="order-3 sm:order-5 sm:col-span-2">
-            <label htmlFor="metadata-director" className={LABEL}>
-              導演
-            </label>
-            <input
-              id="metadata-director"
-              type="text"
-              {...register('director')}
-              className={cn(INPUT, 'border-[var(--border-subtle)]')}
-            />
-          </div>
+            <div className="order-3 sm:order-5 sm:col-span-2">
+              <label htmlFor="metadata-director" className={LABEL}>
+                導演
+              </label>
+              <input
+                id="metadata-director"
+                type="text"
+                {...register('director')}
+                className={cn(INPUT, 'border-[var(--border-subtle)]')}
+              />
+            </div>
 
-          <div className="order-6 col-span-2">
-            <span id="metadata-cast-label" className={LABEL}>
-              演員
-            </span>
-            <CastEditor
-              labelId="metadata-cast-label"
-              cast={cast}
-              onChange={(next) => setValue('cast', next, { shouldDirty: true })}
-            />
-          </div>
+            <div className="order-6 col-span-2">
+              <span id="metadata-cast-label" className={LABEL}>
+                演員
+              </span>
+              <CastEditor
+                labelId="metadata-cast-label"
+                cast={cast}
+                onChange={(next) => setValue('cast', next, { shouldDirty: true })}
+              />
+            </div>
 
-          <div className="order-7 col-span-2">
-            <label htmlFor="metadata-overview" className={LABEL}>
-              簡介
-            </label>
-            <textarea
-              id="metadata-overview"
-              {...register('overview')}
-              rows={4}
-              className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
-            />
-          </div>
-        </fieldset>
-      </form>
+            <div className="order-7 col-span-2">
+              <label htmlFor="metadata-overview" className={LABEL}>
+                簡介
+              </label>
+              <textarea
+                id="metadata-overview"
+                {...register('overview')}
+                rows={4}
+                className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+              />
+            </div>
+          </fieldset>
+        </form>
+      </div>
 
       <div className="flex shrink-0 flex-col gap-3 border-t border-[var(--border-subtle)] px-4 pb-6 pt-4 sm:flex-row sm:items-center sm:px-6 sm:pb-4">
         {updateMutation.error ? (
