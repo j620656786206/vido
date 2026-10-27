@@ -1,6 +1,6 @@
 # testsprite-2026-10-quota-run：十月 TestSprite 額度（150 點）用在「新用戶第一週會碰到的路」
 
-Status: in-progress
+Status: done
 
 **Source:** 2026-10-22 Party Mode（Murat／John／Bob／Sally／Amelia）＋ founder-pm 判決，Alexyu 選 A。額度月底歸零（見 9 月 `testsprite-2026-09-quota-run`）。
 
@@ -64,6 +64,8 @@ Sally 的驗收原則：新案例要斷言「畫面說人話」（例如已略�
 
 - 2026-10-22 晚：Alexyu「逐一點擊每個頁面的詳細操作，補齊任何情境」。用 Playwright 盤點 25 個頁面的每個按鈕／連結／輸入框，對照既有 120 條找出沒點過的操作，新增 TC151–TC187（37 條），各跑 1 次（改寫的再跑 1 次）：33 過；TC163（搜尋頁 TMDb 斷線露出內部代碼、不列片庫結果）與 TC185（不存在網址只顯示英文 Not Found）是真 bug，已立案；TC186／TC187 手機版 TestSprite 不能改視窗→環境限制。TC173、TC177、TC183 第一版預期寫錯，改寫後過；TC159、TC175 本機核對過不是空洞 PASS。另立 `disc-2026-10-add-library-missing-path-and-duplicates`（要 Alexyu 決定）與 `disc-2026-10-ci-playwright-deps-hang`。額度 → 41.5。
 
+- 2026-10-27 月底前最後一輪（main `4339c590` 之後重新打包；這幾天合併了重新選片 #915、季跟著換 #917、外網重新解析不卡 #919、Gemini 模型 #921、純季集檔名 #922）：新增 TC188–TC190（重新選片：已比對的片能從修改資訊切到手動選片且頁面不卡、沒比對到的片沒有這一列、沒存的修改不會留下），送出前先用本機 Playwright 走過，各跑 3 次 9／9 過。回歸 6 批 56 次 50 過：TC185 是已知的 `disc-2026-10-not-found-page-english`；TC085 是已知的 `plan-drift-tc085-tech-badges-fixture`；TC080／TC081／TC083 下載頁在沒有 qBittorrent 的測試環境沒有項目可測→計畫標 ENV-LIMITED；TC162 是搜尋頁兩個搜尋框清除不同步的舊問題（本機重現，記進 `disc-2026-10-search-page-tmdb-down-raw-code`）。TC143（依字幕狀態排序）本機核對過真的照順序排。會改資料的案例分批、中間重新 seed。沒有今天改動造成的問題。額度 41.5 → 10，AC 6 ✅。
+
 ### File List
 
 - `testsprite_tests/testsprite_frontend_test_plan.json`（TC096、TC122 改寫）
@@ -71,4 +73,5 @@ Sally 的驗收原則：新案例要斷言「畫面說人話」（例如已略�
 - `testsprite_tests/TC122_Service_status_page_speaks_Chinese_and_tells_you_where_to_fix_a_broken_TMDB.py`（重新生成）
 - `testsprite_tests/testsprite-mcp-test-report.md`（十月一節；階段 2、4）
 - `testsprite_tests/testsprite_frontend_test_plan.json`（新增 TC139–TC148；改寫 TC134、TC125、TC143 參數名；TC093 退役；TC088 環境限制）
-- `testsprite_tests/TC139…TC148_*.py`（新）、`TC125`／`TC134`／`TC122` 重新生成、`TC093` 刪除
+- `testsprite_tests/TC139…TC148_*.py`（新）
+- `testsprite_tests/TC188…TC190_*.py`（新）；`testsprite_frontend_test_plan.json` 新增 TC188–TC190、TC080／TC081／TC083 標 ENV-LIMITED（10-27）、`TC125`／`TC134`／`TC122` 重新生成、`TC093` 刪除
