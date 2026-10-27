@@ -2,12 +2,28 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
-import { ENRICHMENT_CONNECT_TIMEOUT_MS, useEnrichmentRefresh } from './useEnrichmentRefresh';
+import {
+  ENRICHMENT_CONNECT_TIMEOUT_MS,
+  ENRICHMENT_POLL_INTERVAL_MS,
+  useEnrichmentRefresh,
+} from './useEnrichmentRefresh';
 import { libraryKeys } from './useLibrary';
+import { scannerService, type EnrichStatus } from '../services/scannerService';
 
 vi.mock('../services/scannerService', () => ({
-  scannerService: { getSSEUrl: () => '/api/v1/events' },
+  scannerService: { getSSEUrl: () => '/api/v1/events', getEnrichStatus: vi.fn() },
 }));
+
+const status = (over: Partial<EnrichStatus>): EnrichStatus => ({
+  total: 0,
+  processed: 0,
+  succeeded: 0,
+  failed: 0,
+  skipped: 0,
+  currentTitle: '',
+  isActive: true,
+  ...over,
+});
 
 class MockEventSource {
   static instances: MockEventSource[] = [];
@@ -231,5 +247,137 @@ describe('useEnrichmentRefresh (batch 重新解析 → background matching)', ()
       );
     });
     expect(result.current.matching?.phase).toBe('queued');
+  });
+
+  // ─── disc-2026-10-reparse-dialog-stuck-over-tunnel ───────────────────────
+  // Through the Cloudflare tunnel the stream never opened, and while it hung the
+  // re-parse POST's answer never came back: 處理中 0 / 1 after a 2-second pass.
+
+  describe('when the stream does not deliver', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.mocked(scannerService.getEnrichStatus).mockReset();
+    });
+
+    // Let the awaited poll settle after advancing the clock.
+    const tick = async (ms: number) => {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    };
+
+    it('[P0] a stream that has not opened in time is closed, not left hanging', async () => {
+      const { result } = renderHook(() => useEnrichmentRefresh(), { wrapper });
+      act(() => {
+        void result.current.watch();
+      });
+      await tick(ENRICHMENT_CONNECT_TIMEOUT_MS);
+      expect(MockEventSource.instances[0].closed).toBe(true);
+    });
+
+    it('an error before opening closes it; after opening the browser reconnects', async () => {
+      const { result } = renderHook(() => useEnrichmentRefresh(), { wrapper });
+      act(() => {
+        void result.current.watch();
+      });
+      await act(async () => MockEventSource.instances[0].onerror?.());
+      expect(MockEventSource.instances[0].closed).toBe(true);
+
+      act(() => {
+        void result.current.watch();
+      });
+      const es = MockEventSource.instances[1];
+      await act(async () => es.onopen?.());
+      await act(async () => es.onerror?.());
+      expect(es.closed).toBe(false);
+    });
+
+    it('[P0] track() polls the pass status: running, then 完成 with the result, then stops', async () => {
+      const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+      vi.mocked(scannerService.getEnrichStatus)
+        .mockResolvedValueOnce(status({ total: 1, processed: 0, currentTitle: '將夜' }))
+        .mockResolvedValueOnce(status({ total: 1, processed: 1, succeeded: 1, isActive: false }));
+      const { result } = renderHook(() => useEnrichmentRefresh(), { wrapper });
+      act(() => {
+        void result.current.watch();
+      });
+      await tick(ENRICHMENT_CONNECT_TIMEOUT_MS); // never opened
+      act(() => result.current.track());
+
+      await tick(ENRICHMENT_POLL_INTERVAL_MS);
+      expect(result.current.matching).toMatchObject({
+        phase: 'running',
+        total: 1,
+        currentTitle: '將夜',
+      });
+
+      await tick(ENRICHMENT_POLL_INTERVAL_MS);
+      expect(result.current.matching).toMatchObject({ phase: 'done', total: 1, succeeded: 1 });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
+
+      await tick(ENRICHMENT_POLL_INTERVAL_MS * 3);
+      expect(scannerService.getEnrichStatus).toHaveBeenCalledTimes(2);
+    });
+
+    it('a failed poll is asked again', async () => {
+      vi.mocked(scannerService.getEnrichStatus)
+        .mockRejectedValueOnce(new Error('network'))
+        .mockResolvedValueOnce(status({ total: 2, succeeded: 2, isActive: false }));
+      const { result } = renderHook(() => useEnrichmentRefresh(), { wrapper });
+      act(() => {
+        void result.current.watch();
+      });
+      act(() => result.current.track());
+      await tick(ENRICHMENT_POLL_INTERVAL_MS * 2);
+      expect(result.current.matching).toMatchObject({ phase: 'done', total: 2, succeeded: 2 });
+    });
+
+    it('an empty follow-up pass (zeros) keeps the numbers this pass showed', async () => {
+      vi.mocked(scannerService.getEnrichStatus)
+        .mockResolvedValueOnce(status({ total: 3, processed: 1, succeeded: 1 }))
+        .mockResolvedValueOnce(status({ isActive: false }));
+      const { result } = renderHook(() => useEnrichmentRefresh(), { wrapper });
+      act(() => {
+        void result.current.watch();
+      });
+      act(() => result.current.track());
+      await tick(ENRICHMENT_POLL_INTERVAL_MS * 2);
+      expect(result.current.matching).toMatchObject({ phase: 'done', total: 3, succeeded: 1 });
+    });
+
+    it('a 完成 from the stream stops the polling', async () => {
+      vi.mocked(scannerService.getEnrichStatus).mockResolvedValue(status({ total: 1 }));
+      const { result } = renderHook(() => useEnrichmentRefresh(), { wrapper });
+      act(() => {
+        void result.current.watch();
+      });
+      const es = MockEventSource.instances[0];
+      await act(async () => es.onopen?.());
+      act(() => result.current.track());
+      act(() => es.emit('enrich_complete', { total: 1, succeeded: 1, failed: 0, skipped: 0 }));
+      await tick(ENRICHMENT_POLL_INTERVAL_MS * 3);
+      expect(scannerService.getEnrichStatus).not.toHaveBeenCalled();
+      expect(result.current.matching).toMatchObject({ phase: 'done', succeeded: 1 });
+    });
+
+    it('stop() and unmount end the polling', async () => {
+      vi.mocked(scannerService.getEnrichStatus).mockResolvedValue(status({ total: 1 }));
+      const { result, unmount } = renderHook(() => useEnrichmentRefresh(), { wrapper });
+      act(() => {
+        void result.current.watch();
+      });
+      act(() => result.current.track());
+      act(() => result.current.stop());
+      await tick(ENRICHMENT_POLL_INTERVAL_MS * 2);
+      expect(scannerService.getEnrichStatus).not.toHaveBeenCalled();
+
+      act(() => {
+        void result.current.watch();
+      });
+      act(() => result.current.track());
+      unmount();
+      await tick(ENRICHMENT_POLL_INTERVAL_MS * 2);
+      expect(scannerService.getEnrichStatus).not.toHaveBeenCalled();
+    });
   });
 });
