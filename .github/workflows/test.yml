@@ -398,13 +398,55 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-browsers-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-chromium-webkit
 
+      # 系統套件快取（disc-2026-10-ci-playwright-install-deps-hang）：install-deps
+      # 每次要從 azure 的 apt 鏡像抓 181 個套件、119 MB。鏡像慢的時候只有每秒幾十
+      # KB（libflite1 一個 13.6 MB 抓了 3 分 40 秒），抓到 job 的 20 分鐘上限被取消，
+      # 測試一條都沒跑——2026-10 一週 6 次。把抓過的 .deb 存起來，下次直接從快取裝；
+      # key 跟瀏覽器快取一樣綁 Playwright 版本。只有真的有新版套件時才會再去鏡像抓。
+      - name: Restore apt packages for Playwright
+        id: apt-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/apt-cache
+          key: apt-playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-chromium-webkit
+
+      - name: Seed apt with the cached packages
+        run: |
+          # apt-get 預設會留下抓到的 .deb，但 runner 映像可能設了自動清掉；明確留著，存快取才有東西。
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99keep-debs > /dev/null
+          sudo rm -f /etc/apt/apt.conf.d/docker-clean
+          if compgen -G "$HOME/apt-cache/*.deb" > /dev/null; then
+            sudo cp "$HOME"/apt-cache/*.deb /var/cache/apt/archives/
+            echo "seeded $(find "$HOME/apt-cache" -name '*.deb' | wc -l) packages from the cache"
+          fi
+
+      # 每次最多 6 分鐘、試兩次，第二次改用 Canonical 的鏡像（某一台 runner 的 azure
+      # 鏡像每秒只有 70 KB 時，其他分片 30 秒就抓完同樣的 119 MB）。真的不行也在
+      # 13 分鐘內失敗，不會拖到 job 的 20 分鐘上限。見 scripts/ci-playwright-deps.sh。
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium webkit
+        timeout-minutes: 13
+        run: scripts/ci-playwright-deps.sh install --with-deps chromium webkit
 
       - name: Install Playwright system deps (browsers from cache)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium webkit
+        timeout-minutes: 13
+        run: scripts/ci-playwright-deps.sh install-deps chromium webkit
+
+      - name: Keep the apt packages for the next run
+        if: steps.apt-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/apt-cache
+          cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2> /dev/null || true
+          echo "keeping $(find ~/apt-cache -name '*.deb' | wc -l) packages"
+
+      # 四個分片同時存同一個 key，只會有一個存成功，其餘只是警告。
+      - name: Save apt packages
+        if: steps.apt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/apt-cache
+          key: ${{ steps.apt-cache.outputs.cache-primary-key }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
