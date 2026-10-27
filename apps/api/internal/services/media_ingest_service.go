@@ -292,7 +292,34 @@ func (s *MediaIngestService) UpsertEpisode(ctx context.Context, in EpisodeInput)
 	if err != nil {
 		return false, fmt.Errorf("upsert episode: %w", err)
 	}
+	s.releaseFileFromOtherEpisodes(ctx, episode)
 	return created, nil
+}
+
+// episodeFileReleaser is asserted, not added to the wide interface, so its
+// mocks do not grow (the episodeRemovalRepo pattern).
+type episodeFileReleaser interface {
+	ReleaseFileFromOtherEpisodes(ctx context.Context, seriesID, filePath, keepEpisodeID string) (int64, error)
+}
+
+var _ episodeFileReleaser = (*repository.EpisodeRepository)(nil)
+
+// releaseFileFromOtherEpisodes keeps one file on one episode row. Fail-soft:
+// the episode is already stored; a leftover duplicate is logged.
+func (s *MediaIngestService) releaseFileFromOtherEpisodes(ctx context.Context, episode *models.Episode) {
+	releaser, ok := s.episodeRepo.(episodeFileReleaser)
+	if !ok || episode.ID == "" || !episode.FilePath.Valid || episode.FilePath.String == "" {
+		return
+	}
+	n, err := releaser.ReleaseFileFromOtherEpisodes(ctx, episode.SeriesID, episode.FilePath.String, episode.ID)
+	if err != nil {
+		s.logger.Warn("could not release the file from other episode rows", "episode_id", episode.ID, "error", err)
+		return
+	}
+	if n > 0 {
+		s.logger.Info("file moved to its real episode; the old row no longer claims it",
+			"series_id", episode.SeriesID, "season", episode.SeasonNumber, "episode", episode.EpisodeNumber, "released", n)
+	}
 }
 
 // IngestEpisodeFile is the whole series → season → episode chain for one scanned file.

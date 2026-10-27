@@ -1,6 +1,6 @@
 # disc-2026-10-gemini-parse-model-retired-again：檔名解析改用 Gemini 現役模型，沒劇名的檔名又能加進媒體庫
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-27；行號為 main `5cbd5e8a` 之後。Rule 24 lane ③，Alexyu 10/27 要求開票並指定做這張。 -->
 

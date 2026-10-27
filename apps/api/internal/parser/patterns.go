@@ -61,6 +61,15 @@ var (
 			`(?:\.[a-z0-9]{2,4})?$`, // Extension
 	)
 
+	// Bare episode: S01E05.mkv, S01E05.Pilot.1080p.mkv — the show's name lives
+	// only in the folder (disc-2026-10-bare-episode-filename-uses-folder-title).
+	tvPatternBareEpisode = regexp.MustCompile(
+		`(?i)^[Ss](?P<season>\d{1,2})[Ee](?P<episode>\d{1,3})` + // S01E05
+			`(?:-?[Ee]?(?P<episode_end>\d{1,3}))?` + // Optional episode range
+			`(?:[.\s_-]+.+)?` + // Optional rest
+			`(?:\.[a-z0-9]{2,4})?$`, // Extension
+	)
+
 	// Alternative: Show.Name.1x05.mkv
 	tvPatternAlt = regexp.MustCompile(
 		`(?i)^(?P<title>.+?)` + // Title (non-greedy)
