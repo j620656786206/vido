@@ -57,6 +57,32 @@ test.describe('Media Detail - Movie @e2e @media-detail', () => {
     await expect(page.getByText(movie.title).first()).toBeVisible({ timeout: 15000 });
   });
 
+  // disc-2026-10-series-wrong-version-b: a matched item can be matched wrong.
+  test('[P1] 修改資訊 → 重新選片 swaps the editor for 手動選片, and the page stays usable', async ({
+    page,
+    api,
+  }) => {
+    const movie = await seedMovie(api, { title: `E2E 認錯片 ${Date.now()}`, tmdbId: SEED_TMDB_ID });
+    movieIds.push(movie.id);
+
+    await page.goto(`/media/movie/${movie.id}`);
+    await page.getByTestId('action-edit-metadata').click();
+    const editor = page.getByTestId('metadata-editor-dialog');
+    await expect(editor.getByTestId('metadata-editor-rematch')).toContainText('認錯片了？');
+    await editor.getByRole('button', { name: '重新選片' }).click();
+
+    const match = page.getByTestId('manual-match-dialog');
+    await expect(match).toBeVisible();
+    await expect(editor).toBeHidden();
+    await expect(match.getByRole('searchbox')).not.toHaveValue('');
+
+    // Two Radix dialogs swapped in one tick must not leave the page inert.
+    await page.keyboard.press('Escape');
+    await expect(match).toBeHidden();
+    await page.getByTestId('action-edit-metadata').click();
+    await expect(editor).toBeVisible();
+  });
+
   test('[P1] should display back button on detail page', async ({ page, api }) => {
     // GIVEN: A movie exists
     const movie = await seedMovie(api, { tmdbId: SEED_TMDB_ID });

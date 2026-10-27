@@ -433,6 +433,44 @@ describe('MetadataEditorDialog', () => {
     });
   });
 
+  // disc-2026-10-series-wrong-version-b (B13p-D RhXQl / B13p-M do1eP)
+  describe('認錯片了？ row', () => {
+    it('is there only when the caller passes onRematch', () => {
+      const { unmount } = renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
+      expect(screen.queryByTestId('metadata-editor-rematch')).toBeNull();
+      expect(screen.queryByRole('button', { name: '重新選片' })).toBeNull();
+      unmount();
+
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} onRematch={vi.fn()} />);
+      const row = screen.getByTestId('metadata-editor-rematch');
+      expect(row).toHaveTextContent('認錯片了？');
+      expect(row).toHaveTextContent(
+        '海報、簡介、演員會換成你選的那一部；這裡還沒儲存的修改不會留下。'
+      );
+    });
+
+    it('重新選片 hands over without saving — even with unsaved edits', async () => {
+      const user = userEvent.setup();
+      const onRematch = vi.fn();
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} onRematch={onRematch} />);
+      const title = screen.getByDisplayValue('鬼滅之刃');
+      await user.clear(title);
+      await user.type(title, '改過的片名');
+
+      await user.click(screen.getByRole('button', { name: '重新選片' }));
+
+      expect(onRematch).toHaveBeenCalledTimes(1);
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+      expect(mockUploadAsync).not.toHaveBeenCalled();
+      expect(defaultProps.onSuccess).not.toHaveBeenCalled();
+    });
+
+    it('still opens with focus in 片名, not on 重新選片', async () => {
+      renderWithProviders(<MetadataEditorDialog {...defaultProps} onRematch={vi.fn()} />);
+      await waitFor(() => expect(screen.getByDisplayValue('鬼滅之刃')).toHaveFocus());
+    });
+  });
+
   it('keeps 儲存 disabled until something changes', () => {
     renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
     expect(screen.getByRole('button', { name: '儲存' })).toBeDisabled();

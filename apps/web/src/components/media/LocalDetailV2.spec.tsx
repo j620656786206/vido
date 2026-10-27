@@ -18,7 +18,10 @@ const h = vi.hoisted(() => ({
   tvCredits: { data: undefined } as { data: unknown },
   douban: { data: null, isLoading: false } as { data: unknown; isLoading: boolean },
   reparse: {} as Record<string, unknown>,
-  editorProps: [] as Array<{ initialData: { posterUrl?: string; year?: number } }>,
+  editorProps: [] as Array<{
+    initialData: { posterUrl?: string; year?: number };
+    onRematch?: () => void;
+  }>,
 }));
 
 // dsr-2b-b: the re-match mutation is the container's; stub it so the no-metadata
@@ -101,9 +104,19 @@ vi.mock('./CreditsSection', () => ({
 }));
 vi.mock('./DualRatingDisplay', () => ({ DualRatingDisplay: () => null }));
 vi.mock('../metadata-editor', () => ({
-  MetadataEditorDialog: (props: { initialData: { posterUrl?: string; year?: number } }) => {
+  MetadataEditorDialog: (props: {
+    isOpen: boolean;
+    initialData: { posterUrl?: string; year?: number };
+    onRematch?: () => void;
+  }) => {
     h.editorProps.push(props);
-    return null;
+    return props.isOpen ? (
+      <div data-testid="stub-editor">
+        {props.onRematch && (
+          <button type="button" data-testid="stub-editor-rematch" onClick={props.onRematch} />
+        )}
+      </div>
+    ) : null;
   },
 }));
 // v2 shell swap (ux3-subtitle-v2 Task 6): LocalDetailV2 renders the NEW
@@ -318,7 +331,7 @@ describe('LocalDetailV2', () => {
       expect(screen.queryByTestId('detail-no-metadata')).not.toBeInTheDocument();
       expect(screen.getByTestId('action-localize-nfo')).toBeInTheDocument();
       expect(screen.getByTestId('action-manage-subtitle').className).toMatch(/--accent-primary/);
-      expect(screen.queryByTestId('stub-manual-match-mounted')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('stub-manual-match')).not.toBeInTheDocument();
       expect(screen.getByText(badge)).toBeInTheDocument();
     });
 
@@ -339,6 +352,44 @@ describe('LocalDetailV2', () => {
       await screen.findByTestId('local-detail-v2');
       expect(screen.getByTestId('action-localize-nfo')).toBeInTheDocument();
       expect(screen.getByTestId('action-manage-subtitle').className).toMatch(/--accent-primary/);
+    });
+
+    // disc-2026-10-series-wrong-version-b: a matched item can be matched wrong.
+    describe('重新選片 from 修改資訊', () => {
+      it('a matched movie: 重新選片 closes the editor and opens 手動選片 from the file name', async () => {
+        h.local = withStatus('success', {
+          metadataSource: 'tmdb',
+          tmdbId: 603,
+          filePath: '/volume1/Movies/[Leopard-Raws] Kimi no Na wa (BD).mkv',
+        });
+        renderDetail();
+        fireEvent.click(await screen.findByTestId('action-edit-metadata'));
+        fireEvent.click(await screen.findByTestId('stub-editor-rematch'));
+        expect(screen.queryByTestId('stub-editor')).not.toBeInTheDocument();
+        const dialog = await screen.findByTestId('stub-manual-match');
+        expect(dialog).toHaveAttribute('data-media-type', 'movie');
+        expect(dialog).toHaveTextContent(/^Kimi no Na wa$/);
+      });
+
+      it('a matched series opens 手動選片 from its title', async () => {
+        h.localSeries = series({
+          data: { ...series().data, metadataSource: 'nfo', tmdbId: 83612, title: '將夜' },
+        });
+        renderSeriesDetail();
+        fireEvent.click(await screen.findByTestId('action-edit-metadata'));
+        fireEvent.click(await screen.findByTestId('stub-editor-rematch'));
+        const dialog = await screen.findByTestId('stub-manual-match');
+        expect(dialog).toHaveAttribute('data-media-type', 'series');
+        expect(dialog).toHaveTextContent(/^將夜$/);
+      });
+
+      it('an unmatched item gets no 重新選片 row — its page already leads with 手動選片', async () => {
+        h.local = withStatus('failed');
+        h.editorProps.length = 0;
+        renderDetail();
+        await screen.findByTestId('detail-no-metadata');
+        expect(h.editorProps.at(-1)?.onRematch).toBeUndefined();
+      });
     });
 
     it('手動選片 opens the dialog, locked to this item, prefilled from the FILE name', async () => {

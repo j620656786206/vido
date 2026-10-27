@@ -54,6 +54,14 @@ export function useApplyMetadata() {
             : detailKeys.localMovie(variables.mediaId),
       });
       queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+      // disc-2026-10-series-wrong-version-b: re-matching an already-matched series
+      // changes its seasons; the season list is otherwise cached for an hour.
+      if (variables.mediaType === 'series') {
+        queryClient.invalidateQueries({ queryKey: detailKeys.seasons(variables.mediaId) });
+        queryClient.invalidateQueries({
+          queryKey: [...detailKeys.all, 'season-episodes', variables.mediaId],
+        });
+      }
     },
   });
 }

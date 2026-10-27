@@ -1,6 +1,6 @@
 # disc-2026-10-series-wrong-version-c：影集資料夾改名或刪掉後，舊的那一筆影集會從媒體庫消失
 
-Status: review
+Status: done
 
 <!-- SM Bob create-story 2026-10-23；行號為 main `2dfc100c`。傘狀條目 disc-2026-10-series-wrong-version 的第三張。 -->
 

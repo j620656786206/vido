@@ -425,22 +425,30 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           mediaType={isMovie ? 'movie' : 'series'}
           initialData={editorMetadata}
           onSuccess={() => (isMovie ? localMovie.refetch() : localSeries.refetch())}
+          // disc-2026-10-series-wrong-version-b: a matched item can be matched
+          // wrong; an unmatched one already leads with 手動選片 (B10p / B11p).
+          onRematch={
+            noMetadata
+              ? undefined
+              : () => {
+                  setEditorOpen(false);
+                  setMatchOpen(true);
+                }
+          }
         />
       )}
 
-      {noMetadata && (
-        <ManualMatchDialogV2
-          open={matchOpen}
-          onOpenChange={setMatchOpen}
-          mediaId={id}
-          mediaType={mediaKind}
-          // Movies: the file's own name — after an edit or a wrong match the title is
-          // no longer what the file is called. Series: the title — a series
-          // file_path is its FOLDER (the library root in a flat layout), and the
-          // backend's own series re-match uses the title for the same reason.
-          initialQuery={cleanFilenameForSearch(isMovie ? filePath || data.title : data.title)}
-        />
-      )}
+      <ManualMatchDialogV2
+        open={matchOpen}
+        onOpenChange={setMatchOpen}
+        mediaId={id}
+        mediaType={mediaKind}
+        // Movies: the file's own name — after an edit or a wrong match the title is
+        // no longer what the file is called. Series: the title — a series
+        // file_path is its FOLDER (the library root in a flat layout), and the
+        // backend's own series re-match uses the title for the same reason.
+        initialQuery={cleanFilenameForSearch(isMovie ? filePath || data.title : data.title)}
+      />
 
       {filePath && (
         <ManageSubtitleDialogV2

@@ -56,4 +56,44 @@ describe('useApplyMetadata', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: key });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
   });
+
+  // disc-2026-10-series-wrong-version-b: re-matching a matched series changes its
+  // seasons (將夜: 60 episodes → 20); the season list is cached for an hour.
+  it.each([
+    ['series', true],
+    ['movie', false],
+  ] as const)('a %s re-match refreshes the season list: %s', async (mediaType, refreshes) => {
+    vi.mocked(metadataService.applyMetadata).mockResolvedValue({
+      success: true,
+      mediaId: 'm-1',
+      mediaType,
+      title: '將夜',
+      source: 'tmdb',
+      tmdbId: 282136,
+      parseStatus: 'success',
+    });
+    const { invalidate, wrapper } = setup();
+
+    const { result } = renderHook(() => useApplyMetadata(), { wrapper });
+    result.current.mutate({
+      mediaId: 'm-1',
+      mediaType,
+      selectedItem: {
+        id: 'tmdb-282136',
+        source: 'tmdb',
+        mediaType: mediaType === 'movie' ? 'movie' : 'tv',
+      },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const seasons = { queryKey: detailKeys.seasons('m-1') };
+    const episodes = { queryKey: [...detailKeys.all, 'season-episodes', 'm-1'] };
+    if (refreshes) {
+      expect(invalidate).toHaveBeenCalledWith(seasons);
+      expect(invalidate).toHaveBeenCalledWith(episodes);
+    } else {
+      expect(invalidate).not.toHaveBeenCalledWith(seasons);
+      expect(invalidate).not.toHaveBeenCalledWith(episodes);
+    }
+  });
 });
