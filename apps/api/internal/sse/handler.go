@@ -17,7 +17,10 @@ func Handler(hub *Hub) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Set SSE headers
 		c.Header("Content-Type", "text/event-stream")
-		c.Header("Cache-Control", "no-cache")
+		// no-transform: a proxy in front (the Cloudflare tunnel) must not compress
+		// or rewrite the stream — doing so holds events back
+		// (disc-2026-10-reparse-dialog-stuck-over-tunnel).
+		c.Header("Cache-Control", "no-cache, no-transform")
 		c.Header("Connection", "keep-alive")
 		c.Header("X-Accel-Buffering", "no") // Disable nginx buffering
 

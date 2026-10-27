@@ -108,6 +108,20 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return snakeToCamel<T>(data.data);
 }
 
+/**
+ * GET /scanner/enrich/status — the matching pass's progress (EnrichmentProgress).
+ * Once a pass ends `isActive` is false and the counts are that pass's result.
+ */
+export interface EnrichStatus {
+  total: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  skipped: number;
+  currentTitle: string;
+  isActive: boolean;
+}
+
 export const scannerService = {
   async triggerScan(): Promise<ScanResult> {
     return fetchApi<ScanResult>('/scanner/scan', { method: 'POST' });
@@ -130,6 +144,10 @@ export const scannerService = {
       method: 'PUT',
       body: JSON.stringify({ interval }),
     });
+  },
+
+  async getEnrichStatus(): Promise<EnrichStatus> {
+    return fetchApi<EnrichStatus>('/scanner/enrich/status');
   },
 
   getSSEUrl(): string {

@@ -78,6 +78,7 @@ const enrichment = vi.hoisted(() => ({
   watching: false,
   watch: undefined as unknown as ReturnType<typeof vi.fn>,
   stop: undefined as unknown as ReturnType<typeof vi.fn>,
+  track: undefined as unknown as ReturnType<typeof vi.fn>,
   reset() {
     this.watching = false;
     this.watch = vi.fn(() => {
@@ -87,6 +88,7 @@ const enrichment = vi.hoisted(() => ({
     this.stop = vi.fn(() => {
       this.watching = false;
     });
+    this.track = vi.fn();
   },
 }));
 enrichment.reset();
@@ -94,6 +96,7 @@ vi.mock('../../hooks/useEnrichmentRefresh', () => ({
   useEnrichmentRefresh: () => ({
     matching: enrichment.watching ? h.matching : null,
     watch: enrichment.watch,
+    track: enrichment.track,
     stop: enrichment.stop,
   }),
 }));
@@ -434,6 +437,8 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     expect(h.batchReparse).toHaveBeenCalledWith({ ids: ['a'], type: 'movie' });
     expect(enrichment.watch).toHaveBeenCalledTimes(1);
     expect(enrichment.stop).not.toHaveBeenCalled();
+    // disc-2026-10-reparse-dialog-stuck-over-tunnel: rows were queued — poll too.
+    expect(enrichment.track).toHaveBeenCalledTimes(1);
     expect(await screen.findByTestId('progress-text')).toHaveTextContent(
       '本輪整理 20 部（含你勾的 1 部）'
     );
@@ -500,6 +505,7 @@ describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
     // it listened before asking (it could not know nothing would queue) — then let go
     expect(enrichment.stop).toHaveBeenCalledTimes(1);
     expect(enrichment.watching).toBe(false);
+    expect(enrichment.track).not.toHaveBeenCalled(); // nothing queued, nothing to poll
   });
 
   it('批次生成字幕 opens the generation-batch dialog with the movie selection', async () => {

@@ -392,7 +392,12 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
   // runs in the background; from then on this page refetches whenever a pass
   // completes, so 整理中 flips to the real result without a reload — and the
   // dialog shows the pass (C24-D, disc-2026-09-batch-reparse-progress-in-dialog).
-  const { matching, watch: watchEnrichment, stop: stopEnrichment } = useEnrichmentRefresh();
+  const {
+    matching,
+    watch: watchEnrichment,
+    track: trackEnrichment,
+    stop: stopEnrichment,
+  } = useEnrichmentRefresh();
   const [isBatchSubtitleOpen, setIsBatchSubtitleOpen] = useState(false);
   // Mixed movie+episode selection since sub-4-2 D1 — no client-side filtering.
   const [generationBatchSelection, setGenerationBatchSelection] = useState<string[]>([]);
@@ -534,6 +539,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
             throw err;
           });
           if (result.successCount === 0) stopEnrichment();
+          else trackEnrichment();
           setBatchProgress((prev) => ({
             ...prev,
             // current = what was actually queued: the dialog says 含你勾的 N 部.
@@ -572,6 +578,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
       batchReparseMutation,
       batchExportMutation,
       watchEnrichment,
+      trackEnrichment,
       stopEnrichment,
     ]
   );
