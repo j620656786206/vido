@@ -517,6 +517,27 @@ func (r *EpisodeRepository) ClearMissingFile(ctx context.Context, episodeID, fil
 	return n > 0, nil
 }
 
+// ReleaseFileFromOtherEpisodes clears filePath from every OTHER episode row of
+// the series that still holds it — one file is one episode. A file that used to
+// collapse onto the episode-0 placeholder (before bare SxxExx names parsed) and
+// now lands on its real number must not show up twice
+// (disc-2026-10-bare-episode-filename-uses-folder-title). Same columns as
+// ClearMissingFile; the rows stay.
+func (r *EpisodeRepository) ReleaseFileFromOtherEpisodes(ctx context.Context, seriesID, filePath, keepEpisodeID string) (int64, error) {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE episodes SET file_path = NULL, subtitle_tracks = NULL, subtitle_tracks_file_sig = NULL
+		 WHERE series_id = ? AND file_path = ? AND id <> ?`,
+		seriesID, filePath, keepEpisodeID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to release episode file: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	return n, nil
+}
+
 // UpdateSubtitleTracks records what the sweep read for one episode: the
 // merged embedded+sidecar tracks and the file signature they were read from
 // (migration 044). Narrow write, like UpdateDurationSeconds: `updated_at` is

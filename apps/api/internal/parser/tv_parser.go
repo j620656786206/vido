@@ -60,6 +60,12 @@ func (p *TVParser) Parse(filename string) *ParseResult {
 		return result
 	}
 
+	// S01E05 with no show name: the season and episode are all a filename can
+	// say; the scanner takes the show from the folder.
+	if p.parseBareEpisodeFormat(name, result) {
+		return result
+	}
+
 	// Try alternative 1x05 format
 	if p.parseAltFormat(name, result) {
 		return result
@@ -94,6 +100,7 @@ func (p *TVParser) CanParse(filename string) bool {
 	}
 
 	return tvPatternStandard.MatchString(name) ||
+		tvPatternBareEpisode.MatchString(name) ||
 		tvPatternAlt.MatchString(name) ||
 		tvPatternDaily.MatchString(name) ||
 		tvPatternAnimeEp.MatchString(name) ||
@@ -148,6 +155,40 @@ func (p *TVParser) parseStandardFormat(filename string, result *ParseResult) boo
 	// Extract additional metadata
 	p.extractQualityInfo(filename, result)
 
+	return true
+}
+
+// parseBareEpisodeFormat handles S01E05.mkv: the show's name is not in the
+// filename at all, so the title stays empty and the caller names the show (the
+// scanner uses the series folder). Without this the name went to AI, which
+// cannot see a title either and answered with an empty one about half the time
+// — those episodes were never imported
+// (disc-2026-10-bare-episode-filename-uses-folder-title).
+func (p *TVParser) parseBareEpisodeFormat(filename string, result *ParseResult) bool {
+	match := tvPatternBareEpisode.FindStringSubmatch(filename)
+	if match == nil {
+		return false
+	}
+
+	groups := getNamedGroups(tvPatternBareEpisode, match)
+	season, err := strconv.Atoi(groups["season"])
+	if err != nil {
+		return false
+	}
+	episode, err := strconv.Atoi(groups["episode"])
+	if err != nil {
+		return false
+	}
+
+	result.Status = ParseStatusSuccess
+	result.MediaType = MediaTypeTVShow
+	result.Season = season
+	result.Episode = episode
+	if end, err := strconv.Atoi(groups["episode_end"]); err == nil && end > episode {
+		result.EpisodeEnd = end
+	}
+
+	p.extractQualityInfo(filename, result)
 	return true
 }
 
