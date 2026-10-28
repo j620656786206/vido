@@ -22,6 +22,19 @@
  */
 import type { LibraryMovie, LibrarySeries } from '../types/library';
 
+/**
+ * The four `subtitle_status` values that mean "Vido is working on this file
+ * right now" (sub-1-2: searching + the three persisted pipeline stages). The
+ * season list draws them as the J11 spinner and keeps itself fresh while any
+ * is showing (disc-2026-10-episode-row-live-progress-a) — one list, so the
+ * spinner and the refresh can never disagree about what counts as in flight.
+ */
+const SUBTITLE_IN_FLIGHT = new Set(['searching', 'probing', 'extracting', 'translating']);
+
+export function isSubtitleInFlight(status: string | undefined | null): boolean {
+  return SUBTITLE_IN_FLIGHT.has(status ?? '');
+}
+
 export interface StatusDescriptor {
   label: string;
   /** Tailwind token classes: tint background + AA-safe text color (§2.5). */

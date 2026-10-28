@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Tooltip } from '../ui/Tooltip';
+import { isSubtitleInFlight } from '../../utils/libraryStatus';
 import type { ChineseSubtitleSource, MergedEpisode } from '../../types/library';
 
 /**
@@ -173,8 +174,6 @@ type Mark = {
   spin?: boolean;
 };
 
-const IN_FLIGHT = new Set(['searching', 'probing', 'extracting', 'translating']);
-
 const SOURCE_LABEL: Record<ChineseSubtitleSource['kind'], (s: ChineseSubtitleSource) => string> = {
   embedded: () => '片內字幕',
   sidecar: (s) => (s.label ? `旁邊的 ${s.label} 檔` : '旁邊的字幕檔'),
@@ -191,7 +190,7 @@ function describeSources(sources: ChineseSubtitleSource[] | undefined): string {
 function chineseMark(episode: MergedEpisode): Mark | null {
   const verdict = episode.chineseSubtitle;
   if (!verdict) return null;
-  if (IN_FLIGHT.has(episode.subtitleStatus ?? '')) {
+  if (isSubtitleInFlight(episode.subtitleStatus)) {
     return {
       Icon: Loader2,
       color: 'text-[var(--accent-text)]',

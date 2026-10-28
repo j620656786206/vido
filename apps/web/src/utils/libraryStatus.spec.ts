@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  isSubtitleInFlight,
   deriveLifecycleStatus,
   deriveSubtitleStatus,
   pickPosterBadge,
@@ -412,5 +413,26 @@ describe('deriveSubtitleStatus — series rolled up from episodes', () => {
 
   it('one unread episode → unknown, no badge', () => {
     expect(deriveSubtitleStatus(series('unknown'))).toBeNull();
+  });
+});
+
+// disc-2026-10-episode-row-live-progress-a: the one list behind the J11 spinner
+// and the season list's live refresh.
+describe('isSubtitleInFlight', () => {
+  it.each(['searching', 'probing', 'extracting', 'translating'])('%s is in flight', (s) => {
+    expect(isSubtitleInFlight(s)).toBe(true);
+  });
+  it.each([
+    'found',
+    'not_found',
+    'not_searched',
+    'no_text_source',
+    'skipped',
+    'untranslated',
+    '',
+    undefined,
+    null,
+  ])('%s is not', (s) => {
+    expect(isSubtitleInFlight(s)).toBe(false);
   });
 });

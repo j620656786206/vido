@@ -1,5 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { EPISODE_LIVE_COALESCE_MS } from '../../hooks/useEpisodeGenerationLive';
 import { SeasonAccordion } from './SeasonAccordion';
 import type { SeasonSummary, SeasonEpisodesResponse } from '../../types/library';
 
@@ -230,5 +231,96 @@ describe('SeasonAccordion', () => {
       />
     );
     expect(screen.getByRole('button', { name: '想要更多集數' })).toBeInTheDocument();
+  });
+});
+
+// disc-2026-10-episode-row-live-progress-a — the J11 spinner appears when a run
+// starts and turns into the result when it ends, with the dialog closed.
+describe('SeasonAccordion — live generation state', () => {
+  class MockEventSource {
+    static instances: MockEventSource[] = [];
+    listeners: Record<string, ((e: MessageEvent) => void)[]> = {};
+    closed = false;
+    onopen: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor(public url: string) {
+      MockEventSource.instances.push(this);
+    }
+    addEventListener(type: string, cb: (e: MessageEvent) => void) {
+      (this.listeners[type] ??= []).push(cb);
+    }
+    close() {
+      this.closed = true;
+    }
+    emit(type: string, data: unknown) {
+      this.listeners[type]?.forEach((cb) =>
+        cb(new MessageEvent(type, { data: JSON.stringify({ type, data }) }))
+      );
+    }
+  }
+
+  const row = (subtitleStatus: string) => ({
+    episodeNumber: 3,
+    name: '新的血脈',
+    hasLocalFile: true,
+    episodeId: 'ep-3',
+    filePath: '/tv/s01e03.mkv',
+    subtitleStatus,
+    chineseSubtitle: 'zh_hant' as const,
+    chineseSubtitleSources: [{ kind: 'vido' as const, language: 'zh-Hant' as const, label: '' }],
+  });
+  const view = () => (
+    <SeasonAccordion seasons={seasons} seriesTitle="特種部隊：母獅" seriesId="s1" tmdbId={123} />
+  );
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    MockEventSource.instances = [];
+    (globalThis as Record<string, unknown>).EventSource = MockEventSource;
+    useSeasonEpisodesMock.mockReset();
+    dialogProps.mockReset();
+  });
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).EventSource;
+    vi.useRealTimers();
+  });
+
+  it('refetches the season the moment the dialog reports a run started', () => {
+    const query = stubQuery({ data: { season: seasons[0], episodes: [row('found')] } });
+    useSeasonEpisodesMock.mockReturnValue(query);
+    render(view());
+    fireEvent.click(screen.getByTestId('season-header-1'));
+    fireEvent.click(screen.getByTestId('episode-manage-subtitle'));
+    expect(query.refetch).not.toHaveBeenCalled();
+
+    const { onGenerationStarted } = dialogProps.mock.lastCall![0] as {
+      onGenerationStarted: () => void;
+    };
+    act(() => onGenerationStarted());
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('turns the spinner into the result when that episode finishes (no reload)', () => {
+    const running = stubQuery({ data: { season: seasons[0], episodes: [row('extracting')] } });
+    useSeasonEpisodesMock.mockReturnValue(running);
+    const { rerender } = render(view());
+    fireEvent.click(screen.getByTestId('season-header-1'));
+    expect(screen.getByTestId('episode-subtitle-indicator')).toHaveAccessibleName(
+      '字幕生成中，打開「管理字幕」看進度'
+    );
+
+    act(() => MockEventSource.instances[0].emit('transcription_complete', { media_id: 'ep-3' }));
+    act(() => vi.advanceTimersByTime(EPISODE_LIVE_COALESCE_MS));
+    expect(running.refetch).toHaveBeenCalledTimes(1);
+
+    // What that refetch brings back.
+    useSeasonEpisodesMock.mockReturnValue(
+      stubQuery({ data: { season: seasons[0], episodes: [row('found')] } })
+    );
+    rerender(view());
+    expect(screen.getByTestId('episode-subtitle-indicator')).toHaveAccessibleName(
+      '有繁中字幕，Vido 生成'
+    );
+    expect(MockEventSource.instances.every((es) => es.closed)).toBe(true);
   });
 });
