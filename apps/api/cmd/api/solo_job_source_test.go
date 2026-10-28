@@ -1,40 +1,86 @@
 package main
 
-import "testing"
+import (
+	"context"
+	"sort"
+	"testing"
+	"time"
 
-// disc-2026-10-activity-generation-progress-detail: composedSoloJobs names the
-// one running item across both sources, and nothing when it is not exactly one.
+	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/subtitle"
+)
 
-type fakeSolo struct {
-	running int
-	id      string
-}
+// disc-2026-10-activity-solo-jobs-collapsed: composedSoloJobs lists every job
+// from both sources — one Activity row each — instead of one summed count.
 
-func (f fakeSolo) ActivityProgress() (bool, int, int, int, string) {
-	return f.running > 0, 0, f.running, 0, ""
+type fakeSolo []services.SoloJobSnapshot
+
+func (f fakeSolo) ActiveSoloJobs() []services.SoloJobSnapshot {
+	return append([]services.SoloJobSnapshot(nil), f...)
 }
 func (f fakeSolo) ActiveManualUsage() (float64, float64, bool) { return 0, 0, false }
-func (f fakeSolo) ActiveMediaID() (string, bool)               { return f.id, f.running == 1 }
 
-func TestComposedSoloJobs_ActiveMediaID(t *testing.T) {
+func TestComposedSoloJobs_ListsBothSources(t *testing.T) {
 	cases := []struct {
 		name         string
 		legacy, solo fakeSolo
-		want         string
-		ok           bool
+		want         []string
 	}{
-		{"idle", fakeSolo{}, fakeSolo{}, "", false},
-		{"one pipeline click", fakeSolo{}, fakeSolo{running: 1, id: "ep-1"}, "ep-1", true},
-		{"one legacy click", fakeSolo{running: 1, id: "mv-1"}, fakeSolo{}, "mv-1", true},
-		{"one on each side", fakeSolo{running: 1, id: "mv-1"}, fakeSolo{running: 1, id: "ep-1"}, "", false},
-		{"two on one side", fakeSolo{}, fakeSolo{running: 2}, "", false},
+		{"idle", nil, nil, nil},
+		{"pipeline clicks", nil, fakeSolo{{MediaID: "ep-1"}, {MediaID: "ep-2"}}, []string{"ep-1", "ep-2"}},
+		{"legacy click", fakeSolo{{MediaID: "mv-1"}}, nil, []string{"mv-1"}},
+		{"both sides", fakeSolo{{MediaID: "mv-1"}}, fakeSolo{{MediaID: "ep-1", Queued: true}}, []string{"ep-1", "mv-1"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := composedSoloJobs{tc.legacy, tc.solo}.ActiveMediaID()
-			if got != tc.want || ok != tc.ok {
-				t.Errorf("ActiveMediaID() = %q, %v; want %q, %v", got, ok, tc.want, tc.ok)
+			var got []string
+			for _, s := range (composedSoloJobs{tc.legacy, tc.solo}).ActiveSoloJobs() {
+				got = append(got, s.MediaID)
+			}
+			sort.Strings(got)
+			if len(got) != len(tc.want) {
+				t.Fatalf("ActiveSoloJobs() = %v; want %v", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("ActiveSoloJobs() = %v; want %v", got, tc.want)
+				}
 			}
 		})
+	}
+}
+
+// The audio extractor's wait on the shared gate reaches the job's observer.
+func TestExtractSlotAdapter_ReportsTheWait(t *testing.T) {
+	gate := subtitle.NewExtractGate()
+	hold, _, err := gate.Acquire(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	seen := make(chan bool, 4)
+	ctx := services.WithExtractWaitObserver(context.Background(), func(w bool) { seen <- w })
+	acquired := make(chan func(), 1)
+	go func() {
+		release, err := extractSlotAdapter{gate: gate}.Acquire(ctx)
+		if err != nil {
+			t.Error(err)
+		}
+		acquired <- release
+	}()
+
+	select {
+	case w := <-seen:
+		if !w {
+			t.Fatal("first report should be waiting=true")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("a busy gate must report the wait")
+	}
+	hold()
+	release := <-acquired
+	defer release()
+	if w := <-seen; w {
+		t.Fatal("taking the slot should report waiting=false")
 	}
 }

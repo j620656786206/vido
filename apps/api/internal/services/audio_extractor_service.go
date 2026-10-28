@@ -197,13 +197,22 @@ func (s *AudioExtractorService) ExtractAudio(ctx context.Context, inputPath stri
 		return "", ErrFFmpegNotAvailable
 	}
 
-	// Acquire semaphore slot
+	// Acquire semaphore slot. A busy semaphore is a wait for the extraction
+	// slot as far as the job is concerned: the Activity row says 排隊中 until
+	// both this and the shared gate below are held
+	// (disc-2026-10-activity-solo-jobs-collapsed).
 	select {
 	case s.semaphore <- struct{}{}:
-		defer func() { <-s.semaphore }()
-	case <-ctx.Done():
-		return "", ctx.Err()
+	default:
+		ReportExtractWait(ctx, true)
+		select {
+		case s.semaphore <- struct{}{}:
+		case <-ctx.Done():
+			ReportExtractWait(ctx, false)
+			return "", ctx.Err()
+		}
 	}
+	defer func() { <-s.semaphore }()
 
 	// The shared disk gate goes around the ffmpeg pass ONLY, and outside the
 	// timeout below: queueing behind another extraction must not eat the
@@ -211,10 +220,12 @@ func (s *AudioExtractorService) ExtractAudio(ctx context.Context, inputPath stri
 	if s.slot != nil {
 		release, err := s.slot.Acquire(ctx)
 		if err != nil {
+			ReportExtractWait(ctx, false)
 			return "", fmt.Errorf("audio extraction gave up waiting for the extraction slot: %w", err)
 		}
 		defer release()
 	}
+	ReportExtractWait(ctx, false)
 
 	timeout, sizeGB, knob := s.effectiveTimeout(inputPath)
 	extractCtx, cancel := context.WithTimeout(ctx, timeout)

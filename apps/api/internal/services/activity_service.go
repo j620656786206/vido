@@ -37,7 +37,7 @@ type ActivityService struct {
 	scan          scanStateSource     // reused from status_summary_service.go
 	batch         batchJobSource      // subtitle.BatchProcessor (primitives only — no import)
 	generation    batchJobSource      // GenerationBatchProcessor (Story 9R-16 AC 10)
-	transcription batchJobSource      // TranscriptionService, solo jobs only (disc-2026-07-transcription-active-jobs)
+	transcription soloJobLister       // solo 生成字幕 clicks, one row each (disc-2026-10-activity-solo-jobs-collapsed)
 	downloads     downloadCountSource // reused from status_summary_service.go
 	parse         parseJobSource      // repository.ParseJobRepository (existing interface)
 	steps         GenerationStepReader
@@ -60,15 +60,20 @@ func (s *ActivityService) SetStepReader(r GenerationStepReader) { s.steps = r }
 
 // stepOf is the step for source's single active item, or nil.
 func (s *ActivityService) stepOf(source batchJobSource) *ActiveJobStep {
-	if s.steps == nil {
-		return nil
-	}
 	named, ok := source.(activeMediaSource)
 	if !ok {
 		return nil
 	}
 	mediaID, ok := named.ActiveMediaID()
-	if !ok || mediaID == "" {
+	if !ok {
+		return nil
+	}
+	return s.stepFor(mediaID)
+}
+
+// stepFor is mediaID's recorded step, or nil.
+func (s *ActivityService) stepFor(mediaID string) *ActiveJobStep {
+	if s.steps == nil || mediaID == "" {
 		return nil
 	}
 	phase, current, total, ok := s.steps.Step(mediaID)
@@ -76,6 +81,12 @@ func (s *ActivityService) stepOf(source batchJobSource) *ActiveJobStep {
 		return nil
 	}
 	return &ActiveJobStep{Phase: phase, Current: current, Total: total}
+}
+
+// soloJobLister is the solo-click source: one snapshot per running job
+// (subtitle.SoloRunner and/or TranscriptionService, composed in main.go).
+type soloJobLister interface {
+	ActiveSoloJobs() []SoloJobSnapshot
 }
 
 // batchJobSource is the active batch-subtitle job (subtitle.BatchProcessor). Primitive
@@ -96,7 +107,7 @@ type parseJobSource interface {
 // NewActivityService wires the existing services/repos it composes. generation
 // is the Route C generation-batch source (9R-16 AC 10) — same primitive
 // interface as the fetch-batch source, nil-safe (fail-soft per section).
-func NewActivityService(scan scanStateSource, batch batchJobSource, generation batchJobSource, transcription batchJobSource, downloads downloadCountSource, parse parseJobSource) *ActivityService {
+func NewActivityService(scan scanStateSource, batch batchJobSource, generation batchJobSource, transcription soloJobLister, downloads downloadCountSource, parse parseJobSource) *ActivityService {
 	return &ActivityService{scan: scan, batch: batch, generation: generation, transcription: transcription, downloads: downloads, parse: parse}
 }
 
@@ -134,9 +145,16 @@ type ActiveJob struct {
 	Total       int    `json:"total,omitempty"`
 	// Step is where the generating item is right now — "轉錄 2/6 段"
 	// (disc-2026-10-activity-generation-progress-detail, an additive field).
-	// transcription and generation_batch only; absent when unknown or when
-	// several solo jobs run (which one would it describe?).
+	// transcription and generation_batch only; absent when unknown, and on a
+	// queued transcription row.
 	Step *ActiveJobStep `json:"step,omitempty"`
+	// MediaID and Queued are transcription-only, one row per solo job
+	// (disc-2026-10-activity-solo-jobs-collapsed AC #7 [@contract-v1],
+	// additive). MediaID is the item the job generates — the row's identity.
+	// Queued is true while the job waits for the extraction slot; absent
+	// means running.
+	MediaID string `json:"media_id,omitempty"`
+	Queued  bool   `json:"queued,omitempty"`
 }
 
 // ActiveJobStep is one item's stage and, when the run reported one, its count:
@@ -269,24 +287,56 @@ func (s *ActivityService) activeJobsSection() ActiveJobsSection {
 		}
 	}
 	if s.transcription != nil {
-		if active, pct, cur, total, item := s.transcription.ActivityProgress(); active {
-			job := ActiveJob{
-				Kind:        "transcription",
-				PercentDone: pct,
-				Detail:      item,
-				Current:     cur,
-				Total:       total,
-				Step:        s.stepOf(s.transcription),
-			}
-			// A counted step is the row's progress: the bar and percent_done
-			// follow the chunks / cues of the one running item.
-			if job.Step != nil && job.Step.Total > 0 {
-				job.PercentDone = job.Step.Current * 100 / job.Step.Total
-			}
-			jobs = append(jobs, job)
-		}
+		jobs = append(jobs, s.soloJobRows(s.transcription.ActiveSoloJobs())...)
 	}
 	return ActiveJobsSection{Status: sectionOK, Jobs: jobs}
+}
+
+// soloJobRows turns the solo clicks into one `transcription` row each
+// (disc-2026-10-activity-solo-jobs-collapsed): running jobs first, oldest
+// accepted first; then queued jobs, longest-waiting first — roughly the order
+// the slot will take them in (each wait is FIFO; the audio semaphore and the
+// shared gate are two queues), which for a run of clicks is the click order.
+// Ties break on the media id so the order holds still between polls. snaps
+// is sorted in place: the sources hand over a fresh copy each call.
+func (s *ActivityService) soloJobRows(snaps []SoloJobSnapshot) []ActiveJob {
+	sort.SliceStable(snaps, func(i, j int) bool { return soloJobBefore(snaps[i], snaps[j]) })
+	rows := make([]ActiveJob, 0, len(snaps))
+	for _, snap := range snaps {
+		row := ActiveJob{Kind: "transcription", Detail: snap.Title, MediaID: snap.MediaID}
+		if snap.Queued {
+			// The phase tracker still holds `extracting` for a queued job;
+			// that would read as 提取音訊 while nothing is being extracted.
+			row.Queued = true
+			rows = append(rows, row)
+			continue
+		}
+		row.Step = s.stepFor(snap.MediaID)
+		// A counted step is the row's progress: the bar and percent_done
+		// follow the chunks / cues of this job's item.
+		if row.Step != nil && row.Step.Total > 0 {
+			row.PercentDone = row.Step.Current * 100 / row.Step.Total
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+func soloJobBefore(a, b SoloJobSnapshot) bool {
+	if a.Queued != b.Queued {
+		return !a.Queued
+	}
+	at, bt := a.StartedAt, b.StartedAt
+	if a.Queued {
+		at, bt = a.QueuedAt, b.QueuedAt
+	}
+	if !at.Equal(bt) {
+		return at.Before(bt)
+	}
+	if a.Queued && !a.StartedAt.Equal(b.StartedAt) {
+		return a.StartedAt.Before(b.StartedAt)
+	}
+	return a.MediaID < b.MediaID
 }
 
 func (s *ActivityService) pendingSection(ctx context.Context) PendingSection {

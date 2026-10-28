@@ -54,6 +54,7 @@ snake_case on the wire; the web client camelCases at the `fetchApi` boundary (Ru
 |---|---|---|
 | `active_jobs.scan` | `ScannerService.GetProgress()` / `IsScanActive()` | ✅ live |
 | `active_jobs.subtitle_batch` | `subtitle.BatchProcessor.ActivityProgress()` | ✅ live (new primitive adapter — keeps `services` free of a `subtitle` import → no cycle) |
+| `active_jobs.transcription` | `subtitle.SoloRunner.ActiveSoloJobs()` (pipeline mode) + `TranscriptionService.ActiveSoloJobs()` (legacy Solo jobs), joined by `composedSoloJobs` in `cmd/api` | ✅ live, **one row per solo 生成字幕 job** since disc-2026-10-activity-solo-jobs-collapsed (`[@contract-v1]`, keys in that story's AC #7): `detail` = that job's title, `media_id` = its item, `queued: true` while it waits for the extraction slot (no `step`, `percent_done` 0); running rows carry their own `step`. Running first (oldest accepted first), then queued (longest waiting first). No `current`/`total` (the old job count = the row count) |
 | `active_jobs` **AI correction** | — | ⛔ **greenfield**: no AI-job tracking exists; omitted until it lands |
 | `pending.parse_count` | `ParseJobRepository.GetPending()` (existing iface) | ✅ live (capped at 500) |
 | `downloads` | `DownloadService.GetDownloadCounts()` | ✅ live |

@@ -203,6 +203,9 @@ type TranscriptionService struct {
 
 	mu         sync.Mutex
 	inProgress map[string]*soloTranscriptionJob // mediaID (UUID string, 9R-18) → job record
+	// now stamps a solo job's StartedAt / QueuedAt for the Activity row order
+	// (disc-2026-10-activity-solo-jobs-collapsed). Tests override it.
+	now func() time.Time
 }
 
 // NewTranscriptionService creates a new TranscriptionService.
@@ -224,6 +227,7 @@ func NewTranscriptionService(
 		runPerMediaMinute: defaultRunPerMediaMinute,
 		probeWritable:     defaultWritableProbe,
 		inProgress:        make(map[string]*soloTranscriptionJob),
+		now:               time.Now,
 	}
 }
 
@@ -576,6 +580,7 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID s
 	go func() {
 		pipelineCtx, pipelineCancel := context.WithCancel(context.Background())
 		defer pipelineCancel()
+		pipelineCtx = s.withSoloQueueObserver(pipelineCtx, mediaID, jobID)
 		_ = s.runPipeline(pipelineCtx, jobID, cfg.mediaType, mediaID, filePath, mediaDir, cfg.translate)
 	}()
 
@@ -726,6 +731,11 @@ type soloTranscriptionJob struct {
 	JobID string
 	Title string
 	Solo  bool
+	// StartedAt is when the job was acquired; QueuedAt when it began waiting
+	// for the extraction slot (zero while not waiting). Solo jobs only read
+	// them — the Activity row order (disc-2026-10-activity-solo-jobs-collapsed).
+	StartedAt time.Time
+	QueuedAt  time.Time
 	// budget is the run's OWN ai.Budget (9R-17) — set only when this run
 	// created it (a solo click), never when it spends from a batch's shared
 	// envelope. Read by costFields (the transcription_* SSE cost keys) and
@@ -747,7 +757,7 @@ func (s *TranscriptionService) acquireJob(mediaID, title string, solo bool) (str
 		return "", ErrTranscriptionInProgress
 	}
 	jobID := uuid.New().String()
-	s.inProgress[mediaID] = &soloTranscriptionJob{JobID: jobID, Title: title, Solo: solo}
+	s.inProgress[mediaID] = &soloTranscriptionJob{JobID: jobID, Title: title, Solo: solo, StartedAt: s.now().UTC()}
 	return jobID, nil
 }
 
@@ -792,9 +802,10 @@ func (s *TranscriptionService) resolveActivityTitle(ctx context.Context, mediaTy
 // fractional or bounded count, and fabricating a percentage would misreport
 // real progress the same way a $0 AI-usage record would misreport real cost.
 // currentItem is one representative in-flight job's title — which one is
-// unspecified when more than one job is running (Go map iteration order);
-// any currently-running job's title honestly answers "something is
-// generating right now," and picking is not worth ordering machinery for.
+// unspecified when more than one job is running (Go map iteration order).
+// Only the home readout's in-flight cell reads it now (the `active` bool);
+// the Activity page lists every job through ActiveSoloJobs
+// (disc-2026-10-activity-solo-jobs-collapsed).
 func (s *TranscriptionService) ActivityProgress() (active bool, percentDone, current, total int, currentItem string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -808,21 +819,52 @@ func (s *TranscriptionService) ActivityProgress() (active bool, percentDone, cur
 	return current > 0, 0, current, 0, currentItem
 }
 
-// ActiveMediaID names the one SOLO job running (legacy mode's solo clicks), for
-// the Activity row's step; ok=false when none or several run. Batch / pipeline
-// jobs are not counted here — the same rule as ActivityProgress.
-func (s *TranscriptionService) ActiveMediaID() (mediaID string, ok bool) {
+// ActiveSoloJobs is one snapshot per running SOLO job — the Activity page's
+// one-row-per-click list (disc-2026-10-activity-solo-jobs-collapsed). Batch /
+// pipeline jobs are not listed here — the same rule as ActivityProgress.
+// Unordered: the Activity service owns the row order.
+func (s *TranscriptionService) ActiveSoloJobs() []SoloJobSnapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	n := 0
+	out := make([]SoloJobSnapshot, 0, len(s.inProgress))
 	for id, job := range s.inProgress {
 		if !job.Solo {
 			continue
 		}
-		n++
-		mediaID = id
+		out = append(out, SoloJobSnapshot{
+			MediaID:   id,
+			Title:     job.Title,
+			StartedAt: job.StartedAt,
+			Queued:    !job.QueuedAt.IsZero(),
+			QueuedAt:  job.QueuedAt,
+		})
 	}
-	return mediaID, n == 1
+	return out
+}
+
+// withSoloQueueObserver attaches the solo job's extraction-wait observer to
+// its run ctx, so the Activity row says 排隊中 while the job waits for the
+// audio extraction slot (disc-2026-10-activity-solo-jobs-collapsed).
+func (s *TranscriptionService) withSoloQueueObserver(ctx context.Context, mediaID, jobID string) context.Context {
+	return WithExtractWaitObserver(ctx, func(waiting bool) { s.setSoloQueued(mediaID, jobID, waiting) })
+}
+
+// setSoloQueued is a solo job's extraction-wait observer. It touches only
+// the job it was attached to (jobID): a later job on the same media id must
+// not inherit this one's state. A repeated true keeps the original QueuedAt.
+func (s *TranscriptionService) setSoloQueued(mediaID, jobID string, waiting bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.inProgress[mediaID]
+	if !ok || job.JobID != jobID {
+		return
+	}
+	switch {
+	case !waiting:
+		job.QueuedAt = time.Time{}
+	case job.QueuedAt.IsZero():
+		job.QueuedAt = s.now().UTC()
+	}
 }
 
 // eventTitle is the `title` every transcription_* payload carries (story

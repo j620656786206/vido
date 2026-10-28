@@ -14,6 +14,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/vido/api/internal/services"
 )
 
 // ─── sub-6-3 AC #1 / #4a: size-aware deadline ──────────────────────────────
@@ -309,4 +311,61 @@ func TestExtractor_SetsWaitDelaySoAKilledFFmpegCannotHoldTheSlot(t *testing.T) {
 	e := NewExtractor(time.Minute, nil)
 	_, err := e.Extract(context.Background(), media, t.TempDir(), []int{1})
 	require.NoError(t, err, "the happy path is unaffected by the delay")
+}
+
+// ─── disc-2026-10-activity-solo-jobs-collapsed: the job hears its wait ─────
+
+func TestExtractor_QueuedExtractReportsTheJobsWait(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "ffmpeg.log")
+	installFakeFFmpeg(t, logPath, 10*time.Millisecond)
+
+	gate := NewExtractGate()
+	hold, _, err := gate.Acquire(context.Background(), nil)
+	require.NoError(t, err)
+
+	var mu sync.Mutex
+	var seen []bool
+	snapshot := func() []bool { mu.Lock(); defer mu.Unlock(); return append([]bool(nil), seen...) }
+	ctx := services.WithExtractWaitObserver(context.Background(), func(w bool) {
+		mu.Lock()
+		seen = append(seen, w)
+		mu.Unlock()
+	})
+
+	e := NewExtractor(time.Minute, nil, WithExtractGate(gate))
+	done := make(chan error, 1)
+	go func() {
+		_, err := e.Extract(ctx, "/m.mkv", t.TempDir(), []int{1})
+		done <- err
+	}()
+
+	require.Eventually(t, func() bool { return len(snapshot()) > 0 }, time.Second, 5*time.Millisecond)
+	assert.Equal(t, []bool{true}, snapshot(), "behind another extraction = waiting")
+
+	hold()
+	require.NoError(t, <-done)
+	got := snapshot()
+	require.NotEmpty(t, got)
+	assert.False(t, got[len(got)-1], "holding the slot ends the wait")
+}
+
+func TestExtractor_GivingUpWhileQueuedEndsTheJobsWait(t *testing.T) {
+	installFakeFFmpeg(t, filepath.Join(t.TempDir(), "ffmpeg.log"), 10*time.Millisecond)
+	gate := NewExtractGate()
+	hold, _, err := gate.Acquire(context.Background(), nil)
+	require.NoError(t, err)
+	defer hold()
+
+	var seen []bool
+	ctx, cancel := context.WithTimeout(services.WithExtractWaitObserver(context.Background(),
+		func(w bool) { seen = append(seen, w) }), 30*time.Millisecond)
+	defer cancel()
+
+	e := NewExtractor(time.Minute, nil, WithExtractGate(gate))
+	_, err = e.Extract(ctx, "/m.mkv", t.TempDir(), []int{1})
+
+	require.ErrorIs(t, err, ErrSubtitleExtractWaitAborted)
+	require.NotEmpty(t, seen)
+	assert.True(t, seen[0])
+	assert.False(t, seen[len(seen)-1], "an abort must not leave the job looking queued")
 }

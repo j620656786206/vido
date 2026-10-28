@@ -28,6 +28,14 @@ func (f fakeBatch) ActivityProgress() (bool, int, int, int, string) {
 	return f.active, f.percentDone, f.current, f.total, f.item
 }
 
+// fakeSoloJobs is the solo-click source (disc-2026-10-activity-solo-jobs-collapsed).
+// It hands out a copy, as the real sources do — the service sorts what it gets.
+type fakeSoloJobs []SoloJobSnapshot
+
+func (f fakeSoloJobs) ActiveSoloJobs() []SoloJobSnapshot {
+	return append([]SoloJobSnapshot(nil), f...)
+}
+
 type fakeParse struct {
 	pending    []*models.ParseJob
 	pendingErr error
@@ -59,7 +67,7 @@ func TestActivity_AllOK(t *testing.T) {
 		fakeScan{active: true, progress: ScanProgress{PercentDone: 62, CurrentFile: "movie.mkv", FilesFound: 1234}},
 		fakeBatch{active: true, percentDone: 40, current: 12, total: 30, item: "ep.mkv"},
 		fakeBatch{active: true, percentDone: 25, current: 3, total: 12, item: "gen.mkv"},
-		fakeBatch{active: false}, // transcription: inactive here — dedicated coverage below
+		fakeSoloJobs(nil), // transcription: inactive here — dedicated coverage below
 		// bugfix-e: buckets are disjoint and total (All == the sum), so the
 		// fixture states every bucket instead of leaving a phantom remainder
 		// for the old subtraction to sweep into 排隊中.
@@ -110,7 +118,7 @@ func TestActivity_TranscriptionJobSurfacesAsOwnKind(t *testing.T) {
 		fakeScan{active: false},
 		fakeBatch{active: false},
 		fakeBatch{active: false},
-		fakeBatch{active: true, current: 1, item: "龍族前傳 S03E01"},
+		fakeSoloJobs{{MediaID: "ep-1", Title: "龍族前傳 S03E01", StartedAt: time.Now()}},
 		fakeDownloads{counts: &qbittorrent.DownloadCounts{}},
 		fakeParse{},
 	)
@@ -121,20 +129,21 @@ func TestActivity_TranscriptionJobSurfacesAsOwnKind(t *testing.T) {
 		t.Fatalf("active = %+v, want ok with 1 job", a.ActiveJobs)
 	}
 	job := a.ActiveJobs.Jobs[0]
-	if job.Kind != "transcription" || job.Detail != "龍族前傳 S03E01" || job.Current != 1 {
+	if job.Kind != "transcription" || job.Detail != "龍族前傳 S03E01" || job.MediaID != "ep-1" || job.Queued {
 		t.Errorf("transcription job = %+v", job)
 	}
 	// This source tracks discrete stages, not a fractional/bounded count — a
-	// fabricated percent or total would misreport real progress.
-	if job.PercentDone != 0 || job.Total != 0 {
-		t.Errorf("transcription job percent/total = %d/%d, want 0/0 (no fabricated progress)", job.PercentDone, job.Total)
+	// fabricated percent or total would misreport real progress. current is
+	// no longer the job count either: one row is one job.
+	if job.PercentDone != 0 || job.Current != 0 || job.Total != 0 {
+		t.Errorf("transcription job percent/current/total = %d/%d/%d, want 0/0/0", job.PercentDone, job.Current, job.Total)
 	}
 }
 
 func TestActivity_NoTranscriptionJobIsAbsentFromActiveList(t *testing.T) {
 	svc := NewActivityService(
 		fakeScan{active: false}, fakeBatch{active: false}, fakeBatch{active: false},
-		fakeBatch{active: false}, // transcription: none in flight
+		fakeSoloJobs{}, // transcription: none in flight
 		fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{},
 	)
 
@@ -152,7 +161,7 @@ func TestActivity_NoActiveJobsIsOKEmpty(t *testing.T) {
 		fakeScan{active: false},
 		fakeBatch{active: false},
 		fakeBatch{active: false},
-		fakeBatch{active: false},
+		fakeSoloJobs(nil),
 		fakeDownloads{counts: &qbittorrent.DownloadCounts{}},
 		fakeParse{},
 	)
@@ -168,7 +177,7 @@ func TestActivity_NoActiveJobsIsOKEmpty(t *testing.T) {
 
 func TestActivity_PendingFailsSoft(t *testing.T) {
 	svc := NewActivityService(
-		fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}},
+		fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil), fakeDownloads{counts: &qbittorrent.DownloadCounts{}},
 		fakeParse{pendingErr: errors.New("db down"), all: []*models.ParseJob{}},
 	)
 	a := svc.GetActivity(context.Background())
@@ -184,7 +193,7 @@ func TestActivity_PendingFailsSoft(t *testing.T) {
 
 func TestActivity_DownloadsFailSoft(t *testing.T) {
 	svc := NewActivityService(
-		fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{err: errors.New("qb unreachable")},
+		fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil), fakeDownloads{err: errors.New("qb unreachable")},
 		fakeParse{},
 	)
 	a := svc.GetActivity(context.Background())
@@ -197,7 +206,7 @@ func TestActivity_DownloadsFailSoft(t *testing.T) {
 // up yet" is not a load failure — the hub must not offer a retry for it.
 func TestActivity_DownloadsNotConfigured(t *testing.T) {
 	notConfigured := &qbittorrent.ConnectionError{Code: qbittorrent.ErrCodeNotConfigured, Message: "qBittorrent not configured"}
-	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{},
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil),
 		fakeDownloads{err: fmt.Errorf("counts: %w", notConfigured)}, fakeParse{})
 
 	d := svc.GetActivity(context.Background()).Downloads
@@ -211,7 +220,7 @@ func TestActivity_DownloadsNotConfigured(t *testing.T) {
 
 func TestActivity_DownloadsConnectionFailureStaysUnavailable(t *testing.T) {
 	refused := &qbittorrent.ConnectionError{Code: qbittorrent.ErrCodeConnectionFailed, Message: "dial tcp: refused"}
-	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{err: refused}, fakeParse{})
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil), fakeDownloads{err: refused}, fakeParse{})
 
 	d := svc.GetActivity(context.Background()).Downloads
 	if d.Status != sectionUnavailable || d.Error == "" {
@@ -226,7 +235,7 @@ func TestActivity_RecentCapsAndFiltersTerminal(t *testing.T) {
 	}
 	// Non-terminal jobs must be filtered out of the recent feed.
 	jobs = append(jobs, pj(models.ParseJobPending, "skip"), pj(models.ParseJobProcessing, "skip"))
-	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{all: jobs})
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil), fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{all: jobs})
 
 	a := svc.GetActivity(context.Background())
 	if len(a.Recent.Events) != recentEventsMax {
@@ -242,7 +251,7 @@ func TestActivity_RecentCapsAndFiltersTerminal(t *testing.T) {
 func TestActivity_RecentPrefersCompletedAt(t *testing.T) {
 	completed := time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC)
 	job := &models.ParseJob{Status: models.ParseJobCompleted, FileName: "x.mkv", UpdatedAt: time.Now(), CompletedAt: &completed}
-	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{all: []*models.ParseJob{job}})
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil), fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{all: []*models.ParseJob{job}})
 
 	a := svc.GetActivity(context.Background())
 	if len(a.Recent.Events) != 1 || !a.Recent.Events[0].At.Equal(completed) {
@@ -308,7 +317,7 @@ func TestActivity_DownloadsBucketsAreTruthful(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			counts := tc.counts
-			svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &counts}, fakeParse{})
+			svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil), fakeDownloads{counts: &counts}, fakeParse{})
 			d := svc.GetActivity(context.Background()).Downloads
 
 			if d.Status != sectionOK {
@@ -332,7 +341,7 @@ func TestActivity_DownloadsBucketsAreTruthful(t *testing.T) {
 // message, which stays omitempty and absent on a healthy section).
 func TestActivity_DownloadsSectionWireKeys(t *testing.T) {
 	counts := qbittorrent.DownloadCounts{All: 9, Downloading: 1, Queued: 2, Paused: 3, Error: 3}
-	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &counts}, fakeParse{})
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil), fakeDownloads{counts: &counts}, fakeParse{})
 
 	blob, err := json.Marshal(svc.GetActivity(context.Background()).Downloads)
 	if err != nil {
@@ -363,7 +372,7 @@ func TestActivity_DownloadsSectionWireKeys(t *testing.T) {
 // A section-level failure still carries the string `error` message — the additive
 // count keys must not have displaced it.
 func TestActivity_DownloadsUnavailableKeepsErrorMessage(t *testing.T) {
-	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{err: errors.New("qbt down")}, fakeParse{})
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil), fakeDownloads{err: errors.New("qbt down")}, fakeParse{})
 
 	blob, err := json.Marshal(svc.GetActivity(context.Background()).Downloads)
 	if err != nil {
