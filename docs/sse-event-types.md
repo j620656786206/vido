@@ -176,6 +176,16 @@ with the same meaning, ride that job's `transcription_extracting` /
 `transcription_failed` events (declared in `transcription_service.go`), including the
 ones its speech-recognition leg sends.
 
+**A stopped single-title job.** `POST /api/v1/{movies|episodes}/{id}/transcribe/cancel`
+stops a running single-title generation (pipeline mode). No new event kind: the job ends,
+as any other non-success does, with `transcription_failed` carrying its `job_id`, the
+`spent_usd` / `budget_usd` above, `failure_reason: "cancelled"` and
+`message: "已停止生成"` (the client words the rest from the code, as for every reason).
+It is still that job's LAST event, and it is sent before the item can be generated again.
+A stop that arrives after the subtitle file was placed changes nothing — the job ends with
+`transcription_complete`. The speech-recognition leg (its own `job_id`) may send its own
+`transcription_failed` first, as it does for any failure.
+
 **Pipeline stages** — one wire enum, two emitting paths:
 
 _Search path (`Engine`, in order):_

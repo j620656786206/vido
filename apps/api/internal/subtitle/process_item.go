@@ -30,7 +30,10 @@ import (
 //  2. run row pending→running, media row → extracting
 //  3. SelectAndRoute   — verdict decides the rest
 //  4. deliver → provenance → terminal media status, IN THAT ORDER (P9)
-//  5. any failure      — run `failed`, media back to `not_searched` (retryable)
+//  5. any failure      — run `failed`, media back to `not_searched` (retryable);
+//     under RestoreMediaOnCancel a CALLER cancellation settles the media row
+//     instead (settleCancelledMedia), and nothing after a confirmed place is
+//     cancellable
 func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessItemOptions) (*ProcessOutcome, error) {
 	if err := p.requireItemPorts(); err != nil {
 		return nil, err
@@ -78,7 +81,7 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	// The per-item scope rides the context so the chunk loop inside
 	// TranslateTrack can attribute progress and the prompt-cache verdict
 	// without changing sub-1-5a's stamped signature.
-	scope := &processScope{ref: ref, showKey: item.ShowKey}
+	scope := &processScope{ref: ref, showKey: item.ShowKey, loaded: item, restoreOnCancel: opts.RestoreMediaOnCancel}
 	ctx = withProcessScope(ctx, scope)
 
 	// sub-5-1 AC #3: every paid call under this item runs against a Budget —
@@ -284,6 +287,12 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	if err != nil {
 		return p.failItem(ctx, ref, run, "place", err)
 	}
+	// The sidecar is on disk: from here on this run IS complete, so a
+	// cancellation arriving now must not turn the remaining bookkeeping writes
+	// into a failed 「中途停止」 row that points away from the file it just
+	// wrote (disc-2026-10-solo-generation-cancel-api AC #3e). Values (the
+	// Budget, the process scope) ride along.
+	commitCtx := context.WithoutCancel(ctx)
 
 	// Provenance strictly AFTER a confirmed place (P9). The reverse order
 	// leaves a `completed` row pointing at a file a crash never wrote.
@@ -310,13 +319,13 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		hits := scope.cacheHitCues
 		run.CacheHitCues = &hits
 	}
-	p.stampRunSpend(ctx, run)
-	if err := p.recordTerminal(ctx, run); err != nil {
+	p.stampRunSpend(commitCtx, run)
+	if err := p.recordTerminal(commitCtx, run); err != nil {
 		// The sidecar IS on disk. Reverting the media row to `not_searched`
 		// keeps the item retryable, and the next run's P5 pre-flight will see
 		// the acceptable sidecar and early-exit — so the inconsistency
 		// self-heals rather than costing another translation.
-		return p.failItem(ctx, ref, run, "record provenance", err)
+		return p.failItem(commitCtx, ref, run, "record provenance", err)
 	}
 
 	if transientCount > 0 {
@@ -331,11 +340,11 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		// and the pre-flight (preflightSkip) reads this run's transient_count
 		// and lets the retry through. The retry costs only the English cues:
 		// everything else is in the segment cache.
-		p.restoreMediaStatus(ctx, ref, item)
+		p.restoreMediaStatus(commitCtx, ref, item)
 		p.emitProgress(ref, StageComplete, fmt.Sprintf(completePartialFormat, transientCount))
 	} else {
-		if err := p.setMediaStatus(ctx, ref, models.SubtitleStatusFound, placed.SubtitlePath, deliveredLanguage); err != nil {
-			return p.failItem(ctx, ref, run, "mark media found", err)
+		if err := p.setMediaStatus(commitCtx, ref, models.SubtitleStatusFound, placed.SubtitlePath, deliveredLanguage); err != nil {
+			return p.failItem(commitCtx, ref, run, "mark media found", err)
 		}
 		p.emitProgress(ref, StageComplete, "subtitle generated")
 	}
@@ -598,6 +607,10 @@ func (p *Pipeline) transcribeFallback(
 		return p.failItem(ctx, ref, run, "asr fallback", err)
 	}
 
+	// The ASR leg returned success: its sidecar and its media-row verdict are
+	// written, so the run is complete whatever arrives now (the place-path
+	// rationale above, disc-2026-10-solo-generation-cancel-api AC #3e).
+	ctx = context.WithoutCancel(ctx)
 	completedAt := p.now().UTC()
 	run.Status = models.SubtitleRunCompleted
 	run.Route = models.SubtitleRunRouteASR // sub-7-6a: the lane that actually ran
@@ -892,6 +905,10 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 	// failure — otherwise a shutdown strands every in-flight item at
 	// `translating` with no `failed` run row explaining why.
 	cleanupCtx := context.WithoutCancel(ctx)
+	// Decided ONCE, here: the run row, the media row and the returned error
+	// all follow this one answer (see the switch below for why ctx.Err() is
+	// asked too).
+	callerCancelled := isCallerCancellation(cause, ctx.Err())
 
 	if run != nil && run.ID != "" {
 		completedAt := p.now().UTC()
@@ -918,7 +935,7 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 		//     stderr can cut off the trailing "deadline exceeded";
 		//  3. anything else, an ordinary deadline included, is unmarked.
 		switch {
-		case isCallerCancellation(cause, ctx.Err()):
+		case callerCancelled:
 			msg = CancelledRunPrefix + msg
 		case isQueueTimeout(cause):
 			msg = QueueTimeoutRunPrefix + msg
@@ -932,13 +949,24 @@ func (p *Pipeline) failItem(ctx context.Context, ref MediaRef, run *models.Subti
 		}
 	}
 
-	if serr := p.setMediaStatus(cleanupCtx, ref, models.SubtitleStatusNotSearched, "", ""); serr != nil {
+	if scope := processScopeFrom(ctx); scope != nil && scope.restoreOnCancel && callerCancelled {
+		p.settleCancelledMedia(cleanupCtx, ref, scope.loaded)
+	} else if serr := p.setMediaStatus(cleanupCtx, ref, models.SubtitleStatusNotSearched, "", ""); serr != nil {
 		p.logger.Error("failed to revert media subtitle status after a failed run",
 			"media_id", ref.ID, "media_type", ref.MediaType, "error", serr)
 	}
 
 	p.emitProgress(ref, StageFailed, err.Error())
 	p.logger.Error("subtitle pipeline failed", "media_id", ref.ID, "media_type", ref.MediaType, "stage", stage, "error", err)
+	if callerCancelled && !errors.Is(err, context.Canceled) {
+		// A subprocess the cancel killed says only "signal: killed". Put the
+		// verdict this function just recorded into the error itself, so a
+		// caller classifying it (SoloRunner's transcription_failed) reads the
+		// row's answer from the error alone — never from a ctx that a LATER
+		// stop may have cancelled after this run had already failed for
+		// another reason (disc-2026-10-solo-generation-cancel-api CR H1).
+		err = fmt.Errorf("%w: %w", err, context.Canceled)
+	}
 	return nil, err
 }
 
@@ -977,6 +1005,57 @@ func (p *Pipeline) restoreMediaStatus(ctx context.Context, ref MediaRef, item *M
 		p.logger.Error("failed to restore media subtitle status after pre-flight refusal",
 			"media_id", ref.ID, "media_type", ref.MediaType, "error", err)
 	}
+}
+
+// settleCancelledMedia is failItem's media-row policy for a run the CALLER
+// stopped under ProcessItemOptions.RestoreMediaOnCancel
+// (disc-2026-10-solo-generation-cancel-api AC #5). It re-reads the row:
+//
+//   - still one of the in-flight statuses (the pipeline's own `extracting` /
+//     `translating`), or unreadable → put back what Load found
+//     (restoreMediaStatus's values). A cancelled RE-generation leaves the old
+//     subtitle file on disk, so the row must keep pointing at it;
+//   - anything else → some leg wrote a verdict during the run and it is the
+//     truth now: the ASR leg writes `untranslated` + the English SRT path when
+//     it is stopped mid-translation (TranscriptionService.translateAndPersist),
+//     and that path is what lets the next click translate instead of paying
+//     for the speech recognition again. Keep it.
+//
+// A Load-time status that is itself in flight (a row stranded by a crash) or
+// unknown falls back to `not_searched`, failItem's ordinary floor.
+// ctx must already be cancellation-free (failItem's cleanupCtx).
+func (p *Pipeline) settleCancelledMedia(ctx context.Context, ref MediaRef, loaded *MediaItem) {
+	cur, err := p.media.Load(ctx, ref)
+	switch {
+	case err != nil:
+		p.logger.Warn("cancelled run: could not re-read the media row — restoring what Load found",
+			"media_id", ref.ID, "media_type", ref.MediaType, "error", err)
+	case cur != nil && cur.SubtitleStatus.IsValid() && !isInFlightSubtitleStatus(cur.SubtitleStatus):
+		p.logger.Info("cancelled run: keeping the media row a leg wrote during the run",
+			"media_id", ref.ID, "media_type", ref.MediaType, "status", string(cur.SubtitleStatus))
+		return
+	}
+
+	status, path, language := models.SubtitleStatusNotSearched, "", ""
+	if loaded != nil && loaded.SubtitleStatus.IsValid() && !isInFlightSubtitleStatus(loaded.SubtitleStatus) {
+		status, path, language = loaded.SubtitleStatus, loaded.SubtitlePath, loaded.SubtitleLanguage
+	}
+	if serr := p.setMediaStatus(ctx, ref, status, path, language); serr != nil {
+		p.logger.Error("failed to restore media subtitle status after a cancelled run",
+			"media_id", ref.ID, "media_type", ref.MediaType, "error", serr)
+	}
+}
+
+// isInFlightSubtitleStatus names the statuses that only mean "a run is
+// working on this right now" — never a resting state for a row nobody is
+// working on.
+func isInFlightSubtitleStatus(status models.SubtitleStatus) bool {
+	switch status {
+	case models.SubtitleStatusSearching, models.SubtitleStatusProbing,
+		models.SubtitleStatusExtracting, models.SubtitleStatusTranslating:
+		return true
+	}
+	return false
 }
 
 // maxErrorMessage bounds what lands in the error_message column: a wrapped

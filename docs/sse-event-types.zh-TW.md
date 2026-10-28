@@ -172,6 +172,13 @@ es.addEventListener('scan_progress', (e: MessageEvent) => {
 `transcription_progress`／`translation_progress`／`transcription_complete`／`transcription_failed` 事件
 （宣告在 `transcription_service.go`）也帶這兩個欄位、意義相同，包括語音辨識那段送出的事件。
 
+**單集生成被停止。** `POST /api/v1/{movies|episodes}/{id}/transcribe/cancel` 會停下正在跑的單集生成（pipeline
+模式）。沒有新的事件種類：這個工作跟其他沒成功的結束一樣，以帶它 `job_id` 的 `transcription_failed` 結束，
+帶上面的 `spent_usd`／`budget_usd`、`failure_reason: "cancelled"` 與 `message: "已停止生成"`（其餘文字由前端依代碼決定，
+跟其他原因一樣）。它仍是這個工作的**最後一個**事件，而且在這部片能再次生成之前送出。停止若在字幕檔已放好之後才到，
+不會改變結果——工作以 `transcription_complete` 結束。語音辨識那段（有自己的 `job_id`）可能先送出自己的
+`transcription_failed`，跟任何失敗時一樣。
+
 **管線階段** — 同一組 wire enum，兩條發送路徑：
 
 _搜尋路徑（`Engine`，依序）：_

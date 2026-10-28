@@ -79,6 +79,12 @@ type PhaseReader interface {
 type SoloGenerator interface {
 	Start(ctx context.Context, ref subtitle.MediaRef, modelID string) (jobID string, err error)
 	Status(ref subtitle.MediaRef) (inProgress bool, jobID string)
+	// Cancel stops ref's solo job, leaving any other owner of the item alone
+	// (disc-2026-10-solo-generation-cancel-api). Idempotent.
+	Cancel(ref subtitle.MediaRef) subtitle.SoloCancelResult
+	// Cancelling reports a solo job that was told to stop and is still
+	// winding down — the status route's `cancelling`.
+	Cancelling(ref subtitle.MediaRef) bool
 }
 
 // TranscriptionEstimator prices what a click on 生成字幕 would start (story
@@ -132,9 +138,11 @@ func (h *TranscriptionHandler) SetPhaseReader(r PhaseReader) {
 func (h *TranscriptionHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.POST("/movies/:id/transcribe", h.TranscribeMovie)
 	rg.GET("/movies/:id/transcribe/status", h.transcriptionStatusFor(models.SubtitleRunMediaMovie))
+	rg.POST("/movies/:id/transcribe/cancel", h.CancelMovieTranscription)
 	if h.episodeService != nil {
 		rg.POST("/episodes/:id/transcribe", h.TranscribeEpisode)
 		rg.GET("/episodes/:id/transcribe/status", h.transcriptionStatusFor(models.SubtitleRunMediaEpisode))
+		rg.POST("/episodes/:id/transcribe/cancel", h.CancelEpisodeTranscription)
 	}
 	if h.estimator != nil {
 		rg.GET("/movies/:id/transcribe/estimate", h.EstimateMovie)
@@ -243,7 +251,7 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 // @Success      202  {object}  APIResponse  "{job_id, message}"
 // @Failure      400  {object}  APIResponse  "VALIDATION_INVALID_FORMAT (empty id) / VALIDATION_REQUIRED_FIELD (no file path, or file missing on disk)"
 // @Failure      404  {object}  APIResponse  "episode not found"
-// @Failure      409  {object}  APIResponse  "TRANSCRIPTION_IN_PROGRESS — a run for this episode is already in flight / SUBTITLE_TARGET_NOT_WRITABLE — the episode folder refused a write probe; refused before any paid call"
+// @Failure      409  {object}  APIResponse  "TRANSCRIPTION_IN_PROGRESS — a run for this episode is already in flight (or, in pipeline mode, a stopped run is still winding down — the message says so) / SUBTITLE_TARGET_NOT_WRITABLE — the episode folder refused a write probe; refused before any paid call"
 // @Failure      500  {object}  APIResponse  "failed to start"
 // @Failure      503  {object}  APIResponse  "TRANSCRIPTION_DISABLED — no ASR capability AND this episode cannot resume translate-only"
 // @Router       /api/v1/episodes/{id}/transcribe [post]
@@ -331,6 +339,13 @@ func (h *TranscriptionHandler) startSolo(c *gin.Context, ref subtitle.MediaRef, 
 	jobID, err := h.solo.Start(c.Request.Context(), ref, "")
 	if err != nil {
 		switch {
+		case errors.Is(err, subtitle.ErrSoloGenerationCancelling):
+			// Same code as any in-flight refusal, so the dialog's outcome
+			// parsing needs no change; the words say why and for how long
+			// (disc-2026-10-solo-generation-cancel-api AC #6).
+			ErrorResponse(c, http.StatusConflict, "TRANSCRIPTION_IN_PROGRESS",
+				"正在停止上一次的生成，請過幾秒再按",
+				"停止完成後就能重新生成。")
 		case errors.Is(err, services.ErrTranscriptionInProgress):
 			subject := "這部影片"
 			if ref.MediaType == models.SubtitleRunMediaEpisode {
@@ -452,6 +467,11 @@ type TranscriptionStatusResponse struct {
 	Phase      string   `json:"phase,omitempty"`
 	Message    string   `json:"message,omitempty"`
 	Percentage *float64 `json:"percentage,omitempty"`
+	// Cancelling is true while a solo job that was told to stop is still
+	// winding down — the 停止中… state a reopened dialog should show. Absent
+	// otherwise, and always in legacy mode (additive,
+	// disc-2026-10-solo-generation-cancel-api AC #6).
+	Cancelling bool `json:"cancelling,omitempty"`
 }
 
 // withPhase fills the stage fields of a running item's status.
@@ -477,7 +497,7 @@ func (h *TranscriptionHandler) withPhase(resp TranscriptionStatusResponse, media
 // @Tags         subtitles
 // @Produce      json
 // @Param        id path string true "Movie or episode ID (UUID)"
-// @Success      200 {object} APIResponse "data: {in_progress: bool, job_id?: string, phase?: string, message?: string, percentage?: number} — job_id only for a running solo click in pipeline mode; phase/message/percentage only while running and once the run reported progress"
+// @Success      200 {object} APIResponse "data: {in_progress: bool, job_id?: string, phase?: string, message?: string, percentage?: number, cancelling?: bool} — job_id only for a running solo click in pipeline mode; phase/message/percentage only while running and once the run reported progress; cancelling=true while a stopped solo click is still winding down"
 // @Router       /api/v1/movies/{id}/transcribe/status [get]
 // @Router       /api/v1/episodes/{id}/transcribe/status [get]
 func (h *TranscriptionHandler) TranscriptionStatus(c *gin.Context) {
@@ -494,11 +514,11 @@ func (h *TranscriptionHandler) transcriptionStatusFor(mediaType string) gin.Hand
 			// Pipeline mode: the pool's in-flight set is the truth (solo click,
 			// batch and workers all reserve there); the legacy table only sees
 			// the ASR leg and would read idle while a track is being translated.
-			inProgress, jobID := h.solo.Status(subtitle.MediaRef{ID: id, MediaType: mediaType})
-			c.JSON(http.StatusOK, APIResponse{
-				Success: true,
-				Data:    h.withPhase(TranscriptionStatusResponse{InProgress: inProgress, JobID: jobID}, id),
-			})
+			ref := subtitle.MediaRef{ID: id, MediaType: mediaType}
+			inProgress, jobID := h.solo.Status(ref)
+			resp := h.withPhase(TranscriptionStatusResponse{InProgress: inProgress, JobID: jobID}, id)
+			resp.Cancelling = inProgress && h.solo.Cancelling(ref)
+			c.JSON(http.StatusOK, APIResponse{Success: true, Data: resp})
 			return
 		}
 		c.JSON(http.StatusOK, APIResponse{
@@ -506,6 +526,71 @@ func (h *TranscriptionHandler) transcriptionStatusFor(mediaType string) gin.Hand
 			Data:    h.withPhase(TranscriptionStatusResponse{InProgress: h.transcriptionService.IsInProgress(id)}, id),
 		})
 	}
+}
+
+// TranscriptionCancelResponse is the POST …/transcribe/cancel payload
+// (disc-2026-10-solo-generation-cancel-api AC #1 [@contract-v1]).
+type TranscriptionCancelResponse struct {
+	// Cancelled: this item's detail-page generation now has a stop in effect
+	// and is winding down (true again on a repeated call). false: there was
+	// no detail-page generation to stop.
+	Cancelled bool `json:"cancelled"`
+	// Running: something is still generating the item after this call —
+	// including the just-stopped run until its transcription_failed
+	// (failure_reason=cancelled) terminal event is out.
+	Running bool `json:"running"`
+	// Owner is present only while Running: "solo" (the detail-page click this
+	// route stops), "other" (the consent batch, the pool or the free lane —
+	// left alone; the batch stops via POST /subtitles/generation-batch/cancel)
+	// or "legacy" (legacy mode's click, which cannot be stopped).
+	Owner string `json:"owner,omitempty"`
+}
+
+// cancelOwnerLegacy is TranscriptionCancelResponse.Owner for a legacy-mode
+// click (no SoloGenerator wired).
+const cancelOwnerLegacy = "legacy"
+
+// CancelMovieTranscription stops a running detail-page generation for one movie.
+//
+// @Summary      Stop the subtitle generation started from this movie's page
+// @Description  Idempotent. Stops the detail-page 生成字幕 run for this movie in any phase (queued, extracting, transcribing, translating); a stop that lands after the subtitle file was placed changes nothing — the run completes. The run then ends with the transcription_failed SSE event carrying failure_reason=cancelled; its row is recorded as failed (中途停止) with the spend so far, and the movie's subtitle record is left as it was before the run (or as the speech-recognition leg already recorded it). Nothing running → cancelled=false, running=false. A run owned by the consent batch, the pool or the free lane is not touched (cancelled=false, running=true, owner=other). Legacy mode (VIDO_SUBTITLE_PIPELINE_MODE=legacy) cannot stop a run: cancelled=false, owner=legacy while one runs. Does not look the movie up.
+// @Tags         subtitles
+// @Produce      json
+// @Param        id path string true "Movie ID (UUID)"
+// @Success      200 {object} APIResponse{data=TranscriptionCancelResponse} "{cancelled, running, owner?: solo|other|legacy}"
+// @Router       /api/v1/movies/{id}/transcribe/cancel [post]
+func (h *TranscriptionHandler) CancelMovieTranscription(c *gin.Context) {
+	h.cancelTranscription(c, models.SubtitleRunMediaMovie)
+}
+
+// CancelEpisodeTranscription stops a running detail-page generation for one episode.
+//
+// @Summary      Stop the subtitle generation started from this episode's page
+// @Description  The episode counterpart of POST /movies/{id}/transcribe/cancel — same semantics and payload. Mounted only where the episode route is.
+// @Tags         subtitles
+// @Produce      json
+// @Param        id path string true "Episode ID (UUID)"
+// @Success      200 {object} APIResponse{data=TranscriptionCancelResponse} "{cancelled, running, owner?: solo|other|legacy}"
+// @Router       /api/v1/episodes/{id}/transcribe/cancel [post]
+func (h *TranscriptionHandler) CancelEpisodeTranscription(c *gin.Context) {
+	h.cancelTranscription(c, models.SubtitleRunMediaEpisode)
+}
+
+func (h *TranscriptionHandler) cancelTranscription(c *gin.Context, mediaType string) {
+	id := c.Param("id")
+	if h.solo == nil {
+		// Legacy mode: TranscriptionService keeps no cancel for its detached
+		// solo jobs, and this story does not add one — say so, never stop
+		// anything (AC #7).
+		resp := TranscriptionCancelResponse{Running: h.transcriptionService.IsInProgress(id)}
+		if resp.Running {
+			resp.Owner = cancelOwnerLegacy
+		}
+		SuccessResponse(c, resp)
+		return
+	}
+	r := h.solo.Cancel(subtitle.MediaRef{ID: id, MediaType: mediaType})
+	SuccessResponse(c, TranscriptionCancelResponse{Cancelled: r.Cancelled, Running: r.Running, Owner: r.Owner})
 }
 
 // EstimateMovie prices a click on 生成字幕 for one movie.
