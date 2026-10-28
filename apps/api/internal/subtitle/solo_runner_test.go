@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -686,30 +687,24 @@ func TestSoloRunner_CleanupOnlyForgetsItsOwnJob(t *testing.T) {
 
 func TestSoloRunner_ActivityAndUsageSeeRunningJobs(t *testing.T) {
 	release := make(chan struct{})
-	s := newSoloHarness(t, translateDecision("Good morning."), nil, WithSoloRunBudgetUSD(3))
+	started := time.Date(2026, 10, 28, 21, 30, 0, 0, time.UTC)
+	s := newSoloHarness(t, translateDecision("Good morning."), nil, WithSoloRunBudgetUSD(3),
+		WithSoloClock(func() time.Time { return started }))
 	s.trans.fn = func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
 		<-release
 		return map[int]string{blocks[0].Index: "早安"}, ai.CompletionUsage{}, nil
 	}
 
-	active, _, current, _, _ := s.runner.ActivityProgress()
-	assert.False(t, active)
-	assert.Zero(t, current)
+	assert.Empty(t, s.runner.ActiveSoloJobs())
 	_, _, ok := s.runner.ActiveManualUsage()
 	assert.False(t, ok, "nothing running → absent, never $0")
 
 	_, err := s.runner.Start(context.Background(), s.ref, "")
 	require.NoError(t, err)
 
-	active, _, current, _, item := s.runner.ActivityProgress()
-	assert.True(t, active)
-	assert.Equal(t, 1, current)
-	assert.Equal(t, "怪奇物語", item)
-	// disc-2026-10-activity-generation-progress-detail: the one running item
-	// is named for the Activity row's step.
-	id, named := s.runner.ActiveMediaID()
-	assert.True(t, named)
-	assert.Equal(t, s.ref.ID, id)
+	// disc-2026-10-activity-solo-jobs-collapsed: one snapshot per job.
+	assert.Equal(t, []services.SoloJobSnapshot{{MediaID: s.ref.ID, Title: "怪奇物語", StartedAt: started}},
+		s.runner.ActiveSoloJobs())
 	spent, budget, ok := s.runner.ActiveManualUsage()
 	assert.True(t, ok)
 	assert.Equal(t, 0.0, spent)
@@ -717,10 +712,64 @@ func TestSoloRunner_ActivityAndUsageSeeRunningJobs(t *testing.T) {
 
 	close(release)
 	s.runner.waitIdle()
-	active, _, _, _, _ = s.runner.ActivityProgress()
-	assert.False(t, active)
-	_, named = s.runner.ActiveMediaID()
-	assert.False(t, named, "idle names nothing")
+	assert.Empty(t, s.runner.ActiveSoloJobs(), "a finished job leaves the list")
+}
+
+// slotWaitingTranscriber stands in for the ASR leg: it waits for "the
+// extraction slot" the way AudioExtractorService does — through the job ctx's
+// observer — and then works, each step gated by the test.
+type slotWaitingTranscriber struct {
+	waiting, working chan struct{} // closed by the transcriber
+	getSlot, finish  chan struct{} // closed by the test
+}
+
+func (f *slotWaitingTranscriber) Available() bool { return true }
+
+func (f *slotWaitingTranscriber) Transcribe(ctx context.Context, _ MediaRef, _, _ string) error {
+	services.ReportExtractWait(ctx, true)
+	close(f.waiting)
+	<-f.getSlot
+	services.ReportExtractWait(ctx, false)
+	close(f.working)
+	<-f.finish
+	return nil
+}
+
+func TestSoloRunner_JobWaitingForTheExtractionSlotIsQueued(t *testing.T) {
+	asr := &slotWaitingTranscriber{
+		waiting: make(chan struct{}), working: make(chan struct{}),
+		getSlot: make(chan struct{}), finish: make(chan struct{}),
+	}
+	var mu sync.Mutex
+	clock := time.Date(2026, 10, 28, 21, 30, 0, 0, time.UTC)
+	now := func() time.Time { mu.Lock(); defer mu.Unlock(); return clock }
+	s := newSoloHarness(t, noTextDecision(), []PipelineOption{WithSpeechTranscriber(asr)}, WithSoloClock(now))
+	s.ref = MediaRef{ID: "ep-5", MediaType: models.SubtitleRunMediaEpisode}
+
+	_, err := s.runner.Start(context.Background(), s.ref, "")
+	require.NoError(t, err)
+	startedAt := now()
+
+	mu.Lock()
+	clock = clock.Add(2 * time.Second)
+	mu.Unlock()
+	<-asr.waiting
+	snaps := s.runner.ActiveSoloJobs()
+	require.Len(t, snaps, 1)
+	assert.True(t, snaps[0].Queued, "blocked on the extraction slot = 排隊中")
+	assert.Equal(t, startedAt.Add(2*time.Second), snaps[0].QueuedAt)
+	assert.Equal(t, startedAt, snaps[0].StartedAt)
+
+	close(asr.getSlot)
+	<-asr.working
+	snaps = s.runner.ActiveSoloJobs()
+	require.Len(t, snaps, 1)
+	assert.False(t, snaps[0].Queued, "holding the slot = running again")
+	assert.True(t, snaps[0].QueuedAt.IsZero())
+
+	close(asr.finish)
+	s.runner.waitIdle()
+	assert.Empty(t, s.runner.ActiveSoloJobs())
 }
 
 // releaseSpyGuard records how many events the hub held when Release ran.

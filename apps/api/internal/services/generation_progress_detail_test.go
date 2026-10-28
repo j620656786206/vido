@@ -106,7 +106,7 @@ func (f fakeSteps) Step(mediaID string) (string, int, int, bool) {
 	return s.Phase, s.Current, s.Total, ok
 }
 
-func activityWith(generation, transcription batchJobSource) *ActivityService {
+func activityWith(generation batchJobSource, transcription soloJobLister) *ActivityService {
 	return NewActivityService(fakeScan{}, fakeBatch{}, generation, transcription,
 		fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{})
 }
@@ -123,8 +123,7 @@ func jobOfKind(t *testing.T, a *ActivitySummary, kind string) ActiveJob {
 }
 
 func TestActivity_TranscriptionRowShowsTheRunningItemsStep(t *testing.T) {
-	solo := namedBatch{fakeBatch: fakeBatch{active: true, current: 1, item: "See S01E02"}, mediaID: "ep-1", named: true}
-	svc := activityWith(fakeBatch{}, solo)
+	svc := activityWith(fakeBatch{}, fakeSoloJobs{{MediaID: "ep-1", Title: "See S01E02"}})
 	svc.SetStepReader(fakeSteps{"ep-1": {Phase: "transcribing", Current: 2, Total: 6}})
 
 	job := jobOfKind(t, ptr(svc.GetActivity(context.Background())), "transcription")
@@ -135,8 +134,7 @@ func TestActivity_TranscriptionRowShowsTheRunningItemsStep(t *testing.T) {
 }
 
 func TestActivity_TranscriptionStepWithoutCountKeepsNoPercent(t *testing.T) {
-	solo := namedBatch{fakeBatch: fakeBatch{active: true, current: 1}, mediaID: "ep-1", named: true}
-	svc := activityWith(fakeBatch{}, solo)
+	svc := activityWith(fakeBatch{}, fakeSoloJobs{{MediaID: "ep-1"}})
 	svc.SetStepReader(fakeSteps{"ep-1": {Phase: "extracting"}})
 
 	job := jobOfKind(t, ptr(svc.GetActivity(context.Background())), "transcription")
@@ -145,25 +143,16 @@ func TestActivity_TranscriptionStepWithoutCountKeepsNoPercent(t *testing.T) {
 	assert.Zero(t, job.PercentDone, "no count — still no fabricated percent")
 }
 
-func TestActivity_NoStepWhenItCannotBeNamed(t *testing.T) {
-	steps := fakeSteps{"ep-1": {Phase: "transcribing", Current: 2, Total: 6}}
-	cases := map[string]*ActivityService{
-		"several solo jobs": activityWith(fakeBatch{},
-			namedBatch{fakeBatch: fakeBatch{active: true, current: 2}, named: false}),
-		"source cannot name its item": activityWith(fakeBatch{}, fakeBatch{active: true, current: 1}),
-		"nothing recorded for the item": activityWith(fakeBatch{},
-			namedBatch{fakeBatch: fakeBatch{active: true, current: 1}, mediaID: "ep-9", named: true}),
-	}
-	for name, svc := range cases {
-		t.Run(name, func(t *testing.T) {
-			svc.SetStepReader(steps)
-			job := jobOfKind(t, ptr(svc.GetActivity(context.Background())), "transcription")
-			assert.Nil(t, job.Step)
-			assert.Zero(t, job.PercentDone)
-		})
-	}
-	t.Run("no reader wired — the row is exactly what it was", func(t *testing.T) {
-		svc := activityWith(fakeBatch{}, namedBatch{fakeBatch: fakeBatch{active: true, current: 1}, mediaID: "ep-1", named: true})
+func TestActivity_NoStepWhenNothingIsRecorded(t *testing.T) {
+	t.Run("nothing recorded for the item", func(t *testing.T) {
+		svc := activityWith(fakeBatch{}, fakeSoloJobs{{MediaID: "ep-9"}})
+		svc.SetStepReader(fakeSteps{"ep-1": {Phase: "transcribing", Current: 2, Total: 6}})
+		job := jobOfKind(t, ptr(svc.GetActivity(context.Background())), "transcription")
+		assert.Nil(t, job.Step)
+		assert.Zero(t, job.PercentDone)
+	})
+	t.Run("no reader wired — no step", func(t *testing.T) {
+		svc := activityWith(fakeBatch{}, fakeSoloJobs{{MediaID: "ep-1"}})
 		job := jobOfKind(t, ptr(svc.GetActivity(context.Background())), "transcription")
 		assert.Nil(t, job.Step)
 	})
@@ -172,7 +161,7 @@ func TestActivity_NoStepWhenItCannotBeNamed(t *testing.T) {
 func TestActivity_BatchRowKeepsItemCountAndAddsTheCurrentItemsStep(t *testing.T) {
 	batch := namedBatch{fakeBatch: fakeBatch{active: true, percentDone: 15, current: 3, total: 20, item: "See S01E02"},
 		mediaID: "ep-1", named: true}
-	svc := activityWith(batch, fakeBatch{})
+	svc := activityWith(batch, fakeSoloJobs(nil))
 	svc.SetStepReader(fakeSteps{"ep-1": {Phase: "translating", Current: 120, Total: 659}})
 
 	job := jobOfKind(t, ptr(svc.GetActivity(context.Background())), "generation_batch")
@@ -184,27 +173,3 @@ func TestActivity_BatchRowKeepsItemCountAndAddsTheCurrentItemsStep(t *testing.T)
 }
 
 func ptr[T any](v T) *T { return &v }
-
-// ─── The real sources name their one item ──────────────────────────────────
-
-func TestTranscriptionService_ActiveMediaIDCountsSoloJobsOnly(t *testing.T) {
-	svc := newActivityTestService()
-	_, ok := svc.ActiveMediaID()
-	assert.False(t, ok, "idle")
-
-	_, err := svc.acquireJob("batch-1", "", false)
-	require.NoError(t, err)
-	_, ok = svc.ActiveMediaID()
-	assert.False(t, ok, "a batch job is the batch row's")
-
-	_, err = svc.acquireJob("solo-1", "沙丘", true)
-	require.NoError(t, err)
-	id, ok := svc.ActiveMediaID()
-	assert.True(t, ok)
-	assert.Equal(t, "solo-1", id)
-
-	_, err = svc.acquireJob("solo-2", "奧本海默", true)
-	require.NoError(t, err)
-	_, ok = svc.ActiveMediaID()
-	assert.False(t, ok, "two solo jobs — which one would the row describe?")
-}

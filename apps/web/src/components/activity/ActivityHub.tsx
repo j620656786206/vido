@@ -91,6 +91,18 @@ function stepText(step: ActiveJobStep | undefined): string | null {
   return step ? (STEP_WORDS[step.phase]?.idle ?? null) : null;
 }
 
+/**
+ * disc-2026-10-activity-solo-jobs-collapsed (Sally): a solo job waiting for the
+ * extraction slot says so in the readout's own voice — no step, no bar.
+ */
+function QueuedReadout() {
+  return (
+    <span className="text-xs text-[var(--text-secondary)]" data-testid="activity-job-queued">
+      排隊中
+    </span>
+  );
+}
+
 function StepReadout({ step }: { step: ActiveJobStep | undefined }) {
   const counted = countedStep(step);
   if (counted) {
@@ -145,6 +157,8 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
             <span className="font-mono text-xs text-[var(--text-secondary)]">
               {j.current ?? 0} / {j.total}
             </span>
+          ) : NO_PERCENT_KINDS.has(j.kind) && j.queued ? (
+            <QueuedReadout />
           ) : NO_PERCENT_KINDS.has(j.kind) ? (
             <StepReadout step={j.step} />
           ) : (
@@ -162,7 +176,7 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
             right={right}
             progress={
               NO_PERCENT_KINDS.has(j.kind)
-                ? countedStep(j.step)
+                ? countedStep(j.step) && !j.queued
                   ? j.percentDone
                   : undefined
                 : j.percentDone
@@ -170,12 +184,16 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
             testId={`activity-job-${j.kind}`}
           />
         );
+        // One row per solo job (disc-2026-10-activity-solo-jobs-collapsed): the
+        // media id keeps a row's identity while the backend reorders running /
+        // queued between polls.
+        const key = j.mediaId ? `${j.kind}-${j.mediaId}` : `${j.kind}-${i}`;
         // Story ux3-ai-2 — the generation-batch row LINKS to the immersive workspace
         // (the WATCHER); the header CTA stays the LAUNCHER (dialog). D4-1: one row, one link.
         if (j.kind === 'generation_batch') {
           return (
             <Link
-              key={`${j.kind}-${i}`}
+              key={key}
               to="/activity"
               search={{ view: 'generation' }}
               data-testid="activity-generation-batch-link"
@@ -185,7 +203,7 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
             </Link>
           );
         }
-        return <div key={`${j.kind}-${i}`}>{row}</div>;
+        return <div key={key}>{row}</div>;
       })}
     </ActivitySectionShell>
   );

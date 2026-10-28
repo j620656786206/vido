@@ -340,10 +340,16 @@ func (e *Extractor) Extract(ctx context.Context, mediaPath, tmpDir string, strea
 		if ahead > 0 && queuedAhead == 0 {
 			queuedAhead = ahead
 		}
+		// The job-level observer: a solo job waiting here is 排隊中 on the
+		// Activity page (disc-2026-10-activity-solo-jobs-collapsed).
+		services.ReportExtractWait(ctx, ahead > 0)
 		if notify != nil {
 			notify(ahead)
 		}
 	})
+	// Held or given up: either way no longer waiting. The gate only calls
+	// onWait(0) after an actual wait, and never on an abort.
+	services.ReportExtractWait(ctx, false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s (queued behind %d for %s): %w",
 			ErrSubtitleExtractWaitAborted, base, queuedAhead, waited.Round(time.Second), err)

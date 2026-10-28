@@ -40,7 +40,7 @@ func (f fakeRecentRuns) RecentTerminalRuns(_ context.Context, limit int) ([]repo
 }
 
 func newRecentOnlyService(parse parseJobSource, runs recentRunSource) *ActivityService {
-	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, parse)
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeSoloJobs(nil), fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, parse)
 	if runs != nil {
 		svc.SetRecentRuns(runs)
 	}

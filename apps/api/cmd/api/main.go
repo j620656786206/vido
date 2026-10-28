@@ -1765,7 +1765,10 @@ func main() {
 // port lives there and the concrete gate is adapted here).
 type extractSlotAdapter struct{ gate *subtitle.ExtractGate }
 
+// A wait on the gate reaches the job's extraction-wait observer, so a solo
+// job queued here shows 排隊中 on the Activity page
+// (disc-2026-10-activity-solo-jobs-collapsed).
 func (a extractSlotAdapter) Acquire(ctx context.Context) (func(), error) {
-	release, _, err := a.gate.Acquire(ctx, nil)
+	release, _, err := a.gate.Acquire(ctx, services.ExtractWaitReporter(ctx))
 	return release, err
 }

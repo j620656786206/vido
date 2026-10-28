@@ -87,6 +87,9 @@ type soloJob struct {
 	Title     string
 	Budget    *ai.Budget
 	StartedAt time.Time
+	// QueuedAt is when the run began waiting for the extraction slot; zero
+	// while it is not waiting. Guarded by SoloRunner.mu.
+	QueuedAt time.Time
 }
 
 // SoloRunnerOption configures one optional knob of NewSoloRunner.
@@ -260,6 +263,9 @@ func (s *SoloRunner) Start(ctx context.Context, ref MediaRef, modelID string) (j
 		defer s.wg.Done()
 		runCtx, cancel := context.WithCancel(ai.WithBudget(context.Background(), job.Budget))
 		defer cancel()
+		// The Activity row says 排隊中 while the run waits for the extraction
+		// slot (subtitle demux or audio extraction), and its step otherwise.
+		runCtx = services.WithExtractWaitObserver(runCtx, func(waiting bool) { s.setQueued(job, waiting) })
 
 		outcome, runErr := s.pipeline.ProcessItem(runCtx, ref, ProcessItemOptions{
 			Regenerate:            true,
@@ -297,34 +303,41 @@ func (s *SoloRunner) Status(ref MediaRef) (inProgress bool, jobID string) {
 	return s.guard.IsInFlight(ref), ""
 }
 
-// ActivityProgress is the Activity page's in-flight row for solo clicks —
-// the same primitive shape services.batchJobSource takes, so main.go can
-// compose this runner with TranscriptionService (legacy solo runs, and the
-// ASR leg of a pipeline run counts itself as Solo=false there, so nothing is
-// counted twice). currentItem is one running job's title when several run.
-func (s *SoloRunner) ActivityProgress() (active bool, percentDone, current, total int, currentItem string) {
+// ActiveSoloJobs is the Activity page's 進行中 list for solo clicks — one
+// snapshot per running job (disc-2026-10-activity-solo-jobs-collapsed), so
+// eight clicks read as eight rows instead of one. The ASR leg of a pipeline
+// run registers in TranscriptionService as Solo=false, so main.go can
+// concatenate this with that service's solo jobs without counting twice.
+// Unordered: the Activity service owns the row order.
+func (s *SoloRunner) ActiveSoloJobs() []services.SoloJobSnapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for _, job := range s.jobs {
-		current++
-		currentItem = job.Title
+	out := make([]services.SoloJobSnapshot, 0, len(s.jobs))
+	for ref, job := range s.jobs {
+		out = append(out, services.SoloJobSnapshot{
+			MediaID:   ref.ID,
+			Title:     job.Title,
+			StartedAt: job.StartedAt,
+			Queued:    !job.QueuedAt.IsZero(),
+			QueuedAt:  job.QueuedAt,
+		})
 	}
-	return current > 0, 0, current, 0, currentItem
+	return out
 }
 
-// ActiveMediaID names the one item this runner is generating, for the
-// Activity row's step (disc-2026-10-activity-generation-progress-detail).
-// ok=false when idle or when several run.
-func (s *SoloRunner) ActiveMediaID() (mediaID string, ok bool) {
+// setQueued is the job's extraction-wait observer (services.WithExtractWaitObserver):
+// true when its run starts waiting for the extraction slot, false once it
+// holds it. A repeated true keeps the original QueuedAt — the wait did not
+// restart.
+func (s *SoloRunner) setQueued(job *soloJob, waiting bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.jobs) != 1 {
-		return "", false
+	switch {
+	case !waiting:
+		job.QueuedAt = time.Time{}
+	case job.QueuedAt.IsZero():
+		job.QueuedAt = s.now().UTC()
 	}
-	for ref := range s.jobs {
-		mediaID = ref.ID
-	}
-	return mediaID, true
 }
 
 // ActiveManualUsage is GET /ai/usage's live-spend figure for solo clicks

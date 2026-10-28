@@ -31,8 +31,16 @@ export interface ActiveJob {
   detail?: string;
   current?: number;
   total?: number;
-  /** transcription / generation_batch only; absent when unknown. */
+  /** transcription / generation_batch only; absent when unknown, and on a queued row. */
   step?: ActiveJobStep;
+  /**
+   * transcription only — one row per solo 生成字幕 job
+   * (disc-2026-10-activity-solo-jobs-collapsed AC #7 `[@contract-v1]`). The
+   * item the job generates; the row's identity.
+   */
+  mediaId?: string;
+  /** transcription only — `true` while the job waits for the extraction slot; absent = running. */
+  queued?: boolean;
 }
 export interface ActiveJobsSection {
   status: SectionStatus;

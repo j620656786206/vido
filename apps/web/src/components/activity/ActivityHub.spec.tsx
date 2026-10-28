@@ -43,7 +43,7 @@ vi.mock('../subtitle/GenerationWorkspaceV2', () => ({
 import { useActivity } from '../../hooks/useActivity';
 import { useSubtitleSpend } from '../../hooks/useSubtitleSpend';
 import { ActivityHub } from './ActivityHub';
-import type { ActivitySummary, ActiveJobStep } from '../../services/activityService';
+import type { ActivitySummary, ActiveJob, ActiveJobStep } from '../../services/activityService';
 import type { SubtitleSpendSummary } from '../../services/subtitleSpendService';
 
 const mockUseActivity = vi.mocked(useActivity);
@@ -371,7 +371,7 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
       expect(row).not.toHaveTextContent('0%');
     });
 
-    it('no step (several jobs, or nothing reported yet) stays 「進行中」', async () => {
+    it('no step (nothing reported yet) stays 「進行中」', async () => {
       transcriptionWith(undefined);
       renderHub();
       const row = await screen.findByTestId('activity-job-transcription');
@@ -404,6 +404,110 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
       expect(row).toHaveTextContent('3 / 20');
       expect(row).toHaveTextContent('See S01E02 · 轉錄 2/6 段');
       expect(within(row).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '15');
+    });
+  });
+
+  // disc-2026-10-activity-solo-jobs-collapsed — eight 生成字幕 clicks read as
+  // ONE row with badge 1 on the NAS. One row per job; queued ones say 排隊中.
+  describe('one row per solo job', () => {
+    const lioness = (ep: number) => `特種部隊：母獅 S01E0${ep}`;
+    const eightJobs = (): ActiveJob[] => [
+      {
+        kind: 'transcription',
+        percentDone: 18,
+        detail: lioness(1),
+        mediaId: 'ep-1',
+        step: { phase: 'translating', current: 120, total: 659 },
+      },
+      {
+        kind: 'transcription',
+        percentDone: 13,
+        detail: lioness(2),
+        mediaId: 'ep-2',
+        step: { phase: 'transcribing', current: 3, total: 22 },
+      },
+      { kind: 'transcription', percentDone: 0, detail: lioness(3), mediaId: 'ep-3' },
+      ...[4, 5, 6, 7, 8].map((ep) => ({
+        kind: 'transcription',
+        percentDone: 0,
+        detail: lioness(ep),
+        mediaId: `ep-${ep}`,
+        queued: true,
+      })),
+    ];
+    const withJobs = (jobs: ActiveJob[]) =>
+      mockUseActivity.mockReturnValue(
+        result({ data: summary({ activeJobs: { status: 'ok', jobs } }) })
+      );
+
+    it('8 jobs → 8 rows in the order the backend sent, badge 8', async () => {
+      withJobs(eightJobs());
+      renderHub();
+
+      const rows = await screen.findAllByTestId('activity-job-transcription');
+      expect(rows).toHaveLength(8);
+      rows.forEach((row, i) => {
+        expect(row).toHaveTextContent('字幕生成中');
+        expect(row).toHaveTextContent(lioness(i + 1));
+      });
+      const header = screen.getByRole('heading', { name: '進行中' }).parentElement!;
+      expect(header).toHaveTextContent(/^進行中8$/);
+    });
+
+    it('running rows keep their own step; queued rows say 「排隊中」 with no bar', async () => {
+      withJobs(eightJobs());
+      renderHub();
+
+      const rows = await screen.findAllByTestId('activity-job-transcription');
+      expect(within(rows[0]).getByTestId('activity-job-step')).toHaveTextContent('翻譯 120/659 句');
+      expect(within(rows[0]).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '18');
+      expect(within(rows[1]).getByTestId('activity-job-step')).toHaveTextContent('轉錄 3/22 段');
+      expect(within(rows[2]).getByTestId('activity-job-step')).toHaveTextContent('進行中');
+      expect(within(rows[2]).queryByRole('progressbar')).toBeNull();
+      for (const row of rows.slice(3)) {
+        expect(within(row).getByTestId('activity-job-queued')).toHaveTextContent('排隊中');
+        expect(within(row).queryByTestId('activity-job-step')).toBeNull();
+        expect(within(row).queryByRole('progressbar')).toBeNull();
+        expect(row).not.toHaveTextContent('進行中');
+      }
+    });
+
+    it('a queued row draws no bar even if a stale step and percent came along', async () => {
+      withJobs([
+        {
+          kind: 'transcription',
+          percentDone: 40,
+          detail: lioness(5),
+          mediaId: 'ep-5',
+          queued: true,
+          step: { phase: 'transcribing', current: 2, total: 5 },
+        },
+      ]);
+      renderHub();
+
+      const row = await screen.findByTestId('activity-job-transcription');
+      expect(within(row).getByTestId('activity-job-queued')).toHaveTextContent('排隊中');
+      expect(within(row).queryByRole('progressbar')).toBeNull();
+    });
+
+    it('the batch row stays one row, ahead of the solo rows', async () => {
+      withJobs([
+        { kind: 'generation_batch', percentDone: 20, detail: '沙丘', current: 2, total: 10 },
+        ...eightJobs().slice(0, 2),
+      ]);
+      renderHub();
+
+      await screen.findAllByTestId('activity-job-transcription');
+      const testIds = Array.from(
+        document.querySelectorAll(
+          '[data-testid="activity-job-generation_batch"], [data-testid="activity-job-transcription"]'
+        )
+      ).map((el) => el.getAttribute('data-testid'));
+      expect(testIds).toEqual([
+        'activity-job-generation_batch',
+        'activity-job-transcription',
+        'activity-job-transcription',
+      ]);
     });
   });
 
