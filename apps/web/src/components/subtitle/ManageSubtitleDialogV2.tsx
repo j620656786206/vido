@@ -251,6 +251,12 @@ export interface ManageSubtitleDialogV2Props {
   isLoading?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Fired when 生成字幕 is accepted, answered "already running" (409), or the
+   *  dialog opens onto a run already going — so the parent can show the run on
+   *  its own list right away instead of waiting for the end
+   *  (disc-2026-10-episode-row-live-progress-a AC #1). Not fired for 尚未設定
+   *  (disabled) or a failed trigger. Read through a ref like onGenerationFailed. */
+  onGenerationStarted?: () => void;
   /** Fired on transcription_complete (AC 6 — parent invalidates detail + library caches). */
   onGenerationComplete?: () => void;
   /** Fired ONCE each time a run enters `failed` (dsr-6b AC #6) — the parent
@@ -275,6 +281,7 @@ export function ManageSubtitleDialogV2({
   isLoading = false,
   open,
   onOpenChange,
+  onGenerationStarted,
   onGenerationComplete,
   onGenerationFailed,
   onDownloadSuccess,
@@ -410,6 +417,13 @@ export function ManageSubtitleDialogV2({
     refreshEstimate();
   }, [subtitleStatus, refreshEstimate]);
 
+  // Same ref treatment as onGenerationFailed: the attach effect below must not
+  // re-run because the parent passed a fresh arrow.
+  const onGenerationStartedRef = useRef(onGenerationStarted);
+  useEffect(() => {
+    onGenerationStartedRef.current = onGenerationStarted;
+  });
+
   // Dormant fetch section (reuses the Epic 8 hook; results WITHOUT chips/scores).
   // Named onlineSearch — `fetch` would shadow window.fetch inside this component.
   const onlineSearch = useSubtitleSearch();
@@ -428,6 +442,7 @@ export function ManageSubtitleDialogV2({
       // job id (pipeline mode) tells the hook WHICH terminal is ours — the ASR
       // leg's own complete and the pipeline's D6 complete fire first.
       setGenView('progress');
+      onGenerationStartedRef.current?.();
       if (outcome.status === 'started') {
         generation.startTracking(mediaId, outcome.result.jobId);
         return;
@@ -471,6 +486,9 @@ export function ManageSubtitleDialogV2({
     if (!open || !alreadyRunning || genView !== 'idle') return;
     setGenView('progress');
     startTracking(mediaId, runningStatus?.jobId, runningStatus);
+    // The list behind the dialog may still show the row as idle (it was
+    // fetched before this run began) — let it catch up.
+    onGenerationStartedRef.current?.();
   }, [open, alreadyRunning, genView, startTracking, mediaId, runningStatus]);
 
   const handleOpenChange = useCallback(

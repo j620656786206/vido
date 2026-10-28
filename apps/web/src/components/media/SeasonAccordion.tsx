@@ -16,6 +16,7 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl } from '../../lib/image';
 import { useSeasonEpisodes } from '../../hooks/useMediaDetails';
+import { useEpisodeGenerationLive } from '../../hooks/useEpisodeGenerationLive';
 import type { MergedEpisode, SeasonSummary } from '../../types/library';
 import { ManageSubtitleDialogV2 } from '../subtitle/ManageSubtitleDialogV2';
 import { EpisodeList, canManageEpisodeSubtitle, episodeCode } from './EpisodeList';
@@ -64,6 +65,10 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
     season.seasonNumber,
     isExpanded
   );
+
+  // disc-2026-10-episode-row-live-progress-a: the J11 spinner appears when a
+  // run starts and turns into the result when it ends, with the dialog closed.
+  const live = useEpisodeGenerationLive({ episodes: data?.episodes, refetch, enabled: isExpanded });
 
   const subtitleEpisode = openedEpisode
     ? (data?.episodes.find((ep) => ep.episodeId === openedEpisode.episodeId) ?? openedEpisode)
@@ -153,6 +158,7 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
           subtitleLanguage={subtitleEpisode.subtitleLanguage}
           open={true}
           onOpenChange={(next) => !next && setOpenedEpisode(null)}
+          onGenerationStarted={() => live.markStarted(subtitleEpisode.episodeId)}
           onGenerationComplete={() => refetch()}
           onGenerationFailed={() => refetch()}
         />

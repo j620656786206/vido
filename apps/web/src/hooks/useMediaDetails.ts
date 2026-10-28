@@ -53,7 +53,12 @@ export function useSeasonEpisodes(seriesId: string, seasonNumber: number, enable
   return useQuery<SeasonEpisodesResponse, Error>({
     queryKey: detailKeys.seasonEpisodes(seriesId, seasonNumber),
     queryFn: () => libraryService.getSeasonEpisodes(seriesId, seasonNumber),
-    staleTime: 60 * 60 * 1000, // 1h — episodes change infrequently
+    // 30s, not the 1h this had: the TMDb half rarely changes, but each row's
+    // subtitle status does — a run started here and finished after the 管理字幕
+    // dialog closed left the list an hour stale on the next expand or visit
+    // (disc-2026-10-episode-row-live-progress-a AC #6). While a run is going,
+    // useEpisodeGenerationLive keeps it fresh; this only covers coming back.
+    staleTime: 30 * 1000,
     enabled: enabled && !!seriesId,
   });
 }

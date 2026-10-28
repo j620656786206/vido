@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createRootRoute,
@@ -864,6 +864,37 @@ describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
     expect(mockedTrigger).not.toHaveBeenCalled();
   });
 
+  // disc-2026-10-episode-row-live-progress-a AC #1 — the season list shows the
+  // run as soon as it is accepted, not when the dialog happens to see its end.
+  it.each([
+    ['started', { status: 'started', result: { jobId: 'j1', message: '' } }],
+    ['inProgress (409)', { status: 'inProgress' }],
+  ] as const)('tells the parent a run is going when the trigger answers %s', async (_, outcome) => {
+    mockedEpisodeTrigger.mockResolvedValue(outcome);
+    const onGenerationStarted = vi.fn();
+    renderEpisodeDialog({ onGenerationStarted });
+
+    fireEvent.click(await findPricedGenerate());
+
+    await waitFor(() => expect(onGenerationStarted).toHaveBeenCalledTimes(1));
+  });
+
+  it('does not tell the parent a run is going when generation is not configured or fails', async () => {
+    const onGenerationStarted = vi.fn();
+    mockedEpisodeTrigger.mockResolvedValueOnce({ status: 'disabled' });
+    renderEpisodeDialog({ onGenerationStarted });
+    fireEvent.click(await findPricedGenerate());
+    expect(await screen.findByTestId('generation-not-configured')).toBeInTheDocument();
+
+    cleanup();
+    mockedEpisodeTrigger.mockRejectedValueOnce(new Error('boom'));
+    renderEpisodeDialog({ onGenerationStarted });
+    fireEvent.click(await findPricedGenerate());
+    expect(await screen.findByTestId('generation-trigger-error')).toBeInTheDocument();
+
+    expect(onGenerationStarted).not.toHaveBeenCalled();
+  });
+
   it('hands the glossary PANEL the series id too, so the count updates after an edit (dsr-6b)', async () => {
     h.glossaryPanelId = undefined;
     renderEpisodeDialog();
@@ -1693,6 +1724,42 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
 
     await expectAttachedProgress(MOVIE_UUID, '怪奇物語');
     expect(mockedStatus).toHaveBeenCalledWith('movie', MOVIE_UUID, expect.any(AbortSignal));
+  });
+
+  // disc-2026-10-episode-row-live-progress-a CR M1: the season list behind the
+  // dialog may have fetched the row before this run began — tell it, once,
+  // even though the parent hands a fresh arrow on every render.
+  it('episode — running when opened → tells the parent a run is going, exactly once', async () => {
+    mockedStatus.mockResolvedValue({ inProgress: true });
+    const onGenerationStarted = vi.fn();
+    // A parent that re-renders with a NEW arrow each time (SeasonAccordion does).
+    function Parent(props: React.ComponentProps<typeof ManageSubtitleDialogV2>) {
+      const [n, setN] = React.useState(0);
+      return (
+        <>
+          <button type="button" data-testid="rerender-parent" onClick={() => setN(n + 1)}>
+            {n}
+          </button>
+          <ManageSubtitleDialogV2 {...props} onGenerationStarted={() => onGenerationStarted()} />
+        </>
+      );
+    }
+    renderDialog(
+      {
+        mediaId: EPISODE_UUID,
+        mediaType: 'episode',
+        glossaryMediaId: SERIES_UUID,
+        mediaTitle: '第七集',
+        subtitleTracks: undefined,
+      },
+      { wrapper: Parent }
+    );
+
+    expect(await screen.findByTestId('generation-progress-v2')).toBeInTheDocument();
+    await waitFor(() => expect(onGenerationStarted).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByTestId('rerender-parent'));
+    fireEvent.click(screen.getByTestId('rerender-parent'));
+    expect(onGenerationStarted).toHaveBeenCalledTimes(1);
   });
 
   it('running when opened WITH a solo job id → attaches to that job (pipeline mode)', async () => {
