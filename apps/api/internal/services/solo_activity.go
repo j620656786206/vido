@@ -20,6 +20,10 @@ type SoloJobSnapshot struct {
 	// the job is not waiting.
 	Queued   bool
 	QueuedAt time.Time
+	// SpentUSD is what the job has spent so far — its ai.Budget's recorded
+	// figure, raw (disc-2026-10-solo-live-spend). nil = the job has no meter
+	// yet (a legacy run before its Budget is attached); 0 = nothing spent.
+	SpentUSD *float64
 }
 
 // extractWaitObserverKey carries a job's "am I waiting for the extraction

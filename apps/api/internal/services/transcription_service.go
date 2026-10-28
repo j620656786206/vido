@@ -164,6 +164,10 @@ type TranscriptionService struct {
 	runFloor          time.Duration
 	runPerMediaMinute time.Duration
 	runBudgetUSD      float64 // 9R-11: per-run AI cost ceiling (0 = unlimited)
+	// soloSpend is where the ASR leg of a pipeline-mode click finds the
+	// click's Budget for its events' cost keys (disc-2026-10-solo-live-spend).
+	// nil = legacy-only boot. Guarded by mu.
+	soloSpend *SoloSpendBoard
 
 	// 9R-10 pipeline dependencies (all optional / nil-safe).
 	glossaryRepo repository.GlossaryRepositoryInterface // per-show glossary (9R-6/7)
@@ -670,10 +674,26 @@ func (s *TranscriptionService) trackRunBudget(mediaID string, budget *ai.Budget)
 	}
 }
 
-// costFields adds the 9R-17 cost keys to a transcription_* payload for a run
-// that owns its budget: spent_usd always, budget_usd only when a ceiling is
-// set. A run without its own budget (batch item, or nothing in flight) gets
-// NEITHER key — absent means "not this view's figure", never 0.
+// SetSoloSpendBoard wires the pipeline-mode solo jobs' Budgets
+// (disc-2026-10-solo-live-spend): the ASR leg of such a job runs here as a
+// non-solo job spending from the click's Budget, and its transcription_*
+// events read that Budget from the board. main.go calls it once at boot.
+func (s *TranscriptionService) SetSoloSpendBoard(board *SoloSpendBoard) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.soloSpend = board
+}
+
+// costFields adds the 9R-17 cost keys to a transcription_* payload: spent_usd
+// always, budget_usd only when a ceiling is set. The figure is the run's OWN
+// budget (a legacy solo click) or, failing that, the pipeline-mode click this
+// run is the ASR leg of (disc-2026-10-solo-live-spend). A run that is neither
+// (a batch item, a pool item, or nothing in flight) gets NEITHER key — absent
+// means "not this view's figure", never 0.
+//
+// The board figure is read for the events only: it never becomes job.budget,
+// so ActiveManualUsage keeps counting each click's Budget once (the SoloRunner
+// reports it).
 func (s *TranscriptionService) costFields(data map[string]interface{}) {
 	mediaID, _ := data["media_id"].(string)
 	if mediaID == "" {
@@ -685,15 +705,12 @@ func (s *TranscriptionService) costFields(data map[string]interface{}) {
 	if ok {
 		budget = job.budget
 	}
+	board := s.soloSpend
 	s.mu.Unlock()
 	if budget == nil {
-		return
+		budget = board.Lookup(mediaID)
 	}
-	snap := budget.Snapshot()
-	data["spent_usd"] = snap.SpentUSD
-	if snap.BudgetUSD > 0 {
-		data["budget_usd"] = snap.BudgetUSD
-	}
+	AddRunCost(data, budget)
 }
 
 // ActiveManualUsage reports the run-owned budgets of every solo transcription
@@ -831,13 +848,18 @@ func (s *TranscriptionService) ActiveSoloJobs() []SoloJobSnapshot {
 		if !job.Solo {
 			continue
 		}
-		out = append(out, SoloJobSnapshot{
+		snap := SoloJobSnapshot{
 			MediaID:   id,
 			Title:     job.Title,
 			StartedAt: job.StartedAt,
 			Queued:    !job.QueuedAt.IsZero(),
 			QueuedAt:  job.QueuedAt,
-		})
+		}
+		if job.budget != nil {
+			spent := job.budget.SpentUSD()
+			snap.SpentUSD = &spent
+		}
+		out = append(out, snap)
 	}
 	return out
 }

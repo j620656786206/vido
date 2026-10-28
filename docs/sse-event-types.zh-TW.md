@@ -154,14 +154,23 @@ es.addEventListener('scan_progress', (e: MessageEvent) => {
 
 單一媒體項目的字幕管線進度。在搜尋和下載過程中，每個管線階段都會廣播。
 
-**發布者：** `Engine.broadcastStatus()`、`SubtitleHandler.broadcastStatus()`
+**發布者：** `Engine.broadcastStatus()`、`SubtitleHandler.broadcastStatus()`（搜尋路徑）；`subtitle.NewSSEProgressHook`（生成管線——花費欄位只有它會帶）
 
-| 欄位         | 型別     | 說明                    |
-| ------------ | -------- | ----------------------- |
-| `media_id`   | `string` | 媒體項目 UUID           |
-| `media_type` | `string` | `"movie"` 或 `"series"` |
-| `stage`      | `string` | 目前管線階段（見下表）  |
-| `message`    | `string` | 人類可讀的狀態訊息      |
+| 欄位         | 型別     | 說明                                                                      |
+| ------------ | -------- | ------------------------------------------------------------------------- |
+| `media_id`   | `string` | 媒體項目 UUID                                                             |
+| `media_type` | `string` | `"movie"` 或 `"series"`（搜尋路徑）；`"movie"` 或 `"episode"`（生成管線） |
+| `stage`      | `string` | 目前管線階段（見下表）                                                    |
+| `message`    | `string` | 人類可讀的狀態訊息                                                        |
+| `spent_usd`  | `number` | _選填。_ 只有單集生成工作才有——到目前的花費                               |
+| `budget_usd` | `number` | _選填。_ 只有單集生成工作才有——它的費用上限                               |
+
+**即時花費（`spent_usd`／`budget_usd`，只加不改）。** 這部片若是正在跑的單集生成工作（pipeline
+模式下詳細頁按的「生成字幕」），每個生成階段的事件都帶這個工作到目前的花費：`spent_usd` 是記錄到的原始數字
+（前端負責四捨五入；`0` = 還沒花錢），`budget_usd` 只在有上限時才帶。批次項目、pool 項目與搜尋路徑一律不帶——
+沒有欄位代表「不是這個畫面該顯示的數字」，不是 `0`。同一個工作的 `transcription_extracting`／
+`transcription_progress`／`translation_progress`／`transcription_complete`／`transcription_failed` 事件
+（宣告在 `transcription_service.go`）也帶這兩個欄位、意義相同，包括語音辨識那段送出的事件。
 
 **管線階段** — 同一組 wire enum，兩條發送路徑：
 

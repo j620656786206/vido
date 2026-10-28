@@ -535,6 +535,56 @@ describe('useGenerationProgress D6 subtitle_progress family (sub-4-3 AC #8)', ()
       expect(result.current.progress.spentUsd).toBeNull();
       expect(result.current.progress.budgetUsd).toBeNull();
     });
+
+    // disc-2026-10-solo-live-spend AC #6: a pipeline-mode click on the translate
+    // lane — the start event says $0, then every middle event is a D6 stage. The
+    // stages now carry the job's spend, so 本次用量 moves instead of sitting at
+    // US$0.00 until the terminal.
+    it('本次用量 follows the spend a D6 stage carries mid-run (solo job id tracked)', () => {
+      const { result } = renderHook(() => useGenerationProgress());
+      act(() => result.current.startTracking(MOVIE_UUID, 'solo-1'));
+      const es = MockEventSource.instances[0];
+      act(() =>
+        es.emit(
+          'transcription_extracting',
+          wireEvent('transcription_extracting', {
+            job_id: 'solo-1',
+            phase: 'extracting',
+            spent_usd: 0,
+            budget_usd: 5,
+          })
+        )
+      );
+      expect(result.current.progress.spentUsd).toBe(0);
+
+      act(() =>
+        es.emit(
+          'subtitle_progress',
+          wireEvent('subtitle_progress', {
+            stage: 'translating',
+            message: '翻譯中（第 3/7 段）',
+            spent_usd: 0.12,
+            budget_usd: 5,
+          })
+        )
+      );
+      expect(result.current.progress.phase).toBe('translating');
+      expect(result.current.progress.spentUsd).toBe(0.12);
+      expect(result.current.progress.budgetUsd).toBe(5);
+
+      act(() =>
+        es.emit(
+          'subtitle_progress',
+          wireEvent('subtitle_progress', {
+            stage: 'translating',
+            message: '翻譯中（第 5/7 段）',
+            spent_usd: 0.2,
+            budget_usd: 5,
+          })
+        )
+      );
+      expect(result.current.progress.spentUsd).toBe(0.2);
+    });
   });
 
   // disc-2026-10-single-generate-ignores-embedded-english-b — the solo job id

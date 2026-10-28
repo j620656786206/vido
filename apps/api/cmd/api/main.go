@@ -901,6 +901,13 @@ func main() {
 		sidecarcheck.NewChecker(ffprobeService, repos.Cache, slog.Default()),
 		audioExtractorService, slog.Default())
 	if cfg.SubtitlePipelineEnabled() {
+		// disc-2026-10-solo-live-spend: each click's Budget, by media id, for
+		// the events the click's runner does not send itself — the pipeline's
+		// subtitle_progress stages and the ASR leg's transcription_* — so the
+		// 本次用量 line moves while the run is still going. The runner
+		// publishes; the hook and the service only read.
+		soloSpend := services.NewSoloSpendBoard()
+		transcriptionService.SetSoloSpendBoard(soloSpend)
 		subtitleExtractor := subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitleExtractorOpts...)
 		subtitleRouter := subtitle.NewRouter(
 			ffprobeService,
@@ -937,7 +944,7 @@ func main() {
 			subtitle.WithSpeechTranscriber(pipelineASR),
 			// AC #6: FR33/P8 progress. Same event type and payload shape the
 			// search path already broadcasts — sse/hub.go stays untouched.
-			subtitle.WithProgress(subtitle.NewSSEProgressHook(sseHub)),
+			subtitle.WithProgress(subtitle.NewSSEProgressHook(sseHub, subtitle.WithProgressSpend(soloSpend))),
 			// sub-7-6a: one `subtitle_run_receipt` per run, at its terminal
 			// write — the frontend's cost line for both legs.
 			subtitle.WithRunReceipt(subtitle.NewSSEReceiptHook(sseHub)),
@@ -978,6 +985,7 @@ func main() {
 				return ""
 			}),
 			subtitle.WithSoloRunBudgetUSD(cfg.AIRunBudgetUSD),
+			subtitle.WithSoloSpendBoard(soloSpend),
 			// The router tries the English subtitle beside the file before
 			// speech recognition; the gate asks the same finder, stored
 			// checks only (disc-2026-10-solo-gate-en-sidecar).

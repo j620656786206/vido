@@ -41,6 +41,13 @@ export interface ActiveJob {
   mediaId?: string;
   /** transcription only — `true` while the job waits for the extraction slot; absent = running. */
   queued?: boolean;
+  /**
+   * transcription only — what the job has spent so far, raw (round with
+   * decimal.js at display). `0` = nothing paid yet; absent = no meter yet,
+   * never 0 (disc-2026-10-solo-live-spend AC #5 `[@contract-v1]`). Queued rows
+   * carry it too. No screen reads it yet — the row design is pending.
+   */
+  spentUsd?: number;
 }
 export interface ActiveJobsSection {
   status: SectionStatus;
