@@ -155,6 +155,12 @@ type ActiveJob struct {
 	// means running.
 	MediaID string `json:"media_id,omitempty"`
 	Queued  bool   `json:"queued,omitempty"`
+	// SpentUSD is what the solo job has spent so far — transcription only
+	// (disc-2026-10-solo-live-spend [@contract-v1], additive). Raw, never
+	// pre-rounded (the client rounds with decimal.js); 0 is sent as 0
+	// (nothing paid yet); absent = the job has no meter yet. Queued rows
+	// carry it too: a job can wait for the slot after it has paid.
+	SpentUSD *float64 `json:"spent_usd,omitempty"`
 }
 
 // ActiveJobStep is one item's stage and, when the run reported one, its count:
@@ -304,6 +310,10 @@ func (s *ActivityService) soloJobRows(snaps []SoloJobSnapshot) []ActiveJob {
 	rows := make([]ActiveJob, 0, len(snaps))
 	for _, snap := range snaps {
 		row := ActiveJob{Kind: "transcription", Detail: snap.Title, MediaID: snap.MediaID}
+		if snap.SpentUSD != nil {
+			spent := *snap.SpentUSD
+			row.SpentUSD = &spent
+		}
 		if snap.Queued {
 			// The phase tracker still holds `extracting` for a queued job;
 			// that would read as 提取音訊 while nothing is being extracted.

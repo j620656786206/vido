@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/sse"
 )
 
@@ -41,6 +42,22 @@ type ProgressBroadcaster interface {
 	Broadcast(event sse.Event)
 }
 
+// SSEProgressOption configures one optional knob of NewSSEProgressHook.
+type SSEProgressOption func(*sseProgressConfig)
+
+type sseProgressConfig struct {
+	spend *services.SoloSpendBoard
+}
+
+// WithProgressSpend adds the running single-title job's spend to the stage
+// events of its item (disc-2026-10-solo-live-spend): spent_usd always,
+// budget_usd when the job has a ceiling — the same keys and meaning as the
+// job's own transcription_* events. Items not on the board (batch, pool,
+// search) keep the four keys they always had.
+func WithProgressSpend(board *services.SoloSpendBoard) SSEProgressOption {
+	return func(c *sseProgressConfig) { c.spend = board }
+}
+
 // NewSSEProgressHook adapts the Pipeline's progress hook (sub-1-5b) onto the
 // existing SSE hub (AC #6). main.go installs the result with WithProgress.
 //
@@ -51,26 +68,35 @@ type ProgressBroadcaster interface {
 //     the frontend keeps the listener it has. The four new stage values
 //     (`probing`/`extracting`/`translating`/`skipped`, sub-1-3 [@contract-v1])
 //     reach the wire here for the first time; the FE consumes `stage` as a loose
-//     string and renders `message`, so it degrades gracefully today.
+//     string and renders `message`, so it degrades gracefully today. A solo
+//     job's item additionally carries spent_usd / budget_usd (additive,
+//     WithProgressSpend) — so the payload is a map[string]interface{}; the
+//     JSON of the four string keys is unchanged.
 //   - {media_id, media_type} ride every event because ONE Pipeline serves both
 //     pool workers — without them a concurrent season batch could not attribute
 //     an event to an item.
 //   - The zh-TW composition happens HERE, at the wiring layer, not in the
 //     stages: the pipeline's own messages are log lines (English, for the
 //     operator), and Rule 3 keeps user-facing strings at the edge.
-func NewSSEProgressHook(hub ProgressBroadcaster) func(ref MediaRef, stage PipelineStage, message string) {
+func NewSSEProgressHook(hub ProgressBroadcaster, opts ...SSEProgressOption) func(ref MediaRef, stage PipelineStage, message string) {
+	var cfg sseProgressConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	return func(ref MediaRef, stage PipelineStage, message string) {
 		if hub == nil {
 			return
 		}
+		data := map[string]interface{}{
+			"media_id":   ref.ID,
+			"media_type": ref.MediaType,
+			"stage":      string(stage),
+			"message":    zhTWStageMessage(stage, message),
+		}
+		services.AddRunCost(data, cfg.spend.Lookup(ref.ID))
 		hub.Broadcast(sse.Event{
 			Type: sse.EventSubtitleProgress,
-			Data: map[string]string{
-				"media_id":   ref.ID,
-				"media_type": ref.MediaType,
-				"stage":      string(stage),
-				"message":    zhTWStageMessage(stage, message),
-			},
+			Data: data,
 		})
 	}
 }

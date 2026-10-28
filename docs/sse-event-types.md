@@ -154,14 +154,27 @@ Sent when a scan is cancelled by the user. Contains partial counts at the time o
 
 Subtitle pipeline progress for individual media items. Broadcast at each pipeline stage during search and download.
 
-**Publishers:** `Engine.broadcastStatus()`, `SubtitleHandler.broadcastStatus()`
+**Publishers:** `Engine.broadcastStatus()`, `SubtitleHandler.broadcastStatus()` (search path); `subtitle.NewSSEProgressHook` (generation pipeline — the only publisher of the cost keys)
 
-| Field        | Type     | Description                        |
-| ------------ | -------- | ---------------------------------- |
-| `media_id`   | `string` | Media item UUID                    |
-| `media_type` | `string` | `"movie"` or `"series"`            |
-| `stage`      | `string` | Current pipeline stage (see below) |
-| `message`    | `string` | Human-readable status message      |
+| Field        | Type     | Description                                                                           |
+| ------------ | -------- | ------------------------------------------------------------------------------------- |
+| `media_id`   | `string` | Media item UUID                                                                       |
+| `media_type` | `string` | `"movie"` or `"series"` (search path); `"movie"` or `"episode"` (generation pipeline) |
+| `stage`      | `string` | Current pipeline stage (see below)                                                    |
+| `message`    | `string` | Human-readable status message                                                         |
+| `spent_usd`  | `number` | _Optional._ Single-title job only — spend so far (see note below)                     |
+| `budget_usd` | `number` | _Optional._ Single-title job only — its cost ceiling                                  |
+
+**Live spend (`spent_usd` / `budget_usd`, additive).** When the item is a running
+single-title generation job (the detail-page 生成字幕 click in pipeline mode), every
+generation-stage frame carries what that job has spent so far: `spent_usd` is the job's
+recorded figure, raw (the client rounds; `0` = nothing paid yet), and `budget_usd` is
+present only when the job has a ceiling. Batch items, pool items and the search path
+never carry them — absent means "not this view's figure", never `0`. The same two keys,
+with the same meaning, ride that job's `transcription_extracting` /
+`transcription_progress` / `translation_progress` / `transcription_complete` /
+`transcription_failed` events (declared in `transcription_service.go`), including the
+ones its speech-recognition leg sends.
 
 **Pipeline stages** — one wire enum, two emitting paths:
 

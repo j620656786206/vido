@@ -197,6 +197,10 @@ interface PipelinePayload {
   mediaId?: string;
   stage?: string;
   message?: string;
+  /** disc-2026-10-solo-live-spend: a single-title job's spend so far — present
+   *  only on that job's stages (absent on batch / search frames, never 0-filled). */
+  spentUsd?: number;
+  budgetUsd?: number;
 }
 interface ChangedItem {
   mediaId: string;
@@ -654,7 +658,14 @@ export function useGenerationJobsFeed() {
           type: 'STAGE',
           stage,
           mediaId: payload.mediaId,
-          payload: { message: payload.message },
+          // The cost keys ride along so a single job's 本次用量 moves on the
+          // translate lane too (disc-2026-10-solo-live-spend); a batch
+          // member's frame carries none and the reducer ignores members' cost.
+          payload: {
+            message: payload.message,
+            spentUsd: payload.spentUsd,
+            budgetUsd: payload.budgetUsd,
+          },
           pipeline: true,
         });
       } else if (['complete', 'failed', 'skipped'].includes(payload.stage)) {

@@ -66,7 +66,12 @@ type SoloRunner struct {
 	// loaded item's TranslateContext.Title.
 	title        func(ctx context.Context, ref MediaRef, item *MediaItem) string
 	runBudgetUSD float64
-	now          func() time.Time
+	// spend publishes each running job's Budget by media id, so the events
+	// this runner does not send itself — the pipeline's subtitle_progress
+	// stages and the ASR leg's transcription_* — carry what the job has spent
+	// so far (disc-2026-10-solo-live-spend). nil = not published.
+	spend *services.SoloSpendBoard
+	now   func() time.Time
 
 	mu   sync.Mutex
 	jobs map[MediaRef]*soloJob
@@ -125,6 +130,12 @@ func WithSoloTitle(fn func(ctx context.Context, ref MediaRef, item *MediaItem) s
 // 0 = unlimited) — the same envelope the pipeline applies to budget-less items.
 func WithSoloRunBudgetUSD(usd float64) SoloRunnerOption {
 	return func(s *SoloRunner) { s.runBudgetUSD = usd }
+}
+
+// WithSoloSpendBoard publishes each running job's Budget on board, which the
+// pipeline's stage events and the ASR leg read (disc-2026-10-solo-live-spend).
+func WithSoloSpendBoard(board *services.SoloSpendBoard) SoloRunnerOption {
+	return func(s *SoloRunner) { s.spend = board }
 }
 
 // WithSoloClock injects the clock (tests).
@@ -251,6 +262,7 @@ func (s *SoloRunner) Start(ctx context.Context, ref MediaRef, modelID string) (j
 	s.mu.Lock()
 	s.jobs[ref] = job
 	s.mu.Unlock()
+	s.spend.Track(ref.ID, job.Budget)
 
 	s.emitStart(ref, job, predicted)
 
@@ -282,6 +294,7 @@ func (s *SoloRunner) Start(ctx context.Context, ref MediaRef, modelID string) (j
 			delete(s.jobs, ref)
 		}
 		s.mu.Unlock()
+		s.spend.Untrack(ref.ID, job.Budget)
 		s.emitTerminal(ref, job, outcome, runErr)
 		s.guard.Release(ref)
 	}()
@@ -314,12 +327,16 @@ func (s *SoloRunner) ActiveSoloJobs() []services.SoloJobSnapshot {
 	defer s.mu.Unlock()
 	out := make([]services.SoloJobSnapshot, 0, len(s.jobs))
 	for ref, job := range s.jobs {
+		// The job's Budget exists from acceptance, so a running job always
+		// has a figure — 0 until something is paid (disc-2026-10-solo-live-spend).
+		spent := job.Budget.SpentUSD()
 		out = append(out, services.SoloJobSnapshot{
 			MediaID:   ref.ID,
 			Title:     job.Title,
 			StartedAt: job.StartedAt,
 			Queued:    !job.QueuedAt.IsZero(),
 			QueuedAt:  job.QueuedAt,
+			SpentUSD:  &spent,
 		})
 	}
 	return out
@@ -383,13 +400,9 @@ func (s *SoloRunner) jobFields(ref MediaRef, job *soloJob, phase string) map[str
 		"title":      job.Title,
 		"phase":      phase,
 	}
-	// Mirrors TranscriptionService.costFields: spent always, the ceiling only
-	// when there is one — absent means "no ceiling", never 0.
-	snap := job.Budget.Snapshot()
-	data["spent_usd"] = snap.SpentUSD
-	if snap.BudgetUSD > 0 {
-		data["budget_usd"] = snap.BudgetUSD
-	}
+	// The same writer the ASR leg and the pipeline stages use: spent always,
+	// the ceiling only when there is one — absent means "no ceiling", never 0.
+	services.AddRunCost(data, job.Budget)
 	return data
 }
 

@@ -703,7 +703,9 @@ func TestSoloRunner_ActivityAndUsageSeeRunningJobs(t *testing.T) {
 	require.NoError(t, err)
 
 	// disc-2026-10-activity-solo-jobs-collapsed: one snapshot per job.
-	assert.Equal(t, []services.SoloJobSnapshot{{MediaID: s.ref.ID, Title: "怪奇物語", StartedAt: started}},
+	// disc-2026-10-solo-live-spend: the job's meter rides along — 0 until paid.
+	zero := 0.0
+	assert.Equal(t, []services.SoloJobSnapshot{{MediaID: s.ref.ID, Title: "怪奇物語", StartedAt: started, SpentUSD: &zero}},
 		s.runner.ActiveSoloJobs())
 	spent, budget, ok := s.runner.ActiveManualUsage()
 	assert.True(t, ok)
@@ -802,4 +804,158 @@ func TestFailureMessage_EmptyAccountSaysWhereToTopUp(t *testing.T) {
 	anthropic := &ai.CreditExhaustedError{Provider: "anthropic", BillingURL: ai.AnthropicBillingURL}
 	message, _ = failureMessage(nil, fmt.Errorf("translate: %w", anthropic), nil)
 	assert.Equal(t, "Anthropic 帳號沒有額度了，儲值後再按一次生成", message)
+}
+
+// ─── disc-2026-10-solo-live-spend ──────────────────────────────────────────
+
+// liveSpendHarness wires the runner, the pipeline's stage hook and the board
+// onto ONE hub, the way main.go does, so the event order is the wire order.
+func liveSpendHarness(t *testing.T, decision RouteDecision, pipelineOpts ...PipelineOption) (*itemHarness, *SoloRunner, *recordingHub, *services.SoloSpendBoard) {
+	t.Helper()
+	hub := &recordingHub{}
+	board := services.NewSoloSpendBoard()
+	opts := append([]PipelineOption{WithProgress(NewSSEProgressHook(hub, WithProgressSpend(board)))}, pipelineOpts...)
+	h := newItemHarness(t, decision, opts...)
+	runner := NewSoloRunner(h.pipeline, newFakeSoloGuard(), hub, nil,
+		WithSoloRunBudgetUSD(5), WithSoloSpendBoard(board))
+	return h, runner, hub, board
+}
+
+// stageSpends lists every subtitle_progress frame's spent_usd for ref, in
+// wire order; a frame without the key fails the test (absent ≠ 0).
+func stageSpends(t *testing.T, hub *recordingHub, mediaID string) []float64 {
+	t.Helper()
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	var out []float64
+	for _, e := range hub.events {
+		if e.Type != sse.EventSubtitleProgress {
+			continue
+		}
+		data := e.Data.(map[string]interface{})
+		if data["media_id"] != mediaID {
+			continue
+		}
+		spent, ok := data["spent_usd"].(float64)
+		require.True(t, ok, "stage %v of a solo job must carry spent_usd", data["stage"])
+		assert.Equal(t, 5.0, data["budget_usd"], "stage %v carries the job's ceiling", data["stage"])
+		out = append(out, spent)
+	}
+	return out
+}
+
+// AC #2: the translate lane's stage events carry the job's live spend — 0
+// before the LLM is paid, the paid figure after, never going down.
+func TestSoloRunner_StageEventsCarryTheJobsLiveSpend(t *testing.T) {
+	h, runner, hub, board := liveSpendHarness(t, translateDecision("Good morning."))
+	h.trans.fn = func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		// What the real provider does: record the call on the run's Budget.
+		budget := board.Lookup(h.ref.ID)
+		require.NotNil(t, budget, "the job's Budget is on the board while it runs")
+		budget.RecordLLM("claude-haiku-4-5", 200_000, 40_000)
+		return map[int]string{blocks[0].Index: "早安"}, ai.CompletionUsage{}, nil
+	}
+
+	_, err := runner.Start(context.Background(), h.ref, "")
+	require.NoError(t, err)
+	runner.waitIdle()
+
+	spends := stageSpends(t, hub, h.ref.ID)
+	require.GreaterOrEqual(t, len(spends), 2)
+	assert.Equal(t, 0.0, spends[0], "the first stage comes before anything is paid")
+	for i := 1; i < len(spends); i++ {
+		assert.GreaterOrEqual(t, spends[i], spends[i-1], "spend never goes down between frames")
+	}
+	last := spends[len(spends)-1]
+	assert.Greater(t, last, 0.0, "a stage after the paid call shows the paid figure")
+
+	done := hub.ofType(services.EventTranscriptionComplete)
+	require.Len(t, done, 1)
+	assert.Equal(t, done[0]["spent_usd"], last, "the terminal and the last stage agree: one meter")
+	assert.Nil(t, board.Lookup(h.ref.ID), "a finished job leaves the board")
+}
+
+// AC #4: the ASR leg spends from the click's Budget — the very one the board
+// publishes — so the ASR leg's events and the runner report one figure, and
+// the usage figure counts it once.
+func TestSoloRunner_ASRLegSpendsFromTheBoardsBudget(t *testing.T) {
+	var asrBudget, boardBudget *ai.Budget
+	var board *services.SoloSpendBoard
+	asr := &ctxTranscriber{fn: func(ctx context.Context, ref MediaRef) {
+		asrBudget = ai.BudgetFromContext(ctx)
+		boardBudget = board.Lookup(ref.ID)
+		asrBudget.RecordASR(120) // two hosted minutes
+	}}
+	h, runner, hub, b := liveSpendHarness(t, noTextDecision(), WithSpeechTranscriber(asr))
+	board = b
+
+	_, err := runner.Start(context.Background(), h.ref, "")
+	require.NoError(t, err)
+	runner.waitIdle()
+
+	require.NotNil(t, asrBudget)
+	assert.Same(t, boardBudget, asrBudget, "the ASR leg spends from the Budget the board publishes")
+	failedOrDone := append(hub.ofType(services.EventTranscriptionComplete), hub.ofType(services.EventTranscriptionFailed)...)
+	require.Len(t, failedOrDone, 1)
+	assert.Equal(t, asrBudget.SpentUSD(), failedOrDone[0]["spent_usd"], "the terminal reports exactly the ASR spend — once")
+}
+
+func TestSoloRunner_ActiveSoloJobsCarryTheLiveSpend(t *testing.T) {
+	release := make(chan struct{})
+	h, runner, _, board := liveSpendHarness(t, translateDecision("Good morning."))
+	h.trans.fn = func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		board.Lookup(h.ref.ID).RecordLLM("claude-haiku-4-5", 200_000, 40_000)
+		<-release
+		return map[int]string{blocks[0].Index: "早安"}, ai.CompletionUsage{}, nil
+	}
+
+	_, err := runner.Start(context.Background(), h.ref, "")
+	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		snaps := runner.ActiveSoloJobs()
+		return len(snaps) == 1 && snaps[0].SpentUSD != nil && *snaps[0].SpentUSD > 0
+	}, 2*time.Second, 5*time.Millisecond, "the Activity snapshot reads the meter while the job runs")
+
+	spent, _, ok := runner.ActiveManualUsage()
+	require.True(t, ok)
+	assert.Equal(t, *runner.ActiveSoloJobs()[0].SpentUSD, spent, "Activity row and /ai/usage read the same meter")
+
+	close(release)
+	runner.waitIdle()
+}
+
+// ctxTranscriber is an ASR leg that sees the job ctx.
+type ctxTranscriber struct {
+	fn func(ctx context.Context, ref MediaRef)
+}
+
+func (f *ctxTranscriber) Available() bool { return true }
+
+func (f *ctxTranscriber) Transcribe(ctx context.Context, ref MediaRef, _, _ string) error {
+	f.fn(ctx, ref)
+	return nil
+}
+
+// AC #3: the same pipeline and hook, driven WITHOUT a solo job (a pool item or
+// a consent-batch item calls ProcessItem directly): no stage carries cost.
+func TestPipeline_ItemWithoutASoloJobSendsNoStageCost(t *testing.T) {
+	h, _, hub, _ := liveSpendHarness(t, translateDecision("Good morning."))
+
+	_, err := h.pipeline.ProcessItem(ai.WithBudget(context.Background(), ai.NewBudget(5)), h.ref,
+		ProcessItemOptions{Regenerate: true})
+	require.NoError(t, err)
+
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+	stages := 0
+	for _, e := range hub.events {
+		if e.Type != sse.EventSubtitleProgress {
+			continue
+		}
+		stages++
+		data := e.Data.(map[string]interface{})
+		assert.NotContains(t, data, "spent_usd", "stage %v of a non-solo item", data["stage"])
+		assert.NotContains(t, data, "budget_usd", "stage %v of a non-solo item", data["stage"])
+	}
+	assert.Positive(t, stages, "the run must have emitted stages for this to mean anything")
 }

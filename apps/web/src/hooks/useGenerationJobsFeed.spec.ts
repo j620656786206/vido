@@ -314,6 +314,46 @@ describe('useGenerationJobsFeed (ux3-ai-2 AC 4/5, reworked by dsr-6d-c-2)', () =
     });
   });
 
+  // disc-2026-10-solo-live-spend AC #7: on the translate lane every middle
+  // event is a D6 stage — its cost keys must reach the single job's 本次用量.
+  it('a solo pipeline run: the D6 stages carry the live spend into the single job', () => {
+    const { result, es } = connected();
+    act(() => {
+      es.emit('transcription_extracting', {
+        job_id: 'solo-1',
+        media_id: 'm7',
+        media_type: 'movie',
+        phase: 'extracting',
+        title: '末日光明 S01E02',
+        spent_usd: 0,
+        budget_usd: 5,
+      });
+      es.emit('subtitle_progress', {
+        media_id: 'm7',
+        media_type: 'movie',
+        stage: 'translating',
+        message: '翻譯中（第 3/7 段）',
+        spent_usd: 0.12,
+        budget_usd: 5,
+      });
+    });
+    expect(result.current.singleJobs['m7']).toMatchObject({ spentUsd: 0.12, budgetUsd: 5 });
+    act(() => {
+      // A frame without the keys keeps the last figure — absent is not 0.
+      es.emit('subtitle_progress', {
+        media_id: 'm7',
+        media_type: 'movie',
+        stage: 'translating',
+        message: '翻譯中（第 4/7 段）',
+      });
+    });
+    expect(result.current.singleJobs['m7']).toMatchObject({
+      spentUsd: 0.12,
+      budgetUsd: 5,
+      message: '翻譯中（第 4/7 段）',
+    });
+  });
+
   it("a solo pipeline run on the ASR lane: the ASR leg's own untitled terminal (other job id) does not end the job", () => {
     const { result, es } = connected();
     act(() => {

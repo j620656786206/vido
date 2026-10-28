@@ -1,12 +1,15 @@
 package subtitle
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/sse"
 )
 
@@ -15,11 +18,11 @@ type fakeBroadcaster struct{ events []sse.Event }
 
 func (f *fakeBroadcaster) Broadcast(event sse.Event) { f.events = append(f.events, event) }
 
-func (f *fakeBroadcaster) last(t *testing.T) map[string]string {
+func (f *fakeBroadcaster) last(t *testing.T) map[string]interface{} {
 	t.Helper()
 	require.NotEmpty(t, f.events)
-	payload, ok := f.events[len(f.events)-1].Data.(map[string]string)
-	require.True(t, ok, "payload must stay map[string]string — the shape the search path already broadcasts")
+	payload, ok := f.events[len(f.events)-1].Data.(map[string]interface{})
+	require.True(t, ok, "payload is a map[string]interface{} since disc-2026-10-solo-live-spend (cost keys are numbers)")
 	return payload
 }
 
@@ -123,4 +126,56 @@ func TestSSEProgressHook_WiresIntoThePipelineAsAProgressOption(t *testing.T) {
 
 	require.Len(t, hub.events, 1)
 	assert.Equal(t, "偵測內嵌字幕軌…", hub.last(t)["message"])
+}
+
+// ─── disc-2026-10-solo-live-spend AC #2 / #3 ───────────────────────────────
+
+func TestSSEProgressHook_SoloItemCarriesTheJobsLiveSpend(t *testing.T) {
+	hub := &fakeBroadcaster{}
+	board := services.NewSoloSpendBoard()
+	budget := ai.NewBudget(5)
+	board.Track("ep-1", budget)
+	hook := NewSSEProgressHook(hub, WithProgressSpend(board))
+	ref := MediaRef{ID: "ep-1", MediaType: "episode"}
+
+	hook(ref, StageTranslating, "translating chunk 1/3")
+	first := hub.last(t)
+	assert.Equal(t, 0.0, first["spent_usd"], "nothing paid yet is a recorded 0")
+	assert.Equal(t, 5.0, first["budget_usd"])
+
+	budget.RecordLLM("claude-sonnet-4-5", 100_000, 20_000)
+	hook(ref, StageTranslating, "translating chunk 2/3")
+	second := hub.last(t)
+	assert.Equal(t, budget.SpentUSD(), second["spent_usd"], "the next frame reads the meter again")
+	assert.Greater(t, second["spent_usd"].(float64), 0.0)
+	assert.Equal(t, "翻譯中（第 2/3 段）", second["message"], "the existing keys are untouched")
+}
+
+func TestSSEProgressHook_NoCeilingSendsNoBudgetKey(t *testing.T) {
+	hub := &fakeBroadcaster{}
+	board := services.NewSoloSpendBoard()
+	board.Track("mv-1", ai.NewBudget(0))
+	NewSSEProgressHook(hub, WithProgressSpend(board))(MediaRef{ID: "mv-1", MediaType: "movie"}, StageProbing, "")
+
+	payload := hub.last(t)
+	assert.Contains(t, payload, "spent_usd")
+	assert.NotContains(t, payload, "budget_usd", "absent = no ceiling, never 0")
+}
+
+func TestSSEProgressHook_ItemNotOnTheBoardKeepsItsFourKeys(t *testing.T) {
+	hub := &fakeBroadcaster{}
+	board := services.NewSoloSpendBoard()
+	board.Track("someone-else", ai.NewBudget(5))
+	for _, hook := range []func(MediaRef, PipelineStage, string){
+		NewSSEProgressHook(hub),                           // no board wired
+		NewSSEProgressHook(hub, WithProgressSpend(board)), // a batch / pool item
+		NewSSEProgressHook(hub, WithProgressSpend(nil)),   // nil board
+	} {
+		hook(MediaRef{ID: "batch-item", MediaType: "movie"}, StageTranslating, "translating chunk 1/2")
+		raw, err := json.Marshal(hub.events[len(hub.events)-1].Data)
+		require.NoError(t, err)
+		assert.JSONEq(t,
+			`{"media_id":"batch-item","media_type":"movie","stage":"translating","message":"翻譯中（第 1/2 段）"}`,
+			string(raw), "the wire shape of a non-solo item is byte-for-byte what it was")
+	}
 }
