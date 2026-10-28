@@ -197,6 +197,18 @@ type ProcessItemOptions struct {
 	// served by speech recognition on such a file and must not now get
 	// 已略過. Additive on v1.
 	TranscribeWhenSkipped bool
+
+	// RestoreMediaOnCancel changes what a CALLER cancellation does to the
+	// media row (disc-2026-10-solo-generation-cancel-api AC #5). Without it a
+	// cancelled item goes to `not_searched` like every other failure — the
+	// batch, pool and free-lane behaviour, unchanged. With it (the detail-page
+	// click, which the user can now stop) the row is put back where Load found
+	// it while it still shows the pipeline's own in-flight status, and a
+	// verdict some leg already wrote during the run — the ASR leg's
+	// `untranslated` + English SRT path, the only key to a translate-only
+	// resume — is kept instead of erased. Additive on v1 (the FreeOnly
+	// precedent): zero value = shipped behaviour.
+	RestoreMediaOnCancel bool
 }
 
 // ProcessOutcome is what one item flow produced.
@@ -619,6 +631,13 @@ type processScope struct {
 	// delta from here, not the batch running total — otherwise every run row
 	// would misattribute its siblings' cost.
 	spentUSDAtStart decimal.Decimal
+
+	// loaded is the media row as ProcessItem's Load found it, and
+	// restoreOnCancel is ProcessItemOptions.RestoreMediaOnCancel: together they
+	// let failItem settle a cancelled item's row (settleCancelledMedia)
+	// without a signature change on the dozen failItem call sites.
+	loaded          *MediaItem
+	restoreOnCancel bool
 }
 
 type processScopeKey struct{}

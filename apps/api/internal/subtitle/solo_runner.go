@@ -95,6 +95,43 @@ type soloJob struct {
 	// QueuedAt is when the run began waiting for the extraction slot; zero
 	// while it is not waiting. Guarded by SoloRunner.mu.
 	QueuedAt time.Time
+	// cancel stops this job's run ctx (disc-2026-10-solo-generation-cancel-api).
+	// Set before the job is published in SoloRunner.jobs, so Cancel never
+	// finds a job without one.
+	cancel context.CancelFunc
+	// Cancelling is true once Cancel reached this job; the job stays in
+	// SoloRunner.jobs (and holds the single-flight claim) until its run has
+	// wound down and its terminal event is out. Guarded by SoloRunner.mu.
+	Cancelling bool
+}
+
+// ErrSoloGenerationCancelling is Start's refusal while the previous click on
+// the same item is still stopping (disc-2026-10-solo-generation-cancel-api
+// AC #6). It wraps services.ErrTranscriptionInProgress, so every existing
+// errors.Is check still answers 409; the handler only words it differently.
+var ErrSoloGenerationCancelling = fmt.Errorf("SUBTITLE_SOLO_CANCELLING: the previous run is still stopping: %w",
+	services.ErrTranscriptionInProgress)
+
+// Who holds an item's single-flight claim, as Cancel reports it.
+const (
+	// SoloOwnerSolo: a detail-page click — this runner's job, which Cancel stops.
+	SoloOwnerSolo = "solo"
+	// SoloOwnerOther: the consent batch, a pool worker or the free lane. Cancel
+	// does not touch it; the batch has its own cancel.
+	SoloOwnerOther = "other"
+)
+
+// SoloCancelResult is Cancel's answer — the cancel endpoints' payload.
+type SoloCancelResult struct {
+	// Cancelled: a solo job for the item now has a stop in effect (also on a
+	// repeated call while it winds down — Cancel is idempotent).
+	Cancelled bool
+	// Running: something is still generating the item after the call,
+	// including a just-cancelled job that has not finished stopping.
+	Running bool
+	// Owner names the claim holder while Running (SoloOwnerSolo /
+	// SoloOwnerOther); empty when nothing runs.
+	Owner string
 }
 
 // SoloRunnerOption configures one optional knob of NewSoloRunner.
@@ -211,6 +248,9 @@ func (s *SoloRunner) Start(ctx context.Context, ref MediaRef, modelID string) (j
 	// Single flight FIRST: every later refusal releases this claim, and a
 	// refusal here must not touch a claim that belongs to someone else.
 	if !s.guard.TryReserve(ref) {
+		if s.Cancelling(ref) {
+			return "", ErrSoloGenerationCancelling
+		}
 		return "", services.ErrTranscriptionInProgress
 	}
 	defer func() {
@@ -259,6 +299,14 @@ func (s *SoloRunner) Start(ctx context.Context, ref MediaRef, modelID string) (j
 		Budget:    ai.NewBudget(s.runBudgetUSD),
 		StartedAt: s.now().UTC(),
 	}
+	// Detached from the request ctx (the StartTranscription precedent): the
+	// job outlives the HTTP call. The per-click Budget rides the ctx so the
+	// pipeline keeps it rather than attaching its own, and the ASR leg's
+	// resolveBudget shares it too — one ceiling across ASR and LLM. Built
+	// HERE, before the job is published, so Cancel always finds its cancel
+	// (disc-2026-10-solo-generation-cancel-api).
+	runCtx, cancel := context.WithCancel(ai.WithBudget(context.Background(), job.Budget))
+	job.cancel = cancel
 	s.mu.Lock()
 	s.jobs[ref] = job
 	s.mu.Unlock()
@@ -266,14 +314,9 @@ func (s *SoloRunner) Start(ctx context.Context, ref MediaRef, modelID string) (j
 
 	s.emitStart(ref, job, predicted)
 
-	// Detached from the request ctx (the StartTranscription precedent): the
-	// job outlives the HTTP call. The per-click Budget rides the ctx so the
-	// pipeline keeps it rather than attaching its own, and the ASR leg's
-	// resolveBudget shares it too — one ceiling across ASR and LLM.
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		runCtx, cancel := context.WithCancel(ai.WithBudget(context.Background(), job.Budget))
 		defer cancel()
 		// The Activity row says 排隊中 while the run waits for the extraction
 		// slot (subtitle demux or audio extraction), and its step otherwise.
@@ -283,19 +326,29 @@ func (s *SoloRunner) Start(ctx context.Context, ref MediaRef, modelID string) (j
 			Regenerate:            true,
 			TranscribeWhenSkipped: true,
 			ModelID:               modelID,
+			// A stopped click must not erase the row's subtitle — a
+			// re-generation leaves the old file on disk, and the ASR leg's
+			// resume key must survive (disc-2026-10-solo-generation-cancel-api).
+			RestoreMediaOnCancel: true,
 		})
+		// Read before the deferred cancel: non-nil only when Cancel stopped it.
+		stopped := runCtx.Err()
 
-		// Order matters (CR M2): forget THIS job (never a newer one that may
-		// already own the ref), emit its terminal while the claim is still
-		// ours — so "the job's last event" cannot be overtaken by a second
-		// click's start event — and only then let go of the in-flight claim.
+		// Order matters (CR M2): stop publishing the live spend (the terminal
+		// carries the final figure itself, PR #935), emit the terminal while
+		// the claim is still ours — so "the job's last event" cannot be
+		// overtaken by a second click's start event — then forget THIS job
+		// (never a newer one), and only then let go of the in-flight claim.
+		// Forgetting AFTER the terminal (disc-2026-10-solo-generation-cancel-api
+		// CR L3): until the claim is released, Cancel and Start still see the
+		// user's own job — never "someone else holds it".
+		s.spend.Untrack(ref.ID, job.Budget)
+		s.emitTerminal(ref, job, outcome, runErr, stopped)
 		s.mu.Lock()
 		if cur, ok := s.jobs[ref]; ok && cur == job {
 			delete(s.jobs, ref)
 		}
 		s.mu.Unlock()
-		s.spend.Untrack(ref.ID, job.Budget)
-		s.emitTerminal(ref, job, outcome, runErr)
 		s.guard.Release(ref)
 	}()
 
@@ -314,6 +367,43 @@ func (s *SoloRunner) Status(ref MediaRef) (inProgress bool, jobID string) {
 		return true, job.ID
 	}
 	return s.guard.IsInFlight(ref), ""
+}
+
+// Cancel stops the solo job generating ref, if there is one — the
+// …/transcribe/cancel endpoints (disc-2026-10-solo-generation-cancel-api).
+// It only cancels the job's ctx: the run winds down through the pipeline's
+// own failure path (run row failed with the cancelled prefix, spend stamped,
+// media row settled), then the job's terminal transcription_failed event goes
+// out and the single-flight claim is released — the same order as any other
+// end. Idempotent. An item held by the batch, a pool worker or the free lane
+// is left alone (Owner SoloOwnerOther).
+func (s *SoloRunner) Cancel(ref MediaRef) SoloCancelResult {
+	s.mu.Lock()
+	job, ok := s.jobs[ref]
+	if ok {
+		job.Cancelling = true
+		job.cancel()
+	}
+	s.mu.Unlock()
+	switch {
+	case ok:
+		s.logger.Info("solo subtitle run cancelled by the user",
+			"job_id", job.ID, "media_id", ref.ID, "media_type", ref.MediaType)
+		return SoloCancelResult{Cancelled: true, Running: true, Owner: SoloOwnerSolo}
+	case s.guard.IsInFlight(ref):
+		return SoloCancelResult{Running: true, Owner: SoloOwnerOther}
+	default:
+		return SoloCancelResult{}
+	}
+}
+
+// Cancelling reports whether ref's solo job has been told to stop and has not
+// finished stopping yet (the status route's `cancelling`).
+func (s *SoloRunner) Cancelling(ref MediaRef) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[ref]
+	return ok && job.Cancelling
 }
 
 // ActiveSoloJobs is the Activity page's 進行中 list for solo clicks — one
@@ -415,8 +505,15 @@ func (s *SoloRunner) emitStart(ref MediaRef, job *soloJob, predicted string) {
 	s.broadcast(services.EventTranscriptionExtracting, data)
 }
 
+// soloStoppedMessage is the terminal line of a run the user stopped — F3s's
+// first line (pen-prompts-solo-progress-cancel.md 提示詞 5). Not a failure
+// sentence: the client words the rest from failure_reason=cancelled.
+const soloStoppedMessage = "已停止生成"
+
 // emitTerminal composes the job's LAST event from what the pipeline produced.
-func (s *SoloRunner) emitTerminal(ref MediaRef, job *soloJob, outcome *ProcessOutcome, runErr error) {
+// stopped is the run ctx's Err() when ProcessItem returned: non-nil only when
+// Cancel stopped the job.
+func (s *SoloRunner) emitTerminal(ref MediaRef, job *soloJob, outcome *ProcessOutcome, runErr, stopped error) {
 	var run *models.SubtitleRun
 	if outcome != nil {
 		run = outcome.Run
@@ -457,12 +554,16 @@ func (s *SoloRunner) emitTerminal(ref MediaRef, job *soloJob, outcome *ProcessOu
 		data["route"] = run.Route
 	}
 	message, detail := failureMessage(run, runErr, job.Budget)
+	reason := soloFailureReason(run, runErr)
+	if reason == models.SubtitleRunFailureCancelled && stopped != nil {
+		message = soloStoppedMessage
+	}
 	data["message"] = message
 	data["error"] = detail
 	// The reason CODE the activity record gives this same run (failure_reason,
 	// disc-2026-10-live-activity-failure-reasons-a AC #1): the client words it
 	// from the code; `error` stays for the dialog's diagnostic line.
-	data["failure_reason"] = soloFailureReason(run, runErr)
+	data["failure_reason"] = reason
 	s.broadcast(services.EventTranscriptionFailed, data)
 	s.logger.Warn("solo subtitle run did not produce a subtitle",
 		"job_id", job.ID, "media_id", ref.ID, "media_type", ref.MediaType, "message", message, "error", detail)
@@ -490,6 +591,13 @@ func (s *SoloRunner) emitTerminal(ref MediaRef, job *soloJob, outcome *ProcessOu
 // says other, so the live log must too. (The credit and budget checks come
 // from the error's type; their codes sit within the first few hundred bytes
 // of any real message, so the stored text names them as well.)
+//
+// A run the user STOPPED is read from the error alone: failItem decides
+// "cancelled" from the cause and the ctx at failure time, and when it does it
+// puts context.Canceled into the returned error — so a ffmpeg the stop killed
+// ("signal: killed") is cancelled here too, and a stop that arrives only
+// after the run already failed for another reason cannot relabel it
+// (disc-2026-10-solo-generation-cancel-api AC #4, CR H1).
 func soloFailureReason(run *models.SubtitleRun, runErr error) string {
 	if run != nil && run.ErrorMessage != "" {
 		return models.SubtitleRunFailureReason(run.ErrorMessage)
@@ -497,8 +605,6 @@ func soloFailureReason(run *models.SubtitleRun, runErr error) string {
 	if runErr == nil {
 		return models.SubtitleRunFailureOther
 	}
-	// ctxErr nil: the solo run's ctx is cancelled only after ProcessItem
-	// returns, so failItem's ctx.Err() leg cannot have fired for it.
 	if isCallerCancellation(runErr, nil) {
 		return models.SubtitleRunFailureCancelled
 	}

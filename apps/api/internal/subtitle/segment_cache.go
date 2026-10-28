@@ -213,6 +213,10 @@ func (p *Pipeline) storeCachedCues(ctx context.Context, translated []SubtitleBlo
 	if p.cache == nil {
 		return
 	}
+	// These cues are already paid for: a stop that arrives now must not drop
+	// them, or the next run pays for them again
+	// (disc-2026-10-solo-generation-cancel-api CR L2). Values ride along.
+	ctx = context.WithoutCancel(ctx)
 
 	failures := 0
 	for _, b := range translated {

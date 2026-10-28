@@ -1460,6 +1460,13 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 	// the SSE partial flag); translation expected but absent → untranslated +
 	// the EN path. A translate=false run writes nothing: no translation was
 	// expected.
+	//
+	// The verdict writes run on a ctx a stop cannot cancel: every file they
+	// describe is already on disk (a cancellation DURING translation returned
+	// above), so a stop landing now must not leave the row saying the opposite
+	// of the disk (disc-2026-10-solo-generation-cancel-api CR M1).
+	ctx, cancelVerdict := context.WithTimeout(context.WithoutCancel(ctx), commitWriteTimeout)
+	defer cancelVerdict()
 	switch {
 	case zhSRTPath != "" && outcome.DemotesVerdict():
 		// bugfix-j AC #2: same writeback shape as the budget-pause branch
@@ -1484,6 +1491,11 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 
 	return zhSRTPath, outcome, nil
 }
+
+// commitWriteTimeout bounds the bookkeeping writes that run after the paid
+// work is on disk, on a ctx detached from the run's cancellation — the same
+// bound the deadline writeback in translateAndPersist uses.
+const commitWriteTimeout = 10 * time.Second
 
 // writeSubtitleStatus is the sub-3-2 writeback dispatch. The movie branch
 // keeps 9R-16's nil-writer semantics EXACTLY (nil = place files, persist
@@ -1744,6 +1756,10 @@ func (s *TranscriptionService) storeChunk(ctx context.Context, scope *asrChunkSc
 	if scope == nil {
 		return
 	}
+	// The chunk is already paid for: a stop that arrives now must not drop it,
+	// or the next run transcribes — and pays for — it again
+	// (disc-2026-10-solo-generation-cancel-api CR L2).
+	ctx = context.WithoutCancel(ctx)
 	raw, err := json.Marshal(v)
 	if err != nil {
 		s.logger.Warn("asr chunk cache: encode failed", "media_id", scope.identity.MediaID, "chunk", index+1, "error", err)
@@ -2265,6 +2281,14 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 			return "", TranslationOutcome{}, fmt.Errorf("save zh-Hant SRT: %w", err)
 		}
 	}
+
+	// The zh-Hant sidecar is placed and paid for: from here on nothing may be
+	// cancelled, or a stop landing now would fail the verdict write and leave
+	// a fresh subtitle on disk under a run reported as 已停止
+	// (disc-2026-10-solo-generation-cancel-api CR M1). Bounded like the
+	// deadline writeback in translateAndPersist.
+	ctx, cancelCommit := context.WithTimeout(context.WithoutCancel(ctx), commitWriteTimeout)
+	defer cancelCommit()
 
 	// sub-5-5 AC #4 回程: the translate stage succeeded and the subtitle is on
 	// disk — feed the harvested renderings back, insert-if-absent only (an

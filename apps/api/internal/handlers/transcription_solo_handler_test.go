@@ -31,7 +31,18 @@ type fakeSoloGenerator struct {
 	inProgress bool
 	statusJob  string
 	statusAsk  []subtitle.MediaRef
+	// cancel is what Cancel answers; cancelAsk records each call.
+	cancel     subtitle.SoloCancelResult
+	cancelAsk  []subtitle.MediaRef
+	cancelling bool
 }
+
+func (f *fakeSoloGenerator) Cancel(ref subtitle.MediaRef) subtitle.SoloCancelResult {
+	f.cancelAsk = append(f.cancelAsk, ref)
+	return f.cancel
+}
+
+func (f *fakeSoloGenerator) Cancelling(subtitle.MediaRef) bool { return f.cancelling }
 
 func (f *fakeSoloGenerator) Start(_ context.Context, ref subtitle.MediaRef, modelID string) (string, error) {
 	f.started = append(f.started, ref)
