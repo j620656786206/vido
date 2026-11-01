@@ -59,6 +59,11 @@ type SubtitleRunRepositoryInterface interface {
 	// episode, season/episode numbers) of what it ran on — the activity
 	// record's subtitle source (disc-2026-10-activity-subtitle-run-time-a).
 	RecentTerminalRuns(ctx context.Context, limit int) ([]RecentSubtitleRun, error)
+	// FinishedRunsStartedBetween returns every completed, failed or skipped
+	// run whose started_at is in [from, to), newest first, each with its
+	// library names (same joins as RecentTerminalRuns) — the spend history
+	// list (disc-2026-11-spend-history-b-api).
+	FinishedRunsStartedBetween(ctx context.Context, from, to time.Time) ([]RecentSubtitleRun, error)
 }
 
 // RecentSubtitleRun is one finished run plus the library names it needs to be
@@ -504,10 +509,16 @@ func (r *SubtitleRunRepository) RecentTerminalRuns(ctx context.Context, limit in
 	if limit <= 0 {
 		return nil, nil
 	}
-	query := recentTerminalRunsQuery
-	rows, err := r.db.QueryContext(ctx, query, models.SubtitleRunCompleted, models.SubtitleRunFailed, limit)
+	return r.queryRunsWithNames(ctx, "recent terminal subtitle runs", recentTerminalRunsQuery,
+		models.SubtitleRunCompleted, models.SubtitleRunFailed, limit)
+}
+
+// queryRunsWithNames runs a query that selects subtitleRunColumnsAs(...)
+// followed by the title / season / episode columns of the library joins.
+func (r *SubtitleRunRepository) queryRunsWithNames(ctx context.Context, what, query string, args ...any) ([]RecentSubtitleRun, error) {
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query recent terminal subtitle runs: %w", err)
+		return nil, fmt.Errorf("failed to query %s: %w", what, err)
 	}
 	defer rows.Close()
 
@@ -517,7 +528,7 @@ func (r *SubtitleRunRepository) RecentTerminalRuns(ctx context.Context, limit in
 		var season, episode sql.NullInt64
 		run, err := scanSubtitleRun(appendScan{rows, []any{&rec.MediaTitle, &season, &episode}})
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan recent terminal subtitle run: %w", err)
+			return nil, fmt.Errorf("failed to scan %s: %w", what, err)
 		}
 		rec.Run = run
 		if season.Valid && episode.Valid {
@@ -527,9 +538,33 @@ func (r *SubtitleRunRepository) RecentTerminalRuns(ctx context.Context, limit in
 		out = append(out, rec)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating recent terminal subtitle runs: %w", err)
+		return nil, fmt.Errorf("error iterating %s: %w", what, err)
 	}
 	return out, nil
+}
+
+// finishedRunsStartedBetweenQuery is FinishedRunsStartedBetween's SQL: the
+// RecentTerminalRuns joins over a started_at window. Skipped rows are in on
+// purpose — the history page lists them as 沒有可用字幕 — while pending and
+// running rows are not: their spend is not stamped until they end.
+var finishedRunsStartedBetweenQuery = `SELECT ` + subtitleRunColumnsAs("r") + `,
+		COALESCE(m.title, s.title, sd.title, ''), e.season_number, e.episode_number
+	FROM subtitle_runs r
+	LEFT JOIN movies m ON r.media_type = 'movie' AND m.id = r.media_id
+	LEFT JOIN episodes e ON r.media_type = 'episode' AND e.id = r.media_id
+	LEFT JOIN series s ON s.id = e.series_id
+	LEFT JOIN series sd ON r.media_type = 'series' AND sd.id = r.media_id
+	WHERE r.status IN (?, ?, ?) AND r.started_at >= ? AND r.started_at < ?
+	ORDER BY r.started_at DESC, r.id ASC`
+
+// FinishedRunsStartedBetween is the spend history read. Same lexicographic-UTC
+// comparison as CompletedRunsBetween (started_at is stored UTC by
+// subtitleRunValues), so both bounds are UTC-normalized here. No LIMIT: the
+// month window bounds the set (正式機 ~100 runs a month), and the service
+// needs every row of the month for the summary and the daily series anyway.
+func (r *SubtitleRunRepository) FinishedRunsStartedBetween(ctx context.Context, from, to time.Time) ([]RecentSubtitleRun, error) {
+	return r.queryRunsWithNames(ctx, "finished subtitle runs between", finishedRunsStartedBetweenQuery,
+		models.SubtitleRunCompleted, models.SubtitleRunFailed, models.SubtitleRunSkipped, from.UTC(), to.UTC())
 }
 
 // appendScan lets scanSubtitleRun read a row that carries extra trailing

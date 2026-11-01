@@ -1437,6 +1437,10 @@ func main() {
 	subtitleSpendService := services.NewSubtitleSpendService(repos.SubtitleRuns, repos.Movies, repos.Episodes, slog.Default())
 	subtitleSpendService.SetSideSpend(repository.NewAISideSpendRepository(db.Conn()))
 	subtitleSpendHandler := handlers.NewSubtitleSpendHandler(subtitleSpendService, slog.Default())
+	// disc-2026-11-spend-history-b-api: the per-run list behind the AI 花費明細
+	// page — same ledger, same server-zone month as the summary above.
+	subtitleRunHistoryHandler := handlers.NewSubtitleRunHistoryHandler(
+		services.NewSubtitleRunHistoryService(repos.SubtitleRuns, slog.Default()), slog.Default())
 	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
 	// batch-subtitle + generation-batch + solo-transcription progress, pending-parse
 	// count, download counts, and recent parse events. Wired after the processors
@@ -1576,8 +1580,9 @@ func main() {
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
-		subtitleSpendHandler.RegisterRoutes(apiV1)   // GET /api/v1/subtitles/spend (sub-7-6b)
-		generationBatchHandler.RegisterRoutes(apiV1) // /api/v1/subtitles/generation-batch group (Story 9R-16)
+		subtitleSpendHandler.RegisterRoutes(apiV1)      // GET /api/v1/subtitles/spend (sub-7-6b)
+		subtitleRunHistoryHandler.RegisterRoutes(apiV1) // GET /api/v1/subtitles/runs (disc-2026-11-spend-history-b-api)
+		generationBatchHandler.RegisterRoutes(apiV1)    // /api/v1/subtitles/generation-batch group (Story 9R-16)
 		// Story 9R-17: GET /api/v1/ai/usage — live spend of the paid run in
 		// progress (generation batch or solo transcription).
 		handlers.NewAIUsageHandler(generationBatchProcessor, soloJobs).RegisterRoutes(apiV1)

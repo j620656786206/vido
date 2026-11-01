@@ -1,6 +1,6 @@
 # Story disc-2026-11-spend-history-a-ledger：每次執行都記下「當初預估多少」「用哪個聽寫引擎」「字幕從哪來」
 
-Status: review
+Status: done
 
 **Source:** 傘狀 `disc-2026-11-spend-history`（Alexyu 2026-11-01 提出，party mode 同日討論，⚖️ 選 B：四張一起排）。本單只做後端記錄，讓 -b 的列表 API 和 -d 的頁面有資料可讀。不做：API、畫面、回填舊資料、改月報。
 
