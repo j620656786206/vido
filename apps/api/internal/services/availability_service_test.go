@@ -146,3 +146,39 @@ func TestAvailabilityService_CheckOwnedByType(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+// stubLibraryIDRepo adds the id lookup to a repository double.
+type stubLibraryIDRepo struct {
+	ids map[int64]string
+	err error
+}
+
+func (s stubLibraryIDRepo) FindLibraryIDByTMDbID(_ context.Context, tmdbID int64) (string, error) {
+	return s.ids[tmdbID], s.err
+}
+
+func TestAvailabilityService_LibraryID_RoutesByTypeAndToleratesUnwiredRepos(t *testing.T) {
+	svc := &AvailabilityService{
+		movieIDs:  stubLibraryIDRepo{ids: map[int64]string{1: "movie-1"}},
+		seriesIDs: stubLibraryIDRepo{ids: map[int64]string{1: "series-1"}},
+	}
+	ctx := context.Background()
+
+	// Same numeric TMDb id, two titles: the type picks the table.
+	got, err := svc.LibraryID(ctx, "tv", 1)
+	if err != nil || got != "series-1" {
+		t.Fatalf("tv: got %q, %v", got, err)
+	}
+	got, err = svc.LibraryID(ctx, "movie", 1)
+	if err != nil || got != "movie-1" {
+		t.Fatalf("movie: got %q, %v", got, err)
+	}
+	if got, _ := svc.LibraryID(ctx, "tv", 0); got != "" {
+		t.Fatalf("tmdb 0: got %q", got)
+	}
+
+	// Repositories without the lookup (test doubles) answer "not in the library".
+	if got, err := (&AvailabilityService{}).LibraryID(ctx, "tv", 1); got != "" || err != nil {
+		t.Fatalf("unwired: got %q, %v", got, err)
+	}
+}

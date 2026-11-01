@@ -1279,3 +1279,25 @@ func (r *SeriesRepository) DeleteByLibraryID(ctx context.Context, libraryID stri
 	}
 	return n, nil
 }
+
+// FindLibraryIDByTMDbID returns the library id of the non-removed series row
+// for a TMDb id, or "" when the library has none. disc-2026-11-tmdb-detail-
+// owned-no-link-to-library: the TMDb detail page uses it to send an owned title
+// to its library page (seasons, episodes, 生成字幕). The oldest row wins when a
+// title was scanned in twice.
+func (r *SeriesRepository) FindLibraryIDByTMDbID(ctx context.Context, tmdbID int64) (string, error) {
+	if tmdbID <= 0 {
+		return "", nil
+	}
+	var id string
+	err := r.db.QueryRowContext(ctx,
+		`SELECT id FROM series WHERE tmdb_id = ? AND is_removed = 0 ORDER BY created_at, id LIMIT 1`,
+		tmdbID).Scan(&id)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("find series library id by tmdb_id: %w", err)
+	}
+	return id, nil
+}

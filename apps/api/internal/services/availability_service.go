@@ -27,7 +27,25 @@ type AvailabilityServiceInterface interface {
 	// sharing the same numeric id (Story 13-3a CR M1; mirrors the 13-1a
 	// type-aware create guard).
 	CheckOwnedByType(ctx context.Context, mediaType string, tmdbIDs []int64) ([]int64, error)
+	// LibraryID returns the library id of the owned title with this TMDb id
+	// and media type ('movie'|'tv'), or "" when the library has none or the
+	// lookup is not wired (disc-2026-11-tmdb-detail-owned-no-link-to-library).
+	LibraryID(ctx context.Context, mediaType string, tmdbID int64) (string, error)
 }
+
+// libraryIDFinder is the one repository method LibraryID needs. It is kept off
+// the big repository interfaces so their many test doubles stay untouched;
+// both concrete repositories satisfy it.
+type libraryIDFinder interface {
+	FindLibraryIDByTMDbID(ctx context.Context, tmdbID int64) (string, error)
+}
+
+// The wiring in NewAvailabilityService relies on these; break them and the
+// build fails instead of the TMDb page silently never finding a library row.
+var (
+	_ libraryIDFinder = (*repository.MovieRepository)(nil)
+	_ libraryIDFinder = (*repository.SeriesRepository)(nil)
+)
 
 // AvailabilityService wraps movie + series repositories to answer "do I already
 // own this?" queries with a single DB round trip per table. Handlers use this
@@ -36,6 +54,9 @@ type AvailabilityServiceInterface interface {
 type AvailabilityService struct {
 	movies repository.MovieRepositoryInterface
 	series repository.SeriesRepositoryInterface
+
+	movieIDs  libraryIDFinder
+	seriesIDs libraryIDFinder
 }
 
 // NewAvailabilityService wires the two repository dependencies.
@@ -43,7 +64,26 @@ func NewAvailabilityService(
 	movies repository.MovieRepositoryInterface,
 	series repository.SeriesRepositoryInterface,
 ) *AvailabilityService {
-	return &AvailabilityService{movies: movies, series: series}
+	svc := &AvailabilityService{movies: movies, series: series}
+	// The production repositories carry the id lookup; test doubles that do
+	// not simply answer "not in the library".
+	svc.movieIDs, _ = movies.(libraryIDFinder)
+	svc.seriesIDs, _ = series.(libraryIDFinder)
+	return svc
+}
+
+// LibraryID answers "which library row is this TMDb title?" for one media
+// type — 'tv' reads the series table, anything else movies, matching
+// CheckOwnedByType.
+func (s *AvailabilityService) LibraryID(ctx context.Context, mediaType string, tmdbID int64) (string, error) {
+	finder := s.movieIDs
+	if mediaType == models.RequestMediaTypeTV {
+		finder = s.seriesIDs
+	}
+	if finder == nil || tmdbID <= 0 {
+		return "", nil
+	}
+	return finder.FindLibraryIDByTMDbID(ctx, tmdbID)
 }
 
 // CheckOwned merges ownership hits from the movies and series tables. Empty
