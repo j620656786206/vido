@@ -519,21 +519,21 @@ func (p *ClaudeProvider) CompleteTextWithUsage(ctx context.Context, req Completi
 		return CompletionResult{}, err
 	}
 
+	usage := CompletionUsage{
+		InputTokens:              msg.Usage.InputTokens,
+		OutputTokens:             msg.Usage.OutputTokens,
+		CacheCreationInputTokens: msg.Usage.CacheCreationInputTokens,
+		CacheReadInputTokens:     msg.Usage.CacheReadInputTokens,
+	}
 	text := textFromMessage(msg)
 	if text == "" {
+		// A no-text reply is still billed, so its usage rides along with the
+		// error for callers that count spend (the subtitle translator).
 		if msg.StopReason == anthropic.StopReasonMaxTokens {
-			return CompletionResult{}, fmt.Errorf("%w: %w (output_tokens=%d)", ErrAIInvalidResponse, ErrAIResponseTruncated, msg.Usage.OutputTokens)
+			return CompletionResult{Usage: usage}, fmt.Errorf("%w: %w (output_tokens=%d)", ErrAIInvalidResponse, ErrAIResponseTruncated, msg.Usage.OutputTokens)
 		}
-		return CompletionResult{}, ErrAIInvalidResponse
+		return CompletionResult{Usage: usage}, fmt.Errorf("%w: %w (stop_reason=%s, output_tokens=%d)", ErrAIInvalidResponse, ErrAIEmptyReply, msg.StopReason, msg.Usage.OutputTokens)
 	}
 
-	return CompletionResult{
-		Text: text,
-		Usage: CompletionUsage{
-			InputTokens:              msg.Usage.InputTokens,
-			OutputTokens:             msg.Usage.OutputTokens,
-			CacheCreationInputTokens: msg.Usage.CacheCreationInputTokens,
-			CacheReadInputTokens:     msg.Usage.CacheReadInputTokens,
-		},
-	}, nil
+	return CompletionResult{Text: text, Usage: usage}, nil
 }

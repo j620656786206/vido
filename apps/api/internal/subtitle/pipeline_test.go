@@ -1183,6 +1183,45 @@ func TestTranslateTrack_CueTruncatedEvenAloneKeepsItsEnglish(t *testing.T) {
 	assert.Equal(t, 1, res.StubbornCues)
 }
 
+// disc-2026-11-translate-chunk-empty-reply-fails-episode: 《天蠍行動》S01E02
+// failed the whole episode on one chunk whose reply came back with no text and
+// no max_tokens stop (most likely a refusal). Such a chunk is split like a
+// truncated one; the cue that is refused even alone keeps its English, and the
+// refused requests' tokens still count toward spend.
+func TestTranslateTrack_EmptyReplyChunkIsSplitAndOnlyTheTriggerKeepsEnglish(t *testing.T) {
+	texts := make([]string, 0, 25)
+	for i := 1; i <= 25; i++ {
+		texts = append(texts, fmt.Sprintf("Line %d.", i))
+	}
+	refused := fmt.Errorf("translate chunk: %w: %w (stop_reason=refusal, output_tokens=0)", ai.ErrAIInvalidResponse, ai.ErrAIEmptyReply)
+	tr := &fakeTranslator{fn: func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		out := make(map[int]string, len(blocks))
+		for _, b := range blocks {
+			if b.Index == 7 {
+				return nil, ai.CompletionUsage{InputTokens: 100}, refused
+			}
+			out[b.Index] = fmt.Sprintf("第%d句", b.Index)
+		}
+		return out, ai.CompletionUsage{InputTokens: 10}, nil
+	}}
+	res, err := NewPipeline(tr, &recordingConverter{}, nil).TranslateTrack(batch10Ctx(), trackOf(cues(texts...)), TranslateContext{})
+	require.NoError(t, err, "one refused cue must not fail the episode")
+	assert.Equal(t, "Line 7.", res.Blocks[6].Text, "the cue refused even alone keeps its English")
+	assert.Equal(t, "第6句", res.Blocks[5].Text)
+	assert.Equal(t, "第8句", res.Blocks[7].Text)
+	assert.Equal(t, 1, res.StubbornCues)
+	refusedCalls := 0
+	for _, c := range tr.calls {
+		for _, b := range c.blocks {
+			if b.Index == 7 {
+				refusedCalls++
+			}
+		}
+	}
+	assert.Equal(t, 6, refusedCalls, "split 10 → 5 → 2 → 1 (four requests), then the quality gate's two retries")
+	assert.GreaterOrEqual(t, res.Usage.InputTokens, int64(6*100), "refused requests are billed and counted")
+}
+
 func TestTranslateTrack_OtherInvalidRepliesStillStopTheRun(t *testing.T) {
 	tr := &fakeTranslator{fn: func(_ int, _ []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
 		return nil, ai.CompletionUsage{}, ai.ErrAIInvalidResponse

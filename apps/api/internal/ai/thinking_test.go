@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -68,4 +69,44 @@ func TestOpenAICompat_LengthFinishWithNoTextIsTruncated(t *testing.T) {
 	_, err := NewOpenAICompatProvider(server.URL, "gemini-3.5-flash-lite").CompleteText(context.Background(), "", "u", 1)
 	assert.ErrorIs(t, err, ErrAIResponseTruncated)
 	assert.ErrorIs(t, err, ErrAIInvalidResponse)
+}
+
+// disc-2026-11-translate-chunk-empty-reply-fails-episode: a refusal comes back
+// with no text and stop_reason "refusal". It is an empty reply (splittable),
+// not a truncation, says why in the error, and still reports its billed usage.
+func TestClaudeProvider_RefusalIsAnEmptyReplyWithItsStopReason(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"content":[],"stop_reason":"refusal","usage":{"input_tokens":3200,"output_tokens":12}}`)
+	}))
+	defer server.Close()
+	res, err := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL)).CompleteTextWithUsage(context.Background(), CompletionRequest{UserPrompt: "x", MaxTokens: 4096})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAIEmptyReply)
+	assert.ErrorIs(t, err, ErrAIInvalidResponse, "old checks keep matching")
+	assert.NotErrorIs(t, err, ErrAIResponseTruncated)
+	assert.Contains(t, err.Error(), "stop_reason=refusal")
+	assert.True(t, IsShrinkableReply(err))
+	assert.Equal(t, int64(3200), res.Usage.InputTokens, "a refused reply is billed; its usage rides along")
+	assert.Equal(t, int64(12), res.Usage.OutputTokens)
+}
+
+func TestOpenAICompat_ContentFilterWithNoTextIsAnEmptyReply(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"choices":[{"message":{"content":""},"finish_reason":"content_filter"}]}`)
+	}))
+	defer server.Close()
+	_, err := NewOpenAICompatProvider(server.URL, "gemini-3.5-flash-lite").CompleteText(context.Background(), "", "u", 1)
+	assert.ErrorIs(t, err, ErrAIEmptyReply)
+	assert.ErrorIs(t, err, ErrAIInvalidResponse)
+	assert.NotErrorIs(t, err, ErrAIResponseTruncated)
+	assert.Contains(t, err.Error(), "finish_reason=content_filter")
+}
+
+func TestIsShrinkableReply_OnlyNoTextReplies(t *testing.T) {
+	assert.True(t, IsShrinkableReply(fmt.Errorf("%w: %w", ErrAIInvalidResponse, ErrAIResponseTruncated)))
+	assert.True(t, IsShrinkableReply(fmt.Errorf("%w: %w", ErrAIInvalidResponse, ErrAIEmptyReply)))
+	assert.False(t, IsShrinkableReply(ErrAIInvalidResponse), "a reply that had text but did not parse is not split")
+	assert.False(t, IsShrinkableReply(ErrAIProviderError))
+	assert.False(t, IsShrinkableReply(nil))
 }

@@ -1442,25 +1442,29 @@ func metadataOf(tctx TranslateContext) prompts.MediaMetadata {
 	}
 }
 
-// translateSplitting sends blocks as one request. When the reply ran out of
-// room before any text (ai.ErrAIResponseTruncated) it sends each half on its
-// own, down to a single cue — whose failure comes back as "no translation", so
-// the gate keeps that cue's English instead of the whole episode failing
-// (disc-2026-10-translation-batch-truncation; Ming Jwo's 「缺行切半重翻」).
-// Every other error is returned as before. requests is the number of requests
-// actually sent, for countRequest.
+// translateSplitting sends blocks as one request. When the reply carried no
+// text — it ran out of room (ai.ErrAIResponseTruncated,
+// disc-2026-10-translation-batch-truncation) or came back empty for another
+// reason such as a refusal (ai.ErrAIEmptyReply,
+// disc-2026-11-translate-chunk-empty-reply-fails-episode) — it sends each half
+// on its own, down to a single cue, whose failure comes back as "no
+// translation", so the gate keeps that cue's English instead of the whole
+// episode failing (Ming Jwo's 「缺行切半重翻」). The stubborn-cue ceiling still
+// fails the run if too many cues end up that way. Every other error is
+// returned as before. requests is the number of requests actually sent, for
+// countRequest.
 func (p *Pipeline) translateSplitting(ctx context.Context, sys []ai.SystemBlock, contextBlocks []prompts.SubtitleTranslatorBlock, pending []SubtitleBlock, established []prompts.GlossaryEntry) (map[int]string, map[string]string, ai.CompletionUsage, int, error) {
 	got, terms, usage, err := p.translator.TranslateChunk(ctx, sys, contextBlocks, promptBlocksOf(pending), established)
 	requests := 1
-	if err == nil || !errors.Is(err, ai.ErrAIResponseTruncated) {
+	if err == nil || !ai.IsShrinkableReply(err) {
 		return got, terms, usage, requests, err
 	}
 	if len(pending) == 1 {
-		p.logger.Warn("subtitle cue reply truncated even on its own — keeping its English original",
+		p.logger.Warn("subtitle cue reply had no text even on its own — keeping its English original",
 			"cue_index", pending[0].Index, "error", err)
 		return map[int]string{}, nil, usage, requests, nil
 	}
-	p.logger.Warn("subtitle chunk reply truncated — sending it again as two halves",
+	p.logger.Warn("subtitle chunk reply had no text — sending it again as two halves",
 		"cue_range", cueRange(pending), "cues", len(pending), "error", err)
 	mid := len(pending) / 2
 	merged := make(map[int]string, len(pending))

@@ -332,7 +332,13 @@ func (p *OpenAICompatProvider) attempt(ctx context.Context, body []byte) (openAI
 		if len(out.Choices) > 0 && out.Choices[0].FinishReason == "length" {
 			return none, false, fmt.Errorf("%w: %w", ErrAIInvalidResponse, ErrAIResponseTruncated)
 		}
-		return none, false, ErrAIInvalidResponse
+		// Any other empty reply (finish_reason "content_filter", "stop" with
+		// nothing written, no choices at all) — the shape of Claude's refusal.
+		finish := ""
+		if len(out.Choices) > 0 {
+			finish = out.Choices[0].FinishReason
+		}
+		return none, false, fmt.Errorf("%w: %w (finish_reason=%s)", ErrAIInvalidResponse, ErrAIEmptyReply, finish)
 	}
 	return openAICompatReply{
 		text:  out.Choices[0].Message.Content,
