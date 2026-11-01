@@ -143,6 +143,11 @@ func TestRunHistory_ComparableOnlyCompletedRunsWithBothNumbers(t *testing.T) {
 		histRun("failed", models.SubtitleRunRouteASR, models.SubtitleRunFailed, "2026-11-02 06:00", hp(0.10), hp(0.90)),
 		// a skipped run bought nothing: its missing spend is not "unpriced"
 		histRun("skipped", "", models.SubtitleRunSkipped, "2026-11-02 05:00", nil, nil),
+		// free routes were quoted before the router found the Chinese track
+		// (《基地》: $0 against $0.32) — counted in spend, not in the ratio
+		histRun("deliver", models.SubtitleRunRouteDeliverDirect, models.SubtitleRunCompleted, "2026-11-02 04:00", hp(0), hp(0.32)),
+		histRun("convert", models.SubtitleRunRouteConvertThenDeliver, models.SubtitleRunCompleted, "2026-11-02 03:00", hp(0), hp(0.29)),
+		histRun("online", models.SubtitleRunRouteOnline, models.SubtitleRunCompleted, "2026-11-02 02:00", hp(0), hp(0.10)),
 	}}
 	got, err := newHistoryService(src, time.Date(2026, 11, 3, 12, 0, 0, 0, historyTaipei)).History(context.Background(), RunHistoryQuery{})
 	require.NoError(t, err)
