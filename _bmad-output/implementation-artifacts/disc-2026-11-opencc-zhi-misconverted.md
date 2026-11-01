@@ -1,6 +1,6 @@
 # Story disc-2026-11-opencc-zhi-misconverted：「還是只有」不會再被改成「還是隻有」
 
-Status: review
+Status: done
 
 **Source:** GitHub issue #939（Alexyu 2026-10-31，《Lioness》S01E01 01:51「是大家都知道還是隻有她知道」）。⚖️ Alexyu 2026-11-01 選 A：先修這個。不做：換 OpenCC 斷詞引擎（jieba）、翻譯選詞（asset／軍階／ASVAB，#940 的第 2 類）、聽寫錯誤（#940 的第 1 類）。
 
