@@ -35,6 +35,10 @@ import (
 //     ai_side_spend over the same [from, to) window. 0 calls means none; a
 //     row is only ever written when a call cost money. They are NOT in
 //     `by_model` (that table counts subtitle runs) and do not touch `by_batch`.
+//   - `burned_in_calls` / `burned_in_usd` (disc-2026-11-burned-in-subs-b2) are
+//     the burned-in subtitle checks (Claude reading frames), from the same
+//     ledger and window but listed apart: they are not filename parsing, so
+//     `parse_*` leaves them out.
 type SubtitleSpendSummary struct {
 	Period string    `json:"period"`
 	From   time.Time `json:"from"`
@@ -58,6 +62,9 @@ type SubtitleSpendSummary struct {
 
 	ParseCalls int     `json:"parse_calls"`
 	ParseUSD   float64 `json:"parse_usd"`
+
+	BurnedInCalls int     `json:"burned_in_calls"`
+	BurnedInUSD   float64 `json:"burned_in_usd"`
 
 	ByModel []SpendByModel `json:"by_model"`
 	// ByBatch is present only when the request named a batch_id.
@@ -121,10 +128,10 @@ func NewSubtitleSpendService(runs spendRunSource, movies SubtitleStateReader, ep
 // sideSpendSource is the ai_side_spend read this service needs; the concrete
 // AISideSpendRepository satisfies it.
 type sideSpendSource interface {
-	TotalsBetween(ctx context.Context, from, to time.Time) (repository.AISideSpendTotals, error)
+	TotalsByKindBetween(ctx context.Context, from, to time.Time) (map[models.AISideSpendKind]repository.AISideSpendTotals, error)
 }
 
-// SetSideSpend wires the parse-path ledger behind parse_calls / parse_usd.
+// SetSideSpend wires the ai_side_spend ledger behind parse_* and burned_in_*.
 func (s *SubtitleSpendService) SetSideSpend(src sideSpendSource) {
 	s.side = src
 }
@@ -140,7 +147,14 @@ func (s *SubtitleSpendService) SetClock(now func() time.Time) {
 // instants [from, to) — the same「today means the operator's today」 choice
 // HomeSummaryService.processedTodayCell makes.
 func (s *SubtitleSpendService) monthWindow() (from, to time.Time) {
-	now := s.now()
+	return CalendarMonthWindow(s.now())
+}
+
+// CalendarMonthWindow is the calendar month containing now, in now's zone, as
+// UTC instants [from, to). The ONE definition of「本月」 for spend: the
+// summary card and the burned-in sweep's monthly cap both use it, so the cap
+// resets on the day the card starts a new month.
+func CalendarMonthWindow(now time.Time) (from, to time.Time) {
 	from = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	to = from.AddDate(0, 1, 0)
 	return from.UTC(), to.UTC()
@@ -164,12 +178,21 @@ func (s *SubtitleSpendService) MonthSummary(ctx context.Context, batchID string)
 	out.From, out.To = from.In(loc), to.In(loc)
 
 	if s.side != nil {
-		totals, err := s.side.TotalsBetween(ctx, from, to)
+		byKind, err := s.side.TotalsByKindBetween(ctx, from, to)
 		if err != nil {
 			return nil, err
 		}
-		out.ParseCalls = totals.Calls
-		out.ParseUSD = roundUSD(totals.Spent).InexactFloat64()
+		parse := decimal.Zero
+		for kind, t := range byKind {
+			if kind == models.AISideSpendKindBurnedInCheck {
+				out.BurnedInCalls = t.Calls
+				out.BurnedInUSD = roundUSD(t.Spent).InexactFloat64()
+				continue
+			}
+			out.ParseCalls += t.Calls
+			parse = parse.Add(t.Spent)
+		}
+		out.ParseUSD = roundUSD(parse).InexactFloat64()
 	}
 
 	if batchID != "" {

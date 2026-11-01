@@ -71,16 +71,17 @@ Vido 在單一連接埠上同時提供網頁介面和 API。
 
 **行為：**
 
-| 變數                          | 預設值      | 說明                                                                             |
-| ----------------------------- | ----------- | -------------------------------------------------------------------------------- |
-| `PUID`／`PGID`                | `99`／`100` | 容器用哪個使用者執行（Unraid 的 `nobody:users`）。要能寫入媒體資料夾             |
-| `TMDB_DEFAULT_LANGUAGE`       | `zh-TW`     | 預設中繼資料語言（ISO 639-1 格式）                                               |
-| `VIDO_SUBTITLE_PIPELINE_MODE` | `pipeline`  | `pipeline` 先讀片內英文字幕、沒有才聽聲音；`legacy` 回到只搜尋線上字幕的舊引擎   |
-| `VIDO_ASR_PROVIDER`           | `auto`      | 兩把聽寫金鑰都填時用哪家：`auto`（有 ElevenLabs 就用它）、`elevenlabs`、`openai` |
-| `ASR_BASE_URL`／`ASR_MODEL`   | （空白）    | 改用自架的語音辨識服務（例如 Speaches），不用雲端金鑰                            |
-| `AI_RUN_BUDGET_USD`           | `5`         | 每次執行最多花幾美元。超過會暫停，做好的部分保留，下次只做剩下的                 |
-| `AI_PROVIDER`                 | `gemini`    | 兩把都有時，AI 檔名解析優先用哪家；指定的那家沒金鑰會自動用另一家                |
-| `VIDO_LOG_LEVEL`              | `info`      | 設為 `debug` 可用於疑難排解                                                      |
+| 變數                             | 預設值      | 說明                                                                                      |
+| -------------------------------- | ----------- | ----------------------------------------------------------------------------------------- |
+| `PUID`／`PGID`                   | `99`／`100` | 容器用哪個使用者執行（Unraid 的 `nobody:users`）。要能寫入媒體資料夾                      |
+| `TMDB_DEFAULT_LANGUAGE`          | `zh-TW`     | 預設中繼資料語言（ISO 639-1 格式）                                                        |
+| `VIDO_SUBTITLE_PIPELINE_MODE`    | `pipeline`  | `pipeline` 先讀片內英文字幕、沒有才聽聲音；`legacy` 回到只搜尋線上字幕的舊引擎            |
+| `VIDO_ASR_PROVIDER`              | `auto`      | 兩把聽寫金鑰都填時用哪家：`auto`（有 ElevenLabs 就用它）、`elevenlabs`、`openai`          |
+| `ASR_BASE_URL`／`ASR_MODEL`      | （空白）    | 改用自架的語音辨識服務（例如 Speaches），不用雲端金鑰                                     |
+| `AI_RUN_BUDGET_USD`              | `5`         | 每次執行最多花幾美元。超過會暫停，做好的部分保留，下次只做剩下的                          |
+| `VIDO_BURNED_IN_MONTHLY_CAP_USD` | `1.00`      | 自動檢查「中文字幕是不是燒在畫面上」每月最多花幾美元（一季約 $0.002）。`0` 代表不自動檢查 |
+| `AI_PROVIDER`                    | `gemini`    | 兩把都有時，AI 檔名解析優先用哪家；指定的那家沒金鑰會自動用另一家                         |
+| `VIDO_LOG_LEVEL`                 | `info`      | 設為 `debug` 可用於疑難排解                                                               |
 
 ## 安裝後驗證
 

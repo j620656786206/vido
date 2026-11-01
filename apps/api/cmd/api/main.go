@@ -1444,12 +1444,35 @@ func main() {
 	// disc-2026-11-burned-in-subs-b1: does a season whose files carry no
 	// subtitle track have Chinese burned into the picture? One image per
 	// season to Claude, script decided by OpenCC, answer stored per episode.
-	// Manual trigger only for now; -b2 runs it after scans.
+	// -b2: the same check runs by itself — 2 minutes after boot (the one-off
+	// pass over the existing library), after every scan and every 6 hours —
+	// one season at a time, capped per month by VIDO_BURNED_IN_MONTHLY_CAP_USD.
+	// The manual trigger is never capped.
 	var burnedInHandler *handlers.BurnedInSubtitleHandler
+	stopBurnedInSweep := func() {}
 	if burnedInStore, ok := repos.Episodes.(services.BurnedInEpisodeStore); ok {
-		burnedInHandler = handlers.NewBurnedInSubtitleHandler(services.NewBurnedInSubtitleService(
-			burnedInStore, claudeHolder, services.FFmpegFrameGrabber{}, subtitleConverter,
-			repository.NewAISideSpendRepository(db.Conn()), slog.Default()), slog.Default())
+		sideSpend := repository.NewAISideSpendRepository(db.Conn())
+		burnedIn := services.NewBurnedInSubtitleService(
+			burnedInStore, claudeHolder, services.FFmpegFrameGrabber{}, subtitleConverter, sideSpend, slog.Default())
+		burnedInHandler = handlers.NewBurnedInSubtitleHandler(burnedIn, slog.Default())
+
+		finder, canSweep := repos.Episodes.(services.BurnedInSeasonFinder)
+		switch {
+		case cfg.BurnedInMonthlyCapUSD <= 0:
+			slog.Info("burned-in subtitle sweep disabled: VIDO_BURNED_IN_MONTHLY_CAP_USD is 0")
+		case !canSweep:
+			slog.Warn("burned-in subtitle sweep disabled: episode repository lacks FindSeasonsNeedingBurnedInCheck")
+		default:
+			burnedInSweepCtx, burnedInSweepCancel := context.WithCancel(context.Background())
+			defer burnedInSweepCancel()
+			sweep := services.NewBurnedInSweeper(finder, burnedIn, sideSpend, cfg.BurnedInMonthlyCapUSD, slog.Default())
+			scannerService.AppendOnScanComplete(func() { sweep.Trigger(burnedInSweepCtx) })
+			sweep.Start(burnedInSweepCtx)
+			stopBurnedInSweep = func() {
+				burnedInSweepCancel()
+				sweep.Wait()
+			}
+		}
 	} else {
 		slog.Warn("burned-in subtitle check disabled: episode repository lacks SetSeasonBurnedInSubtitle")
 	}
@@ -1781,6 +1804,8 @@ func main() {
 	slog.Info("Stopping episode subtitle-track sweep and movie subtitle-track backfill...")
 	stopEpisodeTracks()
 	stopMovieTracks()
+	// disc-2026-11-burned-in-subs-b2: a round may be mid-ffmpeg or mid-write.
+	stopBurnedInSweep()
 	// disc-2026-10-production-countries-never-filled: same rule — the facets
 	// backfill may be mid-write.
 	stopFacetsBackfill()

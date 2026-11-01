@@ -18,6 +18,10 @@
  *    parsing and keyword generation together. Not part of `byModel` (that
  *    table counts subtitle runs). An older API that predates the two fields
  *    reads as 0 calls, not undefined.
+ *  - `burnedInCalls` / `burnedInUsd` (disc-2026-11-burned-in-subs-b2): the
+ *    burned-in subtitle checks (Claude reading an episode's frames), listed
+ *    apart from parsing — `parseCalls` no longer includes them. An older API
+ *    reads as 0 the same way.
  */
 import { snakeToCamel } from '../utils/caseTransform';
 
@@ -73,7 +77,14 @@ export interface SubtitleSpendSummary {
   parseCalls: number;
   /** What those calls cost, USD. */
   parseUsd: number;
+  /** Paid burned-in subtitle checks this month (0 when none, or an older API). */
+  burnedInCalls: number;
+  /** What those checks cost, USD. */
+  burnedInUsd: number;
 }
+
+/** The fields an older API may omit; each reads as 0. */
+type OptionalSpendFields = 'parseCalls' | 'parseUsd' | 'burnedInCalls' | 'burnedInUsd';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -107,12 +118,19 @@ export const subtitleSpendService = {
     const params = new URLSearchParams({ period: 'month' });
     if (batchId) params.set('batch_id', batchId);
     const summary = await fetchApi<
-      Omit<SubtitleSpendSummary, 'parseCalls' | 'parseUsd'> &
-        Partial<Pick<SubtitleSpendSummary, 'parseCalls' | 'parseUsd'>>
+      Omit<SubtitleSpendSummary, OptionalSpendFields> &
+        Partial<Pick<SubtitleSpendSummary, OptionalSpendFields>>
     >(`/subtitles/spend?${params.toString()}`);
-    // An API older than backlog-ai-parse-reads-env-keys-only-a omits the two
-    // parse fields: that is "no parse calls recorded", i.e. 0.
-    return { ...summary, parseCalls: summary.parseCalls ?? 0, parseUsd: summary.parseUsd ?? 0 };
+    // An API older than backlog-ai-parse-reads-env-keys-only-a (parse_*) or
+    // disc-2026-11-burned-in-subs-b2 (burned_in_*) omits those fields: that is
+    // "no such calls recorded", i.e. 0.
+    return {
+      ...summary,
+      parseCalls: summary.parseCalls ?? 0,
+      parseUsd: summary.parseUsd ?? 0,
+      burnedInCalls: summary.burnedInCalls ?? 0,
+      burnedInUsd: summary.burnedInUsd ?? 0,
+    };
   },
 };
 

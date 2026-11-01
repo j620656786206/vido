@@ -740,3 +740,5 @@ Linux baselines incrementally bootstrapped 2026-11-01 via runner ubuntu-24.04 (I
 Linux baselines incrementally bootstrapped 2026-11-01 via runner ubuntu-24.04 (ImageVersion: 20261026.354.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/activity-spend-history/mobile/default-visual-linux.png
 
 Linux baselines incrementally bootstrapped 2026-11-01 via runner ubuntu-24.04 (ImageVersion: 20261026.354.1) — 2 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/activity-spend-history/desktop/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/activity-spend-history/mobile/default-visual-linux.png
+
+Linux baselines incrementally bootstrapped 2026-11-01 via runner ubuntu-24.04 (ImageVersion: 20261026.354.1) — 1 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/activity-spend-card/burned-in-check/default-visual-linux.png

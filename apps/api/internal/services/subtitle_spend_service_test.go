@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 )
 
 // sub-7-6b — the monthly aggregation is arithmetic over ledger rows with the
@@ -269,4 +270,61 @@ func TestSpendSummary_OnlineDeliveriesChangeNothing(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, without, with)
+}
+
+type fakeSideSpend struct {
+	byKind  map[models.AISideSpendKind]repository.AISideSpendTotals
+	gotFrom time.Time
+	gotTo   time.Time
+}
+
+func (f *fakeSideSpend) TotalsByKindBetween(_ context.Context, from, to time.Time) (map[models.AISideSpendKind]repository.AISideSpendTotals, error) {
+	f.gotFrom, f.gotTo = from, to
+	return f.byKind, nil
+}
+
+// disc-2026-11-burned-in-subs-b2 AC #7: the burned-in check is listed apart;
+// parse_* keeps filename parsing, fansub parsing and keywords together.
+func TestSpendSummary_BurnedInChecksAreListedApartFromParsing(t *testing.T) {
+	side := &fakeSideSpend{byKind: map[models.AISideSpendKind]repository.AISideSpendTotals{
+		models.AISideSpendKindParse:         {Calls: 3, Spent: decimal.RequireFromString("0.012")},
+		models.AISideSpendKindFansub:        {Calls: 1, Spent: decimal.RequireFromString("0.004")},
+		models.AISideSpendKindKeywords:      {Calls: 2, Spent: decimal.RequireFromString("0.002")},
+		models.AISideSpendKindBurnedInCheck: {Calls: 5, Spent: decimal.RequireFromString("0.0115")},
+	}}
+	svc := NewSubtitleSpendService(&fakeSpendRuns{}, nil, nil, nil)
+	svc.SetSideSpend(side)
+	taipei := time.FixedZone("Asia/Taipei", 8*3600)
+	svc.SetClock(func() time.Time { return time.Date(2026, 11, 2, 9, 0, 0, 0, taipei) })
+
+	got, err := svc.MonthSummary(context.Background(), "")
+	require.NoError(t, err)
+	assert.Equal(t, 6, got.ParseCalls)
+	assert.InDelta(t, 0.02, got.ParseUSD, 1e-9, "0.018 summed exactly, rounded to cents like every amount here")
+	assert.Equal(t, 5, got.BurnedInCalls)
+	assert.InDelta(t, 0.01, got.BurnedInUSD, 1e-9, "0.0115 → cents")
+	assert.Equal(t, time.Date(2026, 10, 31, 16, 0, 0, 0, time.UTC), side.gotFrom, "same window as the rest of the summary")
+
+	raw, err := json.Marshal(got)
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"burned_in_calls":5`)
+	assert.Contains(t, string(raw), `"burned_in_usd":0.01`)
+}
+
+func TestSpendSummary_NoSideSpendIsZero(t *testing.T) {
+	svc := NewSubtitleSpendService(&fakeSpendRuns{}, nil, nil, nil)
+	svc.SetSideSpend(&fakeSideSpend{byKind: map[models.AISideSpendKind]repository.AISideSpendTotals{}})
+	got, err := svc.MonthSummary(context.Background(), "")
+	require.NoError(t, err)
+	assert.Zero(t, got.ParseCalls)
+	assert.Zero(t, got.ParseUSD)
+	assert.Zero(t, got.BurnedInCalls)
+	assert.Zero(t, got.BurnedInUSD)
+}
+
+func TestCalendarMonthWindow(t *testing.T) {
+	taipei := time.FixedZone("Asia/Taipei", 8*3600)
+	from, to := CalendarMonthWindow(time.Date(2026, 12, 31, 23, 59, 0, 0, taipei))
+	assert.Equal(t, time.Date(2026, 11, 30, 16, 0, 0, 0, time.UTC), from)
+	assert.Equal(t, time.Date(2026, 12, 31, 16, 0, 0, 0, time.UTC), to, "December rolls into next year's January")
 }

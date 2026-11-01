@@ -66,9 +66,30 @@ func TestChineseSubtitleVerdict_BurnedIn(t *testing.T) {
 	}
 }
 
-func TestHasTraditionalChineseSubtitle_CountsBurnedIn(t *testing.T) {
-	assert.True(t, HasTraditionalChineseSubtitle("not_searched", "", `[]`, BurnedInZhHant))
-	assert.False(t, HasTraditionalChineseSubtitle("not_searched", "", `[]`, BurnedInZhHans))
+// disc-2026-11-burned-in-subs-b2 AC #5 (ruling 2A): any burned Chinese leaves
+// the generation queue; Traditional from a track still does.
+func TestHasTraditionalOrBurnedInChinese(t *testing.T) {
+	const zhTW = `[{"language":"zh-TW","format":"srt","external":true,"stream_index":0}]`
+	const zhCN = `[{"language":"zh-CN","format":"srt","external":true,"stream_index":0}]`
+	for _, tc := range []struct {
+		name   string
+		tracks string
+		burned string
+		want   bool
+	}{
+		{"burned zh-Hant", `[]`, BurnedInZhHant, true},
+		{"burned zh-Hans", `[]`, BurnedInZhHans, true},
+		{"burned zh (script untold)", `[]`, BurnedInZh, true},
+		{"burned none", `[]`, BurnedInNone, false},
+		{"never checked, no tracks", `[]`, "", false},
+		{"Traditional sidecar", zhTW, "", true},
+		{"Simplified sidecar only", zhCN, "", false},
+		{"Simplified sidecar + burned none", zhCN, BurnedInNone, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, HasTraditionalOrBurnedInChinese("not_searched", "", tc.tracks, tc.burned))
+		})
+	}
 }
 
 func TestIsBurnedInValue(t *testing.T) {

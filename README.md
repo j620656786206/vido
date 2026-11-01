@@ -122,6 +122,7 @@ Vido 本身免費。AI 字幕的費用是付給你自己的 Claude 或 Gemini（
 | `ASR_BASE_URL`、`ASR_MODEL`         | 選填                            | 改用自架的語音辨識服務（例如 Speaches、WhisperLive），不用 OpenAI key，也不花雲端費用        |
 | `ENCRYPTION_KEY`                    | 想在網頁上填金鑰就要填          | 剛好 32 個字的隨機字串，用來加密存放你的金鑰                                                 |
 | `AI_RUN_BUDGET_USD`                 | 選填，預設 `5`                  | 每次執行最多花幾美元。超過會暫停，已經做好的部分會保留，下次只做剩下的                       |
+| `VIDO_BURNED_IN_MONTHLY_CAP_USD`    | 選填，預設 `1.00`               | 自動檢查「中文字幕是不是燒在畫面上」每個月最多花幾美元（一季約 $0.002）。`0` 代表不自動檢查  |
 | `VIDO_AUTH_PASSWORD`                | 建議填                          | 整個 Vido 的登入密碼，見上面的「存取控制」                                                   |
 | `PUID`、`PGID`                      | 依你的 NAS                      | 容器用哪個使用者身分執行，要能寫入媒體資料夾                                                 |
 | `AI_PROVIDER`                       | 不用填                          | 兩把都有時，檔名解析優先用哪家（預設 Gemini）；指定的那家沒有金鑰會自動用另一家              |

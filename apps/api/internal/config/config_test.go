@@ -1163,3 +1163,31 @@ func TestLoad_ASRWordTimestamps_CanBeSwitchedOff(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, cfg.ASRWordTimestamps)
 }
+
+// ─── disc-2026-11-burned-in-subs-b2: VIDO_BURNED_IN_MONTHLY_CAP_USD ─────────
+
+func TestLoad_BurnedInMonthlyCapUSD(t *testing.T) {
+	for _, tc := range []struct {
+		name, env string
+		want      float64
+		source    ConfigSource
+	}{
+		{"default", "", 1.0, SourceDefault},
+		{"override", "2.5", 2.5, SourceEnvVar},
+		{"zero turns the automatic check off", "0", 0, SourceEnvVar},
+		{"garbage falls back to the default", "lots", 1.0, SourceDefault},
+		{"negative falls back to the default", "-1", 1.0, SourceDefault},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.env == "" {
+				os.Unsetenv("VIDO_BURNED_IN_MONTHLY_CAP_USD")
+			} else {
+				t.Setenv("VIDO_BURNED_IN_MONTHLY_CAP_USD", tc.env)
+			}
+			cfg, err := Load()
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, cfg.BurnedInMonthlyCapUSD)
+			assert.Equal(t, tc.source, cfg.Sources["VIDO_BURNED_IN_MONTHLY_CAP_USD"])
+		})
+	}
+}

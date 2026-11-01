@@ -57,6 +57,7 @@ var ErrBurnedInModelCall = errors.New("burned-in model call failed")
 type BurnedInEpisodeStore interface {
 	FindBySeasonNumber(ctx context.Context, seriesID string, seasonNumber int) ([]models.Episode, error)
 	SetSeasonBurnedInSubtitle(ctx context.Context, seriesID string, season int, value string, checkedAt time.Time) (int64, error)
+	MarkSeasonBurnedInChecked(ctx context.Context, seriesID string, season int, checkedAt time.Time) (int64, error)
 }
 
 // BurnedInVision is the model access CheckSeason needs —
@@ -129,8 +130,8 @@ func NewBurnedInSubtitleService(episodes BurnedInEpisodeStore, vision BurnedInVi
 // a single trackless episode accepts its one "none".
 //
 // Anything that keeps it from deciding (frames, an unreadable reply, OpenCC)
-// returns a nil Result with a Reason and writes nothing: "could not tell" is
-// never stored as "none". Errors are reserved for a missing key
+// returns a nil Result with a Reason and writes no value: "could not tell" is
+// never stored as "none". It does stamp burned_in_checked_at (see undecided). Errors are reserved for a missing key
 // (ErrBurnedInNotConfigured), the database, and a model call that failed
 // outright.
 func (s *BurnedInSubtitleService) CheckSeason(ctx context.Context, seriesID string, season int) (BurnedInCheckResult, error) {
@@ -159,19 +160,23 @@ func (s *BurnedInSubtitleService) CheckSeason(ctx context.Context, seriesID stri
 	}
 
 	first, err := check(trackless[0])
-	if err != nil || first.reason != "" {
-		res.Reason = first.reason
+	if err != nil {
 		return res, err
+	}
+	if first.reason != "" {
+		return s.undecided(ctx, res, seriesID, season, first.reason)
 	}
 	decided := first
 	if first.value == models.BurnedInNone {
 		if len(trackless) > 1 {
 			second, err := check(trackless[len(trackless)/2])
-			if err != nil || second.reason != "" {
+			if err != nil {
+				return res, err
+			}
+			if second.reason != "" {
 				log.Info("burned-in check: first episode said none, second could not be decided — season left unjudged",
 					"first_episode_id", trackless[0].ID, "second_episode_id", trackless[len(trackless)/2].ID, "reason", second.reason)
-				res.Reason = second.reason
-				return res, err
+				return s.undecided(ctx, res, seriesID, season, second.reason)
 			}
 			decided = second
 		} else {
@@ -189,6 +194,26 @@ func (s *BurnedInSubtitleService) CheckSeason(ctx context.Context, seriesID stri
 	log.Info("burned-in check done", "result", value, "lines", decided.lines,
 		"checked_episode_ids", res.CheckedEpisodeIDs, "episodes_updated", n, "cost_usd", res.CostUSD)
 	return res, nil
+}
+
+// undecided finishes a check that could not decide: no value is written, but
+// the season's unanswered trackless episodes get burned_in_checked_at, so the
+// sweep waits out its retry window instead of paying for the same question on
+// every scan (disc-2026-11-burned-in-subs-b2 AC #2). A failed stamp is only a
+// warning — the result is still "undecided".
+func (s *BurnedInSubtitleService) undecided(ctx context.Context, res BurnedInCheckResult, seriesID string, season int, reason string) (BurnedInCheckResult, error) {
+	res.Reason = reason
+	if _, err := s.episodes.MarkSeasonBurnedInChecked(ctx, seriesID, season, s.now()); err != nil {
+		s.logger.Warn("burned-in check: could not record the undecided check — it may be retried early",
+			"series_id", seriesID, "season", season, "error", err)
+	}
+	return res, nil
+}
+
+// Configured reports whether a Claude key resolves — the sweep ends a round
+// quietly without one.
+func (s *BurnedInSubtitleService) Configured(ctx context.Context) bool {
+	return s.vision.IsConfigured(ctx)
 }
 
 // episodeCheck is one episode's answer: value is one of the four stored

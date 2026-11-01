@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -112,6 +113,11 @@ type Config struct {
 	AIMaxConcurrent int
 	AIRatePerSec    float64
 	AIRunBudgetUSD  float64
+	// BurnedInMonthlyCapUSD caps what the AUTOMATIC burned-in subtitle check
+	// may spend per calendar month (disc-2026-11-burned-in-subs-b2, ruling
+	// 1A). 0 turns the automatic check off; the manual trigger is never capped.
+	// Env: VIDO_BURNED_IN_MONTHLY_CAP_USD, default 1.00.
+	BurnedInMonthlyCapUSD float64
 
 	// LogRetentionDays caps how long system_logs rows are kept
 	// (bugfix-system-logs-no-retention: 880k rows once grew a 1MB dataset into
@@ -209,6 +215,12 @@ func Load() (*Config, error) {
 	cfg.AIMaxConcurrent = cfg.loadInt("AI_MAX_CONCURRENT", 3)
 	cfg.AIRatePerSec = cfg.loadFloat("AI_RATE_PER_SEC", 2.0)
 	cfg.AIRunBudgetUSD = cfg.loadFloat("AI_RUN_BUDGET_USD", 5.0)
+	cfg.BurnedInMonthlyCapUSD = cfg.loadFloat("VIDO_BURNED_IN_MONTHLY_CAP_USD", 1.0)
+	if cfg.BurnedInMonthlyCapUSD < 0 || math.IsNaN(cfg.BurnedInMonthlyCapUSD) || math.IsInf(cfg.BurnedInMonthlyCapUSD, 0) {
+		slog.Warn("Invalid VIDO_BURNED_IN_MONTHLY_CAP_USD, using default", "value", cfg.BurnedInMonthlyCapUSD, "default", 1.0)
+		cfg.BurnedInMonthlyCapUSD = 1.0
+		cfg.Sources["VIDO_BURNED_IN_MONTHLY_CAP_USD"] = SourceDefault
+	}
 	// System-log retention (bugfix-system-logs-no-retention).
 	cfg.LogRetentionDays = cfg.loadInt("VIDO_LOG_RETENTION_DAYS", 14)
 	// ASR engine (9R-9): empty base URL = OpenAI Whisper default.
@@ -432,6 +444,8 @@ func (c *Config) LogConfigSources() {
 		"ELEVENLABS_API_KEY", maskSecret(c.ElevenLabsAPIKey),
 		"ELEVENLABS_API_KEY_source", c.Sources["ELEVENLABS_API_KEY"].String(),
 		"VIDO_ASR_PROVIDER", c.ASRProvider,
+		"VIDO_BURNED_IN_MONTHLY_CAP_USD", c.BurnedInMonthlyCapUSD,
+		"VIDO_BURNED_IN_MONTHLY_CAP_USD_source", c.Sources["VIDO_BURNED_IN_MONTHLY_CAP_USD"].String(),
 		"AI_PROVIDER", c.AIProvider,
 		"AI_PROVIDER_source", c.Sources["AI_PROVIDER"].String(),
 		"ENCRYPTION_KEY", maskSecret(c.EncryptionKey),

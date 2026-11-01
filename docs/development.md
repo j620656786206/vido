@@ -193,6 +193,7 @@ All environment variables are documented in [`.env.example`](../.env.example) at
 | `VIDO_ASR_NAME_PROMPT`                              | `false`      | Hand the show\'s character names to the engine as a prompt; measured no gain and occasional list echo, so opt-in                                                                       |
 | `VIDO_ASR_KEYTERMS`                                 | `true`       | Hand ElevenLabs Scribe the show's character names as a vocabulary (`keyterms`) so they are spelled right; +20% on the Scribe bill, quoted in the estimate. `false` turns it off.       |
 | `AI_RUN_BUDGET_USD`                                 | `5`          | Spend ceiling per run                                                                                                                                                                  |
+| `VIDO_BURNED_IN_MONTHLY_CAP_USD`                    | `1.00`       | Monthly ceiling for the automatic burned-in subtitle check (after boot, after scans, every 6 h); `0` disables it, the manual `POST /subtitles/burned-in/check` is never capped         |
 | `ENABLE_DOUBAN` / `ENABLE_WIKIPEDIA`                | `false`      | Metadata fallback providers (opt-in)                                                                                                                                                   |
 
 AI features degrade gracefully: without keys the rest of the app works and the AI paths report as disabled.

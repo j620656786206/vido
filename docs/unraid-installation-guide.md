@@ -71,16 +71,17 @@ Vido serves both the web UI and API on a single port.
 
 **Behaviour:**
 
-| Variable                      | Default      | Description                                                                                                                      |
-| ----------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| `PUID` / `PGID`               | `99` / `100` | User the container runs as (Unraid's `nobody:users`). Must be able to write the media folder                                     |
-| `TMDB_DEFAULT_LANGUAGE`       | `zh-TW`      | Default metadata language (ISO 639-1)                                                                                            |
-| `VIDO_SUBTITLE_PIPELINE_MODE` | `pipeline`   | `pipeline` reads the embedded English track first, then falls back to speech recognition. `legacy` = online subtitle search only |
-| `VIDO_ASR_PROVIDER`           | `auto`       | Which speech recogniser to use when both keys are set: `auto` (ElevenLabs if present), `elevenlabs`, `openai`                    |
-| `ASR_BASE_URL` / `ASR_MODEL`  | (empty)      | Point at a self-hosted OpenAI-compatible speech recogniser (e.g. Speaches) instead of a cloud key                                |
-| `AI_RUN_BUDGET_USD`           | `5`          | Spend ceiling per run. Work done before the ceiling is kept; the next run only does the rest                                     |
-| `AI_PROVIDER`                 | `gemini`     | Which provider AI filename parsing prefers when both keys exist; if it has no key, the other one is used automatically           |
-| `VIDO_LOG_LEVEL`              | `info`       | Set to `debug` for troubleshooting                                                                                               |
+| Variable                         | Default      | Description                                                                                                                      |
+| -------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `PUID` / `PGID`                  | `99` / `100` | User the container runs as (Unraid's `nobody:users`). Must be able to write the media folder                                     |
+| `TMDB_DEFAULT_LANGUAGE`          | `zh-TW`      | Default metadata language (ISO 639-1)                                                                                            |
+| `VIDO_SUBTITLE_PIPELINE_MODE`    | `pipeline`   | `pipeline` reads the embedded English track first, then falls back to speech recognition. `legacy` = online subtitle search only |
+| `VIDO_ASR_PROVIDER`              | `auto`       | Which speech recogniser to use when both keys are set: `auto` (ElevenLabs if present), `elevenlabs`, `openai`                    |
+| `ASR_BASE_URL` / `ASR_MODEL`     | (empty)      | Point at a self-hosted OpenAI-compatible speech recogniser (e.g. Speaches) instead of a cloud key                                |
+| `AI_RUN_BUDGET_USD`              | `5`          | Spend ceiling per run. Work done before the ceiling is kept; the next run only does the rest                                     |
+| `VIDO_BURNED_IN_MONTHLY_CAP_USD` | `1.00`       | Monthly ceiling for the automatic check for Chinese subtitles burned into the picture (~$0.002 per season). `0` turns it off     |
+| `AI_PROVIDER`                    | `gemini`     | Which provider AI filename parsing prefers when both keys exist; if it has no key, the other one is used automatically           |
+| `VIDO_LOG_LEVEL`                 | `info`       | Set to `debug` for troubleshooting                                                                                               |
 
 ## Post-Installation Verification
 
