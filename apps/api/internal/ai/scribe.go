@@ -95,6 +95,16 @@ const (
 	// held long enough on its own without running into it.
 	scribeFragmentSeconds    = 0.3
 	scribeFragmentGapSeconds = 0.6
+	// scribeMaxWordSeconds: one word lasting longer than this was stretched by
+	// Scribe over the silence or music before it. When speech follows right
+	// after it, its END is the real moment and it is pulled back to sit just
+	// before that speech (disc-2026-11-asr-stretched-word-at-chunk-seam).
+	scribeMaxWordSeconds = 2.0
+	// scribeSecondsPerWidth sizes a re-anchored word: ~0.08 s a letter,
+	// between scribeReanchorMinSeconds and scribeReanchorMaxSeconds.
+	scribeSecondsPerWidth    = 0.08
+	scribeReanchorMinSeconds = 0.3
+	scribeReanchorMaxSeconds = 1.0
 )
 
 // Scribe API errors. Separate sentinels from Whisper's so a log line or an
@@ -501,6 +511,7 @@ func parseScribeResponse(body []byte) (*scribeResponse, error) {
 // capped at scribeCueMaxSeconds and stopping scribeCueLeadSeconds before the
 // next cue — only ever extended, never cut.
 func scribeCues(words []scribeWord) []whisperSegment {
+	words = reanchorStretchedWords(words)
 	type cue struct {
 		start, end float64
 		text       strings.Builder
@@ -605,6 +616,47 @@ func scribeCues(words []scribeWord) []whisperSegment {
 		segs = append(segs, whisperSegment{ID: i, Start: start, End: end, Text: c.text.String()})
 	}
 	return segs
+}
+
+// reanchorStretchedWords moves a word Scribe stretched back over the quiet
+// before it to where it was actually said.
+//
+// 《特種部隊：母獅》S01E01: an audio chunk began at 14:00 with 22 s of music,
+// and Scribe timed the chunk's first word, "That'll", from 0 s. The cue
+// "That'll" sat on screen at 14:00.000–14:07.000 (capped), and "do, Cruz."
+// followed alone at 14:22.94. A word that long is not a word; when the next
+// word starts within scribeCueGapSeconds of its end, its end is the reliable
+// edge, so it keeps its end and gets a spoken length back. A stretched word
+// with nothing right after it (a long cry) is left as it was — the cue cap
+// already handles that.
+//
+// Returns a copy; the input is not modified.
+func reanchorStretchedWords(words []scribeWord) []scribeWord {
+	out := make([]scribeWord, len(words))
+	copy(out, words)
+	for i := range out {
+		w := &out[i]
+		if w.Type != "word" || w.End-w.Start <= scribeMaxWordSeconds {
+			continue
+		}
+		next := -1
+		for j := i + 1; j < len(out); j++ {
+			if out[j].Type == "word" {
+				next = j
+				break
+			}
+			if out[j].Type == "audio_event" {
+				break
+			}
+		}
+		if next == -1 || out[next].Start-w.End > scribeCueGapSeconds {
+			continue
+		}
+		spoken := float64(displayWidth(strings.TrimSpace(w.Text))) * scribeSecondsPerWidth
+		spoken = math.Min(math.Max(spoken, scribeReanchorMinSeconds), scribeReanchorMaxSeconds)
+		w.Start = w.End - spoken
+	}
+	return out
 }
 
 // displayWidth counts a word against scribeCueMaxChars: a CJK character

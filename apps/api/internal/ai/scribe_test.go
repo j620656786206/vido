@@ -455,6 +455,39 @@ func TestScribeCues_OneStretchedTokenIsCappedAtMaxSeconds(t *testing.T) {
 	assert.InDelta(t, 10.0+scribeCueMaxSeconds, segs[0].End, 1e-9)
 }
 
+func TestScribeCues_StretchedWordBeforeSpeechMovesToWhereItWasSaid(t *testing.T) {
+	// 《母獅》S01E01: a chunk opening with 22 s of music; Scribe timed
+	// "That'll" from 0 s. It belongs with "do, Cruz." at 22.94.
+	segs := scribeCues([]scribeWord{
+		word("That'll", 0.0, 22.86), spacing(22.86),
+		word("do,", 22.94, 23.10), spacing(23.10),
+		word("Cruz.", 23.26, 23.70),
+	})
+	require.Len(t, segs, 1, "one cue, not a stray \"That'll\" 22 s early")
+	assert.Equal(t, "That'll do, Cruz.", segs[0].Text)
+	assert.InDelta(t, 22.86-7*scribeSecondsPerWidth, segs[0].Start, 1e-9)
+}
+
+func TestReanchorStretchedWords_LeavesNormalAndIsolatedWordsAlone(t *testing.T) {
+	in := []scribeWord{
+		word("Hello", 1.0, 1.4),                  // normal length
+		word("Aaaaah!", 10.0, 25.0),              // stretched, nothing after
+		word("Noooo", 30.0, 34.0), spacing(34.0), // stretched, next word 2 s later
+		word("wait.", 36.0, 36.4),
+		word("Hm", 40.0, 43.0), event("[door slams]", 43.0, 43.5),
+		word("Go.", 43.5, 43.8),                                         // an event between: not "speech right after"
+		word("I", 50.0, 53.0), spacing(53.0), word("know.", 53.1, 53.4), // short word: min length
+	}
+	out := reanchorStretchedWords(in)
+	assert.InDelta(t, 1.0, out[0].Start, 1e-9)
+	assert.InDelta(t, 10.0, out[1].Start, 1e-9)
+	assert.InDelta(t, 30.0, out[2].Start, 1e-9)
+	assert.InDelta(t, 40.0, out[5].Start, 1e-9)
+	assert.InDelta(t, 53.0-scribeReanchorMinSeconds, out[8].Start, 1e-9)
+	assert.InDelta(t, 53.0, out[8].End, 1e-9)
+	assert.InDelta(t, 50.0, in[8].Start, 1e-9, "the input is not modified")
+}
+
 func TestEndsSentence_AbbreviationsAndInitials(t *testing.T) {
 	for w, want := range map[string]bool{
 		"Mr.": false, "Dr.": false, "U.S.": false, "J.": false, "p.m.": false,
