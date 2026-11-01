@@ -7431,9 +7431,10 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     width: 1024,
   },
   {
-    // The phone: summary stacks, the list becomes four-line cards.
+    // The phone: summary stacks; the list is the same table with four columns
+    // (disc-2026-11-spend-history-mobile-table).
     id: 'activity-spend-history/mobile',
-    label: 'activity/SpendHistoryView (AI 花費明細 — 手機 viewport 390×844，卡片列表)',
+    label: 'activity/SpendHistoryView (AI 花費明細 — 手機 viewport 390×844，四欄精簡表格)',
     component: SpendHistoryView,
     props: SPEND_HISTORY_FX_PROPS,
     penNode: 'screen-section', // no frame — disc-2026-11-spend-history-c design decisions
