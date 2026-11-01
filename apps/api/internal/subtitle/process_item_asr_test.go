@@ -37,12 +37,20 @@ type fakeSpeechTranscriber struct {
 	err       error
 	calls     []asrCall
 	onRun     func()
+	// engine, when set, plays the real service's speech-recognition step:
+	// it names the engine on the row the caller handed down
+	// (disc-2026-11-spend-history-a-ledger). Stamped before err is returned,
+	// as a run that fails mid-ASR has already run ASR.
+	engine, engineModel string
 }
 
 func (f *fakeSpeechTranscriber) Available() bool { return f.available }
 
-func (f *fakeSpeechTranscriber) Transcribe(_ context.Context, ref MediaRef, filePath, mediaDir string) error {
+func (f *fakeSpeechTranscriber) Transcribe(ctx context.Context, ref MediaRef, filePath, mediaDir string) error {
 	f.calls = append(f.calls, asrCall{ref: ref, filePath: filePath, mediaDir: mediaDir})
+	if f.engine != "" && !errors.Is(f.err, services.ErrTranscriptionDisabled) {
+		services.RecordASRIdentity(ctx, f.engine, f.engineModel)
+	}
 	if f.err != nil {
 		return f.err
 	}

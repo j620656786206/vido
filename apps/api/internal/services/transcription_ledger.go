@@ -27,6 +27,13 @@ func (s *TranscriptionService) SetRunLedger(l SubtitleRunLedger) {
 	s.runLedger = l
 }
 
+// SetRunEstimator wires the run-start quote for this engine's own ledger rows
+// (disc-2026-11-spend-history-a-ledger). Optional / nil-safe: unwired leaves
+// estimate_usd NULL, with one Warn per row.
+func (s *TranscriptionService) SetRunEstimator(e RunEstimator) {
+	s.runEstimator = e
+}
+
 // WithRunRecordedByCaller tells the engine that the CALLER owns the run row.
 // The D2 pipeline's ASR fallback (cmd/api/asr_adapter.go) passes it: that
 // item already has a pipeline run row, and a second row for the same work
@@ -37,6 +44,52 @@ func WithRunRecordedByCaller() TranscriptionOption {
 
 type ledgerOwnershipKey struct{}
 type ledgerRunKey struct{}
+type asrIdentityTargetKey struct{}
+
+// WithASRIdentityTarget hands the engine the row of a run the CALLER records
+// (the pipeline's ASR fallback, which also passes WithRunRecordedByCaller), so
+// the speech-recognition engine and model are stamped on that row when — and
+// only when — ASR actually runs (disc-2026-11-spend-history-a-ledger). The
+// caller must not touch run concurrently while the transcription it started
+// is in flight; RunTranscription is synchronous, so the pipeline never does.
+func WithASRIdentityTarget(ctx context.Context, run *models.SubtitleRun) context.Context {
+	if run == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, asrIdentityTargetKey{}, run)
+}
+
+// asrIdentitySource is what the ASR client can say about itself;
+// *ASRProviderHolder implements it. A client that cannot (a test fake, a bare
+// WhisperClient) records no engine rather than a guessed one.
+type asrIdentitySource interface {
+	Identity(ctx context.Context) (provider, model string)
+}
+
+// stampASRIdentity names this service's ASR client on the row recording the
+// run, when the client can name itself.
+func (s *TranscriptionService) stampASRIdentity(ctx context.Context) {
+	src, ok := s.asr.(asrIdentitySource)
+	if !ok {
+		return
+	}
+	provider, model := src.Identity(ctx)
+	RecordASRIdentity(ctx, provider, model)
+}
+
+// RecordASRIdentity writes the speech-recognition engine and model onto the row
+// recording the run in ctx: the engine's own ledger row, else the caller's
+// (WithASRIdentityTarget). A ctx carrying neither is a no-op.
+func RecordASRIdentity(ctx context.Context, provider, model string) {
+	run := ledgerRunFrom(ctx)
+	if run == nil {
+		run, _ = ctx.Value(asrIdentityTargetKey{}).(*models.SubtitleRun)
+	}
+	if run == nil {
+		return
+	}
+	run.ASRProvider, run.ASRModel = provider, model
+}
 
 // withLedgerOwnership marks ctx when the caller records the run itself, so
 // runPipeline — which does not see the options — knows to open no row.
@@ -84,6 +137,14 @@ func (s *TranscriptionService) openLedgerRun(ctx context.Context, mediaType, med
 		// Route C transcription is only ever started by a person (a dialog or
 		// a consent batch); the unattended lanes never reach paid ASR.
 		TriggeredBy: models.SubtitleRunTriggeredManual,
+		// disc-2026-11-spend-history-a-ledger: Route C's subtitle always comes
+		// from the audio — this run's ASR, or an earlier run's English SRT on a
+		// translate-only resume. The engine columns are stamped separately,
+		// only when ASR actually runs (stampASRIdentity).
+		Source: models.SubtitleRunSourceAudio,
+		// The dialog's quote, recomputed at run start (before any extract or
+		// ASR), so the resume credit it prices is the one this run gets.
+		EstimateUSD: estimateRunUSD(ctx, s.runEstimator, mediaType, mediaID, s.logger.Warn),
 	}
 	if s.translationService != nil {
 		run.ModelID = s.translationService.EffectiveModelID(ctx)

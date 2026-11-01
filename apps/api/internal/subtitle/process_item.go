@@ -128,6 +128,9 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 		// ctx from GenerationBatchProcessor exactly like the shared Budget.
 		BatchID:     services.GenerationBatchIDFromContext(ctx),
 		TriggeredBy: runTrigger(opts.Automatic),
+		// disc-2026-11-spend-history-a-ledger: the dialog's quote for this
+		// item, recomputed now — the start of the run that actually happens.
+		EstimateUSD: p.runStartEstimate(ctx, ref, opts),
 	}
 	if err := p.runs.Create(ctx, run); err != nil {
 		return nil, fmt.Errorf("subtitle pipeline: create run for %s %s: %w", ref.MediaType, ref.ID, err)
@@ -189,6 +192,11 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	// on the monthly spend page. The ASR fallback overwrites it with "asr"
 	// when it actually runs.
 	run.Route = string(decision.Kind)
+	// disc-2026-11-spend-history-a-ledger: where the text came from — the
+	// route alone cannot tell an English sidecar from an embedded English
+	// track (both are "translate"). The ASR fallback overwrites it with
+	// "audio" when it runs.
+	run.Source = sourceForDecision(decision)
 
 	// 9R-10b AC #3: the FreeOnly brake. It sits HERE, after routing, because
 	// routing is the only place that can tell the free routes apart from the
@@ -595,7 +603,16 @@ func (p *Pipeline) transcribeFallback(
 	zhPath := ExpectedSidecarPath(item.FilePath)
 	preStat, preErr := os.Stat(zhPath)
 
-	err := p.asr.Transcribe(ctx, ref, item.FilePath, filepath.Dir(item.FilePath))
+	// disc-2026-11-spend-history-a-ledger: the engine stamps its name and
+	// model on THIS row — and only if speech recognition actually runs (a
+	// translate-only resume inside the service runs none).
+	err := p.asr.Transcribe(services.WithASRIdentityTarget(ctx, run), ref, item.FilePath, filepath.Dir(item.FilePath))
+	if !errors.Is(err, services.ErrTranscriptionDisabled) {
+		// The service took the item: whatever it delivered (or tried to)
+		// comes from the audio. A declined item keeps the NULL source of the
+		// no_text_source / skip verdict it degrades to.
+		run.Source = models.SubtitleRunSourceAudio
+	}
 	switch {
 	case err == nil:
 		// fall through to the provenance record below
@@ -637,6 +654,45 @@ func (p *Pipeline) transcribeFallback(
 		"media_id", ref.ID, "media_type", ref.MediaType,
 		"output_path", run.OutputPath, "cue_count", run.CueCount)
 	return outcome, nil
+}
+
+// sourceForDecision maps a routing verdict to the ledger's source column: a
+// sidecar decision is marked StreamIndex -1 by the router (sidecarVerdict),
+// any other chosen track is embedded text, and a verdict with no track (skip /
+// no_text_source) produced no subtitle — "" (NULL).
+func sourceForDecision(decision RouteDecision) string {
+	if decision.Track == nil {
+		return ""
+	}
+	if decision.Track.StreamIndex == -1 {
+		return models.SubtitleRunSourceSidecar
+	}
+	return models.SubtitleRunSourceEmbeddedText
+}
+
+// runStartEstimate asks the wired estimator for this item's quote. It never
+// fails the run: no estimator, or an error, is nil (NULL) plus one Warn.
+//
+// The FreeOnly lane (the auto generator after a scan) is not quoted: it
+// defers every paid route by construction, so the quote would price work that
+// cannot run there — and the estimate's own probes (ffprobe, the background
+// English-sidecar timing check) would otherwise fire for every scanned item.
+func (p *Pipeline) runStartEstimate(ctx context.Context, ref MediaRef, opts ProcessItemOptions) *float64 {
+	if opts.FreeOnly {
+		return nil
+	}
+	if p.estimator == nil {
+		p.logger.Warn("subtitle run ledger: no run estimator wired — estimate_usd stays NULL",
+			"media_id", ref.ID, "media_type", ref.MediaType)
+		return nil
+	}
+	usd, err := p.estimator.EstimateRunUSD(ctx, ref.MediaType, ref.ID)
+	if err != nil {
+		p.logger.Warn("subtitle run ledger: estimate failed — estimate_usd stays NULL",
+			"media_id", ref.ID, "media_type", ref.MediaType, "error", err)
+		return nil
+	}
+	return &usd
 }
 
 // pauseASRItem closes the provenance row for a budget-ceiling hit WITHOUT

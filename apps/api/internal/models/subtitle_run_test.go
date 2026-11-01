@@ -230,3 +230,25 @@ func TestSubtitleRun_ReceiptPayload(t *testing.T) {
 	assert.Equal(t, 844, got["cue_count"])
 	assert.Equal(t, done, got["completed_at"])
 }
+
+// disc-2026-11-spend-history-a-ledger AC #6: the history facts follow the same
+// "absent when not recorded" rule — an unestimated run must not read as a $0
+// quote, and a run that never transcribed names no engine.
+func TestSubtitleRun_ReceiptPayload_HistoryKeysOnlyWhenRecorded(t *testing.T) {
+	bare := &SubtitleRun{ID: "r1", MediaID: "m1", MediaType: SubtitleRunMediaMovie, Status: SubtitleRunCompleted}
+	got := bare.ReceiptPayload()
+	for _, absent := range []string{"estimate_usd", "asr_provider", "asr_model", "source"} {
+		assert.NotContains(t, got, absent, "%s must be absent when not recorded", absent)
+	}
+
+	estimate := 0.0 // a recorded $0 quote (a free Chinese track) IS a fact
+	full := &SubtitleRun{
+		ID: "r2", MediaID: "m2", MediaType: SubtitleRunMediaEpisode, Status: SubtitleRunCompleted,
+		EstimateUSD: &estimate, ASRProvider: "elevenlabs", ASRModel: "scribe_v2", Source: SubtitleRunSourceAudio,
+	}
+	got = full.ReceiptPayload()
+	assert.Equal(t, 0.0, got["estimate_usd"])
+	assert.Equal(t, "elevenlabs", got["asr_provider"])
+	assert.Equal(t, "scribe_v2", got["asr_model"])
+	assert.Equal(t, "audio", got["source"])
+}

@@ -213,6 +213,26 @@ func (h *ASRProviderHolder) Provider(ctx context.Context) string {
 	return c.provider
 }
 
+// Identity names the engine and model the next transcribe would use, for the
+// run ledger (disc-2026-11-spend-history-a-ledger). Scribe is always
+// ai.ScribeModel; Whisper (hosted or self-hosted) reports the model id the
+// request carries — the configured ASR_MODEL, or ai.WhisperModel, which the
+// client sends when none is set. ("", "") when nothing is configured.
+func (h *ASRProviderHolder) Identity(ctx context.Context) (provider, model string) {
+	provider = h.Provider(ctx)
+	switch provider {
+	case "":
+		return "", ""
+	case ASRProviderElevenLabs:
+		return provider, ai.ScribeModel
+	default:
+		if h.model == "" {
+			return provider, ai.WhisperModel
+		}
+		return provider, h.model
+	}
+}
+
 // ASRRate returns the per-audio-minute price the next transcribe will be
 // metered at, and the provider it belongs to — the ONE rate source both the
 // estimators and the metering path read (sub-5-1 費率同源), now per call

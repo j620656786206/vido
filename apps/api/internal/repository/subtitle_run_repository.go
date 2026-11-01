@@ -109,16 +109,18 @@ func NewSubtitleRunRepository(db *sql.DB) *SubtitleRunRepository {
 var _ SubtitleRunRepositoryInterface = (*SubtitleRunRepository)(nil)
 
 // subtitleRunColumns keeps INSERT/UPDATE/SELECT/scan in sync (Rule 15 DB Column
-// Sync). All 24 columns — the 16 of migration 030 in table order, the two
+// Sync). All 28 columns — the 16 of migration 030 in table order, the two
 // spend columns of migration 032, the two English-cue counts of migration
-// 034, the three ledger columns of migration 041, and triggered_by of 043. The bugfix-20-1 precedent — series.seasons
+// 034, the three ledger columns of migration 041, triggered_by of 043, and
+// the four history columns of 048. The bugfix-20-1 precedent — series.seasons
 // was never added to the select list, so GetSeasons silently returned [] for
 // every series — is why this is one constant used everywhere rather than four
 // hand-written lists.
 const subtitleRunColumns = `id, media_id, media_type, tmdb_id, metadata_hash, glossary_version, ` +
 	`prompt_version, model_id, status, source_language, output_path, cue_count, ` +
 	`cache_enabled, error_message, started_at, completed_at, spent_usd, budget_usd, stubborn_count, transient_count, ` +
-	`route, cache_hit_cues, batch_id, triggered_by`
+	`route, cache_hit_cues, batch_id, triggered_by, ` +
+	`estimate_usd, asr_provider, asr_model, source`
 
 // subtitleRunColumnsAs is subtitleRunColumns with every column qualified by a
 // table alias — derived, never hand-copied, so a joined SELECT can never drift
@@ -131,8 +133,8 @@ func subtitleRunColumnsAs(alias string) string {
 	return strings.Join(cols, ", ")
 }
 
-// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (24 values).
-const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
+// subtitleRunInsertPlaceholders matches subtitleRunColumns 1:1 (28 values).
+const subtitleRunInsertPlaceholders = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`
 
 // subtitleRunUpdateAssignments covers every column except the id key, so an
 // Update can never leave a column stale.
@@ -140,9 +142,10 @@ const subtitleRunUpdateAssignments = `media_id = ?, media_type = ?, tmdb_id = ?,
 	`glossary_version = ?, prompt_version = ?, model_id = ?, status = ?, source_language = ?, ` +
 	`output_path = ?, cue_count = ?, cache_enabled = ?, error_message = ?, started_at = ?, completed_at = ?, ` +
 	`spent_usd = ?, budget_usd = ?, stubborn_count = ?, transient_count = ?, ` +
-	`route = ?, cache_hit_cues = ?, batch_id = ?, triggered_by = ?`
+	`route = ?, cache_hit_cues = ?, batch_id = ?, triggered_by = ?, ` +
+	`estimate_usd = ?, asr_provider = ?, asr_model = ?, source = ?`
 
-// subtitleRunValues returns the 24 column values in subtitleRunColumns order.
+// subtitleRunValues returns the 28 column values in subtitleRunColumns order.
 // Both time columns are normalized to UTC before storage: the driver stores a
 // time.Time as text, and FindCompletedRun / ListByStatus ORDER BY that text —
 // a local-time value ("… +0800 CST") would compare by wall-clock digits and
@@ -159,6 +162,7 @@ func subtitleRunValues(run *models.SubtitleRun) []any {
 		run.CacheEnabled, run.ErrorMessage, run.StartedAt.UTC(), completedAt, run.SpentUSD, run.BudgetUSD,
 		run.StubbornCount, run.TransientCount,
 		nullIfEmpty(run.Route), run.CacheHitCues, nullIfEmpty(run.BatchID), nullIfEmpty(run.TriggeredBy),
+		run.EstimateUSD, nullIfEmpty(run.ASRProvider), nullIfEmpty(run.ASRModel), nullIfEmpty(run.Source),
 	}
 }
 
@@ -171,13 +175,14 @@ func nullIfEmpty(s string) any {
 	return s
 }
 
-// scanSubtitleRun reads all 24 columns in subtitleRunColumns order. The four
+// scanSubtitleRun reads all 28 columns in subtitleRunColumns order. The four
 // nullable TEXT/INTEGER columns go through sql.Null* so a row written by any
 // other path (e.g. a bare INSERT) still scans; the nullable columns modelled
 // as pointers stay pointers so "unset" survives the round trip.
 func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.SubtitleRun, error) {
 	var run models.SubtitleRun
 	var sourceLanguage, outputPath, errorMessage, route, batchID, triggeredBy sql.NullString
+	var asrProvider, asrModel, source sql.NullString
 	var cueCount sql.NullInt64
 
 	err := scanner.Scan(
@@ -186,6 +191,7 @@ func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.Subti
 		&run.CacheEnabled, &errorMessage, &run.StartedAt, &run.CompletedAt, &run.SpentUSD, &run.BudgetUSD,
 		&run.StubbornCount, &run.TransientCount,
 		&route, &run.CacheHitCues, &batchID, &triggeredBy,
+		&run.EstimateUSD, &asrProvider, &asrModel, &source,
 	)
 	if err != nil {
 		return run, err
@@ -198,6 +204,9 @@ func scanSubtitleRun(scanner interface{ Scan(dest ...any) error }) (models.Subti
 	run.Route = route.String
 	run.BatchID = batchID.String
 	run.TriggeredBy = triggeredBy.String
+	run.ASRProvider = asrProvider.String
+	run.ASRModel = asrModel.String
+	run.Source = source.String
 	return run, nil
 }
 
@@ -524,7 +533,7 @@ func (r *SubtitleRunRepository) RecentTerminalRuns(ctx context.Context, limit in
 }
 
 // appendScan lets scanSubtitleRun read a row that carries extra trailing
-// columns: the run's 24 destinations come first, then `extra`.
+// columns: the run's 28 destinations come first, then `extra`.
 type appendScan struct {
 	scanner interface{ Scan(dest ...any) error }
 	extra   []any

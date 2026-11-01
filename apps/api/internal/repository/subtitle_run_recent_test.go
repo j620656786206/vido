@@ -244,7 +244,7 @@ func TestSubtitleRunRepository_RecentTerminalRuns_OrphanEpisode(t *testing.T) {
 // subtitleRunColumnsAs qualifies every column, whatever the spacing.
 func TestSubtitleRunColumnsAs(t *testing.T) {
 	cols := strings.Split(subtitleRunColumnsAs("r"), ", ")
-	assert.Len(t, cols, 24)
+	assert.Len(t, cols, 28)
 	for _, c := range cols {
 		assert.True(t, strings.HasPrefix(c, "r."), c)
 		assert.NotContains(t, c, " ", c)

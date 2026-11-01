@@ -157,7 +157,33 @@ type SubtitleRun struct {
 	// request-completion trigger after a download) or SubtitleRunTriggeredManual
 	// (a user action). "" = recorded before the column existed — not guessed.
 	TriggeredBy string `db:"triggered_by" json:"triggered_by,omitempty"`
+
+	// History columns (disc-2026-11-spend-history-a-ledger, migration 048).
+	//
+	// EstimateUSD is what the 管理字幕 dialog's Estimate would have quoted for
+	// this item at the moment the run STARTED (resume credit included),
+	// recomputed server-side — a batch item that waited while the model was
+	// changed records the quote for the run that actually started. nil = not
+	// recorded (pre-048 row, no estimator wired, or the estimate failed).
+	//
+	// ASRProvider / ASRModel name the speech-recognition engine and model, set
+	// only when ASR actually ran on this run; "" otherwise (or the model was
+	// not knowable). Source is where the subtitle came from
+	// (SubtitleRunSource*); "" on lanes that produced none (skip /
+	// no_text_source). All stored NULL when unset.
+	EstimateUSD *float64 `db:"estimate_usd" json:"estimate_usd,omitempty"`
+	ASRProvider string   `db:"asr_provider" json:"asr_provider,omitempty"`
+	ASRModel    string   `db:"asr_model" json:"asr_model,omitempty"`
+	Source      string   `db:"source" json:"source,omitempty"`
 }
+
+// Where a run's subtitle came from (SubtitleRun.Source). Independent of Route:
+// an English sidecar and an embedded English track both route "translate".
+const (
+	SubtitleRunSourceEmbeddedText = "embedded_text"
+	SubtitleRunSourceSidecar      = "sidecar"
+	SubtitleRunSourceAudio        = "audio"
+)
 
 // Who started a run (SubtitleRun.TriggeredBy). The opt-in usage report counts
 // only "auto" — subtitles Vido produced without anyone asking.
@@ -215,6 +241,19 @@ func (r *SubtitleRun) ReceiptPayload() map[string]interface{} {
 	}
 	if r.BudgetUSD != nil {
 		data["budget_usd"] = *r.BudgetUSD
+	}
+	// disc-2026-11-spend-history-a-ledger: same "absent, not zeroed" rule.
+	if r.EstimateUSD != nil {
+		data["estimate_usd"] = *r.EstimateUSD
+	}
+	if r.ASRProvider != "" {
+		data["asr_provider"] = r.ASRProvider
+	}
+	if r.ASRModel != "" {
+		data["asr_model"] = r.ASRModel
+	}
+	if r.Source != "" {
+		data["source"] = r.Source
 	}
 	if r.CompletedAt != nil {
 		data["completed_at"] = r.CompletedAt.UTC()
