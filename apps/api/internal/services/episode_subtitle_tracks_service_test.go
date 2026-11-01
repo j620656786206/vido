@@ -152,8 +152,8 @@ func TestEpisodeSubtitleTracks_ProbesUnreadAndStoresBothHalves(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(repo.writes["e2"][0]), &stored))
 	assert.Len(t, stored, 2)
 	assert.True(t, stored[1].External)
-	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e2"][0]))
-	assert.Equal(t, models.ChineseSubtitleNone, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0]))
+	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e2"][0], ""))
+	assert.Equal(t, models.ChineseSubtitleNone, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0], ""))
 
 	info, _ := os.Stat(e1)
 	assert.Equal(t, FileSignature(info), repo.writes["e1"][1])
@@ -288,7 +288,7 @@ func TestEpisodeSubtitleTracks_UnreadableFolderStoresTheEmbeddedHalf(t *testing.
 	svc := NewEpisodeSubtitleTracksService(repo, prober, side, nil)
 
 	assert.Equal(t, 1, svc.Run(context.Background()).Probed)
-	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0]),
+	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0], ""),
 		"the probe result is kept; the season list fills the sidecars in later")
 }
 
@@ -366,7 +366,7 @@ func TestEpisodeSubtitleTracks_SamplesUntoldChineseTracks(t *testing.T) {
 	res := svc.Run(context.Background())
 	assert.Equal(t, 1, res.Peeked)
 	assert.Equal(t, []int{3}, peeker.calls)
-	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0]))
+	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0], ""))
 
 	var stored []SubtitleTrack
 	require.NoError(t, json.Unmarshal([]byte(repo.writes["e1"][0]), &stored))
@@ -413,7 +413,7 @@ func TestEpisodeSubtitleTracks_FailedSampleStoresTheTrackAndIsTriedOncePerProces
 	res := svc.Run(context.Background())
 	assert.Equal(t, 1, res.Probed)
 	assert.Equal(t, 1, res.PeekFailed)
-	assert.Equal(t, models.ChineseSubtitleZh, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0]),
+	assert.Equal(t, models.ChineseSubtitleZh, models.ChineseSubtitleVerdict("not_searched", "", repo.writes["e1"][0], ""),
 		"the track is stored without a script — still 'Chinese'")
 
 	svc.Run(context.Background())

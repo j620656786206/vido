@@ -1441,6 +1441,18 @@ func main() {
 	// page — same ledger, same server-zone month as the summary above.
 	subtitleRunHistoryHandler := handlers.NewSubtitleRunHistoryHandler(
 		services.NewSubtitleRunHistoryService(repos.SubtitleRuns, slog.Default()), slog.Default())
+	// disc-2026-11-burned-in-subs-b1: does a season whose files carry no
+	// subtitle track have Chinese burned into the picture? One image per
+	// season to Claude, script decided by OpenCC, answer stored per episode.
+	// Manual trigger only for now; -b2 runs it after scans.
+	var burnedInHandler *handlers.BurnedInSubtitleHandler
+	if burnedInStore, ok := repos.Episodes.(services.BurnedInEpisodeStore); ok {
+		burnedInHandler = handlers.NewBurnedInSubtitleHandler(services.NewBurnedInSubtitleService(
+			burnedInStore, claudeHolder, services.FFmpegFrameGrabber{}, subtitleConverter,
+			repository.NewAISideSpendRepository(db.Conn()), slog.Default()), slog.Default())
+	} else {
+		slog.Warn("burned-in subtitle check disabled: episode repository lacks SetSeasonBurnedInSubtitle")
+	}
 	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
 	// batch-subtitle + generation-batch + solo-transcription progress, pending-parse
 	// count, download counts, and recent parse events. Wired after the processors
@@ -1583,6 +1595,9 @@ func main() {
 		subtitleSpendHandler.RegisterRoutes(apiV1)      // GET /api/v1/subtitles/spend (sub-7-6b)
 		subtitleRunHistoryHandler.RegisterRoutes(apiV1) // GET /api/v1/subtitles/runs (disc-2026-11-spend-history-b-api)
 		generationBatchHandler.RegisterRoutes(apiV1)    // /api/v1/subtitles/generation-batch group (Story 9R-16)
+		if burnedInHandler != nil {
+			burnedInHandler.RegisterRoutes(apiV1) // POST /api/v1/subtitles/burned-in/check (disc-2026-11-burned-in-subs-b1)
+		}
 		// Story 9R-17: GET /api/v1/ai/usage — live spend of the paid run in
 		// progress (generation batch or solo transcription).
 		handlers.NewAIUsageHandler(generationBatchProcessor, soloJobs).RegisterRoutes(apiV1)

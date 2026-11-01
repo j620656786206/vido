@@ -68,6 +68,8 @@ func setupEpisodeTestDB(t *testing.T) *sql.DB {
 			subtitle_language TEXT,
 			subtitle_tracks TEXT,
 			subtitle_tracks_file_sig TEXT,
+			burned_in_subtitle TEXT,
+			burned_in_checked_at TIMESTAMP,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)
@@ -374,7 +376,7 @@ func TestEpisodeFindBySeasonNumber(t *testing.T) {
 		episode int
 	}{
 		{1, 1}, {1, 2}, {1, 3}, // Season 1: 3 episodes
-		{2, 1}, {2, 2},         // Season 2: 2 episodes
+		{2, 1}, {2, 2}, // Season 2: 2 episodes
 	}
 
 	for _, sd := range seasonsData {

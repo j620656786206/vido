@@ -100,6 +100,7 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			subtitle_path TEXT,
 			subtitle_language TEXT,
 			subtitle_tracks TEXT,
+			burned_in_subtitle TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)

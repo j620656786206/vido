@@ -46,7 +46,7 @@ func librarySortKey(kind, sortBy string) string {
 	case "rating", "vote_average":
 		return "vote_average"
 	case "subtitle_status":
-		verdict := fmt.Sprintf("%s(subtitle_status, subtitle_language, subtitle_tracks)", chineseSubtitleSQLFunc)
+		verdict := fmt.Sprintf("%s(subtitle_status, subtitle_language, subtitle_tracks, NULL)", chineseSubtitleSQLFunc)
 		if kind == LibraryKindSeries {
 			verdict = seriesChineseSubtitleSQL("series")
 		}

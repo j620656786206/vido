@@ -879,7 +879,7 @@ func scanSeries(scanner interface {
 	// fallback only covers a value the SQL could not give.
 	s.ChineseSubtitle = models.ChineseSubtitle(chineseRollup.String)
 	if !s.ChineseSubtitle.IsValid() {
-		s.ChineseSubtitle = models.ChineseSubtitleVerdict(string(s.SubtitleStatus), s.SubtitleLanguage.String, s.SubtitleTracks.String)
+		s.ChineseSubtitle = models.ChineseSubtitleVerdict(string(s.SubtitleStatus), s.SubtitleLanguage.String, s.SubtitleTracks.String, "")
 	}
 
 	// Populate the wire-exposed Credits only when cast/crew is non-empty, so omitempty

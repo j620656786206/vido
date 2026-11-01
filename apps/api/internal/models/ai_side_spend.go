@@ -3,7 +3,7 @@ package models
 import "time"
 
 // AISideSpendKind names which background AI call a side-spend row paid for.
-// Closed set — mirrored by the CHECK in migration 047.
+// Closed set — mirrored by the CHECK in migration 047 (049 added burned_in_check).
 type AISideSpendKind string
 
 const (
@@ -13,6 +13,10 @@ const (
 	AISideSpendKindFansub AISideSpendKind = "fansub"
 	// AISideSpendKindKeywords is alternative-search-keyword generation.
 	AISideSpendKindKeywords AISideSpendKind = "keywords"
+	// AISideSpendKindBurnedInCheck is the burned-in subtitle check: one image
+	// of an episode's frames read by Claude (disc-2026-11-burned-in-subs-b1,
+	// migration 049).
+	AISideSpendKindBurnedInCheck AISideSpendKind = "burned_in_check"
 )
 
 // AISideSpend is one paid AI call made OUTSIDE a subtitle run — filename

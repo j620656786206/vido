@@ -20,7 +20,8 @@ const episodeSelectColumns = `
 	id, series_id, season_id, tmdb_id, season_number, episode_number,
 	title, overview, air_date, runtime, duration_seconds, still_path,
 	vote_average, file_path, subtitle_status, subtitle_path, subtitle_language,
-	subtitle_tracks, subtitle_tracks_file_sig, created_at, updated_at`
+	subtitle_tracks, subtitle_tracks_file_sig, burned_in_subtitle, burned_in_checked_at,
+	created_at, updated_at`
 
 // EpisodeRepository provides data access operations for episodes
 type EpisodeRepository struct {
@@ -57,6 +58,8 @@ func scanEpisode(s interface{ Scan(...any) error }, episode *models.Episode) err
 		&episode.SubtitleLanguage,
 		&episode.SubtitleTracks,
 		&episode.SubtitleTracksFileSig,
+		&episode.BurnedInSubtitle,
+		&episode.BurnedInCheckedAt,
 		&episode.CreatedAt,
 		&episode.UpdatedAt,
 	)
@@ -183,7 +186,7 @@ func (r *EpisodeRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]mo
 	// same verdict the season-list badge renders.
 	kept := episodes[:0]
 	for _, e := range episodes {
-		if models.HasTraditionalChineseSubtitle(string(e.SubtitleStatus), e.SubtitleLanguage.String, e.SubtitleTracks.String) {
+		if models.HasTraditionalChineseSubtitle(string(e.SubtitleStatus), e.SubtitleLanguage.String, e.SubtitleTracks.String, e.BurnedInSubtitle.String) {
 			continue
 		}
 		kept = append(kept, e)
@@ -196,9 +199,9 @@ func (r *EpisodeRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]mo
 // generation-batch preview count (sub-5-1 AC #7), mirroring
 // MovieRepository.CountMissingZhHantSubtitle over the same shared predicate.
 func (r *EpisodeRepository) CountMissingZhHantSubtitle(ctx context.Context) (int, error) {
-	// The three columns the verdict reads, nothing else: the count must drop
+	// The four columns the verdict reads, nothing else: the count must drop
 	// exactly the rows FindMissingZhHantSubtitle drops.
-	query := `SELECT subtitle_status, subtitle_language, subtitle_tracks FROM episodes WHERE ` + missingZhHantSubtitleEpisodeWhere
+	query := `SELECT subtitle_status, subtitle_language, subtitle_tracks, burned_in_subtitle FROM episodes WHERE ` + missingZhHantSubtitleEpisodeWhere
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count episodes missing zh-Hant subtitle: %w", err)
@@ -207,17 +210,18 @@ func (r *EpisodeRepository) CountMissingZhHantSubtitle(ctx context.Context) (int
 	return countMissingZhHantRows(rows)
 }
 
-// countMissingZhHantRows counts the (status, language, tracks) rows that are
-// not already Traditional Chinese — shared by the movie and episode counts.
+// countMissingZhHantRows counts the (status, language, tracks, burned) rows
+// that are not already Traditional Chinese — shared by the movie and episode
+// counts (movies select NULL for burned: they have no such column).
 func countMissingZhHantRows(rows *sql.Rows) (int, error) {
 	count := 0
 	for rows.Next() {
 		var status sql.NullString
-		var language, tracks sql.NullString
-		if err := rows.Scan(&status, &language, &tracks); err != nil {
+		var language, tracks, burned sql.NullString
+		if err := rows.Scan(&status, &language, &tracks, &burned); err != nil {
 			return 0, fmt.Errorf("failed to scan subtitle columns: %w", err)
 		}
-		if models.HasTraditionalChineseSubtitle(status.String, language.String, tracks.String) {
+		if models.HasTraditionalChineseSubtitle(status.String, language.String, tracks.String, burned.String) {
 			continue
 		}
 		count++
@@ -578,6 +582,30 @@ func (r *EpisodeRepository) RefreshSubtitleTracks(ctx context.Context, episodeID
 		return false, fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	return n > 0, nil
+}
+
+// SetSeasonBurnedInSubtitle writes one burned-in check's result onto every
+// episode of the season whose tracks were read and found empty
+// (subtitle_tracks = '[]') — disc-2026-11-burned-in-subs-b1: one episode is
+// checked and stands for the season, but an episode that HAS tracks is left
+// alone (its tracks already answer). Narrow write like UpdateSubtitleTracks:
+// updated_at is not touched. Returns how many episodes it wrote.
+func (r *EpisodeRepository) SetSeasonBurnedInSubtitle(ctx context.Context, seriesID string, season int, value string, checkedAt time.Time) (int64, error) {
+	if !models.IsBurnedInValue(value) {
+		return 0, fmt.Errorf("invalid burned-in subtitle value %q", value)
+	}
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE episodes SET burned_in_subtitle = ?, burned_in_checked_at = ?
+		 WHERE series_id = ? AND season_number = ? AND subtitle_tracks = '[]'`,
+		value, checkedAt.UTC(), seriesID, season)
+	if err != nil {
+		return 0, fmt.Errorf("failed to set season burned-in subtitle: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	return n, nil
 }
 
 // newNullableString returns a sql-friendly value: NULL for empty strings, the

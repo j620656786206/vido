@@ -76,6 +76,25 @@ type CachingCompleter interface {
 	CompleteTextWithUsage(ctx context.Context, req CompletionRequest) (CompletionResult, error)
 }
 
+// ImageCompleter sends ONE image plus a text prompt and returns the reply with
+// its usage (disc-2026-11-burned-in-subs-b1: reading subtitles burned into the
+// picture). Optional like CachingCompleter — only ClaudeProvider implements it.
+type ImageCompleter interface {
+	CompleteImageWithUsage(ctx context.Context, req ImageCompletionRequest) (CompletionResult, error)
+}
+
+// ImageCompletionRequest is the input to CompleteImageWithUsage.
+type ImageCompletionRequest struct {
+	// Image is the raw (not base64) image bytes.
+	Image []byte
+	// MediaType is "image/png", "image/jpeg", "image/gif" or "image/webp".
+	MediaType string
+	// Prompt follows the image in the same user turn.
+	Prompt string
+	// MaxTokens <= 0 falls back to ClaudeMaxTokens.
+	MaxTokens int
+}
+
 // CacheTTL selects the cache_control lifetime for a system block.
 type CacheTTL string
 
