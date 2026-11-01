@@ -1053,7 +1053,7 @@ func (r *MovieRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]mode
 		// disc-2026-10-candidates-ignore-existing-chinese: a stored
 		// Traditional track or .zh-TW sidecar is a subtitle too — the same
 		// verdict the poster badge renders (CountZhHantSubtitle below).
-		if models.HasTraditionalChineseSubtitle(string(movie.SubtitleStatus), movie.SubtitleLanguage.String, movie.SubtitleTracks.String, "") {
+		if models.HasTraditionalOrBurnedInChinese(string(movie.SubtitleStatus), movie.SubtitleLanguage.String, movie.SubtitleTracks.String, "") {
 			continue
 		}
 		movies = append(movies, movie)

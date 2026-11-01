@@ -1018,6 +1018,9 @@ const batchFxItem = (i: number, status: string, reason = '') => ({
  * 檔名解析 cell (37 次 · $0.18, K5-D-v2 n64lI); `month-start` made no parse
  * calls, so the cell is absent there; `parse-only` is a month where filename
  * parsing was the only spend (backlog-ai-parse-reads-env-keys-only-b).
+ * `burned-in-check` is `month-end` plus the 畫面字幕檢查 cell
+ * (disc-2026-11-burned-in-subs-b2); every other fixture made no such checks,
+ * so the cell is absent there.
  */
 const SPEND_FX_MONTH_END = {
   period: 'month',
@@ -1042,6 +1045,8 @@ const SPEND_FX_MONTH_END = {
   ],
   parseCalls: 37,
   parseUsd: 0.18,
+  burnedInCalls: 0,
+  burnedInUsd: 0,
 };
 const SPEND_FX_MONTH_START = {
   ...SPEND_FX_MONTH_END,
@@ -1076,6 +1081,11 @@ const SPEND_FX_PARSE_ONLY = {
   byModel: [],
   parseCalls: 37,
   parseUsd: 0.18,
+};
+const SPEND_FX_BURNED_IN = {
+  ...SPEND_FX_MONTH_END,
+  burnedInCalls: 46,
+  burnedInUsd: 0.11,
 };
 
 /**
@@ -7415,6 +7425,15 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: SpendCard,
     props: { summary: SPEND_FX_PARSE_ONLY },
     penNode: 'screen-section', // Screen K5-D-v2 (xgYKA) — grp-檔名解析 n64lI, parse-only month
+    statesOnly: ['default'],
+    width: 896,
+  },
+  {
+    id: 'activity-spend-card/burned-in-check',
+    label: 'activity/SpendCard (本月 AI 花費 — 月底＋畫面字幕檢查 46 次：第四格接在檔名解析後面)',
+    component: SpendCard,
+    props: { summary: SPEND_FX_BURNED_IN },
+    penNode: 'screen-section', // no frame — disc-2026-11-burned-in-subs-b2 mirrors grp-檔名解析 (n64lI)
     statesOnly: ['default'],
     width: 896,
   },

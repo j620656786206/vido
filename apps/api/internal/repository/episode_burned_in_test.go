@@ -6,6 +6,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -83,26 +84,31 @@ func TestBurnedInSubtitle_MovesSeriesVerdict(t *testing.T) {
 	}
 }
 
-// A burned-in Traditional episode already has 繁中 — the generation queue must
-// not offer it, the same rule the badge uses.
-func TestBurnedInZhHant_LeavesTheGenerationQueue(t *testing.T) {
+// disc-2026-11-burned-in-subs-b2 AC #5 (ruling 2A): an episode with Chinese
+// burned into the picture — any script — leaves the generation queue; one
+// checked and found without burned Chinese stays.
+func TestBurnedInChinese_LeavesTheGenerationQueue(t *testing.T) {
 	db := newMigratedLibraryDB(t)
 	ctx := context.Background()
 	seedSeries(t, db, NewSeriesRepository(db), "q", "Queue", subtitleShape{status: "not_searched"})
-	seedEpisode(t, db, "q", 1, 1, "/tv/q/S01E01.mkv", `[]`)
-	seedEpisode(t, db, "q", 2, 1, "/tv/q/S02E01.mkv", `[]`)
-
 	repo := NewEpisodeRepository(db)
-	_, err := repo.SetSeasonBurnedInSubtitle(ctx, "q", 1, models.BurnedInZhHant, time.Now())
-	require.NoError(t, err)
-	_, err = repo.SetSeasonBurnedInSubtitle(ctx, "q", 2, models.BurnedInZhHans, time.Now())
-	require.NoError(t, err)
+	for season, burned := range map[int]string{
+		1: models.BurnedInZhHant, 2: models.BurnedInZhHans, 3: models.BurnedInZh, 4: models.BurnedInNone,
+	} {
+		seedEpisode(t, db, "q", season, 1, fmt.Sprintf("/tv/q/S%02dE01.mkv", season), `[]`)
+		_, err := repo.SetSeasonBurnedInSubtitle(ctx, "q", season, burned, time.Now())
+		require.NoError(t, err)
+	}
+	seedEpisode(t, db, "q", 5, 1, "/tv/q/S05E01.mkv", `[]`) // never checked
 
 	missing, err := repo.FindMissingZhHantSubtitle(ctx)
 	require.NoError(t, err)
-	require.Len(t, missing, 1)
-	assert.Equal(t, "q-s02e01", missing[0].ID, "burned Simplified still needs a Traditional subtitle")
+	var ids []string
+	for _, e := range missing {
+		ids = append(ids, e.ID)
+	}
+	assert.Equal(t, []string{"q-s04e01", "q-s05e01"}, ids, "only burned none and never-checked still need a subtitle")
 	count, err := repo.CountMissingZhHantSubtitle(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 1, count)
+	assert.Equal(t, 2, count, "the preview count drops the same rows")
 }

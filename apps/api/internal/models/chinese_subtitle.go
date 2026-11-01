@@ -499,13 +499,22 @@ func WorstChineseSubtitle(verdicts []ChineseSubtitle) (ChineseSubtitle, bool) {
 	return worst, true
 }
 
-// HasTraditionalChineseSubtitle is the "already has 繁中" answer the generation
-// queue must agree with the season-list badge on
-// (disc-2026-10-candidates-ignore-existing-chinese): the SQL predicate alone
-// (`subtitle_language != 'zh-Hant'`) quoted paid work for 558 episodes on the
-// 2026-10-14 production library whose stored tracks already carried a
-// Traditional track or a .zh-TW sidecar — Ted Lasso S01E02 showed zh_hant in
-// the season list and US$0.24 in the consent list on the same screen.
-func HasTraditionalChineseSubtitle(status, language, tracks, burned string) bool {
+// HasTraditionalOrBurnedInChinese is the generation queue's "nothing to add"
+// answer: the title already has Traditional Chinese (the same verdict the
+// season-list badge renders), or Chinese of any script is burned into the
+// picture.
+//
+// The verdict half (disc-2026-10-candidates-ignore-existing-chinese): the SQL
+// predicate alone (`subtitle_language != 'zh-Hant'`) quoted paid work for 558
+// episodes on the 2026-10-14 production library whose stored tracks already
+// carried a Traditional track or a .zh-TW sidecar — Ted Lasso S01E02 showed
+// zh_hant in the season list and US$0.24 in the consent list on the same
+// screen. The burned half (disc-2026-11-burned-in-subs-b2, ruling 2A): a
+// generated subtitle would sit on top of the Chinese already in the picture,
+// so burned Simplified or untold-script Chinese leaves the queue too.
+func HasTraditionalOrBurnedInChinese(status, language, tracks, burned string) bool {
+	if classifyBurned(burned) >= classZh {
+		return true
+	}
 	return ChineseSubtitleVerdict(status, language, tracks, burned) == ChineseSubtitleZhHant
 }

@@ -25,6 +25,9 @@ type AISideSpendRepositoryInterface interface {
 	Create(ctx context.Context, row *models.AISideSpend) error
 	// TotalsBetween sums the rows whose created_at is in [from, to).
 	TotalsBetween(ctx context.Context, from, to time.Time) (AISideSpendTotals, error)
+	// TotalsByKindBetween is TotalsBetween split by kind; a kind with no row
+	// is absent from the map.
+	TotalsByKindBetween(ctx context.Context, from, to time.Time) (map[models.AISideSpendKind]AISideSpendTotals, error)
 }
 
 // AISideSpendRepository is the SQLite implementation.
@@ -84,4 +87,37 @@ func (r *AISideSpendRepository) TotalsBetween(ctx context.Context, from, to time
 		return AISideSpendTotals{}, fmt.Errorf("iterate ai side spend: %w", err)
 	}
 	return totals, nil
+}
+
+// TotalsByKindBetween is TotalsBetween split by kind — the spend summary lists
+// the burned-in check apart from filename parsing, and the burned-in sweep
+// caps its own kind (disc-2026-11-burned-in-subs-b2). Same decimal sum, same
+// half-open UTC window.
+func (r *AISideSpendRepository) TotalsByKindBetween(ctx context.Context, from, to time.Time) (map[models.AISideSpendKind]AISideSpendTotals, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT kind, spent_usd FROM ai_side_spend WHERE created_at >= ? AND created_at < ?`, from.UTC(), to.UTC())
+	if err != nil {
+		return nil, fmt.Errorf("read ai side spend: %w", err)
+	}
+	defer rows.Close()
+
+	out := map[models.AISideSpendKind]AISideSpendTotals{}
+	for rows.Next() {
+		var kind string
+		var usd float64
+		if err := rows.Scan(&kind, &usd); err != nil {
+			return nil, fmt.Errorf("scan ai side spend: %w", err)
+		}
+		t := out[models.AISideSpendKind(kind)]
+		if t.Calls == 0 {
+			t.Spent = decimal.Zero
+		}
+		t.Calls++
+		t.Spent = t.Spent.Add(decimal.NewFromFloat(usd))
+		out[models.AISideSpendKind(kind)] = t
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ai side spend: %w", err)
+	}
+	return out, nil
 }

@@ -81,6 +81,8 @@ function spendMonth(over: Partial<SubtitleSpendSummary> = {}): SubtitleSpendSumm
     byModel: [{ modelId: 'claude-sonnet-5', runs: 9, usd: 4.2 }],
     parseCalls: 0,
     parseUsd: 0,
+    burnedInCalls: 0,
+    burnedInUsd: 0,
     ...over,
   };
 }

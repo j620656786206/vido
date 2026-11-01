@@ -22,6 +22,10 @@
  *    「—」: the two subtitle lanes always exist, parsing happens only with a
  *    key and an unreadable filename, so a standing 「檔名解析 —」 would confuse.
  *    It stays out of 依模型, which counts subtitle runs.
+ *  - 畫面字幕檢查 (disc-2026-11-burned-in-subs-b2) is the burned-in subtitle
+ *    check — Claude reading an episode's frames for Chinese burned into the
+ *    picture. Same rule as 檔名解析 and for the same reason: drawn only in a
+ *    month that made such checks, no 「—」, out of 依模型.
  *
  * The month label comes from the response's own `from`, not the browser clock:
  * the server defines the month it aggregated (its zone), and a wall-clock read
@@ -55,8 +59,9 @@ export function spendHasContent(summary: SubtitleSpendSummary): boolean {
     summary.unroutedRuns > 0 ||
     summary.skippedDeliverCount > 0 ||
     summary.cacheMeasuredRuns > 0 ||
-    // A parse-only month spent money too — never hide it.
-    summary.parseCalls > 0
+    // A parse-only (or check-only) month spent money too — never hide it.
+    summary.parseCalls > 0 ||
+    summary.burnedInCalls > 0
   );
 }
 
@@ -128,7 +133,7 @@ export function SpendCard({ summary }: { summary: SubtitleSpendSummary }) {
       className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
     >
       {/* Paid lanes — side by side on the desktop (K5-D), stacked on a phone (K5-M);
-          檔名解析 joins as the third cell only in a month that made parse calls. */}
+          檔名解析 and 畫面字幕檢查 join only in a month that made such calls. */}
       <dl className="flex flex-col gap-3 sm:flex-row sm:gap-8">
         <LaneStat
           label="翻譯"
@@ -148,6 +153,14 @@ export function SpendCard({ summary }: { summary: SubtitleSpendSummary }) {
             runs={summary.parseCalls}
             amount={summary.parseUsd}
             testId="activity-spend-parse"
+          />
+        )}
+        {summary.burnedInCalls > 0 && (
+          <LaneStat
+            label="畫面字幕檢查"
+            runs={summary.burnedInCalls}
+            amount={summary.burnedInUsd}
+            testId="activity-spend-burned-in"
           />
         )}
       </dl>

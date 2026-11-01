@@ -183,10 +183,12 @@ func (r *EpisodeRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]mo
 	// disc-2026-10-candidates-ignore-existing-chinese: the column only knows
 	// what Vido itself placed. An embedded Traditional track or a .zh-TW
 	// sidecar the sweep stored in subtitle_tracks is a subtitle too — the
-	// same verdict the season-list badge renders.
+	// same verdict the season-list badge renders. Chinese burned into the
+	// picture, of any script, also needs nothing generated
+	// (disc-2026-11-burned-in-subs-b2, ruling 2A).
 	kept := episodes[:0]
 	for _, e := range episodes {
-		if models.HasTraditionalChineseSubtitle(string(e.SubtitleStatus), e.SubtitleLanguage.String, e.SubtitleTracks.String, e.BurnedInSubtitle.String) {
+		if models.HasTraditionalOrBurnedInChinese(string(e.SubtitleStatus), e.SubtitleLanguage.String, e.SubtitleTracks.String, e.BurnedInSubtitle.String) {
 			continue
 		}
 		kept = append(kept, e)
@@ -211,7 +213,8 @@ func (r *EpisodeRepository) CountMissingZhHantSubtitle(ctx context.Context) (int
 }
 
 // countMissingZhHantRows counts the (status, language, tracks, burned) rows
-// that are not already Traditional Chinese — shared by the movie and episode
+// that are neither Traditional Chinese already nor burned-in Chinese — the
+// rows FindMissingZhHantSubtitle keeps; shared by the movie and episode
 // counts (movies select NULL for burned: they have no such column).
 func countMissingZhHantRows(rows *sql.Rows) (int, error) {
 	count := 0
@@ -221,7 +224,7 @@ func countMissingZhHantRows(rows *sql.Rows) (int, error) {
 		if err := rows.Scan(&status, &language, &tracks, &burned); err != nil {
 			return 0, fmt.Errorf("failed to scan subtitle columns: %w", err)
 		}
-		if models.HasTraditionalChineseSubtitle(status.String, language.String, tracks.String, burned.String) {
+		if models.HasTraditionalOrBurnedInChinese(status.String, language.String, tracks.String, burned.String) {
 			continue
 		}
 		count++
@@ -496,8 +499,9 @@ func (r *EpisodeRepository) FindFilesForRemovalCheck(ctx context.Context) ([]Epi
 }
 
 // ClearMissingFile turns an episode whose file is gone back into "known
-// episode, no local file": file_path and the two columns read FROM that file
-// (subtitle_tracks, subtitle_tracks_file_sig) are cleared. Everything else —
+// episode, no local file": file_path and the columns read FROM that file
+// (subtitle_tracks, subtitle_tracks_file_sig, and the burned-in answer —
+// disc-2026-11-burned-in-subs-b2 AC #6) are cleared. Everything else —
 // TMDb data, subtitle delivery state — stays: other flows own it, and they
 // already skip episodes without a path. The next scan that finds the file
 // again writes the path back onto this same row (Upsert matches series +
@@ -508,7 +512,8 @@ func (r *EpisodeRepository) FindFilesForRemovalCheck(ctx context.Context) ([]Epi
 // it cleared.
 func (r *EpisodeRepository) ClearMissingFile(ctx context.Context, episodeID, filePath string) (bool, error) {
 	result, err := r.db.ExecContext(ctx,
-		`UPDATE episodes SET file_path = NULL, subtitle_tracks = NULL, subtitle_tracks_file_sig = NULL
+		`UPDATE episodes SET file_path = NULL, subtitle_tracks = NULL, subtitle_tracks_file_sig = NULL,
+		        burned_in_subtitle = NULL, burned_in_checked_at = NULL
 		 WHERE id = ? AND file_path = ?`,
 		episodeID, filePath)
 	if err != nil {
@@ -529,7 +534,8 @@ func (r *EpisodeRepository) ClearMissingFile(ctx context.Context, episodeID, fil
 // ClearMissingFile; the rows stay.
 func (r *EpisodeRepository) ReleaseFileFromOtherEpisodes(ctx context.Context, seriesID, filePath, keepEpisodeID string) (int64, error) {
 	result, err := r.db.ExecContext(ctx,
-		`UPDATE episodes SET file_path = NULL, subtitle_tracks = NULL, subtitle_tracks_file_sig = NULL
+		`UPDATE episodes SET file_path = NULL, subtitle_tracks = NULL, subtitle_tracks_file_sig = NULL,
+		        burned_in_subtitle = NULL, burned_in_checked_at = NULL
 		 WHERE series_id = ? AND file_path = ? AND id <> ?`,
 		seriesID, filePath, keepEpisodeID)
 	if err != nil {
@@ -546,13 +552,23 @@ func (r *EpisodeRepository) ReleaseFileFromOtherEpisodes(ctx context.Context, se
 // merged embedded+sidecar tracks and the file signature they were read from
 // (migration 044). Narrow write, like UpdateDurationSeconds: `updated_at` is
 // not touched — the file did not change, we only looked at it.
+//
+// When the signature differs from the stored one the file was replaced, so
+// the burned-in answer read from the old picture is cleared and the season is
+// checked again (disc-2026-11-burned-in-subs-b2 AC #6). A re-read of the same
+// file (a script peek) keeps it. SQLite evaluates every SET expression against
+// the row as it was, so the CASE sees the OLD signature.
 func (r *EpisodeRepository) UpdateSubtitleTracks(ctx context.Context, episodeID, tracksJSON, fileSig string) error {
 	if episodeID == "" {
 		return fmt.Errorf("episode id cannot be empty")
 	}
+	sig := newNullableString(fileSig)
 	result, err := r.db.ExecContext(ctx,
-		`UPDATE episodes SET subtitle_tracks = ?, subtitle_tracks_file_sig = ? WHERE id = ?`,
-		tracksJSON, newNullableString(fileSig), episodeID)
+		`UPDATE episodes SET subtitle_tracks = ?, subtitle_tracks_file_sig = ?,
+		        burned_in_subtitle = CASE WHEN subtitle_tracks_file_sig IS ? THEN burned_in_subtitle ELSE NULL END,
+		        burned_in_checked_at = CASE WHEN subtitle_tracks_file_sig IS ? THEN burned_in_checked_at ELSE NULL END
+		 WHERE id = ?`,
+		tracksJSON, sig, sig, sig, episodeID)
 	if err != nil {
 		return fmt.Errorf("failed to update episode subtitle tracks: %w", err)
 	}
@@ -606,6 +622,70 @@ func (r *EpisodeRepository) SetSeasonBurnedInSubtitle(ctx context.Context, serie
 		return 0, fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	return n, nil
+}
+
+// MarkSeasonBurnedInChecked stamps burned_in_checked_at on the season's
+// still-unanswered trackless episodes, leaving burned_in_subtitle NULL: the
+// check ran but could not decide (disc-2026-11-burned-in-subs-b2 AC #2), and
+// the sweep should not pay to ask again before the retry window passes.
+// Returns how many episodes it stamped.
+func (r *EpisodeRepository) MarkSeasonBurnedInChecked(ctx context.Context, seriesID string, season int, checkedAt time.Time) (int64, error) {
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE episodes SET burned_in_checked_at = ?
+		 WHERE series_id = ? AND season_number = ? AND subtitle_tracks = '[]' AND burned_in_subtitle IS NULL`,
+		checkedAt.UTC(), seriesID, season)
+	if err != nil {
+		return 0, fmt.Errorf("failed to mark season burned-in checked: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	return n, nil
+}
+
+// BurnedInSeasonRef names one season the burned-in sweep should check.
+type BurnedInSeasonRef struct {
+	SeriesID    string
+	SeriesTitle string
+	Season      int
+}
+
+// FindSeasonsNeedingBurnedInCheck lists the seasons with at least one episode
+// that has a file, no subtitle track (subtitle_tracks = '[]') and no
+// burned-in answer — skipping episodes whose last undecided check is newer
+// than retryBefore (disc-2026-11-burned-in-subs-b2 AC #1). Removed series are
+// left out. Ordered by series title, then season, so the sweep reads like the
+// library.
+func (r *EpisodeRepository) FindSeasonsNeedingBurnedInCheck(ctx context.Context, retryBefore time.Time) ([]BurnedInSeasonRef, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT e.series_id, COALESCE(s.title, ''), e.season_number
+		   FROM episodes e
+		   JOIN series s ON s.id = e.series_id
+		  WHERE e.file_path IS NOT NULL AND e.file_path != ''
+		    AND e.subtitle_tracks = '[]'
+		    AND e.burned_in_subtitle IS NULL
+		    AND (e.burned_in_checked_at IS NULL OR e.burned_in_checked_at < ?)
+		    AND (s.is_removed = 0 OR s.is_removed IS NULL)
+		  GROUP BY e.series_id, e.season_number
+		  ORDER BY COALESCE(s.title, '') COLLATE NOCASE, e.series_id, e.season_number`,
+		retryBefore.UTC())
+	if err != nil {
+		return nil, fmt.Errorf("failed to find seasons needing a burned-in check: %w", err)
+	}
+	defer rows.Close()
+	var out []BurnedInSeasonRef
+	for rows.Next() {
+		var ref BurnedInSeasonRef
+		if err := rows.Scan(&ref.SeriesID, &ref.SeriesTitle, &ref.Season); err != nil {
+			return nil, fmt.Errorf("failed to scan burned-in season: %w", err)
+		}
+		out = append(out, ref)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating burned-in seasons: %w", err)
+	}
+	return out, nil
 }
 
 // newNullableString returns a sql-friendly value: NULL for empty strings, the

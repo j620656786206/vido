@@ -102,6 +102,7 @@ func (v *fakeVision) CompleteImageWithUsage(ctx context.Context, req ai.ImageCom
 type fakeBurnedStore struct {
 	episodes []models.Episode
 	writes   []string
+	marks    int // undecided checks stamped
 }
 
 func (s *fakeBurnedStore) FindBySeasonNumber(context.Context, string, int) ([]models.Episode, error) {
@@ -111,6 +112,11 @@ func (s *fakeBurnedStore) FindBySeasonNumber(context.Context, string, int) ([]mo
 func (s *fakeBurnedStore) SetSeasonBurnedInSubtitle(_ context.Context, _ string, _ int, value string, _ time.Time) (int64, error) {
 	s.writes = append(s.writes, value)
 	return int64(len(s.episodes)), nil
+}
+
+func (s *fakeBurnedStore) MarkSeasonBurnedInChecked(context.Context, string, int, time.Time) (int64, error) {
+	s.marks++
+	return 1, nil
 }
 
 type fakeSpend struct{ rows []models.AISideSpend }
@@ -610,4 +616,34 @@ func TestComputeEpisodeSubtitle_ReadsBurnedIn(t *testing.T) {
 	assert.Equal(t, models.ChineseSubtitleNone, computeEpisodeSubtitle(ep, nil).verdict)
 	ep.BurnedInSubtitle = models.NewNullString(models.BurnedInZhHans)
 	assert.Equal(t, models.ChineseSubtitleZhHans, computeEpisodeSubtitle(ep, nil).verdict)
+}
+
+// disc-2026-11-burned-in-subs-b2 AC #2: a check that could not decide stamps
+// burned_in_checked_at (value still NULL) so the sweep waits before paying to
+// ask again; a decided check, "no episode", and a failed call do not.
+func TestCheckSeason_UndecidedIsStamped(t *testing.T) {
+	tests := []struct {
+		name   string
+		setup  func(h *burnedHarness)
+		marked int
+	}{
+		{"frames unavailable", func(h *burnedHarness) { h.frames.failAt = map[int]bool{0: true, 1: true, 2: true, 3: true} }, 1},
+		{"reply unreadable", func(h *burnedHarness) { h.vision.reply = replyGarbage }, 1},
+		{"OpenCC fails", func(h *burnedHarness) {
+			h.vision.reply = replyHant
+			h.svc.conv = burnedConverter{err: errors.New("opencc missing")}
+		}, 1},
+		{"first none, second unreadable", func(h *burnedHarness) { h.vision.replies = []string{replyNone, replyGarbage} }, 1},
+		{"decided", func(h *burnedHarness) { h.vision.reply = replyHant }, 0},
+		{"no episode to check", func(h *burnedHarness) { h.store.episodes = h.store.episodes[:2] }, 0},
+		{"model call failed", func(h *burnedHarness) { h.vision.err = fmt.Errorf("%w: 529", ai.ErrAIProviderError) }, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newBurnedHarness(t, "")
+			tt.setup(h)
+			_, _ = h.svc.CheckSeason(context.Background(), "s", 1)
+			assert.Equal(t, tt.marked, h.store.marks)
+		})
+	}
 }

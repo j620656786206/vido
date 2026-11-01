@@ -54,6 +54,8 @@ function spendMonth(over: Partial<SubtitleSpendSummary> = {}): SubtitleSpendSumm
     byModel: [],
     parseCalls: 0,
     parseUsd: 0,
+    burnedInCalls: 0,
+    burnedInUsd: 0,
     ...over,
   };
 }
@@ -641,6 +643,31 @@ describe('HomeReadoutBand — 需要注意 reads the month total when no batch i
     ).toBeNull();
     expect(monthSpendUsd(spendMonth({ translatedRuns: 0, asrRuns: 0, parseCalls: 1 }))).toBe(5.38);
     expect(monthSpendUsd(spendMonth())).toBe(5.38);
+  });
+
+  // disc-2026-11-burned-in-subs-b2 moved the burned-in checks out of parse_*;
+  // the headline is still everything spent, so they are added back here.
+  it('monthSpendUsd adds burned_in_usd, and a check-only month has a total', () => {
+    expect(
+      monthSpendUsd(
+        spendMonth({ parseCalls: 37, parseUsd: 0.18, burnedInCalls: 46, burnedInUsd: 0.11 })
+      )
+    ).toBe(5.67);
+    expect(
+      monthSpendUsd(
+        spendMonth({
+          translatedRuns: 0,
+          translatedUsd: 0,
+          asrRuns: 0,
+          asrUsd: 0,
+          burnedInCalls: 2,
+          burnedInUsd: 0.01,
+        })
+      )
+    ).toBe(0.01);
+    expect(
+      monthSpendUsd(spendMonth({ translatedRuns: 0, asrRuns: 0, burnedInCalls: 0, burnedInUsd: 0 }))
+    ).toBeNull();
   });
 
   it('monthSpendUsd sums the two paid lanes AND the pre-ledger rows exactly (no float drift)', () => {

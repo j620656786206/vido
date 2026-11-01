@@ -37,6 +37,8 @@ function month(over: Partial<SubtitleSpendSummary> = {}): SubtitleSpendSummary {
     ],
     parseCalls: 0,
     parseUsd: 0,
+    burnedInCalls: 0,
+    burnedInUsd: 0,
     ...over,
   };
 }
@@ -246,5 +248,63 @@ describe('SpendSectionView — the hub section around the card', () => {
       />
     );
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+// disc-2026-11-burned-in-subs-b2: 「畫面字幕檢查」 — the burned-in subtitle
+// check, listed apart from 檔名解析 with the same rule: drawn only in a month
+// that made such checks, never 「—」, never in 依模型.
+describe('SpendCard — 畫面字幕檢查 (disc-2026-11-burned-in-subs-b2)', () => {
+  const checkOnly = (): SubtitleSpendSummary =>
+    month({
+      translatedRuns: 0,
+      translatedUsd: 0,
+      asrRuns: 0,
+      asrUsd: 0,
+      skippedDeliverCount: 0,
+      skippedSavedUsdEstimate: 0,
+      cacheHitCues: 0,
+      cacheMeasuredRuns: 0,
+      cacheSavedUsdEstimate: null,
+      byModel: [],
+      burnedInCalls: 46,
+      burnedInUsd: 0.11,
+    });
+
+  it('[P1] with parsing too: the cell sits after 檔名解析, kept out of 依模型', () => {
+    render(
+      <SpendCard
+        summary={month({ parseCalls: 37, parseUsd: 0.18, burnedInCalls: 46, burnedInUsd: 0.11 })}
+      />
+    );
+    const cell = screen.getByTestId('activity-spend-burned-in');
+    expect(cell).toHaveTextContent('畫面字幕檢查');
+    expect(cell).toHaveTextContent('46 次 · $0.11');
+    const lanes = Array.from(cell.parentElement?.children ?? []).map((el) =>
+      el.getAttribute('data-testid')
+    );
+    expect(lanes).toEqual([
+      'activity-spend-translated',
+      'activity-spend-asr',
+      'activity-spend-parse',
+      'activity-spend-burned-in',
+    ]);
+    expect(screen.getByTestId('activity-spend-parse')).toHaveTextContent('37 次 · $0.18');
+    expect(screen.getByTestId('activity-spend-by-model')).not.toHaveTextContent('46 次');
+  });
+
+  it('[P1] 0 checks: no cell at all — not 「畫面字幕檢查 —」', () => {
+    render(<SpendCard summary={month({ parseCalls: 37, parseUsd: 0.18 })} />);
+    expect(screen.queryByTestId('activity-spend-burned-in')).toBeNull();
+    expect(screen.queryByText('畫面字幕檢查')).toBeNull();
+  });
+
+  it('[P1] a month whose only spend was the check still shows the section', () => {
+    expect(spendHasContent(checkOnly())).toBe(true);
+    expect(spendHasContent({ ...checkOnly(), burnedInCalls: 0, burnedInUsd: 0 })).toBe(false);
+    render(<SpendSectionView summary={checkOnly()} failed={false} onRetry={vi.fn()} />);
+    expect(screen.getByTestId('activity-spend-burned-in')).toHaveTextContent('46 次 · $0.11');
+    expect(screen.queryByTestId('activity-spend-parse')).toBeNull();
+    expect(screen.getByTestId('activity-spend-translated')).toHaveTextContent(/—$/);
   });
 });
