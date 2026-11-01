@@ -62,8 +62,8 @@ func Finalize(conv Converter, text string, countries []string) (string, error) {
 			convert = conv.ConvertS2TW
 		}
 		var out []byte
-		if out, err = convert([]byte(text)); err == nil {
-			text = string(out)
+		if out, err = convert([]byte(protectAdverbZhi(text))); err == nil {
+			text = restoreZhi(string(out))
 		}
 	}
 	if !own {
