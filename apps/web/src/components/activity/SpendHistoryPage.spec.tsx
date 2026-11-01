@@ -147,6 +147,11 @@ describe('SpendHistoryView — summary', () => {
     expect(screen.getByTestId('spend-history-accuracy')).toHaveTextContent('實際是預估的 89%');
     expect(screen.getByTestId('spend-history-note')).toHaveTextContent('依開始時間歸到這個月');
     expect(screen.getByTestId('spend-history-note')).toHaveTextContent('失敗和中途停止的也算進去');
+    // Free routes (片內中文字幕) are out of the ratio — the note says so
+    // (disc-2026-11-free-route-records-paid-estimate).
+    expect(screen.getByTestId('spend-history-note')).toHaveTextContent(
+      '準度只算有花錢、而且實際和預估都有記的 5 次'
+    );
   });
 
   it('[P1] nothing comparable → 「還沒有可比的紀錄」, not 0%', async () => {

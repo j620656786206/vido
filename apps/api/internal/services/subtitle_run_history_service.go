@@ -50,7 +50,10 @@ const runHistoryMonthLayout = "2006-01"
 //     spent_usd / estimate_usd / route / source / asr_* / batch_id /
 //     triggered_by; summary.unpriced_runs counts the non-skipped runs whose
 //     spend is null (a skipped run bought nothing);
-//   - comparable_* covers COMPLETED runs that recorded both numbers;
+//   - comparable_* covers COMPLETED runs on a PAID route (翻譯英文字幕,
+//     語音辨識＋翻譯, 舊紀錄) that recorded both numbers — a free route
+//     (片內中文字幕, 線上字幕) is quoted before the route is known, so its $0
+//     says nothing about the quote (disc-2026-11-free-route-records-paid-estimate);
 //     comparable_spent_usd / comparable_estimate_usd are null when there are
 //     none (comparable_runs = 0);
 //   - a day with no runs is a real 0 in `series`.
@@ -69,8 +72,8 @@ type SubtitleRunHistory struct {
 
 // RunHistorySummary is the month's headline. SpentUSD sums every recorded
 // spend (failed and stopped runs cost money too); the comparable_* trio is
-// only the completed runs that recorded both their spend and their estimate, so the
-// page can say「實際是預估的 N%」 without guessing the rest.
+// only the completed paid-route runs that recorded both their spend and their
+// estimate, so the page can say「實際是預估的 N%」 without guessing the rest.
 type RunHistorySummary struct {
 	SpentUSD              float64  `json:"spent_usd"`
 	Runs                  int      `json:"runs"`
@@ -258,6 +261,16 @@ func RunCategory(run *models.SubtitleRun) string {
 	}
 }
 
+// isPaidRunCategory reports whether a run's category is one the AI bills —
+// the only ones whose estimate the accuracy ratio can judge.
+func isPaidRunCategory(c string) bool {
+	switch c {
+	case RunCategoryTranslateEnglish, RunCategoryASR, RunCategoryLegacy:
+		return true
+	}
+	return false
+}
+
 func isRunHistoryCategory(c string) bool {
 	switch c {
 	case RunCategoryChineseTrack, RunCategoryTranslateEnglish, RunCategoryASR, RunCategoryLegacy, RunCategoryNoSubtitle:
@@ -284,8 +297,11 @@ func summarizeRunHistory(rows []repository.RecentSubtitleRun) RunHistorySummary 
 		spent = spent.Add(s)
 		// Only a completed run did the whole job the estimate priced; a
 		// failed or stopped run spent a fraction of it and would drag the
-		// 「實際是預估的 N%」 ratio down.
-		if run.EstimateUSD != nil && run.Status == models.SubtitleRunCompleted {
+		// 「實際是預估的 N%」 ratio down. A free route is left out too: the
+		// quote is taken when the run starts, before the router has found the
+		// official Chinese track, so 《基地》's $0 against a $0.32 quote dragged
+		// the ratio from 105% to 79% without saying anything about the quote.
+		if run.EstimateUSD != nil && run.Status == models.SubtitleRunCompleted && isPaidRunCategory(RunCategory(run)) {
 			sum.ComparableRuns++
 			compSpent = compSpent.Add(s)
 			compEstimate = compEstimate.Add(decimal.NewFromFloat(*run.EstimateUSD))

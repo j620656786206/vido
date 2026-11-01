@@ -116,7 +116,8 @@ function SummaryRow({ data }: { data: RunHistoryPage }) {
       <p className="text-xs text-[var(--text-muted)]" data-testid="spend-history-note">
         依開始時間歸到這個月，失敗和中途停止的也算進去
         {summary.unpricedRuns > 0 && `；另有 ${summary.unpricedRuns} 次沒記錄金額，沒算進總額`}
-        {accuracy !== undefined && `；準度只算實際和預估都有記的 ${summary.comparableRuns} 次`}
+        {accuracy !== undefined &&
+          `；準度只算有花錢、而且實際和預估都有記的 ${summary.comparableRuns} 次`}
       </p>
     </div>
   );
