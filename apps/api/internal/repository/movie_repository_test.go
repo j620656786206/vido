@@ -1390,6 +1390,18 @@ func TestMovieFindOwnedTMDbIDs(t *testing.T) {
 			t.Errorf("expected only 603, got %v", owned)
 		}
 	})
+
+	t.Run("FindLibraryIDByTMDbID: owned → its id; removed, unknown or invalid → empty", func(t *testing.T) {
+		for tmdbID, want := range map[int64]string{603: "m-603", 238: "", 999999: "", 0: ""} {
+			got, err := repo.FindLibraryIDByTMDbID(ctx, tmdbID)
+			if err != nil {
+				t.Fatalf("FindLibraryIDByTMDbID(%d) error: %v", tmdbID, err)
+			}
+			if got != want {
+				t.Errorf("FindLibraryIDByTMDbID(%d) = %q, want %q", tmdbID, got, want)
+			}
+		}
+	})
 }
 
 // TestMovieFindByIMDbIDNotFound verifies error for non-existent IMDb ID

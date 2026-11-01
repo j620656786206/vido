@@ -5,7 +5,14 @@
  * metadata editor, or subtitle actions (those are LocalDetailV2-only). Same v2
  * backdrop hero + reused Epic-12 sections (trailer / providers / credits / recs),
  * each failing soft. An owned item shows the 已入庫 status badge.
+ *
+ * A title the library owns does not stay here: once its library id is known
+ * the page REPLACES itself with the library detail page, which has the same
+ * sections plus seasons, episodes and 生成字幕 (disc-2026-11-tmdb-detail-owned-
+ * no-link-to-library — Alexyu searched 基地 on his phone and found no
+ * episodes). If the lookup fails the TMDb page stays, as before.
  */
+import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
   useMovieDetails,
@@ -16,6 +23,7 @@ import {
   useWatchProviders,
 } from '../../hooks/useMediaDetails';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
+import { useLibraryId } from '../../hooks/useLibraryId';
 import { useRequestedMedia } from '../../hooks/useRequestedMedia';
 import { RequestButton } from '../requests/RequestButton';
 import { CreditsSection } from './CreditsSection';
@@ -44,6 +52,14 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
   const ownership = useOwnedMedia([tmdbId]);
   // Story 13-1b — exact (tmdbId, mediaType) requested check for the 想要 button.
   const requestedState = useRequestedMedia(tmdbId > 0);
+  const libraryId = useLibraryId(type, tmdbId);
+  const ownedId = libraryId.data ?? null;
+
+  useEffect(() => {
+    if (ownedId) {
+      navigate({ to: '/media/$type/$id', params: { type, id: ownedId }, replace: true });
+    }
+  }, [ownedId, type, navigate]);
 
   const detailsQuery = isMovie ? movieDetails : tvDetails;
   const creditsQuery = isMovie ? movieCredits : tvCredits;
@@ -51,7 +67,9 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
 
   const onBack = () => navigate({ to: '/library' });
 
-  if (detailsQuery.isLoading) return <DetailSkeletonV2 />;
+  // Hold the skeleton while the library lookup is out, and while handing over,
+  // so an owned title never flashes its TMDb page first.
+  if (detailsQuery.isLoading || libraryId.isLoading || ownedId) return <DetailSkeletonV2 />;
   // dsr-2 AC #8: a timeout or TMDb outage is a failed load, not a missing title —
   // and only when nothing is cached (a failed background refetch keeps the page).
   // Neither state mentions the library: this title was never in it.

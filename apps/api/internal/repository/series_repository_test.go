@@ -1005,6 +1005,18 @@ func TestSeriesFindOwnedTMDbIDs(t *testing.T) {
 			t.Errorf("expected empty slice, got %v", owned)
 		}
 	})
+
+	t.Run("FindLibraryIDByTMDbID: owned → its id; removed or unknown → empty", func(t *testing.T) {
+		for tmdbID, want := range map[int64]string{1396: "s-1396", 4607: "", 999999: ""} {
+			got, err := repo.FindLibraryIDByTMDbID(ctx, tmdbID)
+			if err != nil {
+				t.Fatalf("FindLibraryIDByTMDbID(%d) error: %v", tmdbID, err)
+			}
+			if got != want {
+				t.Errorf("FindLibraryIDByTMDbID(%d) = %q, want %q", tmdbID, got, want)
+			}
+		}
+	})
 }
 
 // TestSeriesEmptyGenres verifies empty genres handling

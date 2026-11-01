@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/services"
@@ -79,10 +80,55 @@ func (h *AvailabilityHandler) CheckOwned(c *gin.Context) {
 	SuccessResponse(c, CheckOwnedResponse{OwnedIDs: owned})
 }
 
-// RegisterRoutes mounts /media/check-owned under the given API group.
+// LibraryIDResponse is the library id of an owned title, or null.
+// Example: {"id": "511b6c7c-fada-4233-a322-e8f563fa27bd"}
+type LibraryIDResponse struct {
+	ID *string `json:"id"`
+}
+
+// LibraryID handles GET /api/v1/media/library-id?type=movie|tv&tmdb_id=N.
+// @Summary Find the library id of an owned TMDb title
+// @Description The TMDb detail page sends an owned title to its library page
+// @Description (seasons, episodes, subtitles). id is null when the library
+// @Description does not have this title (disc-2026-11-tmdb-detail-owned-no-link-to-library).
+// @Tags media
+// @Produce json
+// @Param type query string true "movie or tv"
+// @Param tmdb_id query int true "TMDb id"
+// @Success 200 {object} APIResponse{data=LibraryIDResponse}
+// @Failure 400 {object} APIResponse "Invalid type or tmdb_id"
+// @Router /api/v1/media/library-id [get]
+func (h *AvailabilityHandler) LibraryID(c *gin.Context) {
+	mediaType := c.Query("type")
+	if mediaType != "movie" && mediaType != "tv" {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "type must be movie or tv")
+		return
+	}
+	tmdbID, err := strconv.ParseInt(c.Query("tmdb_id"), 10, 64)
+	if err != nil || tmdbID <= 0 {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "tmdb_id must be a positive integer")
+		return
+	}
+
+	id, err := h.service.LibraryID(c.Request.Context(), mediaType, tmdbID)
+	if err != nil {
+		slog.Error("Failed to look up library id", "error", err, "type", mediaType, "tmdb_id", tmdbID)
+		InternalServerError(c, "Failed to look up library id")
+		return
+	}
+	if id == "" {
+		SuccessResponse(c, LibraryIDResponse{})
+		return
+	}
+	SuccessResponse(c, LibraryIDResponse{ID: &id})
+}
+
+// RegisterRoutes mounts /media/check-owned and /media/library-id under the
+// given API group.
 func (h *AvailabilityHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	media := rg.Group("/media")
 	{
 		media.POST("/check-owned", h.CheckOwned)
+		media.GET("/library-id", h.LibraryID)
 	}
 }
