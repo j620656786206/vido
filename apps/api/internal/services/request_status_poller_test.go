@@ -125,6 +125,10 @@ func (f *fakeOwnership) CheckOwned(ctx context.Context, tmdbIDs []int64) ([]int6
 	panic("poller must use the type-aware CheckOwnedByType (CR M1)")
 }
 
+func (f *fakeOwnership) LibraryID(ctx context.Context, mediaType string, tmdbID int64) (string, error) {
+	panic("poller never resolves library ids")
+}
+
 func (f *fakeOwnership) CheckOwnedByType(ctx context.Context, mediaType string, tmdbIDs []int64) ([]int64, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
