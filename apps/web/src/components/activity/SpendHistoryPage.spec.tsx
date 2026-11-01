@@ -52,6 +52,8 @@ function page(over: Partial<RunHistoryPage> = {}): RunHistoryPage {
       spentUsd: 3.91,
       runs: 12,
       unpricedRuns: 0,
+      estimateUsd: 3.27,
+      estimatedRuns: 10,
       comparableRuns: 5,
       comparableSpentUsd: 1.2,
       comparableEstimateUsd: 1.35,
@@ -140,37 +142,40 @@ describe('SpendHistoryView — header and month switch', () => {
 });
 
 describe('SpendHistoryView — summary', () => {
-  it('[P1] total, run count and estimate accuracy; says the month is by start time', async () => {
+  it("[P1] the month's actual spend and its estimate side by side — no 「準度」 ratio", async () => {
     renderView(props());
-    expect(await screen.findByTestId('spend-history-total')).toHaveTextContent('$3.91 · 12 次');
-    // 1.20 / 1.35 = 88.9% → 89%.
-    expect(screen.getByTestId('spend-history-accuracy')).toHaveTextContent('實際是預估的 89%');
-    expect(screen.getByTestId('spend-history-note')).toHaveTextContent('依開始時間歸到這個月');
-    expect(screen.getByTestId('spend-history-note')).toHaveTextContent('失敗和中途停止的也算進去');
-    // Free routes (片內中文字幕) are out of the ratio — the note says so
-    // (disc-2026-11-free-route-records-paid-estimate).
-    expect(screen.getByTestId('spend-history-note')).toHaveTextContent(
-      '準度只算有花錢、而且實際和預估都有記的 5 次'
+    expect(await screen.findByTestId('spend-history-total')).toHaveTextContent(
+      '這個月實際花費$3.91 · 12 次'
     );
+    expect(screen.getByTestId('spend-history-estimate')).toHaveTextContent('這個月預估$3.27');
+    expect(screen.getByTestId('spend-history-summary')).not.toHaveTextContent('準度');
+    expect(screen.queryByTestId('spend-history-accuracy')).toBeNull();
+    const note = screen.getByTestId('spend-history-note');
+    expect(note).toHaveTextContent('依開始時間歸到這個月');
+    expect(note).toHaveTextContent('失敗和中途停止的也算進去');
+    expect(note).toHaveTextContent('另有 2 次沒有預估，沒算進預估');
   });
 
-  it('[P1] nothing comparable → 「還沒有可比的紀錄」, not 0%', async () => {
+  it('[P1] no estimate recorded → 「沒有預估紀錄」, never $0.00', async () => {
     const data = page({
       summary: {
         spentUsd: 1,
         runs: 2,
         unpricedRuns: 1,
+        estimateUsd: null,
+        estimatedRuns: 0,
         comparableRuns: 0,
         comparableSpentUsd: null,
         comparableEstimateUsd: null,
       },
     });
     renderView(props({ data, items: data.items }));
-    expect(await screen.findByTestId('spend-history-accuracy')).toHaveTextContent(
-      '還沒有可比的紀錄'
-    );
-    expect(screen.getByTestId('spend-history-accuracy')).not.toHaveTextContent('%');
-    expect(screen.getByTestId('spend-history-note')).toHaveTextContent('另有 1 次沒記錄金額');
+    const est = await screen.findByTestId('spend-history-estimate');
+    expect(est).toHaveTextContent('沒有預估紀錄');
+    expect(est).not.toHaveTextContent('$');
+    const note = screen.getByTestId('spend-history-note');
+    expect(note).toHaveTextContent('另有 1 次沒記錄金額，沒算進實際花費');
+    expect(note).not.toHaveTextContent('沒有預估，沒算進預估');
   });
 });
 
@@ -282,9 +287,31 @@ describe('SpendHistoryView — phone: the same table, four columns', () => {
     expect(compact).toHaveClass('md:hidden');
     expect(compact).toHaveTextContent('語音辨識＋翻譯');
     expect(compact).toHaveTextContent('claude-sonnet-5 ＋ ElevenLabs scribe_v2');
+    expect(within(compact).getByTestId('spend-run-duration')).toBeInTheDocument();
     expect(row).toHaveTextContent('⚠ 比預估高 60%');
     expect(row).toHaveTextContent('$0.50');
     expect(within(row).getByTestId('spend-run-status')).toHaveTextContent('中途停止');
+  });
+});
+
+describe('SpendHistoryView — how long each run took', () => {
+  it('[P1] a 花了多久 column on the desktop and in the phone line; no end time → 沒記錄', async () => {
+    const data = page({
+      items: [
+        run({ id: 'done', startedAt: '2026-10-28T05:33:00Z', completedAt: '2026-10-28T05:41:03Z' }),
+        run({ id: 'open', startedAt: '2026-10-28T06:00:00Z', completedAt: null }),
+      ],
+    });
+    renderView(props({ data, items: data.items }));
+    const t = await table();
+    const head = Array.from(t.querySelectorAll('th')).find((th) => th.textContent === '花了多久');
+    expect(head).toHaveClass('hidden', 'md:table-cell');
+    const [done, open] = within(t).getAllByTestId('spend-history-row');
+    expect(within(done).getAllByTestId('spend-run-duration')[0]).toHaveTextContent('8 分 3 秒');
+    expect(within(open).getAllByTestId('spend-run-duration-unrecorded')[0]).toHaveTextContent(
+      '沒記錄'
+    );
+    expect(open).not.toHaveTextContent('0 秒');
   });
 });
 

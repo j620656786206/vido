@@ -8,6 +8,8 @@ const WIRE = {
     spent_usd: 3.91,
     runs: 12,
     unpriced_runs: 0,
+    estimate_usd: 3.27,
+    estimated_runs: 10,
     comparable_runs: 5,
     comparable_spent_usd: 1.2,
     comparable_estimate_usd: 1.35,
@@ -70,6 +72,8 @@ describe('subtitleRunHistoryService (GET /subtitles/runs — spend-history-b [@c
       expect.anything()
     );
     expect(res.summary.comparableEstimateUsd).toBe(1.35);
+    expect(res.summary.estimateUsd).toBe(3.27);
+    expect(res.summary.estimatedRuns).toBe(10);
     expect(res.items[0].estimateUsd).toBeNull();
     expect(res.items[0].asrProvider).toBeNull();
     expect(res.items[0].startedAt).toBe('2026-10-28T13:33:46Z');

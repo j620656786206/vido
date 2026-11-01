@@ -75,9 +75,15 @@ type SubtitleRunHistory struct {
 // only the completed paid-route runs that recorded both their spend and their
 // estimate, so the page can say「實際是預估的 N%」 without guessing the rest.
 type RunHistorySummary struct {
-	SpentUSD              float64  `json:"spent_usd"`
-	Runs                  int      `json:"runs"`
-	UnpricedRuns          int      `json:"unpriced_runs"`
+	SpentUSD     float64 `json:"spent_usd"`
+	Runs         int     `json:"runs"`
+	UnpricedRuns int     `json:"unpriced_runs"`
+	// EstimateUSD sums every estimate the month recorded (failed and free
+	// runs included — it is what the user was quoted), null when none was;
+	// EstimatedRuns counts them. The page shows it next to SpentUSD
+	// (⚖️ Alexyu 2026-11-01: 「總預估多少錢、實際花費多少錢」, not a ratio).
+	EstimateUSD           *float64 `json:"estimate_usd"`
+	EstimatedRuns         int      `json:"estimated_runs"`
 	ComparableRuns        int      `json:"comparable_runs"`
 	ComparableSpentUSD    *float64 `json:"comparable_spent_usd"`
 	ComparableEstimateUSD *float64 `json:"comparable_estimate_usd"`
@@ -281,10 +287,14 @@ func isRunHistoryCategory(c string) bool {
 
 func summarizeRunHistory(rows []repository.RecentSubtitleRun) RunHistorySummary {
 	var sum RunHistorySummary
-	var spent, compSpent, compEstimate decimal.Decimal
+	var spent, estimated, compSpent, compEstimate decimal.Decimal
 	for i := range rows {
 		run := &rows[i].Run
 		sum.Runs++
+		if run.EstimateUSD != nil {
+			sum.EstimatedRuns++
+			estimated = estimated.Add(decimal.NewFromFloat(*run.EstimateUSD))
+		}
 		if run.SpentUSD == nil {
 			// A skipped run bought nothing, so a missing figure there is not
 			// a missing price.
@@ -308,6 +318,10 @@ func summarizeRunHistory(rows []repository.RecentSubtitleRun) RunHistorySummary 
 		}
 	}
 	sum.SpentUSD = roundUSD(spent).InexactFloat64()
+	if sum.EstimatedRuns > 0 {
+		e := roundUSD(estimated).InexactFloat64()
+		sum.EstimateUSD = &e
+	}
 	if sum.ComparableRuns > 0 {
 		cs, ce := roundUSD(compSpent).InexactFloat64(), roundUSD(compEstimate).InexactFloat64()
 		sum.ComparableSpentUSD, sum.ComparableEstimateUSD = &cs, &ce

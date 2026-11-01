@@ -30,6 +30,9 @@ export interface RunHistorySummary {
   spentUsd: number;
   runs: number;
   unpricedRuns: number;
+  /** Every estimate the month recorded, summed; null when none was (never 0). */
+  estimateUsd: number | null;
+  estimatedRuns: number;
   comparableRuns: number;
   comparableSpentUsd: number | null;
   comparableEstimateUsd: number | null;

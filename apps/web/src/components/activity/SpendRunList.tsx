@@ -1,7 +1,8 @@
 // Design ref: ux-design.pen — no current screen frame; the AI 花費明細 page was specified in words (disc-2026-11-spend-history-c, ⚖️ Alexyu 2026-11-01: no new .pen frames) and built from the K5 spend card's tokens
 /**
  * 逐筆列表 — every run of the month, newest first (disc-2026-11-spend-history-d
- * AC #2/#4). One table at every width: seven columns on the desktop; on a phone
+ * AC #2/#4). One table at every width: eight columns on the desktop (花了多久
+ * since disc-2026-11-spend-history-totals-and-duration); on a phone
  * (disc-2026-11-spend-history-mobile-table, ⚖️ Alexyu 2026-11-01) only
  * 影片／實際／預估／狀態, with time · 處理方式 and the models in small type under
  * the title. The 處理方式 chips above it filter the list only (the summary and
@@ -16,6 +17,7 @@
 import { Check } from 'lucide-react';
 import { usd } from '../../lib/currency';
 import { formatLocalDateTime } from '../../utils/formatLocalDateTime';
+import { formatRunDuration } from '../../utils/formatRunDuration';
 import type { ChartCategory, RunHistoryItem } from '../../services/subtitleRunHistoryService';
 import {
   CATEGORY_LABEL,
@@ -30,6 +32,13 @@ import {
 /** 「11-01 13:33」 in the viewer's zone — the month is in the page header already. */
 function runTime(iso: string): string {
   return formatLocalDateTime(iso).slice(5);
+}
+
+/** How long the run took; 「沒記錄」 when it has no end time. */
+function Duration({ item }: { item: RunHistoryItem }) {
+  const d = formatRunDuration(item.startedAt, item.completedAt);
+  if (!d) return <NotRecorded testId="spend-run-duration-unrecorded" />;
+  return <span data-testid="spend-run-duration">{d}</span>;
 }
 
 function NotRecorded({ testId }: { testId?: string }) {
@@ -145,6 +154,8 @@ function CompactDetails({ item }: { item: RunHistoryItem }) {
         <span className="font-mono tabular-nums">{runTime(item.startedAt)}</span>
         {' · '}
         {routeLabel(item)}
+        {' · 花了 '}
+        <Duration item={item} />
       </span>
       {models.length > 0 && (
         <span className="break-words text-[var(--text-muted)]">{models.join(' ＋ ')}</span>
@@ -169,6 +180,9 @@ export function SpendRunList({ items }: { items: RunHistoryItem[] }) {
             <th className="px-2 py-2.5 text-right font-medium md:px-4">實際</th>
             <th className="px-2 py-2.5 text-right font-medium md:px-4">預估</th>
             <th className="px-3 py-2.5 font-medium md:px-4">狀態</th>
+            <th className={`${DESKTOP_ONLY} whitespace-nowrap px-4 py-2.5 font-medium`}>
+              花了多久
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -203,6 +217,11 @@ export function SpendRunList({ items }: { items: RunHistoryItem[] }) {
               </td>
               <td className="whitespace-nowrap px-3 py-3 md:whitespace-normal md:px-4">
                 <Status item={item} />
+              </td>
+              <td
+                className={`${DESKTOP_ONLY} whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]`}
+              >
+                <Duration item={item} />
               </td>
             </tr>
           ))}
