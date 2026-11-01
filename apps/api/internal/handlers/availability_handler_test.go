@@ -37,6 +37,11 @@ func (m *MockAvailabilityService) CheckOwnedByType(ctx context.Context, mediaTyp
 	return args.Get(0).([]int64), args.Error(1)
 }
 
+func (m *MockAvailabilityService) LibraryID(ctx context.Context, mediaType string, tmdbID int64) (string, error) {
+	args := m.Called(ctx, mediaType, tmdbID)
+	return args.String(0), args.Error(1)
+}
+
 var _ services.AvailabilityServiceInterface = (*MockAvailabilityService)(nil)
 
 func setupAvailabilityRouter(handler *AvailabilityHandler) *gin.Engine {
@@ -175,5 +180,49 @@ func TestAvailabilityHandler_CheckOwned(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Contains(t, w.Body.String(), `"owned_ids":[]`)
+	})
+}
+
+func TestAvailabilityHandler_LibraryID(t *testing.T) {
+	get := func(t *testing.T, svc *MockAvailabilityService, query string) (int, map[string]any) {
+		t.Helper()
+		router := setupAvailabilityRouter(NewAvailabilityHandler(svc))
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/media/library-id?"+query, nil))
+		var body map[string]any
+		_ = json.Unmarshal(w.Body.Bytes(), &body)
+		return w.Code, body
+	}
+
+	t.Run("owned title → its library id", func(t *testing.T) {
+		svc := new(MockAvailabilityService)
+		svc.On("LibraryID", mock.Anything, "tv", int64(93740)).Return("series-uuid", nil)
+		code, body := get(t, svc, "type=tv&tmdb_id=93740")
+		assert.Equal(t, http.StatusOK, code)
+		assert.Equal(t, map[string]any{"id": "series-uuid"}, body["data"])
+	})
+
+	t.Run("not in the library → id null, still 200", func(t *testing.T) {
+		svc := new(MockAvailabilityService)
+		svc.On("LibraryID", mock.Anything, "movie", int64(603)).Return("", nil)
+		code, body := get(t, svc, "type=movie&tmdb_id=603")
+		assert.Equal(t, http.StatusOK, code)
+		assert.Equal(t, map[string]any{"id": nil}, body["data"])
+	})
+
+	t.Run("bad type or tmdb_id → 400, service not called", func(t *testing.T) {
+		for _, q := range []string{"type=book&tmdb_id=1", "type=tv&tmdb_id=abc", "type=tv&tmdb_id=0", "type=tv"} {
+			svc := new(MockAvailabilityService)
+			code, _ := get(t, svc, q)
+			assert.Equal(t, http.StatusBadRequest, code, q)
+			svc.AssertNotCalled(t, "LibraryID", mock.Anything, mock.Anything, mock.Anything)
+		}
+	})
+
+	t.Run("lookup error → 500", func(t *testing.T) {
+		svc := new(MockAvailabilityService)
+		svc.On("LibraryID", mock.Anything, "tv", int64(1)).Return("", errors.New("db down"))
+		code, _ := get(t, svc, "type=tv&tmdb_id=1")
+		assert.Equal(t, http.StatusInternalServerError, code)
 	})
 }

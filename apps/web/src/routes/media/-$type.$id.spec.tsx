@@ -15,6 +15,11 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('../../hooks/useOwnedMedia', () => ({
   useOwnedMedia: vi.fn(),
 }));
+// disc-2026-11-tmdb-detail-owned-no-link-to-library — default: not in the library.
+const mockLibraryId = vi.fn(() => ({ data: null as string | null, isLoading: false }));
+vi.mock('../../hooks/useLibraryId', () => ({
+  useLibraryId: (...args: unknown[]) => mockLibraryId(...(args as [])),
+}));
 // ux3-cutover-3: TMDbDetailV2 pulls the Epic-13 request affordance — isolate it
 // (RequestButton has its own spec).
 vi.mock('../../hooks/useRequestedMedia', () => ({
@@ -371,6 +376,40 @@ describe('TMDbDetailV2 (bugfix-10-1 ACs ported from the deleted TMDbDetailView �
         expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
       expect(screen.queryByTestId('detail-status-badge')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('owned title → the library page (disc-2026-11-tmdb-detail-owned-no-link-to-library)', () => {
+    it('replaces itself with the library page once the library id is known', async () => {
+      mockLibraryId.mockReturnValue({ data: 'series-uuid', isLoading: false });
+      renderTMDbView('tv', 456, ownedTrue);
+      await waitFor(() =>
+        expect(mockNavigate).toHaveBeenCalledWith({
+          to: '/media/$type/$id',
+          params: { type: 'tv', id: 'series-uuid' },
+          replace: true,
+        })
+      );
+      expect(mockLibraryId).toHaveBeenCalledWith('tv', 456);
+      // The TMDb page never paints while handing over.
+      expect(screen.queryByTestId('tmdb-detail-v2')).not.toBeInTheDocument();
+      mockLibraryId.mockReturnValue({ data: null, isLoading: false });
+    });
+
+    it('holds the skeleton while the lookup is out — no flash of the TMDb page', async () => {
+      mockLibraryId.mockReturnValue({ data: null, isLoading: true });
+      renderTMDbView('movie', 123);
+      await waitFor(() => expect(tmdbService.getMovieDetails).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 50));
+      expect(screen.queryByTestId('tmdb-detail-v2')).not.toBeInTheDocument();
+      expect(mockNavigate).not.toHaveBeenCalled();
+      mockLibraryId.mockReturnValue({ data: null, isLoading: false });
+    });
+
+    it('not in the library → stays on the TMDb page, no hand-over', async () => {
+      renderTMDbView('movie', 123);
+      await waitFor(() => expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument());
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 
