@@ -37,6 +37,7 @@ import { Route as SettingsBackupRouteImport } from './routes/settings/backup'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as LibraryTvRouteImport } from './routes/library/tv'
 import { Route as LibraryMoviesRouteImport } from './routes/library/movies'
+import { Route as ActivitySpendRouteImport } from './routes/activity_.spend'
 import { Route as MediaTypeIdRouteImport } from './routes/media/$type.$id'
 
 const SetupRoute = SetupRouteImport.update({
@@ -179,6 +180,11 @@ const LibraryMoviesRoute = LibraryMoviesRouteImport.update({
   path: '/movies',
   getParentRoute: () => LibraryRoute,
 } as any)
+const ActivitySpendRoute = ActivitySpendRouteImport.update({
+  id: '/activity_/spend',
+  path: '/activity/spend',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MediaTypeIdRoute = MediaTypeIdRouteImport.update({
   id: '/media/$type/$id',
   path: '/media/$type/$id',
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
+  '/activity/spend': typeof ActivitySpendRoute
   '/library/movies': typeof LibraryMoviesRoute
   '/library/tv': typeof LibraryTvRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/setup': typeof SetupRoute
+  '/activity/spend': typeof ActivitySpendRoute
   '/library/movies': typeof LibraryMoviesRoute
   '/library/tv': typeof LibraryTvRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
+  '/activity_/spend': typeof ActivitySpendRoute
   '/library/movies': typeof LibraryMoviesRoute
   '/library/tv': typeof LibraryTvRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -289,6 +298,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/setup'
+    | '/activity/spend'
     | '/library/movies'
     | '/library/tv'
     | '/settings/appearance'
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/search'
     | '/setup'
+    | '/activity/spend'
     | '/library/movies'
     | '/library/tv'
     | '/settings/appearance'
@@ -349,6 +360,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/setup'
+    | '/activity_/spend'
     | '/library/movies'
     | '/library/tv'
     | '/settings/appearance'
@@ -381,6 +393,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SetupRoute: typeof SetupRoute
+  ActivitySpendRoute: typeof ActivitySpendRoute
   TestGalleryRoute: typeof TestGalleryRoute
   TestManualSearchRoute: typeof TestManualSearchRoute
   MediaTypeIdRoute: typeof MediaTypeIdRoute
@@ -584,6 +597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LibraryMoviesRouteImport
       parentRoute: typeof LibraryRoute
     }
+    '/activity_/spend': {
+      id: '/activity_/spend'
+      path: '/activity/spend'
+      fullPath: '/activity/spend'
+      preLoaderRoute: typeof ActivitySpendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/media/$type/$id': {
       id: '/media/$type/$id'
       path: '/media/$type/$id'
@@ -657,6 +677,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SetupRoute: SetupRoute,
+  ActivitySpendRoute: ActivitySpendRoute,
   TestGalleryRoute: TestGalleryRoute,
   TestManualSearchRoute: TestManualSearchRoute,
   MediaTypeIdRoute: MediaTypeIdRoute,

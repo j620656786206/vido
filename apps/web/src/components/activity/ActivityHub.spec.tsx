@@ -119,7 +119,16 @@ function renderHub(initialPath = '/activity') {
   });
   const mk = (p: string) =>
     createRoute({ getParentRoute: () => rootRoute, path: p, component: () => null });
-  const routeTree = rootRoute.addChildren([mk('/library'), mk('/downloads'), activityRoute]);
+  const routeTree = rootRoute.addChildren([
+    mk('/library'),
+    mk('/downloads'),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/activity/spend',
+      component: () => <div data-testid="spend-history-stub" />,
+    }),
+    activityRoute,
+  ]);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [initialPath] }),
@@ -731,6 +740,14 @@ describe('ActivityHub — 本月 AI 花費 section (sub-7-6c AC #1, K5-D xgYKA)'
     expect(screen.getByTestId('activity-spend-month')).toHaveTextContent('10 月');
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual(['下載', '本月 AI 花費', '活動記錄']);
+  });
+
+  it('[P1] 看明細 on the spend card opens /activity/spend (disc-2026-11-spend-history-d AC #1)', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    mockUseSpend.mockReturnValue(spendResult({ data: spendMonth() }));
+    renderHub();
+    fireEvent.click(await screen.findByTestId('activity-spend-details-link'));
+    expect(await screen.findByTestId('spend-history-stub')).toBeInTheDocument();
   });
 
   it('[P1] a month with money in it is CONTENT — it defeats the calm empty state alone', async () => {

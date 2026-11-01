@@ -1,6 +1,14 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+
+// The card's 看明細 link is a router Link; a plain anchor is enough here (the
+// real navigation is covered by the page spec and the e2e).
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) =>
+    React.createElement('a', { href: to, ...rest }, children),
+}));
+
 import { SpendCard, SpendSectionView, spendHasContent, spendMonthLabel } from './SpendSection';
 import type { SubtitleSpendSummary } from '../../services/subtitleSpendService';
 
@@ -167,6 +175,15 @@ describe('SpendCard — 檔名解析 (K5-D-v2 n64lI / K5-M-v2 Z4ZUhQ)', () => {
     render(<SpendSectionView summary={parseOnly()} failed={false} onRetry={vi.fn()} />);
     expect(screen.getByTestId('activity-spend-card')).toBeInTheDocument();
     expect(screen.getByTestId('activity-spend-parse')).toHaveTextContent('檔名解析');
+  });
+});
+
+describe('SpendCard — 看明細 (disc-2026-11-spend-history-d AC #1)', () => {
+  it('[P1] links to the per-run page /activity/spend', () => {
+    render(<SpendCard summary={month()} />);
+    const link = screen.getByTestId('activity-spend-details-link');
+    expect(link).toHaveTextContent('看明細');
+    expect(link).toHaveAttribute('href', '/activity/spend');
   });
 });
 
