@@ -8,6 +8,10 @@
  *   days, the scale, the day readout) is HTML so text never stretches.
  * - A day with no spend still gets a stub on the baseline: "nothing that day"
  *   is drawn, not left blank (-c design).
+ * - The chart always has a slot for EVERY day of the month. Days still to
+ *   come stay empty — no bar, no stub, nothing to hover — so the 1st of the
+ *   month is one thin bar, not one bar stretched across the whole chart
+ *   (disc-2026-11-spend-chart-current-month-one-bar).
  * - Hovering a bar (desktop) or tapping it (phone) shows that day's total and
  *   each category's amount in the readout under the chart. A tap pins the day;
  *   hover only previews it. Bars are focusable buttons for the keyboard.
@@ -39,6 +43,20 @@ function dayNumber(date: string): number {
 }
 
 /**
+ * Days in a "YYYY-MM" month; 0 when it does not parse. Plain arithmetic, no
+ * Date object — this is calendar maths, not the wall clock (Rule 23).
+ */
+export function daysInMonth(month: string): number {
+  const m = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!m) return 0;
+  const year = Number(m[1]);
+  const mon = Number(m[2]);
+  if (mon < 1 || mon > 12) return 0;
+  if (mon === 2) return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28;
+  return [4, 6, 9, 11].includes(mon) ? 30 : 31;
+}
+
+/**
  * Which day numbers get an axis label: the 1st, every 5th, and the last day —
  * unless the last sits right next to a 5th (30 · 31 collide on a phone).
  */
@@ -47,7 +65,7 @@ function showAxisLabel(index: number, count: number, day: number): boolean {
   return index === count - 1 && day % 5 >= 3;
 }
 
-export function SpendDailyChart({ series }: { series: RunHistoryDay[] }) {
+export function SpendDailyChart({ series, month }: { series: RunHistoryDay[]; month: string }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
   const activeDate = hovered ?? pinned;
@@ -55,7 +73,9 @@ export function SpendDailyChart({ series }: { series: RunHistoryDay[] }) {
 
   const max = series.reduce<number>((m, d) => (gtUsd(d.spentUsd, m) ? d.spentUsd : m), 0);
   const scale = (v: number) => (max > 0 ? divideUsd(v, max) * PLOT : 0);
-  const width = Math.max(series.length, 1) * SLOT;
+  // One slot per calendar day; the series runs only through today.
+  const slots = Math.max(daysInMonth(month), series.length, 1);
+  const width = slots * SLOT;
 
   return (
     <div className="flex flex-col gap-3" data-testid="spend-history-chart">
@@ -84,8 +104,8 @@ export function SpendDailyChart({ series }: { series: RunHistoryDay[] }) {
           vectorEffect="non-scaling-stroke"
           className="stroke-[var(--border-subtle)]"
         />
-        {series.map((day, i) => {
-          const x = i * SLOT;
+        {series.map((day) => {
+          const x = (dayNumber(day.date) - 1) * SLOT;
           const isActive = day.date === activeDate;
           let y = HEIGHT;
           const segments = CHART_CATEGORIES.flatMap((cat) => {
@@ -160,12 +180,13 @@ export function SpendDailyChart({ series }: { series: RunHistoryDay[] }) {
       {/* Axis days — HTML on the same N-column grid, so they line up with the bars. */}
       <div
         className="-mt-2 grid font-mono text-xs tabular-nums text-[var(--text-muted)]"
-        style={{ gridTemplateColumns: `repeat(${Math.max(series.length, 1)}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: `repeat(${slots}, minmax(0, 1fr))` }}
         aria-hidden="true"
+        data-testid="spend-history-chart-axis"
       >
-        {series.map((day, i) => (
-          <span key={day.date} className="overflow-visible whitespace-nowrap text-center">
-            {showAxisLabel(i, series.length, dayNumber(day.date)) ? dayNumber(day.date) : ''}
+        {Array.from({ length: slots }, (_, i) => (
+          <span key={i} className="overflow-visible whitespace-nowrap text-center">
+            {showAxisLabel(i, slots, i + 1) ? i + 1 : ''}
           </span>
         ))}
       </div>

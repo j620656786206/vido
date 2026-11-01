@@ -9,6 +9,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { SpendHistoryView, type SpendHistoryViewProps } from './SpendHistoryPage';
+import { daysInMonth } from './SpendDailyChart';
 import type {
   RunHistoryDay,
   RunHistoryItem,
@@ -369,6 +370,29 @@ describe('SpendDailyChart (inside the view)', () => {
     for (const word of ['片內中文字幕', '翻譯英文字幕', '語音辨識＋翻譯', '舊紀錄']) {
       expect(legend).toHaveTextContent(word);
     }
+  });
+
+  it('[P1] a slot for every day of the month — days still to come stay empty (disc-2026-11-spend-chart-current-month-one-bar)', async () => {
+    // October has 31 days; the series (through "today") has only the 1st and 2nd.
+    renderView(props());
+    const chart = await screen.findByTestId('spend-history-chart');
+    const axis = within(chart).getByTestId('spend-history-chart-axis');
+    expect(axis.children).toHaveLength(31);
+    expect(axis.style.gridTemplateColumns).toBe('repeat(31, minmax(0, 1fr))');
+    expect(chart.querySelector('svg')).toHaveAttribute('viewBox', '0 0 310 100');
+    // Only the two real days are drawn and hoverable.
+    expect(within(chart).getAllByTestId('spend-history-chart-hit')).toHaveLength(2);
+    const second = within(chart).getAllByTestId('spend-history-chart-day')[1];
+    expect(second).toHaveAttribute('data-date', '2026-10-02');
+    expect(second.querySelector('[data-category]')).toHaveAttribute('x', '12');
+  });
+
+  it('[P2] daysInMonth knows month lengths and refuses junk', () => {
+    expect(daysInMonth('2026-11')).toBe(30);
+    expect(daysInMonth('2026-02')).toBe(28);
+    expect(daysInMonth('2028-02')).toBe(29);
+    expect(daysInMonth('2026-12')).toBe(31);
+    expect(daysInMonth('nope')).toBe(0);
   });
 
   it('[P1] hover shows the day total and each category; a tap pins it', async () => {

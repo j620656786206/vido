@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"github.com/shopspring/decimal"
 	"testing"
 	"time"
 
@@ -300,4 +301,53 @@ func TestRunHistory_LedgerErrorPropagates(t *testing.T) {
 	_, err := svc.History(context.Background(), RunHistoryQuery{})
 	assert.ErrorIs(t, err, boom)
 	assert.NotErrorIs(t, err, ErrInvalidRunHistoryQuery)
+}
+
+func TestAllocateCents_SumsToTheRoundedTotal(t *testing.T) {
+	d := decimal.RequireFromString
+	cases := []struct {
+		name  string
+		parts []string
+		want  []string
+	}{
+		// 0.004 + 1.814 + 0.624 = 2.442 → 2.44; rounding each would give 2.43.
+		{"the 11/1 one-cent gap", []string{"0.004", "1.814", "0.624", "0"}, []string{"0", "1.82", "0.62", "0"}},
+		{"already whole cents", []string{"0", "0.81", "3.1", "0"}, []string{"0", "0.81", "3.1", "0"}},
+		{"nothing spent", []string{"0", "0", "0", "0"}, []string{"0", "0", "0", "0"}},
+		{"two leftover cents go to the two biggest fractions", []string{"0.009", "0.008", "0.001", "0"}, []string{"0.01", "0.01", "0", "0"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			parts := make([]decimal.Decimal, len(tc.parts))
+			sum := decimal.Zero
+			for i, p := range tc.parts {
+				parts[i] = d(p)
+				sum = sum.Add(parts[i])
+			}
+			total := roundUSD(sum)
+			got := allocateCents(total, parts...)
+			gotSum := decimal.Zero
+			for i := range got {
+				assert.True(t, got[i].Equal(d(tc.want[i])), "part %d: got %s want %s", i, got[i], tc.want[i])
+				gotSum = gotSum.Add(got[i])
+			}
+			assert.True(t, gotSum.Equal(total), "sum %s != total %s", gotSum, total)
+		})
+	}
+}
+
+func TestRunHistory_OneDayMonthChartMatchesTheSummary(t *testing.T) {
+	src := &fakeRunHistorySource{rows: []repository.RecentSubtitleRun{
+		histRun("a", models.SubtitleRunRouteTranslate, models.SubtitleRunCompleted, "2026-11-01 18:40", hp(0.907), nil),
+		histRun("b", models.SubtitleRunRouteTranslate, models.SubtitleRunCompleted, "2026-11-01 13:45", hp(0.907), nil),
+		histRun("c", models.SubtitleRunRouteASR, models.SubtitleRunCompleted, "2026-11-01 13:46", hp(0.624), nil),
+		histRun("d", models.SubtitleRunRouteDeliverDirect, models.SubtitleRunCompleted, "2026-11-01 13:44", hp(0.004), nil),
+	}}
+	got, err := newHistoryService(src, time.Date(2026, 11, 1, 20, 0, 0, 0, historyTaipei)).History(context.Background(), RunHistoryQuery{})
+	require.NoError(t, err)
+	require.Len(t, got.Series, 1)
+	day := got.Series[0]
+	assert.Equal(t, got.Summary.SpentUSD, day.SpentUSD, "one day: the chart's day equals the month")
+	c := day.ByCategory
+	assert.InDelta(t, day.SpentUSD, c.ChineseTrack+c.TranslateEnglish+c.ASR+c.Legacy, 1e-9)
 }

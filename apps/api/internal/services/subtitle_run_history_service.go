@@ -316,9 +316,9 @@ func summarizeRunHistory(rows []repository.RecentSubtitleRun) RunHistorySummary 
 }
 
 // runHistorySeries is one entry per calendar day of the month (server zone),
-// through today for the current month and none for a future month. Each
-// category is rounded to cents on its own and the day is their sum, so the
-// four keys always add up to the day exactly.
+// through today for the current month and none for a future month. The day
+// is its exact spend rounded to cents, and the four categories are split from
+// it (allocateCents), so they always add up to the day exactly.
 func runHistorySeries(rows []repository.RecentSubtitleRun, monthStart, now time.Time) []RunHistoryDay {
 	loc := monthStart.Location()
 	type dayAcc struct {
@@ -362,9 +362,16 @@ func runHistorySeries(rows []repository.RecentSubtitleRun, monthStart, now time.
 		key := day.Format(time.DateOnly)
 		entry := RunHistoryDay{Date: key}
 		if d := acc[key]; d != nil {
-			c, t, a, l := roundUSD(d.chinese), roundUSD(d.translate), roundUSD(d.asr), roundUSD(d.leg)
+			// The day is rounded ONCE from its exact sum, then split back
+			// into categories so they still add up to it to the cent. Rounding
+			// each category first made the chart's day ($2.43) disagree with
+			// the summary ($2.44) on a one-day month
+			// (disc-2026-11-spend-chart-current-month-one-bar).
+			total := roundUSD(d.chinese.Add(d.translate).Add(d.asr).Add(d.leg))
+			parts := allocateCents(total, d.chinese, d.translate, d.asr, d.leg)
+			c, t, a, l := parts[0], parts[1], parts[2], parts[3]
 			entry.Runs = d.runs
-			entry.SpentUSD = c.Add(t).Add(a).Add(l).InexactFloat64()
+			entry.SpentUSD = total.InexactFloat64()
 			entry.ByCategory = RunHistoryByCategory{
 				ChineseTrack:     c.InexactFloat64(),
 				TranslateEnglish: t.InexactFloat64(),
@@ -375,6 +382,37 @@ func runHistorySeries(rows []repository.RecentSubtitleRun, monthStart, now time.
 		series = append(series, entry)
 	}
 	return series
+}
+
+// allocateCents splits a cent-rounded total across exact, non-negative parts
+// by the largest-remainder method: each part gets its whole cents, and the
+// cents left over go to the parts with the biggest fractions (a tie goes to
+// the bigger part). The result always sums to total exactly.
+func allocateCents(total decimal.Decimal, parts ...decimal.Decimal) []decimal.Decimal {
+	hundred := decimal.NewFromInt(100)
+	out := make([]decimal.Decimal, len(parts))
+	frac := make([]decimal.Decimal, len(parts))
+	given := decimal.Zero
+	for i, p := range parts {
+		cents := p.Mul(hundred)
+		whole := cents.Floor()
+		out[i] = whole.Div(hundred)
+		frac[i] = cents.Sub(whole)
+		given = given.Add(out[i])
+	}
+	left := total.Sub(given).Mul(hundred).Round(0).IntPart()
+	for ; left > 0; left-- {
+		best := -1
+		for i := range parts {
+			if best == -1 || frac[i].GreaterThan(frac[best]) ||
+				(frac[i].Equal(frac[best]) && parts[i].GreaterThan(parts[best])) {
+				best = i
+			}
+		}
+		out[best] = out[best].Add(decimal.NewFromInt(1).Div(hundred))
+		frac[best] = decimal.NewFromInt(-1) // one extra cent per part at most
+	}
+	return out
 }
 
 func runHistoryItem(r repository.RecentSubtitleRun) RunHistoryItem {

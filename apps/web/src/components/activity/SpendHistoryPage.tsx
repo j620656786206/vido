@@ -198,7 +198,7 @@ export function SpendHistoryView(props: SpendHistoryViewProps) {
         <>
           <SummaryRow data={data} />
           <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4">
-            <SpendDailyChart series={data.series} />
+            <SpendDailyChart series={data.series} month={data.month} />
           </div>
           <ActivitySectionShell
             title="逐筆紀錄"
