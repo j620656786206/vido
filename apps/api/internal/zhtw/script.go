@@ -89,3 +89,51 @@ func convertJoined(convert func([]byte) ([]byte, error), texts []string) ([]stri
 		return string(b), err
 	}, texts)
 }
+
+// Scripts ClassifyScript tells apart — the BCP 47 tags subtitle tracks use.
+const (
+	ScriptSimplified  = "zh-Hans"
+	ScriptTraditional = "zh-Hant"
+	// ScriptUntold: Chinese whose script the text cannot tell — no character
+	// that one script writes differently from the other, or a tie.
+	ScriptUntold = "zh"
+)
+
+// ClassifyScript says which script lines of Chinese are written in, three
+// ways: whichever direction OpenCC would rewrite MORE characters in is the
+// script the text is NOT in (disc-2026-11-burned-in-subs-b1). Unlike
+// SimplifiedFields it also names Traditional, and a tie — including "neither
+// direction changes anything" — is ScriptUntold, never a guess.
+//
+// Counting rather than "does t2s change it at all" is what keeps a Traditional
+// line with one stray Simplified character (《白髮》's 静) Traditional: s2tw
+// changes that one character, t2s changes every Traditional one around it. The
+// burned-in exam (disc-2026-11-burned-in-subs-a) got every decidable title right
+// this way; the model guessing the script itself got one wrong.
+func ClassifyScript(conv ScriptConverter, lines []string) (string, error) {
+	text := strings.Join(lines, "\n")
+	if strings.TrimSpace(text) == "" {
+		return ScriptUntold, nil
+	}
+	toTrad, err := conv.ConvertS2TW([]byte(text))
+	if err != nil {
+		return "", err
+	}
+	toSimp, err := conv.ConvertT2S([]byte(text))
+	if err != nil {
+		return "", err
+	}
+	s2tw, okS := changedRunes(text, string(toTrad))
+	t2s, okT := changedRunes(text, string(toSimp))
+	switch {
+	case !okS || !okT:
+		// A conversion that changed the length cannot be counted position by
+		// position; saying "Chinese, script untold" is still true.
+		return ScriptUntold, nil
+	case s2tw > t2s:
+		return ScriptSimplified, nil
+	case t2s > s2tw:
+		return ScriptTraditional, nil
+	}
+	return ScriptUntold, nil
+}

@@ -294,26 +294,70 @@ func parseVerdictTracks(raw string) (tracks []verdictTrack, ok bool) {
 	return tracks, true
 }
 
+// Values of episodes.burned_in_subtitle (migration 049,
+// disc-2026-11-burned-in-subs-b1): what the burned-in check read off the
+// picture. "" (NULL) = never checked, or the check could not decide.
+const (
+	BurnedInZhHant = "zh-Hant"
+	BurnedInZhHans = "zh-Hans"
+	// BurnedInZh: Chinese is burned in, script untold.
+	BurnedInZh = "zh"
+	// BurnedInNone: checked, no Chinese burned in.
+	BurnedInNone = "none"
+)
+
+// IsBurnedInValue reports whether v is one of the four stored values.
+func IsBurnedInValue(v string) bool {
+	switch v {
+	case BurnedInZhHant, BurnedInZhHans, BurnedInZh, BurnedInNone:
+		return true
+	}
+	return false
+}
+
+// classifyBurned maps a burned_in_subtitle value onto the track classes;
+// anything unrecognised says nothing.
+func classifyBurned(burned string) trackClass {
+	switch burned {
+	case BurnedInZhHant:
+		return classZhHant
+	case BurnedInZhHans:
+		return classZhHans
+	case BurnedInZh:
+		return classZh
+	case BurnedInNone:
+		return classNotChinese
+	}
+	return classUndetermined
+}
+
 // ChineseSubtitleVerdict is the ONLY implementation of the "has Chinese
 // subtitles" rule (AC #3). Inputs are the raw subtitle_status,
-// subtitle_language and subtitle_tracks columns; "" stands for NULL. It never
+// subtitle_language, subtitle_tracks and burned_in_subtitle columns; "" stands
+// for NULL (movies and series have no burned column and pass ""). It never
 // fails: anything it cannot read is "unknown" (it runs inside library queries).
 //
-// Rule (Alexyu 2026-10-06):
+// Rule (Alexyu 2026-10-06; burned-in added 2026-11-01, ruling 2A):
 //  1. Chinese evidence → has: subtitle_status=found with a Chinese
-//     subtitle_language, or any Chinese track (embedded or sidecar, text or
-//     image). Traditional beats Simplified beats untold.
+//     subtitle_language, any Chinese track (embedded or sidecar, text or
+//     image), or Chinese burned into the picture. Traditional beats Simplified
+//     beats untold.
 //  2. Otherwise "none" only when certain: the tracks are readable and every one
 //     is a known non-Chinese language (incl. `[]`); or there is no track info
-//     and subtitle_status is not_found / untranslated.
+//     and subtitle_status is not_found / untranslated. A burned "none" is one
+//     more known non-Chinese source: it never turns "no track info" into
+//     "none" on its own — the picture says nothing about tracks nobody read.
 //  3. Everything else is "unknown" — notably an `und` track, which in a
 //     Taiwanese library is quite possibly Chinese.
-func ChineseSubtitleVerdict(status, language, tracks string) ChineseSubtitle {
+func ChineseSubtitleVerdict(status, language, tracks, burned string) ChineseSubtitle {
 	best := classUndetermined
 	if SubtitleStatus(status) == SubtitleStatusFound {
 		if c := classifyTag(language); c >= classZh {
 			best = c
 		}
+	}
+	if c := classifyBurned(burned); c >= classZh && c > best {
+		best = c
 	}
 
 	parsed, haveTracks := parseVerdictTracks(tracks)
@@ -462,6 +506,6 @@ func WorstChineseSubtitle(verdicts []ChineseSubtitle) (ChineseSubtitle, bool) {
 // 2026-10-14 production library whose stored tracks already carried a
 // Traditional track or a .zh-TW sidecar — Ted Lasso S01E02 showed zh_hant in
 // the season list and US$0.24 in the consent list on the same screen.
-func HasTraditionalChineseSubtitle(status, language, tracks string) bool {
-	return ChineseSubtitleVerdict(status, language, tracks) == ChineseSubtitleZhHant
+func HasTraditionalChineseSubtitle(status, language, tracks, burned string) bool {
+	return ChineseSubtitleVerdict(status, language, tracks, burned) == ChineseSubtitleZhHant
 }

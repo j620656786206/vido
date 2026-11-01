@@ -69,7 +69,7 @@ func TestChineseSubtitleVerdict(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, ChineseSubtitleVerdict(tc.status, tc.language, tc.tracks))
+			assert.Equal(t, tc.want, ChineseSubtitleVerdict(tc.status, tc.language, tc.tracks, ""))
 		})
 	}
 }
@@ -80,7 +80,7 @@ func TestChineseSubtitleVerdict_NeverPanics(t *testing.T) {
 	inputs := []string{"", "[", "]", "[null]", "[1,2]", `[{"language":null}]`, "\x00\xff", ",,,", "[{}]", "null"}
 	for _, in := range inputs {
 		assert.NotPanics(t, func() {
-			v := ChineseSubtitleVerdict("not_searched", "", in)
+			v := ChineseSubtitleVerdict("not_searched", "", in, "")
 			assert.True(t, v.IsValid(), "%q gave %q", in, v)
 		}, "%q", in)
 	}
@@ -174,7 +174,7 @@ func TestChineseSubtitleVerdict_DetectedLanguage(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, ChineseSubtitleVerdict("not_searched", "", tc.tracks))
+			assert.Equal(t, tc.want, ChineseSubtitleVerdict("not_searched", "", tc.tracks, ""))
 		})
 	}
 }

@@ -47,6 +47,15 @@ type Episode struct {
 	// SubtitleTracksFileSig is "<size>:<mtime unix nanos>" of the file when
 	// SubtitleTracks' embedded half was probed; a mismatch means re-probe.
 	SubtitleTracksFileSig NullString `db:"subtitle_tracks_file_sig" json:"-"`
+	// BurnedInSubtitle is what the burned-in check read off the picture
+	// (migration 049, disc-2026-11-burned-in-subs-b1): BurnedInZhHant /
+	// BurnedInZhHans / BurnedInZh / BurnedInNone; NULL = never checked or not
+	// decided. Kept out of SubtitleTracks, which a re-probe overwrites, and fed
+	// to ChineseSubtitleVerdict as its fourth input. Not serialised yet — the
+	// screen that shows it is -c's call.
+	BurnedInSubtitle NullString `db:"burned_in_subtitle" json:"-"`
+	// BurnedInCheckedAt is when BurnedInSubtitle was written.
+	BurnedInCheckedAt NullTime `db:"burned_in_checked_at" json:"-"`
 
 	// Timestamps
 	CreatedAt time.Time `db:"created_at" json:"created_at"`

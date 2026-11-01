@@ -68,6 +68,7 @@ var maxCachedClients = 4
 var (
 	_ ai.TextCompleter    = (*ClaudeProviderHolder)(nil)
 	_ ai.CachingCompleter = (*ClaudeProviderHolder)(nil)
+	_ ai.ImageCompleter   = (*ClaudeProviderHolder)(nil)
 )
 
 // NewClaudeProviderHolder builds the holder. `model` may be empty (the ai
@@ -207,6 +208,21 @@ func (h *ClaudeProviderHolder) CompleteTextWithUsage(ctx context.Context, req ai
 		return ai.CompletionResult{}, fmt.Errorf("claude provider does not implement ai.CachingCompleter")
 	}
 	return caching.CompleteTextWithUsage(ctx, req)
+}
+
+// CompleteImageWithUsage implements ai.ImageCompleter by resolving per call —
+// same key and per-run model (ai.WithModelID) rules as the text completions
+// (disc-2026-11-burned-in-subs-b1).
+func (h *ClaudeProviderHolder) CompleteImageWithUsage(ctx context.Context, req ai.ImageCompletionRequest) (ai.CompletionResult, error) {
+	provider, err := h.Get(ctx)
+	if err != nil {
+		return ai.CompletionResult{}, err
+	}
+	images, ok := provider.(ai.ImageCompleter)
+	if !ok {
+		return ai.CompletionResult{}, fmt.Errorf("claude provider does not implement ai.ImageCompleter")
+	}
+	return images.CompleteImageWithUsage(ctx, req)
 }
 
 // TestKey validates a key with the provider's Ping — the smallest real call

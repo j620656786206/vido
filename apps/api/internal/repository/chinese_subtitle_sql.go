@@ -30,17 +30,19 @@ const chineseSubtitleSQLFunc = "vido_chinese_subtitle"
 // package's own tests (sql.Open("sqlite", …)) see it. Connections opened with
 // the mattn sqlite3 driver do NOT; none of those touch the movie/series lists.
 func init() {
-	sqlite.MustRegisterDeterministicScalarFunction(chineseSubtitleSQLFunc, 3, chineseSubtitleSQL)
+	sqlite.MustRegisterDeterministicScalarFunction(chineseSubtitleSQLFunc, 4, chineseSubtitleSQL)
 }
 
 // chineseSubtitleSQL adapts the SQLite call vido_chinese_subtitle(status,
-// language, tracks). It never returns an error: a broken row must not turn the
+// language, tracks, burned). burned is episodes.burned_in_subtitle
+// (disc-2026-11-burned-in-subs-b1); movies and series rows, which have no such
+// column, pass NULL. It never returns an error: a broken row must not turn the
 // whole library list into a 500 (AC #4) — the verdict degrades to "unknown".
 func chineseSubtitleSQL(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return string(models.ChineseSubtitleUnknown), nil
 	}
-	return string(models.ChineseSubtitleVerdict(sqlText(args[0]), sqlText(args[1]), sqlText(args[2]))), nil
+	return string(models.ChineseSubtitleVerdict(sqlText(args[0]), sqlText(args[1]), sqlText(args[2]), sqlText(args[3]))), nil
 }
 
 // subtitleTriageRankSQLFunc is the SQL name of models.SubtitleTriageRank: the
@@ -82,8 +84,8 @@ func sqlText(v driver.Value) string {
 }
 
 // chineseSubtitleFilterCondition builds the WHERE term for the library's
-// chinese_subtitle filter (AC #2 [@contract-v1]). `col` qualifies a column for
-// the FTS join alias. Groups are validated by the handler; an unknown group
+// chinese_subtitle filter (AC #2 [@contract-v1]) on MOVIES (no burned-in
+// column, hence the NULL). `col` qualifies a column for the FTS join alias. Groups are validated by the handler; an unknown group
 // maps to no verdicts and is skipped. Returns "" when nothing applies.
 func chineseSubtitleFilterCondition(groups []string, col func(string) string) (string, []interface{}) {
 	var args []interface{}
@@ -96,7 +98,7 @@ func chineseSubtitleFilterCondition(groups []string, col func(string) string) (s
 		return "", nil
 	}
 	placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(args)), ", ")
-	return fmt.Sprintf("%s(%s, %s, %s) IN (%s)", chineseSubtitleSQLFunc,
+	return fmt.Sprintf("%s(%s, %s, %s, NULL) IN (%s)", chineseSubtitleSQLFunc,
 		col("subtitle_status"), col("subtitle_language"), col("subtitle_tracks"), placeholders), args
 }
 
@@ -150,10 +152,10 @@ func (a *worstChineseSubtitleAgg) Final(*sqlite.FunctionContext) {}
 // `id` inside the subquery would resolve to episodes.id.
 func seriesChineseSubtitleSQL(table string) string {
 	return fmt.Sprintf(`COALESCE(
-		(SELECT %[1]s(%[2]s(e.subtitle_status, e.subtitle_language, e.subtitle_tracks))
+		(SELECT %[1]s(%[2]s(e.subtitle_status, e.subtitle_language, e.subtitle_tracks, e.burned_in_subtitle))
 		   FROM episodes e
 		  WHERE e.series_id = %[3]s.id AND e.file_path IS NOT NULL AND e.file_path != ''),
-		%[2]s(%[3]s.subtitle_status, %[3]s.subtitle_language, %[3]s.subtitle_tracks))`,
+		%[2]s(%[3]s.subtitle_status, %[3]s.subtitle_language, %[3]s.subtitle_tracks, NULL))`,
 		worstChineseSubtitleSQLFunc, chineseSubtitleSQLFunc, table)
 }
 

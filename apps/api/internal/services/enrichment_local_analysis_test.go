@@ -89,7 +89,7 @@ func TestApplyFFprobeTechInfo_ProbedWithNoSubtitlesWritesEmptyArray(t *testing.T
 	require.True(t, movie.SubtitleTracks.Valid, "a successful probe with no subtitles must record []")
 	assert.Equal(t, "[]", movie.SubtitleTracks.String)
 	assert.Equal(t, models.ChineseSubtitleNone,
-		models.ChineseSubtitleVerdict(string(models.SubtitleStatusNotSearched), "", movie.SubtitleTracks.String))
+		models.ChineseSubtitleVerdict(string(models.SubtitleStatusNotSearched), "", movie.SubtitleTracks.String, ""))
 }
 
 func TestApplyFFprobeTechInfo_NoProbeAndNoSidecarStaysNull(t *testing.T) {

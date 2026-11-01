@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -70,6 +71,7 @@ var (
 	_ Provider         = (*ClaudeProvider)(nil)
 	_ TextCompleter    = (*ClaudeProvider)(nil)
 	_ CachingCompleter = (*ClaudeProvider)(nil)
+	_ ImageCompleter   = (*ClaudeProvider)(nil)
 	_ Pinger           = (*ClaudeProvider)(nil)
 )
 
@@ -518,7 +520,49 @@ func (p *ClaudeProvider) CompleteTextWithUsage(ctx context.Context, req Completi
 	if err != nil {
 		return CompletionResult{}, err
 	}
+	return completionFromMessage(msg)
+}
 
+// CompleteImageWithUsage implements ImageCompleter: one user turn holding the
+// image block followed by the prompt. Thinking is honoured exactly as in
+// CompleteTextWithUsage — the burned-in check asks for it off, or a reply cap
+// of a few hundred tokens can be spent on reasoning and come back empty
+// (disc-2026-11-burned-in-subs-a: Haiku with max_tokens 200 did).
+func (p *ClaudeProvider) CompleteImageWithUsage(ctx context.Context, req ImageCompletionRequest) (CompletionResult, error) {
+	if len(req.Image) == 0 {
+		return CompletionResult{}, errors.New("image completion needs an image")
+	}
+	maxTokens := req.MaxTokens
+	if maxTokens <= 0 {
+		maxTokens = ClaudeMaxTokens
+	}
+	params := anthropic.MessageNewParams{
+		Model:     anthropic.Model(p.model),
+		MaxTokens: int64(maxTokens),
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(
+				anthropic.NewImageBlockBase64(req.MediaType, base64.StdEncoding.EncodeToString(req.Image)),
+				anthropic.NewTextBlock(req.Prompt),
+			),
+		},
+	}
+	if ThinkingOffFromContext(ctx) {
+		disabled := anthropic.NewThinkingConfigDisabledParam()
+		params.Thinking = anthropic.ThinkingConfigParamUnion{OfDisabled: &disabled}
+	}
+	slog.Debug("Claude image completion request", "model", p.model, "image_bytes", len(req.Image), "max_tokens", maxTokens)
+
+	msg, err := p.send(ctx, params)
+	if err != nil {
+		return CompletionResult{}, err
+	}
+	return completionFromMessage(msg)
+}
+
+// completionFromMessage reads a reply's text and usage. A no-text reply is
+// still billed, so its usage rides along with the error for callers that
+// count spend.
+func completionFromMessage(msg *anthropic.Message) (CompletionResult, error) {
 	usage := CompletionUsage{
 		InputTokens:              msg.Usage.InputTokens,
 		OutputTokens:             msg.Usage.OutputTokens,
@@ -527,8 +571,6 @@ func (p *ClaudeProvider) CompleteTextWithUsage(ctx context.Context, req Completi
 	}
 	text := textFromMessage(msg)
 	if text == "" {
-		// A no-text reply is still billed, so its usage rides along with the
-		// error for callers that count spend (the subtitle translator).
 		if msg.StopReason == anthropic.StopReasonMaxTokens {
 			return CompletionResult{Usage: usage}, fmt.Errorf("%w: %w (output_tokens=%d)", ErrAIInvalidResponse, ErrAIResponseTruncated, msg.Usage.OutputTokens)
 		}

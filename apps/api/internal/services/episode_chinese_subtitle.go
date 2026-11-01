@@ -65,7 +65,7 @@ func isChineseVerdict(c models.ChineseSubtitle) bool {
 // file says nothing about the tracks inside it — so the verdict then falls
 // back to Vido's record alone (usually unknown).
 func computeEpisodeSubtitle(ep models.Episode, live *SidecarTracks) episodeSubtitleVerdict {
-	status, language := string(ep.SubtitleStatus), ep.SubtitleLanguage.String
+	status, language, burned := string(ep.SubtitleStatus), ep.SubtitleLanguage.String, ep.BurnedInSubtitle.String
 
 	var stored []SubtitleTrack
 	embeddedKnown := ep.SubtitleTracks.Valid && json.Unmarshal([]byte(ep.SubtitleTracks.String), &stored) == nil
@@ -86,7 +86,7 @@ func computeEpisodeSubtitle(ep models.Episode, live *SidecarTracks) episodeSubti
 	if embeddedKnown {
 		merged := append(append(make([]SubtitleTrack, 0, len(embedded)+len(sidecars)), embedded...), sidecars...)
 		raw, _ := json.Marshal(merged)
-		out.verdict = models.ChineseSubtitleVerdict(status, language, string(raw))
+		out.verdict = models.ChineseSubtitleVerdict(status, language, string(raw), burned)
 		if liveOK {
 			canonical, _ := json.Marshal(stored)
 			if stored == nil {
@@ -98,10 +98,10 @@ func computeEpisodeSubtitle(ep models.Episode, live *SidecarTracks) episodeSubti
 		}
 	} else {
 		raw, _ := json.Marshal(sidecars)
-		if v := models.ChineseSubtitleVerdict(status, language, string(raw)); isChineseVerdict(v) {
+		if v := models.ChineseSubtitleVerdict(status, language, string(raw), burned); isChineseVerdict(v) {
 			out.verdict = v
 		} else {
-			out.verdict = models.ChineseSubtitleVerdict(status, language, "")
+			out.verdict = models.ChineseSubtitleVerdict(status, language, "", burned)
 		}
 	}
 

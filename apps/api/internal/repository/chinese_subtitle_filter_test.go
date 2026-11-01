@@ -301,15 +301,15 @@ func TestChineseSubtitleFilter_NASShape(t *testing.T) {
 func TestChineseSubtitleSQLFunction_BadInputNeverErrors(t *testing.T) {
 	db := newMigratedLibraryDB(t)
 	for _, q := range []string{
-		`SELECT vido_chinese_subtitle(NULL, NULL, NULL)`,
-		`SELECT vido_chinese_subtitle('found', 'zh-Hant', X'00FF')`,
-		`SELECT vido_chinese_subtitle(1, 2.5, '[')`,
+		`SELECT vido_chinese_subtitle(NULL, NULL, NULL, NULL)`,
+		`SELECT vido_chinese_subtitle('found', 'zh-Hant', X'00FF', X'00FF')`,
+		`SELECT vido_chinese_subtitle(1, 2.5, '[', 3)`,
 	} {
 		var v string
 		require.NoError(t, db.QueryRow(q).Scan(&v), q)
 		assert.True(t, models.ChineseSubtitle(v).IsValid(), "%s → %q", q, v)
 	}
 	var v string
-	require.NoError(t, db.QueryRow(`SELECT vido_chinese_subtitle('found', 'zh-Hant', NULL)`).Scan(&v))
+	require.NoError(t, db.QueryRow(`SELECT vido_chinese_subtitle('found', 'zh-Hant', NULL, NULL)`).Scan(&v))
 	assert.Equal(t, "zh_hant", v)
 }

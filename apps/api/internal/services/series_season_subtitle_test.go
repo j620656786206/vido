@@ -76,7 +76,7 @@ func TestSeriesService_GetSeasonEpisodes_ChineseSubtitle(t *testing.T) {
 	// against what this request read (AC #4).
 	require.Len(t, repo.refreshed, 1)
 	assert.Equal(t, local[1].SubtitleTracks.String, repo.refreshed["e2"][0])
-	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleVerdict("not_searched", "", repo.refreshed["e2"][1]),
+	assert.Equal(t, models.ChineseSubtitleZhHant, models.ChineseSubtitleVerdict("not_searched", "", repo.refreshed["e2"][1], ""),
 		"what is stored now gives the library filter the same answer")
 }
 
