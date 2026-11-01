@@ -28,7 +28,10 @@ function DialogOverlay({
            emitted zero CSS, so every modal in the subtitle flow popped in and
            out on a single frame. Replaced with keyframes styles.css owns and
            the motion tokens drive. */
-        'fixed inset-0 z-50 bg-[var(--overlay-scrim)] data-[state=open]:animate-overlay-enter data-[state=closed]:animate-overlay-exit',
+        /* -bottom-24: the scrim runs 6rem past the bottom edge, so an iPhone
+           toolbar collapsing under it never uncovers an undimmed strip
+           (disc-2026-09-viewport-fit-cover-missing). Off-screen, harmless. */
+        'fixed inset-0 -bottom-24 z-50 bg-[var(--overlay-scrim)] data-[state=open]:animate-overlay-enter data-[state=closed]:animate-overlay-exit',
         className
       )}
       {...props}

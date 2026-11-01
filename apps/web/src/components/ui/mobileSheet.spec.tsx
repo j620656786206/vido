@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { render } from '@testing-library/react';
 import { MOBILE_SHEET_CONTENT, MOBILE_SHEET_CLOSE, SheetGrabber } from './mobileSheet';
 
@@ -52,6 +54,21 @@ describe('ui/mobileSheet — the phone bottom-sheet shell', () => {
     expect(bar).toHaveAttribute('aria-hidden', 'true');
     expect(tokens(bar.className)).toEqual(
       expect.arrayContaining(['h-1', 'w-9', 'rounded-full', 'bg-[var(--bg-tertiary)]'])
+    );
+  });
+
+  it('carries a sheet-coloured skirt below it on the phone, so an iPhone toolbar collapse never shows the page underneath', () => {
+    const t = tokens(MOBILE_SHEET_CONTENT);
+    expect(t).toContain('max-sm:shadow-[0_6rem_0_0_var(--bg-secondary),var(--shadow-xl)]');
+    // Phone only: the centred desktop dialog keeps its own shadow.
+    expect(t.filter((c) => c.includes('0_6rem_0_0') && !c.startsWith('max-sm:'))).toEqual([]);
+  });
+
+  it('index.html declares viewport-fit=cover, so fixed layers reach the real edge and safe-area insets are live', () => {
+    const html = readFileSync(join(__dirname, '..', '..', '..', 'index.html'), 'utf8');
+    const meta = html.match(/<meta name="viewport" content="([^"]+)"/)?.[1] ?? '';
+    expect(meta.split(/,\s*/)).toEqual(
+      expect.arrayContaining(['width=device-width', 'initial-scale=1', 'viewport-fit=cover'])
     );
   });
 });

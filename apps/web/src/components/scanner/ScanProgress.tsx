@@ -110,7 +110,7 @@ export function ScanProgress() {
        sheet renders with no tab bar beneath it and must sit flush. Keep these
        two breakpoints in step — they answer the same question. */
     <div
-      className="fixed inset-x-0 bottom-[calc(84px+env(safe-area-inset-bottom))] z-50 sm:bottom-0"
+      className="fixed inset-x-0 bottom-[84px] z-50 sm:bottom-0"
       data-testid="scan-progress-wrapper"
     >
       <ScanProgressSheet

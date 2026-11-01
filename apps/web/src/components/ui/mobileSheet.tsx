@@ -17,9 +17,19 @@
 import type { ComponentProps } from 'react';
 import { cn } from '../../lib/utils';
 
-/** Pin to the bottom edge, round the top corners, slide up (phone only). */
+/**
+ * Pin to the bottom edge, round the top corners, slide up (phone only).
+ *
+ * The phone shadow carries a SKIRT: a solid copy of the sheet 6rem below it, in
+ * the sheet's own colour. On iPhone (Safari, and Edge/Chrome — all WebKit) the
+ * layout viewport's bottom can lag the screen's while the toolbar collapses, so
+ * a sheet pinned to bottom-0 briefly ends above the real edge and the page
+ * showed through underneath (Alexyu, iPhone Edge, 2026-11-01). The skirt fills
+ * that strip. A box-shadow, not ::after, because every consumer clips its
+ * content with overflow-hidden and a shadow is never clipped by its own box.
+ */
 export const MOBILE_SHEET_CONTENT =
-  'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)] max-sm:data-[state=open]:animate-sheet-enter max-sm:data-[state=closed]:animate-sheet-exit';
+  'bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-[var(--radius-xl)] max-sm:shadow-[0_6rem_0_0_var(--bg-secondary),var(--shadow-xl)] max-sm:data-[state=open]:animate-sheet-enter max-sm:data-[state=closed]:animate-sheet-exit';
 
 /**
  * Phone-only sizing for ui/Dialog's ✕ (pass as `closeClassName`): a 44×44 hit

@@ -14,7 +14,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import { cn } from '../../lib/utils';
 
 const POPUP_BASE =
-  'fixed inset-x-0 bottom-0 z-[71] max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-xl)] border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-xl)] transition-transform duration-[var(--motion-move)] data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full';
+  'fixed inset-x-0 bottom-0 z-[71] max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-xl)] border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_6rem_0_0_var(--bg-secondary),var(--shadow-xl)] transition-transform duration-[var(--motion-move)] data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full';
 
 const TITLE_BASE = 'mb-3 text-base font-semibold text-[var(--text-primary)]';
 
@@ -72,7 +72,7 @@ export function Sheet({
       onOpenChangeComplete={onOpenChangeComplete}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-[70] bg-[var(--overlay-scrim)] transition-opacity duration-[var(--motion-move)] data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <Dialog.Backdrop className="fixed inset-0 -bottom-24 z-[70] bg-[var(--overlay-scrim)] transition-opacity duration-[var(--motion-move)] data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
         <Dialog.Popup
           className={cn(POPUP_BASE, className)}
           data-testid={testId}

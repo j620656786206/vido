@@ -57,3 +57,16 @@ describe('ui/Dialog — the ✕ names itself', () => {
     expect(tips.length).toBeGreaterThan(1);
   });
 });
+
+describe('ui/Dialog — the scrim (disc-2026-09-viewport-fit-cover-missing)', () => {
+  it('runs past the bottom edge, so an iPhone toolbar collapse never uncovers an undimmed strip', () => {
+    open();
+    const scrim = Array.from(document.querySelectorAll<HTMLElement>('[data-state]')).find((el) =>
+      el.className.includes('overlay-scrim')
+    );
+    expect(scrim).toBeDefined();
+    const t = scrim!.className.split(/\s+/);
+    // tailwind-merge must keep both: inset-0 for the other three sides.
+    expect(t).toEqual(expect.arrayContaining(['fixed', 'inset-0', '-bottom-24']));
+  });
+});
