@@ -1,6 +1,6 @@
 # Story disc-2026-11-translate-chunk-empty-reply-fails-episode：AI 回空白時切半重送，不讓整集失敗
 
-Status: review
+Status: done
 
 **Source:** sprint-status 同名待辦（P1，PR #946 建單）。⚖️ Alexyu 2026-11-01：「先 1，然後修第一件」。
 
@@ -46,10 +46,14 @@ Status: review
 - `go test ./...` 全過；`go vet ./...`、`gofmt`（改到的檔）、`staticcheck`（ai／subtitle／services）乾淨。
 - 新測試：`TestClaudeProvider_RefusalIsAnEmptyReplyWithItsStopReason`、`TestOpenAICompat_ContentFilterWithNoTextIsAnEmptyReply`、`TestIsShrinkableReply_OnlyNoTextReplies`、`TestTranslateTrack_EmptyReplyChunkIsSplitAndOnlyTheTriggerKeepsEnglish`（含用量）、`TestTranslateWithGlossary_EmptyReplyBatchIsSplitInHalf`、`TestTranslateWithGlossary_OtherInvalidReplyIsNotSplit`。
 
-### 沒做的
+### 正式機驗證（2026-11-01）
 
-- 還沒在正式機重跑天蠍 E2／E3 證實。Vido 有密碼鎖，要 Alexyu 登入後按（每集約 $0.19）。重跑後如果還有句子被擋，log 會寫 `stop_reason=…`，可以確定原因。
+- 部署 `4db26ab0` 後 Alexyu 用手機重跑天蠍 E2、E3，兩集都完成：E2 1,502 句、$0.49，E3 1,549 句、$0.44。
+- log 證實原因是 `stop_reason=refusal`（`output_tokens=0`）。E2 的 426–476、E3 的 1272–1325 等五段被擋，切半重送後都翻完；切到單句還是被擋的只有 E2 第 1411 句「It'll be aerosolized in...」（生化病毒劇情），保留英文。
+- 其他保留英文的 30 句幾乎都是人名（O'Brien!、Happy?、Cabe Gallo），屬於「回原文」，不是這次的問題。
+- 每集實際花費是預估的 2.5 倍，另立 `disc-2026-11-translate-estimate-ignores-cue-density`。
 
 ## Change Log
 
 - 2026-11-01：建立＋實作（Alexyu 在外面，同一個 session 接著做）。
+- 2026-11-01：正式機重跑天蠍 E2／E3 驗證通過，狀態改 done。
