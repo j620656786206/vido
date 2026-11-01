@@ -55,6 +55,10 @@ func fullyPopulatedRun() *models.SubtitleRun {
 		CacheHitCues:    intPtr(120),
 		BatchID:         "batch-9",
 		TriggeredBy:     models.SubtitleRunTriggeredAuto,
+		EstimateUSD:     floatPtr(0.37),
+		ASRProvider:     "elevenlabs",
+		ASRModel:        "scribe_v2",
+		Source:          models.SubtitleRunSourceAudio,
 		ErrorMessage:    "",
 		StartedAt:       time.Now().Add(-2 * time.Minute).UTC().Truncate(time.Second),
 		CompletedAt:     &completed,
@@ -98,6 +102,11 @@ func TestSubtitleRunRepository_RoundTripsAllColumns(t *testing.T) {
 	assert.Equal(t, *want.CacheHitCues, *got.CacheHitCues)                     //
 	assert.Equal(t, want.BatchID, got.BatchID)                                 // 23 (041)
 	assert.Equal(t, want.TriggeredBy, got.TriggeredBy)                         // 24 (043)
+	require.NotNil(t, got.EstimateUSD, "estimate_usd must survive")            // 25 (048)
+	assert.InDelta(t, *want.EstimateUSD, *got.EstimateUSD, 1e-9)               //
+	assert.Equal(t, want.ASRProvider, got.ASRProvider)                         // 26 (048)
+	assert.Equal(t, want.ASRModel, got.ASRModel)                               // 27 (048)
+	assert.Equal(t, want.Source, got.Source)                                   // 28 (048)
 	assert.WithinDuration(t, want.StartedAt, got.StartedAt, time.Second)       // 15
 	require.NotNil(t, got.CompletedAt, "completed_at must survive")            // 16
 	assert.WithinDuration(t, *want.CompletedAt, *got.CompletedAt, time.Second) //
@@ -139,7 +148,50 @@ func TestSubtitleRunRepository_NullableColumnsRoundTripAsUnset(t *testing.T) {
 	assert.Nil(t, got.CacheHitCues, "unmeasured cache hits read NULL, never 0 (migration 041)")
 	assert.Equal(t, "", got.BatchID)
 	assert.Equal(t, "", got.TriggeredBy, "an unstamped run has no trigger (migration 043)")
+	assert.Nil(t, got.EstimateUSD, "an unestimated run reads NULL, never $0 (migration 048)")
+	assert.Equal(t, "", got.ASRProvider, "no ASR ran (migration 048)")
+	assert.Equal(t, "", got.ASRModel)
+	assert.Equal(t, "", got.Source)
 }
+
+// disc-2026-11-spend-history-a-ledger AC #1/#5 (Rule 28: the real migration
+// chain): the unset history columns are stored as genuine NULL — not "" / 0 —
+// so a reader outside the repository can tell "not recorded" apart, and an
+// Update that fills them in round-trips.
+func TestSubtitleRunRepository_HistoryColumnsNullUntilRecorded(t *testing.T) {
+	db := setupSubtitleRunDB(t)
+	repo := NewSubtitleRunRepository(db)
+	ctx := context.Background()
+
+	run := &models.SubtitleRun{MediaID: "media-h", MediaType: models.SubtitleRunMediaMovie, Status: models.SubtitleRunRunning}
+	require.NoError(t, repo.Create(ctx, run))
+
+	var estimate sql.NullFloat64
+	var provider, model, source sql.NullString
+	require.NoError(t, db.QueryRow(`SELECT estimate_usd, asr_provider, asr_model, source FROM subtitle_runs WHERE id = ?`, run.ID).
+		Scan(&estimate, &provider, &model, &source))
+	assert.False(t, estimate.Valid, "estimate_usd is NULL, not 0")
+	assert.False(t, provider.Valid, "asr_provider is NULL, not ''")
+	assert.False(t, model.Valid)
+	assert.False(t, source.Valid)
+
+	run.EstimateUSD = floatPtr(1.25)
+	run.ASRProvider = "openai"
+	run.ASRModel = "whisper-1"
+	run.Source = models.SubtitleRunSourceAudio
+	run.Status = models.SubtitleRunCompleted
+	require.NoError(t, repo.Update(ctx, run))
+
+	got, err := repo.FindByID(ctx, run.ID)
+	require.NoError(t, err)
+	require.NotNil(t, got.EstimateUSD)
+	assert.InDelta(t, 1.25, *got.EstimateUSD, 1e-9)
+	assert.Equal(t, "openai", got.ASRProvider)
+	assert.Equal(t, "whisper-1", got.ASRModel)
+	assert.Equal(t, models.SubtitleRunSourceAudio, got.Source)
+}
+
+func floatPtr(f float64) *float64 { return &f }
 
 // TestSubtitleRunRepository_ScanToleratesRawNulls covers rows written outside
 // the repository (a bare INSERT applying column defaults): the nullable columns

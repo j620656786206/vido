@@ -199,6 +199,9 @@ type TranscriptionService struct {
 
 	// runLedger records this engine's own runs (sub-7-6a). Optional / nil-safe.
 	runLedger SubtitleRunLedger
+	// runEstimator stamps the dialog's quote on this engine's own ledger rows
+	// (disc-2026-11-spend-history-a-ledger). nil = estimate_usd stays NULL.
+	runEstimator RunEstimator
 
 	// probeWritable refuses a run whose target folder cannot take the
 	// subtitle, before extraction or any paid call. Defaults to the same probe
@@ -1098,6 +1101,10 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 
 		var err error
 		lang := WhisperLanguageFromTrack(selectedTrack.Language)
+		// disc-2026-11-spend-history-a-ledger: speech recognition really runs
+		// now, so the row that records this work names the engine. A
+		// translate-only resume never gets here and leaves both columns NULL.
+		s.stampASRIdentity(ctx)
 		// Paid-for chunks are stored as they come back and reused next time;
 		// nil when no store is wired or the source file cannot be identified.
 		scope := s.chunkScope(mediaID, filePath, selectedTrack.Index, lang)

@@ -326,6 +326,15 @@ type SpeechTranscriber interface {
 	Transcribe(ctx context.Context, ref MediaRef, filePath, mediaDir string) error
 }
 
+// RunEstimator is the narrow port that stamps the 管理字幕 dialog's quote on a
+// run row at start (disc-2026-11-spend-history-a-ledger). main.go wires
+// services.TranscriptionRunEstimator, which calls the SAME
+// TranscriptionEstimateService.Estimate the dialog does. An error means "no
+// figure" — the row's estimate_usd stays NULL and the run goes on.
+type RunEstimator interface {
+	EstimateRunUSD(ctx context.Context, mediaType, mediaID string) (float64, error)
+}
+
 // Pipeline owns the generation-side stages that must not live in services:
 // the quality gate needs detector.Detect, and Rule 19 forbids services →
 // subtitle. The thin LLM call stays on the services side behind ChunkTranslator.
@@ -403,6 +412,10 @@ type Pipeline struct {
 
 	// localization is the settings-backed sub-7-4 level source (optional).
 	localization func(ctx context.Context) prompts.LocalizationLevel
+
+	// estimator is the OPTIONAL run-start quote (disc-2026-11-spend-history-a-
+	// ledger). nil = estimate_usd stays NULL (one Warn per run).
+	estimator RunEstimator
 }
 
 // PipelineOption injects one item-flow port. Variadic on NewPipeline so
@@ -516,6 +529,12 @@ func WithRunReceipt(fn func(run *models.SubtitleRun)) PipelineOption {
 // settings page applies to the next item without a restart. nil = default.
 func WithLocalizationLevelSource(source func(ctx context.Context) prompts.LocalizationLevel) PipelineOption {
 	return func(p *Pipeline) { p.localization = source }
+}
+
+// WithRunEstimator wires the run-start quote stamped on every run row
+// (disc-2026-11-spend-history-a-ledger). Optional, like the ASR port.
+func WithRunEstimator(est RunEstimator) PipelineOption {
+	return func(p *Pipeline) { p.estimator = est }
 }
 
 // WithClock overrides the pipeline clock. Test-only in practice: the D10 warm

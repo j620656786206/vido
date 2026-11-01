@@ -328,3 +328,35 @@ func TestASRProviderHolder_EndpointFingerprintUsesTheHostedDefaults(t *testing.T
 	assert.Equal(t, "|"+ai.WhisperModel, h.EndpointFingerprint(),
 		"an empty model means the ai package's default; the fingerprint must name it, not \"\"")
 }
+
+// disc-2026-11-spend-history-a-ledger AC #4: the ledger names the engine and,
+// where it is knowable, the model — Scribe always names itself; Whisper only
+// when ASR_MODEL pins one (otherwise the engine's own default applies).
+func TestASRProviderHolder_Identity(t *testing.T) {
+	ctx := context.Background()
+
+	scribe := NewASRProviderHolder(NewKeyResolver(&fakeSecrets{}, EnvKeys{ElevenLabs: "el", OpenAI: "sk"}, nil), "", "", nil)
+	p, m := scribe.Identity(ctx)
+	assert.Equal(t, ASRProviderElevenLabs, p)
+	assert.Equal(t, ai.ScribeModel, m)
+
+	whisper := NewASRProviderHolder(NewKeyResolver(&fakeSecrets{}, EnvKeys{OpenAI: "sk"}, nil), "", "", nil)
+	p, m = whisper.Identity(ctx)
+	assert.Equal(t, ASRProviderOpenAI, p)
+	assert.Equal(t, ai.WhisperModel, m, "no ASR_MODEL: the client sends whisper-1")
+
+	pinned := NewASRProviderHolder(NewKeyResolver(&fakeSecrets{}, EnvKeys{OpenAI: "sk"}, nil), "", "gpt-4o-transcribe", nil)
+	_, m = pinned.Identity(ctx)
+	assert.Equal(t, "gpt-4o-transcribe", m)
+
+	selfHosted := NewASRProviderHolder(NewKeyResolver(&fakeSecrets{}, EnvKeys{}, nil),
+		"http://nas:8000/v1/audio/transcriptions", "Systran/faster-whisper-small", nil)
+	p, m = selfHosted.Identity(ctx)
+	assert.Equal(t, ASRProviderSelfHosted, p)
+	assert.Equal(t, "Systran/faster-whisper-small", m)
+
+	none := NewASRProviderHolder(NewKeyResolver(&fakeSecrets{}, EnvKeys{}, nil), "", "", nil)
+	p, m = none.Identity(ctx)
+	assert.Equal(t, "", p)
+	assert.Equal(t, "", m)
+}

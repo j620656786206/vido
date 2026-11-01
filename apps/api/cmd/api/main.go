@@ -900,6 +900,43 @@ func main() {
 	sidecarFinder := sidecarcheck.NewFinder(
 		sidecarcheck.NewChecker(ffprobeService, repos.Cache, slog.Default()),
 		audioExtractorService, slog.Default())
+	// sub-4-1 route predictor, hoisted to a variable (dsr-6a) so the candidate
+	// sweep and the single-item estimate share ONE adapter and, through it, the
+	// shared ffprobeService concurrency limit.
+	routePredictor := routePredictorAdapter{router: subtitle.NewRouter(
+		ffprobeService,
+		subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitleExtractorOpts...),
+		slog.Default())}
+
+	// dsr-6a AC #2/#3: the price on the 管理字幕 dialog's paid buttons. It shares
+	// the run's own plan checks (TranscriptionService), bills the model the run
+	// will bill (the holder's EffectiveModel — not the catalog pre-selection),
+	// and uses the same self-hosted ASR answer as the candidate sweep below.
+	// Built before the pipeline (disc-2026-11-spend-history-a-ledger) so the
+	// run ledger can be handed the same quote.
+	transcriptionEstimateService := services.NewTranscriptionEstimateService(
+		transcriptionService,
+		translationDispatcher.EffectiveModel,
+		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),
+		slog.Default(),
+	)
+	transcriptionEstimateService.SetASRRateSource(asrHolder.ASRRate)
+	transcriptionEstimateService.SetDurationProber(routePredictor)
+	transcriptionEstimateService.SetEpisodeDurationWriter(repos.Episodes)
+	// Pipeline mode: the click routes through the pipeline, so the quote
+	// predicts the lane it will take. Legacy mode leaves both unset.
+	if cfg.SubtitlePipelineEnabled() {
+		transcriptionEstimateService.SetRoutePredictor(routePredictor)
+		transcriptionEstimateService.SetSidecarSource(sidecarFinder)
+	}
+	// disc-2026-11-spend-history-a-ledger: every run row records the quote the
+	// dialog would have shown at the moment the run started — the same
+	// Estimate, over the same movie / episode row the estimate handler reads.
+	// One adapter serves both ledger writers: the pipeline and the Route C
+	// engine (solo click in legacy mode, legacy batch items).
+	runEstimator := services.NewTranscriptionRunEstimator(transcriptionEstimateService, repos.Movies, repos.Episodes)
+	transcriptionService.SetRunEstimator(runEstimator)
+
 	if cfg.SubtitlePipelineEnabled() {
 		// disc-2026-10-solo-live-spend: each click's Budget, by media id, for
 		// the events the click's runner does not send itself — the pipeline's
@@ -948,6 +985,7 @@ func main() {
 			// sub-7-6a: one `subtitle_run_receipt` per run, at its terminal
 			// write — the frontend's cost line for both legs.
 			subtitle.WithRunReceipt(subtitle.NewSSEReceiptHook(sseHub)),
+			subtitle.WithRunEstimator(runEstimator),
 		)
 		subtitlePipelinePool = subtitle.NewWorkerPool(subtitlePipeline, slog.Default(),
 			subtitle.WithCandidateFinders(repos.Movies, repos.Episodes),
@@ -1239,35 +1277,13 @@ func main() {
 	// (POST /episodes/:id/transcribe). Passing it is what mounts that route.
 	transcriptionHandler := handlers.NewTranscriptionHandler(movieService, repos.Episodes, transcriptionService)
 
-	// sub-4-1 route predictor, hoisted to a variable (dsr-6a) so the candidate
-	// sweep and the single-item estimate share ONE adapter and, through it, the
-	// shared ffprobeService concurrency limit.
-	routePredictor := routePredictorAdapter{router: subtitle.NewRouter(
-		ffprobeService,
-		subtitle.NewExtractor(subtitleExtractTimeout, slog.Default(), subtitleExtractorOpts...),
-		slog.Default())}
-
-	// dsr-6a AC #2/#3: the price on the 管理字幕 dialog's paid buttons. It shares
-	// the run's own plan checks (TranscriptionService), bills the model the run
-	// will bill (the holder's EffectiveModel — not the catalog pre-selection),
-	// and uses the same self-hosted ASR answer as the candidate sweep below.
-	transcriptionEstimateService := services.NewTranscriptionEstimateService(
-		transcriptionService,
-		translationDispatcher.EffectiveModel,
-		ai.IsSelfHostedASRBaseURL(cfg.ASRBaseURL),
-		slog.Default(),
-	)
-	transcriptionEstimateService.SetASRRateSource(asrHolder.ASRRate)
-	transcriptionEstimateService.SetDurationProber(routePredictor)
-	transcriptionEstimateService.SetEpisodeDurationWriter(repos.Episodes)
 	transcriptionHandler.SetEstimator(transcriptionEstimateService)
 	transcriptionHandler.SetPhaseReader(generationPhases)
 	// Pipeline mode: the click routes through the pipeline and the quote names
-	// the lane it will take. Legacy mode leaves both exactly as they were.
+	// the lane it will take (SetRoutePredictor / SetSidecarSource are wired
+	// with the estimator above). Legacy mode leaves both exactly as they were.
 	if subtitleSoloRunner != nil {
 		transcriptionHandler.SetSoloGenerator(subtitleSoloRunner)
-		transcriptionEstimateService.SetRoutePredictor(routePredictor)
-		transcriptionEstimateService.SetSidecarSource(sidecarFinder)
 	}
 
 	// 9R-13: .nfo metadata localizer (movies) — additive zh-TW .nfo via the
