@@ -5,7 +5,12 @@
     <title>Web</title>
     <base href="/" />
 
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- viewport-fit=cover (disc-2026-09-viewport-fit-cover-missing): let fixed
+         layers reach the real bottom edge on iOS. Without it WebKit (Safari, and
+         Edge/Chrome on iPhone) can leave an undimmed strip under a bottom sheet
+         while its toolbar resizes, and every env(safe-area-inset-*) in the app
+         reads 0. The bottom tab bar and sheets already pad by those insets. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/src/styles.css" />
     <script>

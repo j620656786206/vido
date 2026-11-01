@@ -762,9 +762,8 @@ export function ManageSubtitleDialogV2({
 
         {/* Phone (PPLQr / tRFbG): [6,16,16,16] gap 14. Outside the progress view
             the phone sheet has NO footer, so this block is what meets the bottom
-            edge and carries the safe-area inset. (Inert today — index.html has no
-            viewport-fit=cover, so the inset is 0; see
-            disc-2026-09-viewport-fit-cover-missing.) */}
+            edge and carries the safe-area inset (live since index.html declares
+            viewport-fit=cover). */}
         <div
           className={cn(
             'flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-5 max-sm:gap-3.5 max-sm:px-4 max-sm:pt-1.5',

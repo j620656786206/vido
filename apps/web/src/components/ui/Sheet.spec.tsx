@@ -92,9 +92,11 @@ describe('ui/Sheet — defaults keep the two existing callers unchanged', () => 
     // Pinned verbatim from ui/Sheet.tsx before dsr-4b-1: MobileMoreSheet and
     // LibraryFilterSheetV2 pass none of the new props, so cn() must hand these back
     // untouched — a tailwind-merge upgrade that reclassifies a token fails here.
+    // Deliberate change since: the shadow gained the 6rem sheet-coloured skirt
+    // (disc-2026-09-viewport-fit-cover-missing, iPhone toolbar gap).
     render(<Harness title="更多" />);
     expect(screen.getByTestId('bottom-sheet').getAttribute('class')).toBe(
-      'fixed inset-x-0 bottom-0 z-[71] max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-xl)] border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-xl)] transition-transform duration-[var(--motion-move)] data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full'
+      'fixed inset-x-0 bottom-0 z-[71] max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-xl)] border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_6rem_0_0_var(--bg-secondary),var(--shadow-xl)] transition-transform duration-[var(--motion-move)] data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full'
     );
     expect(screen.getByText('更多').getAttribute('class')).toBe(
       'mb-3 text-base font-semibold text-[var(--text-primary)]'

@@ -101,9 +101,8 @@ export function AppShellV2({ children }: AppShellV2Props) {
           </button>
         </header>
 
-        <main className="flex flex-1 flex-col pb-[calc(84px+env(safe-area-inset-bottom))] sm:pb-0">
-          {children}
-        </main>
+        {/* pb-[84px]: MobileTabBar is 84px TOTAL — its safe-area padding sits inside that height (border-box), so the inset is not added again here. */}
+        <main className="flex flex-1 flex-col pb-[84px] sm:pb-0">{children}</main>
       </div>
 
       {/* Mobile bottom tab bar */}
