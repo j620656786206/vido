@@ -197,10 +197,8 @@ test.describe('Activity hub — 本月 AI 花費 @ui @activity @story-sub-7-6c',
     await expect(page).toHaveURL(/\/activity\/spend$/);
     await expect(page.getByRole('heading', { name: 'AI 花費明細' })).toBeVisible();
     await expect(page.getByTestId('spend-history-total')).toContainText('$0.81 · 2 次');
-    // Whichever layout this viewport draws (table ≥ md, cards below), the runs are listed.
-    const rows = page.locator(
-      '[data-testid="spend-history-row"]:visible, [data-testid="spend-history-card"]:visible'
-    );
+    // One table at every width (seven columns ≥ md, four below).
+    const rows = page.locator('[data-testid="spend-history-row"]');
     await expect(rows).toHaveCount(2);
     await expect(rows.first()).toContainText('特種部隊：母獅 S2E1');
     await expect(rows.first()).toContainText('⚠ 比預估高 84%');

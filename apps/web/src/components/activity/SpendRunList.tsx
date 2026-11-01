@@ -1,8 +1,11 @@
 // Design ref: ux-design.pen — no current screen frame; the AI 花費明細 page was specified in words (disc-2026-11-spend-history-c, ⚖️ Alexyu 2026-11-01: no new .pen frames) and built from the K5 spend card's tokens
 /**
  * 逐筆列表 — every run of the month, newest first (disc-2026-11-spend-history-d
- * AC #2/#4). A table on the desktop, a card per run on a phone; the 處理方式
- * chips above it filter the list only (the summary and chart are the month).
+ * AC #2/#4). One table at every width: seven columns on the desktop; on a phone
+ * (disc-2026-11-spend-history-mobile-table, ⚖️ Alexyu 2026-11-01) only
+ * 影片／實際／預估／狀態, with time · 處理方式 and the models in small type under
+ * the title. The 處理方式 chips above it filter the list only (the summary and
+ * chart are the month).
  *
  * Honesty (PRODUCT.md 原則 1, -c design):
  *  - an amount nobody recorded reads 「沒記錄」 in --text-muted, never $0.00 —
@@ -133,87 +136,78 @@ export function SpendCategoryChips({
   );
 }
 
+/** Phone-only lines under the title: what the hidden columns would have said. */
+function CompactDetails({ item }: { item: RunHistoryItem }) {
+  const models = runModels(item);
+  return (
+    <span className="mt-1 flex flex-col gap-0.5 text-xs md:hidden" data-testid="spend-run-compact">
+      <span className="text-[var(--text-secondary)]">
+        <span className="font-mono tabular-nums">{runTime(item.startedAt)}</span>
+        {' · '}
+        {routeLabel(item)}
+      </span>
+      {models.length > 0 && (
+        <span className="break-words text-[var(--text-muted)]">{models.join(' ＋ ')}</span>
+      )}
+    </span>
+  );
+}
+
+/** Columns a phone does not draw — their content moves under the title. */
+const DESKTOP_ONLY = 'hidden md:table-cell';
+
 export function SpendRunList({ items }: { items: RunHistoryItem[] }) {
   return (
-    <>
-      {/* Desktop: the seven-column table. */}
-      <div className="hidden overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] md:block">
-        <table className="w-full text-sm" data-testid="spend-history-table">
-          <thead>
-            <tr className="border-b border-[var(--border-subtle)] text-left text-xs text-[var(--text-muted)]">
-              <th className="px-4 py-2.5 font-medium">時間</th>
-              <th className="px-4 py-2.5 font-medium">影片</th>
-              <th className="px-4 py-2.5 font-medium">處理方式</th>
-              <th className="px-4 py-2.5 font-medium">用了哪些模型</th>
-              <th className="px-4 py-2.5 text-right font-medium">實際</th>
-              <th className="px-4 py-2.5 text-right font-medium">預估</th>
-              <th className="px-4 py-2.5 font-medium">狀態</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr
-                key={item.id}
-                data-testid="spend-history-row"
-                className="border-b border-[var(--border-subtle)] align-top last:border-b-0"
+    <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+      <table className="w-full text-sm" data-testid="spend-history-table">
+        <thead>
+          <tr className="border-b border-[var(--border-subtle)] text-left text-xs text-[var(--text-muted)]">
+            <th className={`${DESKTOP_ONLY} px-4 py-2.5 font-medium`}>時間</th>
+            <th className="px-3 py-2.5 font-medium md:px-4">影片</th>
+            <th className={`${DESKTOP_ONLY} px-4 py-2.5 font-medium`}>處理方式</th>
+            <th className={`${DESKTOP_ONLY} px-4 py-2.5 font-medium`}>用了哪些模型</th>
+            <th className="px-2 py-2.5 text-right font-medium md:px-4">實際</th>
+            <th className="px-2 py-2.5 text-right font-medium md:px-4">預估</th>
+            <th className="px-3 py-2.5 font-medium md:px-4">狀態</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr
+              key={item.id}
+              data-testid="spend-history-row"
+              className="border-b border-[var(--border-subtle)] align-top last:border-b-0"
+            >
+              <td
+                className={`${DESKTOP_ONLY} whitespace-nowrap px-4 py-3 font-mono text-xs tabular-nums text-[var(--text-secondary)]`}
               >
-                <td className="whitespace-nowrap px-4 py-3 font-mono text-xs tabular-nums text-[var(--text-secondary)]">
-                  {runTime(item.startedAt)}
-                </td>
-                <td className="px-4 py-3">
+                {runTime(item.startedAt)}
+              </td>
+              <td className="min-w-0 px-3 py-3 md:px-4">
+                <span className="break-words">
                   <Title item={item} />
-                </td>
-                <td className="px-4 py-3 text-[var(--text-secondary)]">{routeLabel(item)}</td>
-                <td className="px-4 py-3">
-                  <Models item={item} />
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <ActualAmount item={item} />
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <EstimateAmount item={item} />
-                </td>
-                <td className="px-4 py-3">
-                  <Status item={item} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Phone: one card per run — title + actual / time · 處理方式 / models /
-          estimate + status (-c design, four lines). */}
-      <ul className="flex flex-col gap-3 md:hidden" data-testid="spend-history-cards">
-        {items.map((item) => (
-          <li
-            key={item.id}
-            data-testid="spend-history-card"
-            className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4 text-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <span className="min-w-0 break-words font-medium">
-                <Title item={item} />
-              </span>
-              <span className="shrink-0 text-right">
+                </span>
+                <CompactDetails item={item} />
+              </td>
+              <td className={`${DESKTOP_ONLY} px-4 py-3 text-[var(--text-secondary)]`}>
+                {routeLabel(item)}
+              </td>
+              <td className={`${DESKTOP_ONLY} px-4 py-3`}>
+                <Models item={item} />
+              </td>
+              <td className="px-2 py-3 text-right md:px-4">
                 <ActualAmount item={item} />
-              </span>
-            </div>
-            <p className="text-xs text-[var(--text-secondary)]">
-              <span className="font-mono tabular-nums">{runTime(item.startedAt)}</span>
-              {' · '}
-              {routeLabel(item)}
-            </p>
-            <Models item={item} />
-            <div className="flex items-start justify-between gap-3 text-xs">
-              <span className="text-[var(--text-secondary)]">
-                預估 <EstimateAmount item={item} />
-              </span>
-              <Status item={item} />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </>
+              </td>
+              <td className="px-2 py-3 text-right md:px-4">
+                <EstimateAmount item={item} />
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 md:whitespace-normal md:px-4">
+                <Status item={item} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

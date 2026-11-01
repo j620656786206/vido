@@ -105,7 +105,6 @@ function renderView(p: SpendHistoryViewProps) {
 }
 
 const table = () => screen.findByTestId('spend-history-table');
-const cards = () => screen.findByTestId('spend-history-cards');
 
 describe('SpendHistoryView — header and month switch', () => {
   it('[P1] shows the month and steps back a month with ‹', async () => {
@@ -253,26 +252,33 @@ describe('SpendHistoryView — list honesty rules', () => {
   });
 });
 
-describe('SpendHistoryView — mobile card layout', () => {
-  it('[P1] each run is a four-line card: title + actual / time · route / models / estimate + status', async () => {
+describe('SpendHistoryView — phone: the same table, four columns', () => {
+  it('[P1] time, 處理方式 and models are desktop-only columns; on a phone they sit under the title', async () => {
     const data = page({
       items: [run({ status: 'failed', failureReason: 'cancelled', spentUsd: 0.8 })],
     });
     renderView(props({ data, items: data.items }));
-    const card = within(await cards()).getByTestId('spend-history-card');
-    const lines = Array.from(card.children);
-    expect(lines).toHaveLength(4);
-    expect(lines[0]).toHaveTextContent('Lioness S1E1');
-    expect(lines[0]).toHaveTextContent('$0.80');
-    expect(lines[0]).toHaveTextContent('⚠ 比預估高 60%');
-    expect(lines[1]).toHaveTextContent('語音辨識＋翻譯');
-    expect(lines[2]).toHaveTextContent('claude-sonnet-5');
-    expect(lines[3]).toHaveTextContent('預估 $0.50');
-    expect(lines[3]).toHaveTextContent('中途停止');
-    // The table is desktop-only, the cards phone-only (CSS breakpoints).
-    expect(await table()).toHaveClass('w-full');
-    expect((await table()).parentElement).toHaveClass('hidden', 'md:block');
-    expect(await cards()).toHaveClass('md:hidden');
+    const t = await table();
+    // One table at every width — no phone-only card list any more.
+    expect(screen.queryByTestId('spend-history-cards')).toBeNull();
+    expect(t.parentElement).not.toHaveClass('hidden');
+    const heads = Array.from(t.querySelectorAll('th'));
+    const phone = heads
+      .filter((th) => !th.classList.contains('hidden'))
+      .map((th) => th.textContent);
+    expect(phone).toEqual(['影片', '實際', '預估', '狀態']);
+    for (const th of heads.filter((h) => h.classList.contains('hidden'))) {
+      expect(th).toHaveClass('md:table-cell');
+    }
+
+    const row = within(t).getByTestId('spend-history-row');
+    const compact = within(row).getByTestId('spend-run-compact');
+    expect(compact).toHaveClass('md:hidden');
+    expect(compact).toHaveTextContent('語音辨識＋翻譯');
+    expect(compact).toHaveTextContent('claude-sonnet-5 ＋ ElevenLabs scribe_v2');
+    expect(row).toHaveTextContent('⚠ 比預估高 60%');
+    expect(row).toHaveTextContent('$0.50');
+    expect(within(row).getByTestId('spend-run-status')).toHaveTextContent('中途停止');
   });
 });
 
