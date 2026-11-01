@@ -937,6 +937,7 @@ type truncatingCompleter struct {
 	max          int
 	sizes        []int
 	thinkingOffs []bool
+	fail         error // the no-text error for an over-size batch; nil = truncated
 }
 
 func (c *truncatingCompleter) CompleteText(ctx context.Context, _, user string, _ int) (string, error) {
@@ -948,6 +949,9 @@ func (c *truncatingCompleter) CompleteText(ctx context.Context, _, user string, 
 	c.sizes = append(c.sizes, len(idx))
 	c.thinkingOffs = append(c.thinkingOffs, ai.ThinkingOffFromContext(ctx))
 	if len(idx) > c.max {
+		if c.fail != nil {
+			return "", c.fail
+		}
 		return "", fmt.Errorf("%w: %w", ai.ErrAIInvalidResponse, ai.ErrAIResponseTruncated)
 	}
 	var sb strings.Builder
@@ -985,6 +989,36 @@ func TestTranslateWithGlossary_BlockTruncatedAloneKeepsItsEnglish(t *testing.T) 
 	require.NoError(t, err)
 	assert.Equal(t, "Only line.", out[0].Text)
 	assert.Equal(t, 1, outcome.EnglishKeptBlocks)
+}
+
+// disc-2026-11-translate-chunk-empty-reply-fails-episode (ASR leg): an empty
+// reply that is not a truncation (a refusal) is split the same way.
+func TestTranslateWithGlossary_EmptyReplyBatchIsSplitInHalf(t *testing.T) {
+	blocks := make([]TranslationBlock, 12)
+	for i := range blocks {
+		blocks[i] = TranslationBlock{Index: i + 1, Text: fmt.Sprintf("Line number %d here.", i+1)}
+	}
+	refused := fmt.Errorf("%w: %w (stop_reason=refusal, output_tokens=0)", ai.ErrAIInvalidResponse, ai.ErrAIEmptyReply)
+	c := &truncatingCompleter{max: 5, fail: refused}
+	out, outcome, err := NewTranslationService(c, nil).TranslateWithGlossary(batch10Ctx(), blocks, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, []int{10, 5, 5, 2}, c.sizes)
+	for i, b := range out {
+		assert.Equal(t, fmt.Sprintf("中文%d", i+1), b.Text)
+	}
+	assert.Zero(t, outcome.EnglishKeptBlocks)
+}
+
+func TestTranslateWithGlossary_OtherInvalidReplyIsNotSplit(t *testing.T) {
+	blocks := make([]TranslationBlock, 12)
+	for i := range blocks {
+		blocks[i] = TranslationBlock{Index: i + 1, Text: fmt.Sprintf("Line number %d here.", i+1)}
+	}
+	c := &truncatingCompleter{max: 5, fail: ai.ErrAIInvalidResponse}
+	_, _, _ = NewTranslationService(c, nil).TranslateWithGlossary(batch10Ctx(), blocks, nil, nil)
+	for _, n := range c.sizes {
+		assert.NotEqual(t, 5, n, "a bare invalid reply is not re-sent as halves")
+	}
 }
 
 type thinkingProbeCompleter struct{ off bool }

@@ -19,6 +19,22 @@ import (
 // subtitle translator splits the batch) test for this one.
 var ErrAIResponseTruncated = errors.New("AI_RESPONSE_TRUNCATED: reply hit the max_tokens cap before any text")
 
+// ErrAIEmptyReply marks a reply that came back with no text for a reason OTHER
+// than max_tokens — Claude's stop_reason "refusal" (a safety classifier stopped
+// the reply) or an OpenAI-compatible finish_reason such as "content_filter".
+// disc-2026-11-translate-chunk-empty-reply-fails-episode: 《天蠍行動》S01E02
+// and E03 each failed the whole episode on one such chunk. Like
+// ErrAIResponseTruncated it is always wrapped together with
+// ErrAIInvalidResponse; the error text carries the stop reason.
+var ErrAIEmptyReply = errors.New("AI_EMPTY_REPLY: reply carried no text")
+
+// IsShrinkableReply reports whether err is a no-text reply that a smaller
+// request may get past: truncated (less to write) or empty (the trigger may
+// sit in only some of the lines). The subtitle translator splits on these.
+func IsShrinkableReply(err error) bool {
+	return errors.Is(err, ErrAIResponseTruncated) || errors.Is(err, ErrAIEmptyReply)
+}
+
 type thinkingOffKey struct{}
 
 // WithThinkingOff asks the provider not to spend reasoning tokens on requests

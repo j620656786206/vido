@@ -701,7 +701,8 @@ func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.System
 			MaxTokens:  TranslationMaxTokens,
 		})
 		if err != nil {
-			return nil, nil, ai.CompletionUsage{}, fmt.Errorf("translate chunk [%d-%d]: %w", indices[0], indices[len(indices)-1], err)
+			// res.Usage is the billed cost of a no-text reply (zero otherwise).
+			return nil, nil, res.Usage, fmt.Errorf("translate chunk [%d-%d]: %w", indices[0], indices[len(indices)-1], err)
 		}
 		translations, terms := parseTranslationResponseWithTerms(res.Text, indices)
 		return translations, terms, res.Usage, nil
@@ -734,15 +735,15 @@ func (s *TranslationService) completeSplitting(ctx context.Context, systemPrompt
 		translations, terms := parseTranslationResponseWithTerms(text, indices)
 		return translations, terms, nil
 	}
-	if !errors.Is(err, ai.ErrAIResponseTruncated) {
+	if !ai.IsShrinkableReply(err) {
 		return nil, nil, err
 	}
 	if len(blocks) == 1 {
-		slog.Warn("Translation reply truncated even for one block — keeping its English text",
+		slog.Warn("Translation reply had no text even for one block — keeping its English text",
 			"block", blocks[0].Index, "error", err)
 		return map[int]string{}, nil, nil
 	}
-	slog.Warn("Translation reply truncated — sending the batch again as two halves",
+	slog.Warn("Translation reply had no text — sending the batch again as two halves",
 		"batch_start", blocks[0].Index, "batch_end", blocks[len(blocks)-1].Index, "error", err)
 	mid := len(blocks) / 2
 	merged := make(map[int]string, len(blocks))
