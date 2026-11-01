@@ -1132,6 +1132,7 @@ const SPEND_HISTORY_FX_ITEMS = [
   SPEND_HISTORY_FX_RUN({
     id: 'a',
     startedAt: '2026-10-30T11:02:00Z',
+    completedAt: '2026-10-30T11:09:14Z',
     media: { id: 'e1', type: 'episode', title: '特種部隊：母獅', season: 2, episode: 1 },
     spentUsd: 0.81,
     estimateUsd: 0.44,
@@ -1150,6 +1151,7 @@ const SPEND_HISTORY_FX_ITEMS = [
   SPEND_HISTORY_FX_RUN({
     id: 'c',
     startedAt: '2026-10-28T04:10:00Z',
+    completedAt: '2026-10-28T04:31:07Z',
     route: 'asr',
     source: 'audio',
     category: 'asr',
@@ -1164,6 +1166,7 @@ const SPEND_HISTORY_FX_ITEMS = [
   SPEND_HISTORY_FX_RUN({
     id: 'd',
     startedAt: '2026-10-12T14:00:00Z',
+    completedAt: '2026-10-12T14:00:00.400Z',
     route: 'deliver_direct',
     source: 'embedded_text',
     category: 'chinese_track',
@@ -1175,6 +1178,7 @@ const SPEND_HISTORY_FX_ITEMS = [
   SPEND_HISTORY_FX_RUN({
     id: 'e',
     startedAt: '2026-10-07T09:20:00Z',
+    completedAt: '2026-10-07T09:20:03Z',
     status: 'failed',
     failureReason: 'unauthorized',
     spentUsd: null,
@@ -1185,6 +1189,7 @@ const SPEND_HISTORY_FX_ITEMS = [
   SPEND_HISTORY_FX_RUN({
     id: 'f',
     startedAt: '2026-10-03T08:00:00Z',
+    completedAt: null, // a legacy row with no end time → 花了多久「沒記錄」
     route: null,
     source: null,
     category: 'legacy',
@@ -1199,6 +1204,8 @@ const SPEND_HISTORY_FX_PAGE = {
     spentUsd: 8.69,
     runs: 58,
     unpricedRuns: 1,
+    estimateUsd: 7.42,
+    estimatedRuns: 41,
     comparableRuns: 3,
     comparableSpentUsd: 3.5,
     comparableEstimateUsd: 2.83,
@@ -1236,6 +1243,8 @@ const SPEND_HISTORY_FX_EMPTY = {
       spentUsd: 0,
       runs: 0,
       unpricedRuns: 0,
+      estimateUsd: null,
+      estimatedRuns: 0,
       comparableRuns: 0,
       comparableSpentUsd: null,
       comparableEstimateUsd: null,

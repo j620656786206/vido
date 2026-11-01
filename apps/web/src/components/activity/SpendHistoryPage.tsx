@@ -33,7 +33,7 @@ import { ActivitySectionError, ActivitySkeleton } from './ActivityStates';
 import { SpendDailyChart } from './SpendDailyChart';
 import { SpendCategoryChips, SpendRunList } from './SpendRunList';
 import { SpendStat } from './SpendSection';
-import { estimateAccuracyPercent, monthLabel, shiftMonth } from './spendHistoryCopy';
+import { monthLabel, shiftMonth } from './spendHistoryCopy';
 
 export interface SpendHistoryViewProps {
   /** The month on screen, `YYYY-MM`. */
@@ -97,27 +97,38 @@ function MonthSwitcher({
   );
 }
 
+/**
+ * The month's two totals side by side — what was spent and what was quoted —
+ * not a ratio (⚖️ Alexyu 2026-11-01:「不要說預估準度，應該說總預估多少錢、實際
+ * 花費多少錢」). Both include failed and free runs; a run with no recorded
+ * figure is left out of that total and the note says how many.
+ */
 function SummaryRow({ data }: { data: RunHistoryPage }) {
   const { summary } = data;
-  const accuracy = estimateAccuracyPercent(summary);
+  const unestimated = summary.runs - summary.estimatedRuns;
   return (
     <div
       className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
       data-testid="spend-history-summary"
     >
       <dl className="flex flex-col gap-3 sm:flex-row sm:gap-8">
-        <SpendStat label="這個月總共" testId="spend-history-total">
+        <SpendStat label="這個月實際花費" testId="spend-history-total">
           {usd(summary.spentUsd)} · {summary.runs} 次
         </SpendStat>
-        <SpendStat label="預估準度" testId="spend-history-accuracy" muted={accuracy === undefined}>
-          {accuracy === undefined ? '還沒有可比的紀錄' : `實際是預估的 ${accuracy}%`}
+        <SpendStat
+          label="這個月預估"
+          testId="spend-history-estimate"
+          muted={summary.estimateUsd == null}
+        >
+          {summary.estimateUsd == null ? '沒有預估紀錄' : usd(summary.estimateUsd)}
         </SpendStat>
       </dl>
       <p className="text-xs text-[var(--text-muted)]" data-testid="spend-history-note">
         依開始時間歸到這個月，失敗和中途停止的也算進去
-        {summary.unpricedRuns > 0 && `；另有 ${summary.unpricedRuns} 次沒記錄金額，沒算進總額`}
-        {accuracy !== undefined &&
-          `；準度只算有花錢、而且實際和預估都有記的 ${summary.comparableRuns} 次`}
+        {summary.unpricedRuns > 0 && `；另有 ${summary.unpricedRuns} 次沒記錄金額，沒算進實際花費`}
+        {unestimated > 0 &&
+          summary.estimateUsd != null &&
+          `；另有 ${unestimated} 次沒有預估，沒算進預估`}
       </p>
     </div>
   );

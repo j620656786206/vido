@@ -108,6 +108,8 @@ func TestRunHistory_CurrentMonthWindowAndSeriesStopAtToday(t *testing.T) {
 	assert.Equal(t, 3.91, got.Summary.SpentUSD, "failed runs' money is counted")
 	assert.Equal(t, 0, got.Summary.ComparableRuns)
 	assert.Nil(t, got.Summary.ComparableSpentUSD, "no comparable run → null, never 0")
+	assert.Nil(t, got.Summary.EstimateUSD, "no estimate recorded → null, never 0")
+	assert.Equal(t, 0, got.Summary.EstimatedRuns)
 	assert.Nil(t, got.Summary.ComparableEstimateUSD)
 
 	assert.Equal(t, 1, got.Page)
@@ -160,6 +162,11 @@ func TestRunHistory_ComparableOnlyCompletedRunsWithBothNumbers(t *testing.T) {
 	assert.Equal(t, 1.35, *got.Summary.ComparableEstimateUSD)
 	assert.Equal(t, 1.70, got.Summary.SpentUSD)
 	assert.Equal(t, 1, got.Summary.UnpricedRuns)
+	// The quoted total counts every recorded estimate — failed and free runs
+	// too: 0.80 + 0.55 + 0.30 + 0.90 + 0.32 + 0.29 + 0.10 = 3.26 over 7 runs.
+	require.NotNil(t, got.Summary.EstimateUSD)
+	assert.Equal(t, 3.26, *got.Summary.EstimateUSD)
+	assert.Equal(t, 7, got.Summary.EstimatedRuns)
 }
 
 func TestRunHistory_CategoryFiltersItemsOnlyAndPages(t *testing.T) {

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  estimateAccuracyPercent,
   isMonth,
   mediaTitle,
   monthLabel,
@@ -58,28 +57,6 @@ describe('overEstimatePercent — ⚠ only when MORE than 1.5×', () => {
     expect(overEstimatePercent({ spentUsd: null, estimateUsd: 0.5 })).toBeUndefined();
     expect(overEstimatePercent({ spentUsd: 0.5, estimateUsd: null })).toBeUndefined();
     expect(overEstimatePercent({ spentUsd: 0.5, estimateUsd: 0 })).toBeUndefined();
-  });
-});
-
-describe('estimateAccuracyPercent', () => {
-  it('comparable spent / estimate; undefined when nothing to compare', () => {
-    const base = { spentUsd: 1, runs: 1, unpricedRuns: 0 };
-    expect(
-      estimateAccuracyPercent({
-        ...base,
-        comparableRuns: 5,
-        comparableSpentUsd: 1.2,
-        comparableEstimateUsd: 1.35,
-      })
-    ).toBe(89);
-    expect(
-      estimateAccuracyPercent({
-        ...base,
-        comparableRuns: 0,
-        comparableSpentUsd: null,
-        comparableEstimateUsd: null,
-      })
-    ).toBeUndefined();
   });
 });
 

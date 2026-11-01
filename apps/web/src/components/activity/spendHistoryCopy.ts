@@ -10,11 +10,7 @@
  *   decimal arithmetic (lib/currency), never a float compare.
  */
 import { divideUsd, gtUsd, percentOfUsd, subUsd } from '../../lib/currency';
-import type {
-  ChartCategory,
-  RunHistoryItem,
-  RunHistorySummary,
-} from '../../services/subtitleRunHistoryService';
+import type { ChartCategory, RunHistoryItem } from '../../services/subtitleRunHistoryService';
 import { creditProviderName } from '../subtitle/creditStop';
 import { failureCopyForReason } from '../subtitle/runFailureCopy';
 
@@ -147,18 +143,6 @@ export function overEstimatePercent(
   const over = subUsd(spentUsd, estimateUsd);
   if (!gtUsd(over, divideUsd(estimateUsd, 2))) return undefined;
   return percentOfUsd(over, estimateUsd);
-}
-
-/**
- * 預估準度: 「實際是預估的 N%」 over the runs that recorded both, or undefined
- * when there is nothing to compare (the caller writes 「還沒有可比的紀錄」).
- */
-export function estimateAccuracyPercent(summary: RunHistorySummary): number | undefined {
-  const { comparableRuns, comparableSpentUsd, comparableEstimateUsd } = summary;
-  if (comparableRuns <= 0 || comparableSpentUsd == null || comparableEstimateUsd == null) {
-    return undefined;
-  }
-  return percentOfUsd(comparableSpentUsd, comparableEstimateUsd);
 }
 
 const MONTH_RE = /^(\d{4})-(0[1-9]|1[0-2])$/;

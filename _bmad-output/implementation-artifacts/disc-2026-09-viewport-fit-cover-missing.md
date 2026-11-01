@@ -1,6 +1,6 @@
 # Story disc-2026-09-viewport-fit-cover-missing：iPhone 上底部彈窗沒貼到底
 
-Status: review
+Status: done
 
 **Source:** sprint-status 同名待辦（2026-09-20 dsr-6f-1 建單，2026-11-01 調成 P2）。⚖️ Alexyu 2026-11-01「處理剩餘的4項代辦」。
 
@@ -24,7 +24,7 @@ Status: review
 2. [x] 手機底部彈窗有同色裙襬，桌機置中的對話框不受影響（測試＋瀏覽器量到 computed box-shadow `rgb(240,231,211) 0 96px 0 0`）。
 3. [x] 兩種遮罩往下延伸 96px，其他三邊不變（測試＋瀏覽器量到 `bottom: -96px`）。
 4. [x] 主內容下邊距、掃描進度條位置不再重複加 safe-area。
-5. [ ] Alexyu 用 iPhone Edge 實測：生成進度彈窗打開後上下捲動、工具列縮放，底下不再露出一條頁面。
+5. [x] Alexyu 用 iPhone Edge 實測：生成進度彈窗打開後上下捲動、工具列縮放，底下不再露出一條頁面。
 
 ## Dev Agent Record
 
@@ -35,3 +35,4 @@ Status: review
 ## Change Log
 
 - 2026-11-01：建立＋實作。
+- 2026-11-01：Alexyu 部署 `5338ec0d` 後用 iPhone Edge 打開《基地》S01E01、《天蠍行動》S01E01 的管理字幕彈窗，截圖彈窗貼齊底部工具列、沒有縫：「看起來正常」→ done。
