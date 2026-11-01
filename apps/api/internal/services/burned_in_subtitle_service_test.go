@@ -11,6 +11,7 @@ import (
 	"image/draw"
 	"image/jpeg"
 	"image/png"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -178,6 +179,7 @@ func newBurnedHarness(t *testing.T, reply string) *burnedHarness {
 		spend:  &fakeSpend{},
 	}
 	h.svc = NewBurnedInSubtitleService(h.store, h.vision, h.frames, burnedConverter{}, h.spend, nil)
+	h.svc.fileExists = func(string) bool { return true } // the fixture's paths are not on disk
 	return h
 }
 
@@ -527,6 +529,7 @@ func TestCheckSeason_WritesOnlyTracklessEpisodesOfTheSeason(t *testing.T) {
 	vision := &fakeVision{configured: true, reply: `{"burned_chinese": true, "lines": ["这个人", "他们说的"]}`}
 	svc := NewBurnedInSubtitleService(repository.NewEpisodeRepository(db), vision,
 		&fakeFrameGrabber{frame: testFrame(t)}, burnedConverter{}, repository.NewAISideSpendRepository(db), nil)
+	svc.fileExists = func(string) bool { return true }
 	res, err := svc.CheckSeason(ctx, "s", 1)
 	require.NoError(t, err)
 	require.NotNil(t, res.Result)
@@ -646,4 +649,35 @@ func TestCheckSeason_UndecidedIsStamped(t *testing.T) {
 			assert.Equal(t, tt.marked, h.store.marks)
 		})
 	}
+}
+
+func TestCheckSeason_SkipsEpisodesWhoseFileIsGone(t *testing.T) {
+	// 《仙逆》S1: the first trackless row pointed at a removed special, and the
+	// whole season was left unjudged. A missing file is skipped, not sampled.
+	h := newBurnedHarness(t, `{"burned_chinese": true, "lines": ["这个人"]}`)
+	h.svc.fileExists = func(path string) bool { return !strings.HasSuffix(path, "e3.mkv") }
+	res, err := h.svc.CheckSeason(context.Background(), "s", 1)
+	require.NoError(t, err)
+	require.NotNil(t, res.Result)
+	assert.Equal(t, models.BurnedInZhHans, *res.Result)
+	assert.Equal(t, []string{"e4"}, res.CheckedEpisodeIDs, "e3's file is gone — e4 is sampled instead")
+}
+
+func TestCheckSeason_EveryFileGoneIsNoEpisodeToCheck(t *testing.T) {
+	h := newBurnedHarness(t, `{"burned_chinese": true, "lines": ["这个人"]}`)
+	h.svc.fileExists = func(string) bool { return false }
+	res, err := h.svc.CheckSeason(context.Background(), "s", 1)
+	require.NoError(t, err)
+	assert.Nil(t, res.Result)
+	assert.Equal(t, BurnedInReasonNoEpisode, res.Reason)
+	assert.Empty(t, res.CheckedEpisodeIDs)
+}
+
+func TestFileOnDisk(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "a.mkv")
+	require.NoError(t, os.WriteFile(f, []byte("x"), 0o600))
+	assert.True(t, fileOnDisk(f))
+	assert.False(t, fileOnDisk(filepath.Join(dir, "missing.mkv")))
+	assert.False(t, fileOnDisk(dir), "a directory is not a video file")
 }

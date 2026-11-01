@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -101,6 +102,17 @@ type BurnedInSubtitleService struct {
 	spend    BurnedInSpendRecorder
 	logger   *slog.Logger
 	now      func() time.Time
+	// fileExists says whether an episode's file is still on disk. A season can
+	// hold rows whose file was moved or deleted (《仙逆》S1's first trackless
+	// row pointed at a removed special) — sampling one of those used to leave
+	// the whole season unjudged (disc-2026-11-burned-in-skip-missing-files).
+	fileExists func(path string) bool
+}
+
+// fileOnDisk is the production fileExists: a regular file that can be stat'ed.
+func fileOnDisk(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.Mode().IsRegular()
 }
 
 // NewBurnedInSubtitleService builds the service. spend may be nil (nothing is
@@ -111,7 +123,7 @@ func NewBurnedInSubtitleService(episodes BurnedInEpisodeStore, vision BurnedInVi
 	}
 	return &BurnedInSubtitleService{
 		episodes: episodes, vision: vision, frames: frames, conv: conv, spend: spend,
-		logger: logger.With("component", "burned_in_subtitle"), now: time.Now,
+		logger: logger.With("component", "burned_in_subtitle"), now: time.Now, fileExists: fileOnDisk,
 	}
 }
 
@@ -143,7 +155,7 @@ func (s *BurnedInSubtitleService) CheckSeason(ctx context.Context, seriesID stri
 	if err != nil {
 		return res, fmt.Errorf("read season episodes: %w", err)
 	}
-	trackless := tracklessEpisodes(eps)
+	trackless := s.onDisk(tracklessEpisodes(eps))
 	if len(trackless) == 0 {
 		res.Reason = BurnedInReasonNoEpisode
 		return res, nil
@@ -283,6 +295,21 @@ func tracklessEpisodes(eps []models.Episode) []models.Episode {
 	var out []models.Episode
 	for _, e := range eps {
 		if e.FilePath.Valid && e.FilePath.String != "" && e.SubtitleTracks.Valid && e.SubtitleTracks.String == "[]" {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// onDisk keeps the episodes whose file is still there, so the sample and the
+// second opinion are never spent on a row that points at nothing.
+func (s *BurnedInSubtitleService) onDisk(eps []models.Episode) []models.Episode {
+	if s.fileExists == nil {
+		return eps
+	}
+	out := eps[:0:0]
+	for _, e := range eps {
+		if s.fileExists(e.FilePath.String) {
 			out = append(out, e)
 		}
 	}
