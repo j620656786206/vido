@@ -11,6 +11,11 @@ export interface CheckOwnedResponse {
   ownedIds: number[];
 }
 
+/** GET /api/v1/media/library-id — the library id of an owned title, or null. */
+export interface LibraryIdResponse {
+  id: string | null;
+}
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
 
@@ -50,6 +55,17 @@ export const availabilityService = {
       body: JSON.stringify(body),
     });
     return res.ownedIds ?? [];
+  },
+
+  /**
+   * The library id of the owned title with this TMDb id and type, or null when
+   * the library does not have it (disc-2026-11-tmdb-detail-owned-no-link-to-library).
+   * Type-exact: TMDb numbers movies and TV shows independently.
+   */
+  async libraryId(type: 'movie' | 'tv', tmdbId: number): Promise<string | null> {
+    const q = new URLSearchParams({ type, tmdb_id: String(tmdbId) });
+    const res = await fetchApi<LibraryIdResponse>(`/media/library-id?${q}`);
+    return res.id ?? null;
   },
 };
 
