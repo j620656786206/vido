@@ -213,6 +213,7 @@ import { addUsd } from '../../lib/currency';
 import type { GenerationCandidate, SubtitleInventory } from '../../services/subtitleService';
 import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
 import { SpendCard } from '../../components/activity/SpendSection';
+import { SpendHistoryView } from '../../components/activity/SpendHistoryPage';
 import { RecentSection } from '../../components/activity/RecentSection';
 import type { RecentSection as RecentSectionData } from '../../services/activityService';
 import { GenerationWorkspaceV2 } from '../../components/subtitle/GenerationWorkspaceV2';
@@ -1083,6 +1084,170 @@ const SPEND_FX_PARSE_ONLY = {
  * the `now` prop, so these fixtures pin it and need no page clock. Newest
  * first, as the backend sorts; the two subtitle rows are the design's words.
  */
+/**
+ * disc-2026-11-spend-history-d AI 花費明細 (no .pen frame — -c design in words).
+ * The month and "this month" are pinned strings, so the page never reads the
+ * clock (Rule 23). October: a few paid days, the rest $0 stubs; the list
+ * carries every honesty case — 沒記錄, a real $0.00, ⚠ over the estimate, a
+ * failure and a 中途停止.
+ */
+const SPEND_HISTORY_FX_DAY = (d: number, by: Partial<Record<string, number>> = {}) => {
+  const byCategory = { chinese_track: 0, translate_english: 0, asr: 0, legacy: 0, ...by };
+  const spentUsd = Math.round(Object.values(byCategory).reduce((a, b) => a + b, 0) * 100) / 100;
+  return {
+    date: `2026-10-${String(d).padStart(2, '0')}`,
+    spentUsd,
+    runs: spentUsd > 0 ? Object.values(by).length : 0,
+    byCategory,
+  };
+};
+const SPEND_HISTORY_FX_PAID: Record<number, Partial<Record<string, number>>> = {
+  3: { translate_english: 0.29 },
+  7: { translate_english: 0.58, chinese_track: 0 },
+  12: { asr: 1.42, translate_english: 0.31 },
+  19: { legacy: 0.4 },
+  28: { asr: 4.76, translate_english: 0.12 },
+  30: { translate_english: 0.81 },
+};
+const SPEND_HISTORY_FX_RUN = (over: Record<string, unknown>) => ({
+  id: 'run',
+  startedAt: '2026-10-28T05:33:46Z',
+  completedAt: '2026-10-28T05:38:25Z',
+  status: 'completed',
+  failureReason: '',
+  media: { id: 'm', type: 'movie', title: '沙丘：第二部', season: null, episode: null },
+  route: 'translate',
+  source: 'sidecar',
+  category: 'translate_english',
+  spentUsd: 0.31,
+  estimateUsd: 0.29,
+  translationModel: 'claude-sonnet-5',
+  asrProvider: null,
+  asrModel: null,
+  batchId: null,
+  triggeredBy: 'manual',
+  ...over,
+});
+const SPEND_HISTORY_FX_ITEMS = [
+  SPEND_HISTORY_FX_RUN({
+    id: 'a',
+    startedAt: '2026-10-30T11:02:00Z',
+    media: { id: 'e1', type: 'episode', title: '特種部隊：母獅', season: 2, episode: 1 },
+    spentUsd: 0.81,
+    estimateUsd: 0.44,
+  }),
+  SPEND_HISTORY_FX_RUN({
+    id: 'b',
+    route: 'asr',
+    source: 'audio',
+    category: 'asr',
+    spentUsd: 2.38,
+    estimateUsd: 2.1,
+    asrProvider: 'elevenlabs',
+    asrModel: 'scribe_v2',
+    media: { id: 'e2', type: 'episode', title: '特種部隊：母獅', season: 1, episode: 1 },
+  }),
+  SPEND_HISTORY_FX_RUN({
+    id: 'c',
+    startedAt: '2026-10-28T04:10:00Z',
+    route: 'asr',
+    source: 'audio',
+    category: 'asr',
+    status: 'failed',
+    failureReason: 'cancelled',
+    spentUsd: 0.62,
+    estimateUsd: 2.05,
+    asrProvider: 'elevenlabs',
+    asrModel: 'scribe_v2',
+    media: { id: 'e3', type: 'episode', title: '特種部隊：母獅', season: 1, episode: 2 },
+  }),
+  SPEND_HISTORY_FX_RUN({
+    id: 'd',
+    startedAt: '2026-10-12T14:00:00Z',
+    route: 'deliver_direct',
+    source: 'embedded_text',
+    category: 'chinese_track',
+    spentUsd: 0,
+    estimateUsd: 0,
+    translationModel: null,
+    media: { id: 'm2', type: 'movie', title: '奧本海默', season: null, episode: null },
+  }),
+  SPEND_HISTORY_FX_RUN({
+    id: 'e',
+    startedAt: '2026-10-07T09:20:00Z',
+    status: 'failed',
+    failureReason: 'unauthorized',
+    spentUsd: null,
+    estimateUsd: 0.27,
+    source: 'embedded_text',
+    media: { id: 'm3', type: 'movie', title: null, season: null, episode: null },
+  }),
+  SPEND_HISTORY_FX_RUN({
+    id: 'f',
+    startedAt: '2026-10-03T08:00:00Z',
+    route: null,
+    source: null,
+    category: 'legacy',
+    spentUsd: 0.4,
+    estimateUsd: null,
+    media: { id: 'm4', type: 'movie', title: '星際效應', season: null, episode: null },
+  }),
+];
+const SPEND_HISTORY_FX_PAGE = {
+  month: '2026-10',
+  summary: {
+    spentUsd: 8.69,
+    runs: 58,
+    unpricedRuns: 1,
+    comparableRuns: 3,
+    comparableSpentUsd: 3.5,
+    comparableEstimateUsd: 2.83,
+  },
+  series: Array.from({ length: 31 }, (_, i) =>
+    SPEND_HISTORY_FX_DAY(i + 1, SPEND_HISTORY_FX_PAID[i + 1])
+  ),
+  items: SPEND_HISTORY_FX_ITEMS,
+  page: 1,
+  pageSize: 50,
+  total: 58,
+};
+const SPEND_HISTORY_FX_PROPS = {
+  month: '2026-10',
+  currentMonth: '2026-11',
+  onMonthChange: noop,
+  data: SPEND_HISTORY_FX_PAGE,
+  items: SPEND_HISTORY_FX_ITEMS,
+  isLoading: false,
+  isError: false,
+  onRetry: noop,
+  category: undefined,
+  onCategoryChange: noop,
+  hasMore: true,
+  isLoadingMore: false,
+  onLoadMore: noop,
+};
+const SPEND_HISTORY_FX_EMPTY = {
+  ...SPEND_HISTORY_FX_PROPS,
+  month: '2026-08',
+  data: {
+    ...SPEND_HISTORY_FX_PAGE,
+    month: '2026-08',
+    summary: {
+      spentUsd: 0,
+      runs: 0,
+      unpricedRuns: 0,
+      comparableRuns: 0,
+      comparableSpentUsd: null,
+      comparableEstimateUsd: null,
+    },
+    series: [],
+    items: [],
+    total: 0,
+  },
+  items: [],
+  hasMore: false,
+};
+
 const RECENT_FX_NOW = Date.parse('2026-10-19T12:00:00Z');
 const recentFxAgo = (minutes: number) => new Date(RECENT_FX_NOW - minutes * 60_000).toISOString();
 const RECENT_FX_SUBTITLE_RUNS = {
@@ -7253,6 +7418,36 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'screen-section', // Screen K5-M-v2 (ptNai) — sec-本月AI花費
     statesOnly: ['default'],
     viewport: { width: 390, height: 844 },
+  },
+  // --- disc-2026-11-spend-history-d AI 花費明細 (no .pen frame; -c design in words) ---
+  {
+    id: 'activity-spend-history/desktop',
+    label:
+      'activity/SpendHistoryView (AI 花費明細 — 摘要、每日堆疊長條、逐筆表格：沒記錄／$0.00／⚠／失敗／中途停止)',
+    component: SpendHistoryView,
+    props: SPEND_HISTORY_FX_PROPS,
+    penNode: 'screen-section', // no frame — disc-2026-11-spend-history-c design decisions
+    statesOnly: ['default'],
+    width: 1024,
+  },
+  {
+    // The phone: summary stacks, the list becomes four-line cards.
+    id: 'activity-spend-history/mobile',
+    label: 'activity/SpendHistoryView (AI 花費明細 — 手機 viewport 390×844，卡片列表)',
+    component: SpendHistoryView,
+    props: SPEND_HISTORY_FX_PROPS,
+    penNode: 'screen-section', // no frame — disc-2026-11-spend-history-c design decisions
+    statesOnly: ['default'],
+    viewport: { width: 390, height: 844 },
+  },
+  {
+    id: 'activity-spend-history/empty',
+    label: 'activity/SpendHistoryView (AI 花費明細 — 這個月還沒有生成過字幕)',
+    component: SpendHistoryView,
+    props: SPEND_HISTORY_FX_EMPTY,
+    penNode: 'screen-section', // no frame — disc-2026-11-spend-history-c design decisions
+    statesOnly: ['default'],
+    width: 1024,
   },
   // --- disc-2026-10-activity-subtitle-run-time-b 活動記錄 (Screen K1-D-v2 kMeWS / K1-M-v2 QIwY1) ---
   {

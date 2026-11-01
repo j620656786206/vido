@@ -102,4 +102,109 @@ test.describe('Activity hub — 本月 AI 花費 @ui @activity @story-sub-7-6c',
     await expect(page.getByTestId('activity-page-error')).toHaveCount(0);
     await expect(page.getByTestId('activity-empty')).toHaveCount(0);
   });
+
+  test('[P0] 看明細 opens /activity/spend and the per-run list is there @story-disc-2026-11-spend-history-d', async ({
+    page,
+  }) => {
+    await stubCommon(page);
+    await page.route(`${ROUTE_API}/activity`, (route: Route) =>
+      route.fulfill(jsonOk(ACTIVITY_IDLE))
+    );
+    await page.route(`${ROUTE_API}/subtitles/spend*`, (route: Route) =>
+      route.fulfill(jsonOk(SPEND_MONTH))
+    );
+    // GET /subtitles/runs in the spend-history-b [@contract-v1] shape.
+    await page.route(`${ROUTE_API}/subtitles/runs*`, (route: Route) =>
+      route.fulfill(
+        jsonOk({
+          month: '2026-10',
+          summary: {
+            spent_usd: 0.81,
+            runs: 2,
+            unpriced_runs: 1,
+            comparable_runs: 1,
+            comparable_spent_usd: 0.81,
+            comparable_estimate_usd: 0.44,
+          },
+          series: [
+            {
+              date: '2026-10-01',
+              spent_usd: 0,
+              runs: 0,
+              by_category: { chinese_track: 0, translate_english: 0, asr: 0, legacy: 0 },
+            },
+            {
+              date: '2026-10-02',
+              spent_usd: 0.81,
+              runs: 1,
+              by_category: { chinese_track: 0, translate_english: 0.81, asr: 0, legacy: 0 },
+            },
+          ],
+          items: [
+            {
+              id: 'r1',
+              started_at: '2026-10-02T05:33:46Z',
+              completed_at: '2026-10-02T05:38:25Z',
+              status: 'completed',
+              failure_reason: '',
+              media: { id: 'e1', type: 'episode', title: '特種部隊：母獅', season: 2, episode: 1 },
+              route: 'translate',
+              source: 'sidecar',
+              category: 'translate_english',
+              spent_usd: 0.81,
+              estimate_usd: 0.44,
+              translation_model: 'claude-sonnet-5',
+              asr_provider: null,
+              asr_model: null,
+              batch_id: null,
+              triggered_by: 'manual',
+            },
+            {
+              id: 'r2',
+              started_at: '2026-10-01T05:00:00Z',
+              completed_at: null,
+              status: 'failed',
+              failure_reason: 'cancelled',
+              media: {
+                id: 'm1',
+                type: 'movie',
+                title: '沙丘：第二部',
+                season: null,
+                episode: null,
+              },
+              route: 'asr',
+              source: 'audio',
+              category: 'asr',
+              spent_usd: null,
+              estimate_usd: null,
+              translation_model: null,
+              asr_provider: null,
+              asr_model: null,
+              batch_id: null,
+              triggered_by: 'manual',
+            },
+          ],
+          page: 1,
+          page_size: 50,
+          total: 2,
+        })
+      )
+    );
+
+    await page.goto('/activity');
+    await page.getByTestId('activity-spend-details-link').click();
+
+    await expect(page).toHaveURL(/\/activity\/spend$/);
+    await expect(page.getByRole('heading', { name: 'AI 花費明細' })).toBeVisible();
+    await expect(page.getByTestId('spend-history-total')).toContainText('$0.81 · 2 次');
+    // Whichever layout this viewport draws (table ≥ md, cards below), the runs are listed.
+    const rows = page.locator(
+      '[data-testid="spend-history-row"]:visible, [data-testid="spend-history-card"]:visible'
+    );
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText('特種部隊：母獅 S2E1');
+    await expect(rows.first()).toContainText('⚠ 比預估高 84%');
+    await expect(rows.nth(1)).toContainText('中途停止');
+    await expect(rows.nth(1)).toContainText('沒記錄');
+  });
 });

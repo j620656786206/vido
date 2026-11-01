@@ -28,6 +28,9 @@
  * here could disagree with the data under it — and would rot the visual
  * baseline on the 1st (Rule 23). Fixtures pin `from`.
  */
+import type { ReactNode } from 'react';
+import { Link } from '@tanstack/react-router';
+import { ChevronRight } from 'lucide-react';
 import { usd, usdWithEstimate } from '../../lib/currency';
 import type { SubtitleSpendSummary } from '../../services/subtitleSpendService';
 import { ActivitySectionShell } from './ActivitySectionShell';
@@ -57,6 +60,37 @@ export function spendHasContent(summary: SubtitleSpendSummary): boolean {
   );
 }
 
+/**
+ * One headline cell of a spend ledger: a small label over a mono amount. Shared
+ * with the AI 花費明細 page's summary row (disc-2026-11-spend-history-d) so the
+ * two read as one family.
+ */
+export function SpendStat({
+  label,
+  testId,
+  muted = false,
+  children,
+}: {
+  label: string;
+  testId?: string;
+  /** The value is "nothing recorded" — drawn in --text-muted. */
+  muted?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5" data-testid={testId}>
+      <dt className="text-sm text-[var(--text-secondary)]">{label}</dt>
+      <dd
+        className={`font-mono text-base font-semibold tabular-nums ${
+          muted ? 'text-[var(--text-muted)]' : 'text-[var(--text-primary)]'
+        }`}
+      >
+        {children}
+      </dd>
+    </div>
+  );
+}
+
 function LaneStat({
   label,
   runs,
@@ -69,13 +103,10 @@ function LaneStat({
   testId: string;
 }) {
   return (
-    <div className="flex flex-col gap-0.5" data-testid={testId}>
-      <dt className="text-sm text-[var(--text-secondary)]">{label}</dt>
-      <dd className="font-mono text-base font-semibold tabular-nums text-[var(--text-primary)]">
-        {/* 0 runs is "nothing recorded", not "$0.00 spent". */}
-        {runs > 0 ? `${runs} 次 · ${usd(amount)}` : '—'}
-      </dd>
-    </div>
+    <SpendStat label={label} testId={testId}>
+      {/* 0 runs is "nothing recorded", not "$0.00 spent". */}
+      {runs > 0 ? `${runs} 次 · ${usd(amount)}` : '—'}
+    </SpendStat>
   );
 }
 
@@ -165,6 +196,17 @@ export function SpendCard({ summary }: { summary: SubtitleSpendSummary }) {
           </ul>
         </div>
       )}
+
+      {/* disc-2026-11-spend-history-d: the way into the per-run page (-c design:
+          bottom-right text link). */}
+      <Link
+        to="/activity/spend"
+        data-testid="activity-spend-details-link"
+        className="flex min-h-[44px] items-center gap-1 self-end text-sm font-medium text-[var(--accent-text)] hover:underline"
+      >
+        看明細
+        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+      </Link>
     </div>
   );
 }
