@@ -239,7 +239,7 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 		fmt.Sprintf("Downloading subtitle from %s...", req.Provider))
 
 	// Download subtitle content
-	data, err := provider.Download(c.Request.Context(), req.SubtitleID)
+	data, err := providers.DownloadFor(c.Request.Context(), provider, req.SubtitleID, req.MediaFilePath)
 	if err != nil {
 		slog.Error("Manual subtitle download failed",
 			"provider", req.Provider,

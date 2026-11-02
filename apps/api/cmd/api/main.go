@@ -238,6 +238,7 @@ func main() {
 		OpenAI:     cfg.GetOpenAIAPIKey(),
 		ElevenLabs: cfg.ElevenLabsAPIKey,
 		Gemini:     cfg.GetGeminiAPIKey(),
+		Assrt:      cfg.AssrtAPIKey,
 	}, slog.Default(), services.WithBundledKeys(services.BundledKeys{TMDb: config.BundledTMDbKey()}))
 	slog.Info("Key resolver initialized", "tmdb_bundled_key_present", config.HasBundledTMDbKey())
 
@@ -647,7 +648,13 @@ func main() {
 	// Initialize subtitle providers (Assrt, OpenSubtitles).
 	// Zimuku removed 2026-07-05 (9R-14): zimuku.org sits behind a Yunsuo anti-bot
 	// WAF — every query returns ErrCaptchaDetected (ADR route-c Decision 1/D3).
-	assrtProvider := subtitleproviders.NewAssrtProvider(ctx, secretsService)
+	// disc-2026-11-assrt-key-in-settings: the Assrt token is asked for on every
+	// search/download, so saving it on the settings page takes effect without
+	// a restart (it used to be read once here, from the secrets store only).
+	assrtProvider := subtitleproviders.NewAssrtProvider(func(ctx context.Context) string {
+		value, _, _ := keyResolver.Get(ctx, services.KeyAssrt)
+		return value
+	})
 	opensubProvider := subtitleproviders.NewOpenSubProvider(ctx, secretsService)
 	subtitleProviders := []subtitleproviders.SubtitleProvider{assrtProvider, opensubProvider}
 	subtitleEngine := subtitle.NewEngine(

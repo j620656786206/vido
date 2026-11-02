@@ -89,6 +89,8 @@ describe('ApiKeysForm — the three source states (AC #1)', () => {
     expect(screen.getByLabelText('TMDB')).toBeInTheDocument();
     expect(screen.getByLabelText('雲端 ASR（選配）')).toBeInTheDocument();
     expect(screen.getByLabelText('雲端聽寫 ElevenLabs（建議）')).toBeInTheDocument();
+    expect(screen.getByTestId('key-row-assrt')).toBeInTheDocument();
+    expect(screen.getByLabelText('射手網（字幕搜尋，選填）')).toBeInTheDocument();
   });
 
   it('the Gemini row says whose quota it spends and never calls it free (gemini-translation-dispatch)', () => {
@@ -250,6 +252,19 @@ describe('ApiKeysForm — saving (AC #1)', () => {
 
     await waitFor(() => expect(h.saveMutate).toHaveBeenCalledTimes(1));
     expect(h.saveMutate.mock.calls[0][0]).toEqual({ openai: 'sk-openai' });
+  });
+
+  // disc-2026-11-assrt-key-in-settings
+  it('PUTs the 射手網 token under `assrt`', async () => {
+    renderForm();
+
+    fireEvent.change(screen.getByLabelText('射手網（字幕搜尋，選填）'), {
+      target: { value: 'assrt-token' },
+    });
+    fireEvent.click(screen.getByTestId('key-save'));
+
+    await waitFor(() => expect(h.saveMutate).toHaveBeenCalledTimes(1));
+    expect(h.saveMutate.mock.calls[0][0]).toEqual({ assrt: 'assrt-token' });
   });
 
   it('儲存 stays disabled while nothing has been typed', () => {

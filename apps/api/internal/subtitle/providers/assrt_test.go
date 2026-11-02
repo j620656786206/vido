@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -36,7 +38,7 @@ func (m *mockSecretsService) Retrieve(_ context.Context, name string) (string, e
 }
 
 func (m *mockSecretsService) Store(context.Context, string, string) error { return nil }
-func (m *mockSecretsService) Delete(context.Context, string) error       { return nil }
+func (m *mockSecretsService) Delete(context.Context, string) error        { return nil }
 func (m *mockSecretsService) Exists(_ context.Context, name string) (bool, error) {
 	_, ok := m.secrets[name]
 	return ok, nil
@@ -62,9 +64,7 @@ func detailResponse(subs []assrtDetailItem) assrtDetailResponse {
 // --- Tests ---
 
 func TestAssrtProvider_Name(t *testing.T) {
-	p := NewAssrtProvider(context.Background(), newMockSecrets(map[string]string{
-		assrtSecretKey: "test-key",
-	}))
+	p := NewAssrtProvider(staticAssrtKey("test-key"))
 	assert.Equal(t, "assrt", p.Name())
 }
 
@@ -75,14 +75,14 @@ func TestAssrtProvider_SearchSuccess_NativeName(t *testing.T) {
 			ID:         12345,
 			NativeName: "進擊的巨人 第01話",
 			VideoName:  "Attack on Titan S01E01",
-			Lang:       "Chn",
+			Lang:       assrtLang{Desc: "Chn"},
 			Upload:     "2024-01-15 10:30:00",
 		},
 		{
 			ID:         12346,
 			NativeName: "進擊的巨人 第02話",
 			VideoName:  "Attack on Titan S01E02",
-			Lang:       "Chn",
+			Lang:       assrtLang{Desc: "Chn"},
 			Upload:     "2024-01-16 11:00:00",
 		},
 	}
@@ -111,6 +111,47 @@ func TestAssrtProvider_SearchSuccess_NativeName(t *testing.T) {
 	assert.Equal(t, "進擊的巨人 第02話", results[1].Filename)
 }
 
+// The live API's real shapes (captured 2026-11-02, trimmed): an index row with
+// a string `fileid` and `m_langn`, a documented row with `lang` as an object,
+// and `"subs": {}` for no match. The old decoder failed on all three.
+func TestAssrtProvider_SearchLiveShapes(t *testing.T) {
+	const live = `{"status":0,"sub":{"action":"search","subs":[
+	  {"fileid":"714057","video_chinese_name":"天蝎 第一季","videoname":"Scorpion.S01","uploadtime":"2026-02-19 16:39:33","m_langn":["langeng","langchs","langdou"]},
+	  {"id":635634,"native_name":"天蝎 第一季 WEB精校版","videoname":"Scorpion.S01.720p","upload_time":"2019-07-16 22:02:00","lang":{"desc":"繁 简 双语","langlist":{"langcht":true,"langchs":true,"langdou":true}}},
+	  {"id":1,"native_name":"雙語","lang":{"desc":"双语","langlist":{"langdou":true}}},
+	  {"native_name":"no id at all"}
+	],"result":"succeed"}}`
+	const empty = `{"status":0,"sub":{"action":"search","subs":{},"result":"succeed","keyword":"天蠍行動 2014"}}`
+
+	body := live
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	defer server.Close()
+	p := newTestAssrtProvider("test-key", server.URL)
+
+	results, err := p.Search(context.Background(), SubtitleQuery{Title: "Scorpion"})
+	require.NoError(t, err)
+	require.Len(t, results, 3, "a row without any id is skipped")
+
+	assert.Equal(t, "714057", results[0].ID)
+	assert.Equal(t, "天蝎 第一季", results[0].Filename)
+	assert.Equal(t, "zh-Hans", results[0].Language)
+	assert.Equal(t, 2026, results[0].UploadDate.Year())
+
+	assert.Equal(t, "635634", results[1].ID)
+	assert.Equal(t, "天蝎 第一季 WEB精校版", results[1].Filename)
+	assert.Equal(t, "zh-Hant", results[1].Language, "Traditional wins when a pack has both")
+
+	assert.Equal(t, "zh", results[2].Language, "bilingual-only is Chinese of unknown script")
+
+	body = empty
+	results, err = p.Search(context.Background(), SubtitleQuery{Title: "天蠍行動"})
+	require.NoError(t, err, `"subs": {} means no match, not a parse error`)
+	assert.Empty(t, results)
+}
+
 func TestAssrtProvider_SearchEmptyTitle(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("should not reach server with empty title")
@@ -127,9 +168,7 @@ func TestAssrtProvider_SearchEmptyTitle(t *testing.T) {
 
 func TestAssrtProvider_SearchDisabled(t *testing.T) {
 	// When API key is not configured, provider should return empty, not error
-	p := NewAssrtProvider(context.Background(), newMockSecrets(map[string]string{}))
-
-	assert.True(t, p.disabled)
+	p := NewAssrtProvider(staticAssrtKey(""))
 
 	results, err := p.Search(context.Background(), SubtitleQuery{Title: "test"})
 	assert.NoError(t, err)
@@ -226,7 +265,7 @@ func TestAssrtProvider_DownloadSuccess(t *testing.T) {
 				{
 					ID: 42,
 					Filelist: []assrtDetailFile{
-						{URL: fmt.Sprintf("http://%s/download/42.srt", r.Host), Filename: "test.srt", Size: int64(len(subtitleContent))},
+						{URL: fmt.Sprintf("http://%s/download/42.srt", r.Host), Filename: "test.srt"},
 					},
 				},
 			})
@@ -248,8 +287,144 @@ func TestAssrtProvider_DownloadSuccess(t *testing.T) {
 	assert.Equal(t, subtitleContent, data)
 }
 
+// pickAssrtFile — a season pack must yield the requested episode's file
+// (Traditional first), never the .rar, never a neighbouring episode.
+func TestPickAssrtFile(t *testing.T) {
+	pack := assrtDetailItem{
+		Filename: "Scorpion.S01.rar",
+		URL:      "http://x/download/1/Scorpion.S01.rar",
+		Filelist: []assrtDetailFile{
+			{Filename: "Scorpion.S01E01.chs.srt", URL: "http://x/e01chs"},
+			{Filename: "Scorpion.S01E02.eng.srt", URL: "http://x/e02eng"},
+			{Filename: "Scorpion.S01E02.chs.srt", URL: "http://x/e02chs"},
+			{Filename: "Scorpion.S01E02.cht.ass", URL: "http://x/e02cht"},
+			{Filename: "readme.txt", URL: "http://x/readme"},
+		},
+	}
+
+	cases := []struct {
+		name    string
+		detail  assrtDetailItem
+		media   string
+		want    string
+		wantErr string
+	}{
+		{name: "episode match, Traditional first", detail: pack, media: "/tv/Scorpion/Season 1/Scorpion.S01E02.1080p.mkv", want: "http://x/e02cht"},
+		{name: "s1e1 spelled loosely", detail: pack, media: "/tv/天蠍/天蠍行動 s01.e01.mkv", want: "http://x/e01chs"},
+		{name: "pack lacks the episode", detail: pack, media: "/tv/Scorpion.S01E09.mkv", wantErr: "S01E09"},
+		{name: "no video path: best file overall", detail: pack, media: "", want: "http://x/e02cht"},
+		{name: "single file, no episode tags", media: "/movies/Film.2020.mkv",
+			detail: assrtDetailItem{Filelist: []assrtDetailFile{{Filename: "Film.srt", URL: "http://x/film"}}}, want: "http://x/film"},
+		{name: "plain file without a list", media: "/movies/Film.mkv",
+			detail: assrtDetailItem{Filename: "Film.srt", URL: "http://x/film.srt"}, want: "http://x/film.srt"},
+		{name: "archive without a list is refused", media: "/movies/Film.mkv",
+			detail: assrtDetailItem{Filename: "Film.zip", URL: "http://x/film.zip"}, wantErr: "archive"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := pickAssrtFile(tc.detail, tc.media)
+			if tc.wantErr != "" {
+				assert.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got.URL)
+		})
+	}
+}
+
+// The real 天蝎 S01E02 entries (BS pack, 2026-11-02): pure Traditional .srt
+// beats the bilingual and .ass variants; Simplified beats English-only.
+func TestAssrtFileRank_RealPackNames(t *testing.T) {
+	const base = "Scorpion.S01E02.Single.Point.of.Failure.720p.WEB-DL.DD5.1.H.264-BS."
+	order := []string{"繁体.srt", "繁体.ass", "繁体&英文.srt", "繁体&英文.ass", "简体.srt", "简体&英文.srt", "英文.srt"}
+	for i := 1; i < len(order); i++ {
+		assert.Less(t, assrtFileRank(base+order[i-1]), assrtFileRank(base+order[i]),
+			"%s should rank before %s", order[i-1], order[i])
+	}
+}
+
+// Assrt cannot extract from RAR packs on the fly (HTTP 493); the provider
+// then downloads the pack and extracts the file itself.
+func TestAssrtProvider_DownloadForFallsBackToThePack(t *testing.T) {
+	var zipped bytes.Buffer
+	zw := zip.NewWriter(&zipped)
+	for name, body := range map[string]string{
+		"Show.S01E01.繁体.srt": "1\n00:00:01,000 --> 00:00:02,000\n第一集\n",
+		"Show.S01E02.繁体.srt": "1\n00:00:01,000 --> 00:00:02,000\n第二集\n",
+		"readme.txt":         "x",
+	} {
+		w, err := zw.Create(name)
+		require.NoError(t, err)
+		_, _ = w.Write([]byte(body))
+	}
+	require.NoError(t, zw.Close())
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/sub/detail":
+			fmt.Fprintf(w, `{"status":0,"sub":{"subs":[{"id":7,"filename":"Show.S01.zip","url":"http://%[1]s/download/pack.zip",
+			  "filelist":[{"f":"Show.S01E01.繁体.srt","url":"http://%[1]s/onthefly/1","s":"1KB"},{"f":"Show.S01E02.繁体.srt","url":"http://%[1]s/onthefly/2","s":"1KB"}]}]}}`, r.Host)
+		case "/onthefly/2":
+			w.WriteHeader(493)
+		case "/download/pack.zip":
+			_, _ = w.Write(zipped.Bytes())
+		default:
+			t.Errorf("unexpected request %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	p := newTestAssrtProvider("test-key", server.URL)
+
+	data, err := p.DownloadFor(context.Background(), "7", "/tv/Show/Show.S01E02.mkv")
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "第二集")
+}
+
+// A pack whose member names no longer match the listing (GBK-encoded names)
+// still yields the right episode by the same choice rule.
+func TestExtractSubtitle_RenamedMembers(t *testing.T) {
+	var zipped bytes.Buffer
+	zw := zip.NewWriter(&zipped)
+	for name, body := range map[string]string{"a.S01E01.srt": "one", "a.S01E02.srt": "two"} {
+		w, _ := zw.Create(name)
+		_, _ = w.Write([]byte(body))
+	}
+	require.NoError(t, zw.Close())
+
+	data, err := extractSubtitle(zipped.Bytes(), "name-from-listing.srt", "/tv/a.S01E02.mkv")
+	require.NoError(t, err)
+	assert.Equal(t, "two", string(data))
+
+	_, err = extractSubtitle([]byte("not an archive"), "x.srt", "")
+	assert.ErrorContains(t, err, "neither")
+}
+
+// The live detail sends file sizes as "138KB"; the decoder must not choke.
+func TestAssrtProvider_DownloadForLiveDetailShape(t *testing.T) {
+	subtitleContent := []byte("1\n00:00:01,000 --> 00:00:03,000\n你好世界\n")
+	var gotPaths []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPaths = append(gotPaths, r.URL.Path)
+		if r.URL.Path == "/v1/sub/detail" {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, `{"status":0,"sub":{"action":"detail","subs":[{"id":635634,"filename":"Show.S01.rar","url":"http://%[1]s/download/pack.rar","size":763266,
+			  "filelist":[{"f":"Show.S01E01.ass","url":"http://%[1]s/onthefly/1","s":"231KB"},{"f":"Show.S01E02.ass","url":"http://%[1]s/onthefly/2","s":"142KB"}]}]}}`, r.Host)
+			return
+		}
+		_, _ = w.Write(subtitleContent)
+	}))
+	defer server.Close()
+	p := newTestAssrtProvider("test-key", server.URL)
+
+	data, err := p.DownloadFor(context.Background(), "635634", "/tv/Show/Show.S01E02.mkv")
+	require.NoError(t, err)
+	assert.Equal(t, subtitleContent, data)
+	assert.Equal(t, []string{"/v1/sub/detail", "/onthefly/2"}, gotPaths)
+}
+
 func TestAssrtProvider_DownloadDisabled(t *testing.T) {
-	p := NewAssrtProvider(context.Background(), newMockSecrets(map[string]string{}))
+	p := NewAssrtProvider(staticAssrtKey(""))
 
 	data, err := p.Download(context.Background(), "42")
 	assert.Error(t, err)
@@ -345,9 +520,7 @@ func TestAssrtProvider_RateLimiter(t *testing.T) {
 // 2 req/s) would burn the whole quota on the first search and fail every
 // subsequent call for the rest of the minute.
 func TestAssrtProvider_ProductionRateLimitMatchesQuota(t *testing.T) {
-	p := NewAssrtProvider(context.Background(), newMockSecrets(map[string]string{
-		assrtSecretKey: "test-key",
-	}))
+	p := NewAssrtProvider(staticAssrtKey("test-key"))
 
 	assert.Equal(t, rate.Every(assrtRateInterval), p.rateLimiter.Limit())
 	assert.Equal(t, 1, p.rateLimiter.Burst())
@@ -376,7 +549,43 @@ func TestAssrtProvider_ContextCancellation(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// disc-2026-11-assrt-key-in-settings: the token is read on every call, so a
+// token saved on the settings page applies to the next search without a
+// restart, and clearing it idles the provider again.
+func TestAssrtProvider_TokenReadPerCall(t *testing.T) {
+	var gotTokens []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotTokens = append(gotTokens, r.URL.Query().Get("token"))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(searchResponse(nil))
+	}))
+	defer server.Close()
+
+	current := ""
+	p := newTestAssrtProvider("", server.URL)
+	p.apiKey = func(context.Context) string { return current }
+
+	results, err := p.Search(context.Background(), SubtitleQuery{Title: "Scorpion"})
+	require.NoError(t, err)
+	assert.Nil(t, results)
+	assert.Empty(t, gotTokens, "no token configured → no request")
+
+	current = "saved-on-settings-page"
+	_, err = p.Search(context.Background(), SubtitleQuery{Title: "Scorpion"})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"saved-on-settings-page"}, gotTokens)
+
+	current = ""
+	_, err = p.Download(context.Background(), "42")
+	assert.ErrorContains(t, err, "disabled")
+	assert.Len(t, gotTokens, 1, "cleared token → back to idle")
+}
+
 // --- Helper ---
+
+func staticAssrtKey(key string) func(context.Context) string {
+	return func(context.Context) string { return key }
+}
 
 // newTestAssrtProvider creates an AssrtProvider pointing at a test server.
 // It uses an effectively-unlimited rate limiter: the production limiter is
@@ -385,8 +594,7 @@ func TestAssrtProvider_ContextCancellation(t *testing.T) {
 // config by TestAssrtProvider_ProductionRateLimitMatchesQuota.
 func newTestAssrtProvider(apiKey, baseURL string) *AssrtProvider {
 	p := &AssrtProvider{
-		apiKey:      apiKey,
-		disabled:    false,
+		apiKey:      staticAssrtKey(apiKey),
 		httpClient:  &http.Client{Timeout: 10 * time.Second},
 		rateLimiter: rate.NewLimiter(rate.Inf, 1),
 	}
