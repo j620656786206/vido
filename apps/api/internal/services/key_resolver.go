@@ -61,6 +61,7 @@ type EnvKeys struct {
 	OpenAI     string
 	ElevenLabs string
 	Gemini     string
+	Assrt      string
 }
 
 // BundledKeys carries the build-time values (config.BundledTMDbKey). Kept apart
@@ -138,6 +139,8 @@ func secretNameFor(name KeyName) (string, bool) {
 		return SecretNameElevenLabs, true
 	case KeyGemini:
 		return SecretNameGemini, true
+	case KeyAssrt:
+		return SecretNameAssrt, true
 	default:
 		return "", false
 	}
@@ -155,6 +158,8 @@ func (r *keyResolver) envValueFor(name KeyName) string {
 		return r.env.ElevenLabs
 	case KeyGemini:
 		return r.env.Gemini
+	case KeyAssrt:
+		return r.env.Assrt
 	default:
 		return ""
 	}

@@ -108,9 +108,8 @@ func TestLiveSubtitlePOC(t *testing.T) {
 
 	// ---- Provider 2: Assrt (needs token) ----
 	fmt.Println("\n========== ASSRT (射手網, needs API token) ==========")
-	assrtSvc := envSecrets{m: map[string]string{assrtSecretKey: os.Getenv("ASSRT_API_KEY")}}
-	assrt := NewAssrtProvider(ctx, assrtSvc)
-	if assrt.disabled {
+	assrt := NewAssrtProvider(func(context.Context) string { return os.Getenv("ASSRT_API_KEY") })
+	if os.Getenv("ASSRT_API_KEY") == "" {
 		fmt.Println("  DISABLED — no ASSRT_API_KEY in env. (export ASSRT_API_KEY=... to test)")
 	} else {
 		runProvider(t, assrt, cases)

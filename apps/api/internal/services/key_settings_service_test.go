@@ -80,9 +80,35 @@ func TestKeySettings_ListOrderIsStable(t *testing.T) {
 	first := svc.List(context.Background())
 	second := svc.List(context.Background())
 
-	require.Len(t, first.Keys, 5)
+	require.Len(t, first.Keys, 6)
 	assert.Equal(t, first.Keys, second.Keys, "the page must not reshuffle between loads")
 	assert.Equal(t, KeyClaude, first.Keys[0].Name)
+	assert.Equal(t, KeyAssrt, first.Keys[5].Name, "the optional subtitle-search token sits last")
+}
+
+// disc-2026-11-assrt-key-in-settings: the Assrt token is stored under the name
+// the provider has always read, falls back to ASSRT_API_KEY, and clears like
+// every other key.
+func TestKeySettings_AssrtToken(t *testing.T) {
+	ctx := context.Background()
+	secrets := &fakeSecrets{values: map[string]string{}}
+	svc := settingsWith(t, secrets, EnvKeys{Assrt: "env-assrt-token-1234"}, true)
+
+	env := stateOf(svc.List(ctx), KeyAssrt)
+	assert.True(t, env.Configured)
+	assert.Equal(t, KeySourceEnv, env.Source)
+	assert.Empty(t, env.Masked, "an env-sourced token is never echoed back")
+
+	require.NoError(t, svc.Save(ctx, map[KeyName]string{KeyAssrt: "0123456789abcdef0123456789abcdef"}))
+	assert.Equal(t, "0123456789abcdef0123456789abcdef", secrets.values["assrt_api_key"])
+	stored := stateOf(svc.List(ctx), KeyAssrt)
+	assert.Equal(t, KeySourceSecret, stored.Source)
+	assert.Equal(t, "012345…cdef", stored.Masked)
+
+	require.NoError(t, svc.Save(ctx, map[KeyName]string{KeyAssrt: ""}))
+	_, still := secrets.values["assrt_api_key"]
+	assert.False(t, still)
+	assert.Equal(t, KeySourceEnv, stateOf(svc.List(ctx), KeyAssrt).Source, "clearing reverts to the env token")
 }
 
 // ─── AC #4: encryption-key pre-flight ──────────────────────────────────────

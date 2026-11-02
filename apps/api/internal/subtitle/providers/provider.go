@@ -21,6 +21,23 @@ type SubtitleProvider interface {
 	Download(ctx context.Context, id string) ([]byte, error)
 }
 
+// FileAwareDownloader is implemented by providers whose results can be packs —
+// a whole season zipped together (Assrt). Given the video the subtitle is for,
+// they pick the matching file instead of returning the archive.
+type FileAwareDownloader interface {
+	DownloadFor(ctx context.Context, id, mediaFilePath string) ([]byte, error)
+}
+
+// DownloadFor downloads result id for the video at mediaFilePath, letting a
+// FileAwareDownloader pick the matching file from a pack. Every caller that
+// knows the video goes through here rather than calling Download directly.
+func DownloadFor(ctx context.Context, p SubtitleProvider, id, mediaFilePath string) ([]byte, error) {
+	if fa, ok := p.(FileAwareDownloader); ok {
+		return fa.DownloadFor(ctx, id, mediaFilePath)
+	}
+	return p.Download(ctx, id)
+}
+
 // SubtitleQuery contains the search parameters for finding subtitles.
 type SubtitleQuery struct {
 	// Title is the media title to search for (required).

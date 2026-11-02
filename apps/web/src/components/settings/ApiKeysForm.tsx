@@ -110,6 +110,16 @@ const KEY_ROWS: KeyRowSpec[] = [
     hint: '選配：雲端語音辨識。儲存後立即生效，無需重啟伺服器。未設定時仍可使用內建的字幕來源。',
     testable: false,
   },
+  {
+    name: 'assrt',
+    label: '射手網（字幕搜尋，選填）',
+    placeholder: '射手網 API Token',
+    // disc-2026-11-assrt-key-in-settings: the Assrt provider asks for its token
+    // on every search, so this row takes effect on save like the others. The
+    // 5-per-minute quota is the live-verified one (assrt.go), not the docs' 20.
+    hint: '填了就能在「搜尋字幕」裡找射手網的中文字幕，不花 AI 費用。到 assrt.net 註冊後，在個人頁面拿 Token。每分鐘最多查 5 次，Vido 會自動排隊。儲存後立即生效。',
+    testable: false,
+  },
 ];
 
 const EMPTY_VALUES: Record<KeyName, string> = {
@@ -118,6 +128,7 @@ const EMPTY_VALUES: Record<KeyName, string> = {
   tmdb: '',
   elevenlabs: '',
   openai: '',
+  assrt: '',
 };
 
 /** asr-scribe-b: the three engine choices, in the order the card draws them. */

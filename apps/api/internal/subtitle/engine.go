@@ -176,7 +176,7 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 
 	// Stage 3: Download (with fallback)
 	e.broadcastStatus(mediaID, mediaType, StageDownloading, "Downloading best match...")
-	data, match, err := e.downloadBestMatch(ctx, scored)
+	data, match, err := e.downloadBestMatch(ctx, scored, mediaFilePath)
 	if err != nil {
 		return e.handleFailure(ctx, mediaID, mediaType, err)
 	}
@@ -277,7 +277,7 @@ func (e *Engine) search(ctx context.Context, query providers.SubtitleQuery) ([]p
 }
 
 // downloadBestMatch tries to download from scored results, best to worst.
-func (e *Engine) downloadBestMatch(ctx context.Context, scored []ScoredResult) ([]byte, *ScoredResult, error) {
+func (e *Engine) downloadBestMatch(ctx context.Context, scored []ScoredResult, mediaFilePath string) ([]byte, *ScoredResult, error) {
 	for i := range scored {
 		result := &scored[i]
 
@@ -288,7 +288,7 @@ func (e *Engine) downloadBestMatch(ctx context.Context, scored []ScoredResult) (
 			continue
 		}
 
-		data, err := provider.Download(ctx, result.ID)
+		data, err := providers.DownloadFor(ctx, provider, result.ID, mediaFilePath)
 		if err != nil {
 			slog.Warn("Download failed, trying next",
 				"provider", result.Source,

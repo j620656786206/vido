@@ -131,6 +131,18 @@ func TestSaveKeys_StoresOnlySuppliedFields(t *testing.T) {
 		"an omitted field must not reach Save at all — a nil pointer means untouched")
 }
 
+// disc-2026-11-assrt-key-in-settings: the Assrt token travels in the same PUT.
+func TestSaveKeys_AcceptsAssrtToken(t *testing.T) {
+	settings := &fakeKeySettings{state: configuredState()}
+	h := NewKeySettingsHandler(settings, &fakeKeyTester{})
+
+	w := doKeyReq(t, h, http.MethodPut, "/api/v1/settings/keys", `{"assrt":"assrt-token"}`)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Len(t, settings.saved, 1)
+	assert.Equal(t, map[services.KeyName]string{services.KeyAssrt: "assrt-token"}, settings.saved[0])
+}
+
 // TestSaveKeys_ExplicitEmptyStringReachesSaveAsADelete — the distinction a plain
 // string body could not express: absent (leave alone) vs "" (clear it).
 func TestSaveKeys_ExplicitEmptyStringReachesSaveAsADelete(t *testing.T) {
