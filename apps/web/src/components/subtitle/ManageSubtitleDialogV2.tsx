@@ -97,6 +97,11 @@ import { GenerationProgressV2 } from './GenerationProgressV2';
 import { GlossaryPanelV2 } from './GlossaryPanelV2';
 import { deriveGenerateCostView, type RetryNote } from './generateCostView';
 import { Tooltip } from '../ui/Tooltip';
+import {
+  BURNED_IN_CHINESE,
+  BURNED_IN_GENERATE_NOTE,
+  BurnedInSubtitleRow,
+} from './BurnedInSubtitleRow';
 
 interface TrackRow {
   key: string;
@@ -265,6 +270,15 @@ export interface ManageSubtitleDialogV2Props {
   onGenerationFailed?: () => void;
   /** Fired when a dormant-fetch download succeeds (parity with the v1 dialog). */
   onDownloadSuccess?: () => void;
+  /** Episode mode: what the burned-in check read off this episode's picture
+   *  (MergedEpisode.burnedInSubtitle). zh-Hans / zh-Hant / zh adds the 畫面字幕
+   *  row and the generate button's overlap note; none or absent adds nothing
+   *  (disc-2026-11-burned-in-subs-c2). Movies have no such value. */
+  burnedInSubtitle?: string;
+  /** Episode mode: the season the 判斷錯了？ corrections apply to — and the
+   *  season-list query they refetch. */
+  seriesId?: string;
+  seasonNumber?: number;
 }
 
 export function ManageSubtitleDialogV2({
@@ -285,6 +299,9 @@ export function ManageSubtitleDialogV2({
   onGenerationComplete,
   onGenerationFailed,
   onDownloadSuccess,
+  burnedInSubtitle,
+  seriesId,
+  seasonNumber,
 }: ManageSubtitleDialogV2Props) {
   const navigate = useNavigate();
   const isMovie = mediaType === 'movie';
@@ -343,6 +360,7 @@ export function ManageSubtitleDialogV2({
   const runStatusPending = canGenerate && runStatus.isPending;
   const generateCost = runStatusPending ? ({ status: 'loading' } as const) : costView.cost;
   const helperId = useId();
+  const burnedInNoteId = useId();
   const triggerRetryNoteId = useId();
   const retryNoteId = useId();
 
@@ -551,6 +569,20 @@ export function ManageSubtitleDialogV2({
   const tracks = usesInventory
     ? (inventoryView?.rows ?? [])
     : buildTrackRows(subtitleTracks, subtitleStatus, subtitleLanguage);
+  // disc-2026-11-burned-in-subs-c2: Chinese burned into the picture is one more
+  // 現有字幕 row (last) and a note under 生成字幕. Episodes only.
+  const burnedIn =
+    isEpisode && burnedInSubtitle && BURNED_IN_CHINESE.has(burnedInSubtitle)
+      ? inventoryLangDescriptor(burnedInSubtitle === 'zh' ? 'zh-unknown' : burnedInSubtitle)
+      : null;
+  const burnedInRow = burnedIn ? (
+    <BurnedInSubtitleRow
+      label={burnedIn.label}
+      pillClass={burnedIn.pillClass}
+      seriesId={seriesId}
+      seasonNumber={seasonNumber}
+    />
+  ) : null;
   // Partial reads: one half failing never hides the other, but it is said.
   const inventoryNotes: string[] = [];
   if (inventoryView && inventory.data) {
@@ -591,7 +623,7 @@ export function ManageSubtitleDialogV2({
       ) : null;
     }
     if (usesInventory && inventory.isError) {
-      return (
+      const readError = (
         <section
           data-testid="subtitle-inventory-error"
           role="alert"
@@ -609,8 +641,20 @@ export function ManageSubtitleDialogV2({
           </button>
         </section>
       );
+      // The picture's answer does not come from the inventory read — keep it.
+      return burnedInRow ? (
+        <>
+          {readError}
+          <section data-testid="subtitle-tracks-section" className="flex flex-col gap-2.5">
+            <h3 className="text-sm font-semibold text-[var(--text-secondary)]">現有字幕</h3>
+            {burnedInRow}
+          </section>
+        </>
+      ) : (
+        readError
+      );
     }
-    if (tracks.length === 0 && inventoryNotes.length === 0) {
+    if (tracks.length === 0 && inventoryNotes.length === 0 && !burnedInRow) {
       return showEmptyState ? (
         <section
           data-testid="subtitle-empty-state"
@@ -655,6 +699,7 @@ export function ManageSubtitleDialogV2({
             </div>
           </div>
         ))}
+        {burnedInRow}
         {inventoryNotes.map((note) => (
           <p
             key={note}
@@ -929,7 +974,9 @@ export function ManageSubtitleDialogV2({
                   data-testid="generation-section"
                   className={cn(
                     'flex items-center gap-4',
-                    tracks.length === 0 && 'flex-col justify-center gap-2.5',
+                    tracks.length === 0 && !burnedIn && 'flex-col justify-center gap-2.5',
+                    // The overlap note takes its own line under the button.
+                    burnedIn && 'flex-wrap',
                     // Phone (F1-M zLRkb): a full-width button with its helper
                     // centred underneath. F2 (no tracks) has no phone drawing
                     // and follows the same rule.
@@ -943,7 +990,7 @@ export function ManageSubtitleDialogV2({
                     busy={trigger.isPending}
                     onClick={startGeneration}
                     data-testid="action-generate-subtitle"
-                    aria-describedby={helperId}
+                    aria-describedby={burnedIn ? `${helperId} ${burnedInNoteId}` : helperId}
                     className="max-sm:w-full max-sm:py-3"
                   />
                   <p
@@ -976,6 +1023,17 @@ export function ManageSubtitleDialogV2({
                       </>
                     )}
                   </p>
+                  {/* disc-2026-11-burned-in-subs-c2: the button stays usable —
+                      this only says what generating would add on top of. */}
+                  {burnedIn && (
+                    <p
+                      id={burnedInNoteId}
+                      data-testid="generation-burned-in-note"
+                      className="basis-full text-xs text-[var(--text-muted)] max-sm:text-center"
+                    >
+                      {BURNED_IN_GENERATE_NOTE}
+                    </p>
+                  )}
                 </section>
               )}
 

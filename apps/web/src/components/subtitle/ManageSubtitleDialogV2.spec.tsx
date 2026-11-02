@@ -1898,3 +1898,80 @@ describe('ManageSubtitleDialogV2 — opened while a run is going (bugfix-dialog-
     expect(screen.queryByTestId('generation-progress-v2')).not.toBeInTheDocument();
   });
 });
+
+// ── disc-2026-11-burned-in-subs-c2 — 畫面字幕 ─────────────────────────────────
+
+describe('ManageSubtitleDialogV2 — 畫面字幕 (disc-2026-11-burned-in-subs-c2)', () => {
+  it.each([
+    ['zh-Hans', '簡中'],
+    ['zh-Hant', '繁中'],
+    ['zh', '中文'],
+  ])('burned %s: a 畫面字幕 row with the %s pill, last in 現有字幕', async (value, pill) => {
+    renderEpisodeDialog({
+      burnedInSubtitle: value,
+      seriesId: SERIES_UUID,
+      seasonNumber: 1,
+      subtitleStatus: 'found',
+      subtitleLanguage: 'zh-Hant',
+    });
+    const row = await screen.findByTestId('subtitle-track-burned-in');
+    expect(row).toHaveTextContent(pill);
+    expect(row).toHaveTextContent('畫面字幕');
+    expect(screen.getByTestId('subtitle-track-detail-burned-in')).toHaveTextContent(
+      '燒在畫面上，不能關掉'
+    );
+    expect(screen.getByTestId('burned-in-correct')).toHaveTextContent('判斷錯了？');
+    // Last: after the engine row.
+    const section = screen.getByTestId('subtitle-tracks-section');
+    const rows = section.querySelectorAll(
+      '[data-testid^="subtitle-track-"]:not([data-testid*="detail"])'
+    );
+    expect(rows[rows.length - 1]).toBe(row);
+  });
+
+  it('a trackless episode with burned Chinese shows the row instead of 尚無字幕', async () => {
+    renderEpisodeDialog({ burnedInSubtitle: 'zh-Hans', seriesId: SERIES_UUID, seasonNumber: 1 });
+    expect(await screen.findByTestId('subtitle-track-burned-in')).toBeInTheDocument();
+    expect(screen.queryByTestId('subtitle-empty-state')).not.toBeInTheDocument();
+  });
+
+  it.each([['none'], [undefined]])('burned %s: no row, no generate note', async (value) => {
+    renderEpisodeDialog({ burnedInSubtitle: value, seriesId: SERIES_UUID, seasonNumber: 1 });
+    await findPricedGenerate();
+    expect(screen.queryByTestId('subtitle-track-burned-in')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('generation-burned-in-note')).not.toBeInTheDocument();
+    expect(screen.queryByText('畫面字幕')).not.toBeInTheDocument();
+  });
+
+  it('a movie never shows it, whatever it is handed', async () => {
+    renderDialog({ burnedInSubtitle: 'zh-Hans' });
+    await findPricedGenerate();
+    expect(screen.queryByTestId('subtitle-track-burned-in')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('generation-burned-in-note')).not.toBeInTheDocument();
+  });
+
+  it('生成字幕 stays usable and says what it would sit on top of', async () => {
+    mockedEstimate.mockResolvedValue(
+      readyEstimate({ mediaId: EPISODE_UUID, mediaType: 'episode' })
+    );
+    renderEpisodeDialog({ burnedInSubtitle: 'zh-Hant', seriesId: SERIES_UUID, seasonNumber: 1 });
+    const button = await findPricedGenerate();
+    expect(button).toBeEnabled();
+    const note = screen.getByTestId('generation-burned-in-note');
+    expect(note).toHaveTextContent('畫面上已經有中文字幕，再生成的字幕會跟它疊在一起');
+    expect(button.getAttribute('aria-describedby')).toContain(note.id);
+  });
+
+  it('without a season to address, the row shows but offers no correction', async () => {
+    renderEpisodeDialog({ burnedInSubtitle: 'zh-Hans' });
+    expect(await screen.findByTestId('subtitle-track-burned-in')).toBeInTheDocument();
+    expect(screen.queryByTestId('burned-in-correct')).not.toBeInTheDocument();
+  });
+
+  it('an inventory read failure keeps the 畫面字幕 row', async () => {
+    inventoryOverride = () => Promise.reject(new Error('boom'));
+    renderEpisodeDialog({ burnedInSubtitle: 'zh-Hans', seriesId: SERIES_UUID, seasonNumber: 1 });
+    expect(await screen.findByTestId('subtitle-inventory-error')).toBeInTheDocument();
+    expect(screen.getByTestId('subtitle-track-burned-in')).toBeInTheDocument();
+  });
+});

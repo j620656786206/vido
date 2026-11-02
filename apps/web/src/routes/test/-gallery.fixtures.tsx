@@ -1089,6 +1089,59 @@ const SPEND_FX_BURNED_IN = {
 };
 
 /**
+ * disc-2026-11-burned-in-subs-c2 管理字幕 with 畫面字幕: 《仙逆》 S01E01 as
+ * production holds it — no subtitle file, no track inside the file, Simplified
+ * Chinese burned into the picture. Every query the dialog makes is seeded.
+ */
+const BURNED_IN_EPISODE_ID = 'episode-burned-in-1';
+const BURNED_IN_SERIES_ID = 'series-burned-in-1';
+const BURNED_IN_DIALOG_PROPS = {
+  mediaId: BURNED_IN_EPISODE_ID,
+  mediaType: 'episode' as const,
+  glossaryMediaId: BURNED_IN_SERIES_ID,
+  mediaTitle: '仙逆',
+  mediaCode: 'S01E01',
+  mediaFilePath: '/media/tv/仙逆/Season 01/仙逆.S01E01.mp4',
+  subtitleStatus: 'not_searched',
+  burnedInSubtitle: 'zh-Hans',
+  seriesId: BURNED_IN_SERIES_ID,
+  seasonNumber: 1,
+  open: true,
+  onOpenChange: noop,
+  onGenerationComplete: noop,
+};
+const BURNED_IN_DIALOG_SEEDS = [
+  {
+    queryKey: subtitleInventoryKeys.item('episode', BURNED_IN_EPISODE_ID),
+    data: {
+      sidecars: { status: 'ok', files: [] },
+      embedded: { status: 'ok', tracks: [] },
+    } satisfies SubtitleInventory,
+  },
+  {
+    queryKey: transcriptionStatusKeys.item('episode', BURNED_IN_EPISODE_ID),
+    data: { inProgress: false },
+  },
+  {
+    queryKey: transcriptionEstimateKeys.item('episode', BURNED_IN_EPISODE_ID),
+    data: {
+      mediaId: BURNED_IN_EPISODE_ID,
+      mediaType: 'episode',
+      plan: 'full',
+      asrAvailable: true,
+      selfHostedAsr: false,
+      translationConfigured: true,
+      modelId: 'claude-sonnet-5',
+      runtimeMinutes: 20,
+      runtimeKnown: true,
+      runtimeSource: 'ffprobe',
+      estimatedUsd: 0.28,
+    } satisfies TranscriptionEstimate,
+  },
+  { queryKey: glossaryKeys.list(BURNED_IN_SERIES_ID), data: [] satisfies GlossaryTerm[] },
+];
+
+/**
  * disc-2026-10-activity-subtitle-run-time-b 活動記錄 (K1-D-v2 kMeWS / K1-M-v2 QIwY1).
  * Clock-injected (Rule 23 (ii)): RecentSection counts its relative times from
  * the `now` prop, so these fixtures pin it and need no page clock. Newest
@@ -5999,6 +6052,30 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     ],
     viewport: { width: 390, height: 844 },
     penNode: 'screen-section', // Screen F1-M-v2 (JkdfH)
+    statesOnly: ['default'],
+  },
+  {
+    // disc-2026-11-burned-in-subs-c2 (no .pen frame — Sally's decisions in
+    // disc-2026-11-burned-in-subs-c-design): an episode whose only Chinese is
+    // burned into the picture — the 畫面字幕 row with 判斷錯了？, and the overlap
+    // note under 生成字幕. Its own episode id so no other fixture's cache moves.
+    id: 'subtitle-manage-subtitle-dialog-v2-burned-in',
+    label:
+      'subtitle/ManageSubtitleDialogV2 (畫面字幕 · 簡中燒在畫面上、判斷錯了？、生成鈕下方提醒)',
+    component: ManageSubtitleDialogV2,
+    props: BURNED_IN_DIALOG_PROPS,
+    seedQueries: BURNED_IN_DIALOG_SEEDS,
+    penNode: 'screen-section', // no frame — disc-2026-11-burned-in-subs-c design decisions
+    statesOnly: ['default'],
+  },
+  {
+    id: 'subtitle-manage-subtitle-dialog-v2-burned-in-mobile',
+    label: 'subtitle/ManageSubtitleDialogV2 (畫面字幕 — 手機 viewport 390×844，底部 sheet)',
+    component: ManageSubtitleDialogV2,
+    props: BURNED_IN_DIALOG_PROPS,
+    seedQueries: BURNED_IN_DIALOG_SEEDS,
+    viewport: { width: 390, height: 844 },
+    penNode: 'screen-section', // no frame — disc-2026-11-burned-in-subs-c design decisions
     statesOnly: ['default'],
   },
   {

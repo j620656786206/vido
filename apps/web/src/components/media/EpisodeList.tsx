@@ -178,12 +178,22 @@ const SOURCE_LABEL: Record<ChineseSubtitleSource['kind'], (s: ChineseSubtitleSou
   embedded: () => '片內字幕',
   sidecar: (s) => (s.label ? `旁邊的 ${s.label} 檔` : '旁邊的字幕檔'),
   vido: () => 'Vido 生成',
+  // disc-2026-11-burned-in-subs-c2: Chinese burned into the picture.
+  burned: () => '畫面字幕',
 };
 
-/** "片內字幕・旁邊的 zh-TW 檔・Vido 生成" — each source once, in API order. */
+/** "片內字幕・旁邊的 zh-TW 檔・Vido 生成" — each source once, in API order. A
+ *  kind this build does not know is skipped: the backend's kind set is open,
+ *  and one new kind must never take the whole season list down (the reason
+ *  disc-2026-11-burned-in-subs-c1 and -c2 had to ship together). */
 function describeSources(sources: ChineseSubtitleSource[] | undefined): string {
   const seen = new Set<string>();
-  for (const s of sources ?? []) seen.add(SOURCE_LABEL[s.kind](s));
+  for (const s of sources ?? []) {
+    const label = Object.prototype.hasOwnProperty.call(SOURCE_LABEL, s.kind)
+      ? SOURCE_LABEL[s.kind]
+      : undefined;
+    if (label) seen.add(label(s));
+  }
   return [...seen].join('・');
 }
 
@@ -219,6 +229,20 @@ function chineseMark(episode: MergedEpisode): Mark | null {
         detail: sources,
       };
     case 'zh_hans':
+      // ⚖️ Alexyu 2A (disc-2026-11-burned-in-subs): Simplified burned into the
+      // picture counts as having Chinese — it cannot be converted, and a
+      // generated subtitle would sit on top of it — so it is not a red alert.
+      if (
+        (episode.chineseSubtitleSources ?? []).length > 0 &&
+        (episode.chineseSubtitleSources ?? []).every((s) => s.kind === 'burned')
+      ) {
+        return {
+          Icon: CheckCircle2,
+          color: 'text-[var(--success-text)]',
+          title: '有簡中字幕（燒在畫面上）',
+          detail: sources,
+        };
+      }
       return {
         Icon: AlertCircle,
         color: 'text-[var(--error-text)]',

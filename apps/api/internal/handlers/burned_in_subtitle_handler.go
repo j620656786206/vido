@@ -10,12 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/services"
 )
 
 // BurnedInSeasonChecker is the service surface this handler needs.
 type BurnedInSeasonChecker interface {
 	CheckSeason(ctx context.Context, seriesID string, season int) (services.BurnedInCheckResult, error)
+	OverrideSeason(ctx context.Context, seriesID string, season int, value string) (int64, error)
 }
 
 // BurnedInSubtitleHandler triggers the burned-in subtitle check by hand
@@ -34,9 +36,65 @@ func NewBurnedInSubtitleHandler(checker BurnedInSeasonChecker, logger *slog.Logg
 	return &BurnedInSubtitleHandler{checker: checker, logger: logger}
 }
 
-// RegisterRoutes mounts POST /api/v1/subtitles/burned-in/check.
+// RegisterRoutes mounts POST /api/v1/subtitles/burned-in/check and
+// PUT /api/v1/subtitles/burned-in/season.
 func (h *BurnedInSubtitleHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.POST("/subtitles/burned-in/check", h.CheckSeason)
+	rg.PUT("/subtitles/burned-in/season", h.OverrideSeason)
+}
+
+// burnedInOverrideRequest is the PUT body. Season is a pointer for the same
+// reason as burnedInCheckRequest.
+type burnedInOverrideRequest struct {
+	SeriesID string `json:"series_id"`
+	Season   *int   `json:"season"`
+	Value    string `json:"value"`
+}
+
+// burnedInOverrideResponse is the PUT result.
+type burnedInOverrideResponse struct {
+	EpisodesUpdated int64 `json:"episodes_updated"`
+}
+
+// OverrideSeason handles PUT /api/v1/subtitles/burned-in/season.
+// @Summary Correct a season's burned-in subtitle answer by hand
+// @Description The 判斷錯了？→「這季沒有畫面字幕」 fix: every episode of the season whose file has no subtitle track (subtitle_tracks = '[]') is set to "none" and stamped, so the automatic check leaves it alone. No model call, no cost. `value` must be "none" — there is no way to set "has burned-in Chinese" by hand. To re-check instead, POST /api/v1/subtitles/burned-in/check. 404 when the season has no episodes in the library; 200 with episodes_updated 0 when it has episodes but none without subtitle tracks.
+// @Tags subtitles
+// @Accept json
+// @Produce json
+// @Param body body burnedInOverrideRequest true "{series_id, season, value: \"none\"}"
+// @Success 200 {object} APIResponse "{episodes_updated}"
+// @Failure 400 {object} APIResponse "VALIDATION_ERROR — bad body, or value is not \"none\""
+// @Failure 404 {object} APIResponse "DB_NOT_FOUND — no such season in the library"
+// @Router /api/v1/subtitles/burned-in/season [put]
+func (h *BurnedInSubtitleHandler) OverrideSeason(c *gin.Context) {
+	var req burnedInOverrideRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ValidationError(c, "請求格式不正確：需要 series_id、season 和 value。")
+		return
+	}
+	req.SeriesID = strings.TrimSpace(req.SeriesID)
+	if req.SeriesID == "" || req.Season == nil || *req.Season < 0 {
+		ValidationError(c, "需要 series_id 和 season（0 以上的整數）。")
+		return
+	}
+	if req.Value != models.BurnedInNone {
+		ValidationError(c, "value 只能是 \"none\"：只能把整季改成沒有畫面字幕。")
+		return
+	}
+
+	n, err := h.checker.OverrideSeason(c.Request.Context(), req.SeriesID, *req.Season, req.Value)
+	switch {
+	case err == nil:
+		SuccessResponse(c, burnedInOverrideResponse{EpisodesUpdated: n})
+	case errors.Is(err, services.ErrBurnedInOverrideValue):
+		ValidationError(c, "value 只能是 \"none\"：只能把整季改成沒有畫面字幕。")
+	case errors.Is(err, services.ErrBurnedInSeasonNotFound):
+		NotFoundError(c, "Season")
+	default:
+		h.logger.Error("burned-in override failed", "error", err, "series_id", req.SeriesID, "season", *req.Season)
+		InternalServerError(c, "改判時出錯，請稍後再試。")
+	}
 }
 
 // burnedInCheckRequest is the body. Season is a pointer so a missing season

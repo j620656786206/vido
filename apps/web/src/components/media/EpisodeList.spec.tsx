@@ -508,3 +508,93 @@ it('an unrecognised verdict falls back to Vido’s own record, not "not checked"
   );
   expect(screen.getByRole('button', { name: '已找到字幕' })).toBeInTheDocument();
 });
+
+// ─── disc-2026-11-burned-in-subs-c2 — 畫面字幕 as a source ─────────────────────
+
+describe('EpisodeList — 畫面字幕 source (disc-2026-11-burned-in-subs-c2)', () => {
+  it.each<[string, MergedEpisode, string]>([
+    [
+      'burned Traditional only',
+      see(1, {
+        chineseSubtitle: 'zh_hant',
+        burnedInSubtitle: 'zh-Hant',
+        chineseSubtitleSources: [{ kind: 'burned', language: 'zh-Hant', label: '' }],
+      }),
+      '有繁中字幕，畫面字幕',
+    ],
+    [
+      'burned, script untold',
+      see(2, {
+        chineseSubtitle: 'zh',
+        burnedInSubtitle: 'zh',
+        chineseSubtitleSources: [{ kind: 'burned', language: 'zh-unknown', label: '' }],
+      }),
+      '有中文字幕（繁簡未知），畫面字幕',
+    ],
+    [
+      'a zh-TW file beside it, and burned Simplified — same line, API order',
+      see(3, {
+        chineseSubtitle: 'zh_hant',
+        burnedInSubtitle: 'zh-Hans',
+        chineseSubtitleSources: [
+          { kind: 'sidecar', language: 'zh-Hant', label: 'zh-TW' },
+          { kind: 'burned', language: 'zh-Hans', label: '' },
+        ],
+      }),
+      '有繁中字幕，旁邊的 zh-TW 檔・畫面字幕',
+    ],
+    [
+      // 2A: Simplified burned in counts as having Chinese — no red 「轉成繁中」 prompt.
+      'burned Simplified only (《仙逆》)',
+      see(6, {
+        chineseSubtitle: 'zh_hans',
+        burnedInSubtitle: 'zh-Hans',
+        chineseSubtitleSources: [{ kind: 'burned', language: 'zh-Hans', label: '' }],
+      }),
+      '有簡中字幕（燒在畫面上），畫面字幕',
+    ],
+  ])('%s', (_name, episode, sentence) => {
+    render(<EpisodeList episodes={[episode]} seasonNumber={1} />);
+    expect(screen.getByRole('button', { name: sentence })).toBeInTheDocument();
+  });
+
+  it('a Simplified track file is still the red 「轉成繁中」 prompt — only burned-only escapes it', () => {
+    render(
+      <EpisodeList
+        episodes={[
+          see(7, {
+            chineseSubtitle: 'zh_hans',
+            chineseSubtitleSources: [{ kind: 'embedded', language: 'zh-Hans', label: '简体' }],
+          }),
+        ]}
+        seasonNumber={1}
+      />
+    );
+    expect(
+      screen.getByRole('button', { name: '只有簡中字幕，可以在「管理字幕」轉成繁中' })
+    ).toBeInTheDocument();
+  });
+
+  it('a source kind this build does not know is skipped, not a crash', () => {
+    const future = { kind: 'hologram', language: 'zh-Hant', label: '' } as unknown as NonNullable<
+      MergedEpisode['chineseSubtitleSources']
+    >[number];
+    render(
+      <EpisodeList
+        episodes={[
+          see(4, {
+            chineseSubtitle: 'zh_hant',
+            chineseSubtitleSources: [
+              future,
+              { kind: 'embedded', language: 'zh-Hant', label: '繁體中文' },
+            ],
+          }),
+          see(5, { chineseSubtitle: 'zh_hant', chineseSubtitleSources: [future] }),
+        ]}
+        seasonNumber={1}
+      />
+    );
+    expect(screen.getByRole('button', { name: '有繁中字幕，片內字幕' })).toBeInTheDocument();
+    expect(indicator('S01E05')).toBeInTheDocument();
+  });
+});

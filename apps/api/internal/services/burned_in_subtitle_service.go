@@ -208,6 +208,40 @@ func (s *BurnedInSubtitleService) CheckSeason(ctx context.Context, seriesID stri
 	return res, nil
 }
 
+// ErrBurnedInSeasonNotFound: the season has no episode rows at all — the
+// series, or that season of it, is not in the library.
+var ErrBurnedInSeasonNotFound = errors.New("season not found")
+
+// ErrBurnedInOverrideValue: an override asked for a value the user cannot
+// set. Only "none" is accepted (disc-2026-11-burned-in-subs-c design: there is
+// no 「改成有」 entry).
+var ErrBurnedInOverrideValue = errors.New("only \"none\" can be set by hand")
+
+// OverrideSeason is the 判斷錯了？→「這季沒有畫面字幕」 fix
+// (disc-2026-11-burned-in-subs-c1 AC #3): every trackless episode of the
+// season (subtitle_tracks = '[]') becomes "none", stamped now, so the sweep
+// leaves it alone. Free — no model call. 「重新檢查這季」 is CheckSeason.
+// Returns how many episodes were written; 0 when the season exists but has
+// no trackless episode.
+func (s *BurnedInSubtitleService) OverrideSeason(ctx context.Context, seriesID string, season int, value string) (int64, error) {
+	if value != models.BurnedInNone {
+		return 0, ErrBurnedInOverrideValue
+	}
+	eps, err := s.episodes.FindBySeasonNumber(ctx, seriesID, season)
+	if err != nil {
+		return 0, fmt.Errorf("read season episodes: %w", err)
+	}
+	if len(eps) == 0 {
+		return 0, ErrBurnedInSeasonNotFound
+	}
+	n, err := s.episodes.SetSeasonBurnedInSubtitle(ctx, seriesID, season, value, s.now())
+	if err != nil {
+		return 0, fmt.Errorf("write burned-in override: %w", err)
+	}
+	s.logger.Info("burned-in result overridden by hand", "series_id", seriesID, "season", season, "value", value, "episodes_updated", n)
+	return n, nil
+}
+
 // undecided finishes a check that could not decide: no value is written, but
 // the season's unanswered trackless episodes get burned_in_checked_at, so the
 // sweep waits out its retry window instead of paying for the same question on
