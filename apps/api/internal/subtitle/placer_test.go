@@ -445,3 +445,30 @@ func TestPlacer_Place_FormatDetection(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, filepath.Ext(result2.SubtitlePath) == ".ass")
 }
+
+// disc-2026-11-subtitle-backup-no-clobber: replacing a subtitle twice keeps
+// BOTH earlier versions; the original is never overwritten.
+func TestBackupExistingFile_NeverOverwritesAnEarlierBackup(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "Scorpion.S01E02.zh-Hant.srt")
+
+	require.NoError(t, os.WriteFile(path, []byte("original AI subtitle"), 0o644))
+	first, err := backupExistingFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, path+".bak", first)
+
+	require.NoError(t, os.WriteFile(path, []byte("first download"), 0o644))
+	second, err := backupExistingFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, path+".bak.2", second)
+
+	require.NoError(t, os.WriteFile(path, []byte("second download"), 0o644))
+	third, err := backupExistingFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, path+".bak.3", third)
+
+	orig, _ := os.ReadFile(path + ".bak")
+	assert.Equal(t, "original AI subtitle", string(orig))
+	mid, _ := os.ReadFile(path + ".bak.2")
+	assert.Equal(t, "first download", string(mid))
+}

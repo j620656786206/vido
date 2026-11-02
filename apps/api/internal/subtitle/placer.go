@@ -250,6 +250,26 @@ func backupExistingFile(path string) (string, error) {
 		return "", fmt.Errorf("backup target is a directory: %s", backupPath)
 	}
 
+	// Never overwrite an earlier backup: the second replacement of a subtitle
+	// used to rename the current file onto .bak, destroying the ORIGINAL the
+	// first replacement had saved there — 2026-11-02, a paid AI subtitle for
+	// 《天蠍行動》S01E02 was lost that way after two downloads. Take the
+	// first free .bak.N instead (disc-2026-11-subtitle-backup-no-clobber).
+	if _, err := os.Lstat(backupPath); err == nil {
+		free := ""
+		for n := 2; n <= 999; n++ {
+			candidate := fmt.Sprintf("%s.bak.%d", path, n)
+			if _, err := os.Lstat(candidate); os.IsNotExist(err) {
+				free = candidate
+				break
+			}
+		}
+		if free == "" {
+			return "", fmt.Errorf("no free backup name for %s", path)
+		}
+		backupPath = free
+	}
+
 	if err := os.Rename(path, backupPath); err != nil {
 		return "", fmt.Errorf("rename to backup: %w", err)
 	}
