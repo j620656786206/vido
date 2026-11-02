@@ -71,6 +71,19 @@ type RouteDurationPredictor interface {
 	ProbeWithDuration(ctx context.Context, mediaPath string) (RoutePrediction, float64, error)
 }
 
+// RouteCuePredictor is the second OPTIONAL half of RoutePredictor, for the
+// same reason RouteDurationPredictor is optional: the cue count of the track
+// the extract lane would translate, as the container states it
+// (disc-2026-11-translate-estimate-ignores-cue-density). 0 = not stated; the
+// estimate then prices by runtime. A predictor without it prices by runtime
+// exactly as before.
+type RouteCuePredictor interface {
+	// CuesFromTracks reads an already-known track list — no disk access.
+	CuesFromTracks(tracks []SubtitleTrack) int
+	// ProbeWithCues is ProbeWithDuration plus the cue count, one probe.
+	ProbeWithCues(ctx context.Context, mediaPath string) (RoutePrediction, float64, int, error)
+}
+
 // CandidateEpisodeDurationWriter persists a measured episode duration
 // (sub-6-10a AC #1). Narrow on purpose (Rule 11); *repository.EpisodeRepository
 // satisfies it. nil means the sweep still prices from the number it just
@@ -174,10 +187,55 @@ const (
 // excluded), $0.193857/573 cues = $0.000332 per cue; × eval-1's 13.92 cues per
 // runtime minute = $0.00462 ($0.28 an hour, was $0.48). Haiku still sends 10
 // per request and keeps its eval-1 rate.
+//
+// disc-2026-11-translate-estimate-ignores-cue-density (2026-11-02, Bob): this
+// is now only the FALLBACK, used when the container does not state how many
+// cues the track has (see translationUSDPer1kCuesByModel). Cost follows cue
+// count, and cue density does not follow runtime: 《天蠍行動》 runs ~36 cues a
+// minute, eval-1's library 13.92, and S01E01–E03 quoted $0.19 against bills of
+// $0.44–$0.49. On 23 production runs with a measured length the old $0.00462
+// averaged 1.56× low (they billed $0.005–$0.0118 a minute, mean $0.0072);
+// Sonnet moves to $0.0085, the upper part of that spread (it under-quotes 3 of
+// the 23 — the three Scorpion episodes, which the cue rate covers). Every
+// other measured figure on this basis moves by the same factor, 0.0085 /
+// 0.00462 = 1.8398, rounded up: Haiku 0.00301 → 0.00554, and the anchor below.
 var translationUSDPerMinuteByModel = map[string]decimal.Decimal{
-	"claude-haiku-4-5": decimal.RequireFromString("0.00301"),
-	"claude-sonnet-5":  decimal.RequireFromString("0.00462"),
+	"claude-haiku-4-5": decimal.RequireFromString("0.00554"),
+	"claude-sonnet-5":  decimal.RequireFromString("0.0085"),
 }
+
+// translationUSDPer1kCuesByModel prices the EXTRACT route's LLM half by the
+// number of cues translated — the quantity the bill actually follows
+// (disc-2026-11-translate-estimate-ignores-cue-density, Bob 2026-11-02).
+//
+// Sonnet: production, 2026-11-02 — 30 completed translate runs on Sonnet 5,
+// no cache hits, more than 100 cues each, billed $0.28–$0.50 per 1,000 cues
+// for most (mean $0.393, max $0.71); $0.45 is their 75th percentile, chosen
+// over the mean because this screen may err high, never low. Priced against
+// the container's NUMBER_OF_FRAMES — which counts a little MORE than gets
+// translated (Scorpion S01E02: 1,609 stated, 1,502 sent) — it errs higher
+// still.
+//
+// $0.45 is 1.3526× the per-cue figure the per-minute table was built from
+// (See S01E04–06: $0.486060 / 1,461 cues = $0.33269 per 1,000), and every
+// other measured per-cue figure moves by that factor, rounded up. Haiku:
+// eval-1's $2.229 / 10,304 cues = $0.21632 → 0.293. NOT Sonnet × the price
+// ratio (1/3 → $0.15): Haiku sends 10 cues per request and pays the per-batch
+// prompt five times as often, so it measured at 0.65× Sonnet, not 0.33×; the
+// price-ratio figure would sit below its own measurement.
+var translationUSDPer1kCuesByModel = map[string]decimal.Decimal{
+	"claude-haiku-4-5": decimal.RequireFromString("0.293"),
+	"claude-sonnet-5":  decimal.RequireFromString("0.45"),
+}
+
+// translationAnchorUSDPer1kCues is the per-cue anchor an unmeasured model is
+// scaled from by the blended price ratio (ratePerMinuteFrom). Same rule as
+// translationAnchorUSDPerMinute: an unmeasured model still sends 10 cues per
+// request, so it is anchored on Sonnet at 10 cues — eval-1's $5.951 / 10,304
+// cues = $0.57754 per 1,000 — lifted by the same 1.3526 → 0.782. Anchoring it
+// on Sonnet 5's 50-cue $0.45 would quote Sonnet 4.6 (same price, 10-cue batch)
+// below what it pays.
+var translationAnchorUSDPer1kCues = decimal.RequireFromString("0.782")
 
 // translationAnchorUSDPerMinute is the rate an UNMEASURED model is scaled
 // from: Sonnet's eval-1 rate at 10 cues per request — the batch every
@@ -185,7 +243,12 @@ var translationUSDPerMinuteByModel = map[string]decimal.Decimal{
 // deliberately NOT Sonnet's current 50-cue rate: scaling Opus or Sonnet 4.6
 // from that would quote them as if they enjoyed a batch they do not get, i.e.
 // LOW, which is the one direction this screen must never err in.
-var translationAnchorUSDPerMinute = decimal.RequireFromString("0.00804")
+//
+// disc-2026-11-translate-estimate-ignores-cue-density: eval-1's 0.00804 is
+// moved by the same 1.8398 as Sonnet's own runtime rate (it carries the same
+// cue-density error) → 0.0148, so it stays above Sonnet 5's 0.0085 as the
+// rule above requires.
+var translationAnchorUSDPerMinute = decimal.RequireFromString("0.0148")
 
 // translationCalibrationModel is the anchor an UNMEASURED model is priced
 // from: its measured rate scaled by that model's real price ratio. Sonnet,
@@ -250,6 +313,22 @@ var asrLegTranslationAnchorUSDPerMinute = decimal.RequireFromString("0.0216")
 // the EXTRACT route (translating an embedded text track).
 func translationRatePerMinute(model string) decimal.Decimal {
 	return ratePerMinuteFrom(translationUSDPerMinuteByModel, translationAnchorUSDPerMinute, model)
+}
+
+// translationRatePer1kCues is the per-1,000-cue LLM cost of a model on the
+// EXTRACT route — same lookup and scaling as the per-minute table.
+func translationRatePer1kCues(model string) decimal.Decimal {
+	return ratePerMinuteFrom(translationUSDPer1kCuesByModel, translationAnchorUSDPer1kCues, model)
+}
+
+// extractTranslationUSD prices translating one English track: by its cue
+// count when the container states one, otherwise by runtime. Unrounded — the
+// callers round once.
+func extractTranslationUSD(minutes float64, cues int, model string) decimal.Decimal {
+	if cues > 0 {
+		return decimal.NewFromInt(int64(cues)).Mul(translationRatePer1kCues(model)).Shift(-3)
+	}
+	return decimal.NewFromFloat(minutes).Mul(translationRatePerMinute(model))
 }
 
 // asrLegTranslationRatePerMinute is the per-runtime-minute LLM cost of a model
@@ -927,6 +1006,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 	type quotable struct {
 		row   candidateRow
 		route RoutePrediction
+		cues  int // the extract track's stated cue count; 0 = price by runtime
 	}
 	quoted := make([]quotable, 0, len(rows))
 	for i, row := range rows {
@@ -936,16 +1016,17 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 
 		plan := plans[i]
 		var route RoutePrediction
+		var cues int
 		var ok bool
 		if plan.key != "" {
 			if hit, found := cached[plan.key]; found {
-				route, ok = hit, true
+				route, cues, ok = hit.route, hit.cues, true
 				cacheHits++
 			}
 		}
 		if !ok {
 			var probedSeconds float64
-			route, ok, probedSeconds = s.classify(ctx, row)
+			route, ok, probedSeconds, cues = s.classify(ctx, row)
 			// The probe just measured this file; keep the number rather than
 			// pricing it at the 45-minute assumption (sub-6-10a AC #1). Only
 			// when the row has none of its own — a stored duration is either
@@ -963,7 +1044,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 				// failure returns ok == false and must stay OUT of the cache —
 				// freezing one transient I/O error would drop that file from the
 				// candidate list for the whole TTL, silently.
-				s.storeRoute(ctx, plan.key, route)
+				s.storeRoute(ctx, plan.key, routeVerdict{route: route, cues: cues})
 			}
 		}
 		if progress != nil {
@@ -982,7 +1063,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		case RouteExtract:
 			result.Summary.ExtractCount++
 		}
-		quoted = append(quoted, quotable{row: row, route: route})
+		quoted = append(quoted, quotable{row: row, route: route, cues: cues})
 	}
 
 	var resumed map[string]float64
@@ -1004,7 +1085,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 		credit := resumed[row.id]
 		// CR L6: computed ONCE — the summary total below reuses this instead of
 		// re-deriving the same decimal for every writable candidate.
-		defaultUSD := estimateUSDWithCredit(route, minutes, credit, asrRate, defaultModel)
+		defaultUSD := estimateUSDWithCredit(route, minutes, credit, q.cues, asrRate, defaultModel)
 		c := GenerationCandidate{
 			MediaID:           row.id,
 			MediaType:         row.mediaType,
@@ -1036,7 +1117,7 @@ func (s *GenerationCandidateService) Analyze(ctx context.Context, progress Analy
 			// model's number by work that cannot happen.
 			for _, m := range quoteModels {
 				est := result.EstimatesByModel[m]
-				usd := estimateUSDWithCredit(route, minutes, credit, asrRate, m)
+				usd := estimateUSDWithCredit(route, minutes, credit, q.cues, asrRate, m)
 				modelTotals[m] = modelTotals[m].Add(usd)
 				est.PerCandidate[c.MediaID] = usd.InexactFloat64()
 				result.EstimatesByModel[m] = est
@@ -1146,7 +1227,7 @@ func (s *GenerationCandidateService) planRouteCache(ctx context.Context, rows []
 // probes everything, which is exactly what it did before this cache existed.
 // Failing the analysis over a cache miss-to-be would turn a transient SQLite
 // hiccup into "no price for your library".
-func (s *GenerationCandidateService) readRouteCache(ctx context.Context, plans []routeCachePlan) map[string]RoutePrediction {
+func (s *GenerationCandidateService) readRouteCache(ctx context.Context, plans []routeCachePlan) map[string]routeVerdict {
 	if s.routeCache == nil {
 		return nil
 	}
@@ -1167,16 +1248,16 @@ func (s *GenerationCandidateService) readRouteCache(ctx context.Context, plans [
 		return nil
 	}
 
-	out := make(map[string]RoutePrediction, len(values))
+	out := make(map[string]routeVerdict, len(values))
 	for key, value := range values {
-		route := RoutePrediction(value)
-		if !isKnownRoute(route) {
+		verdict, ok := decodeRouteVerdict(value)
+		if !ok {
 			// Not a verdict this build understands; probing is always safe.
 			s.logger.Debug("route cache entry ignored — unrecognised verdict",
 				"key", key, "value", value)
 			continue
 		}
-		out[key] = route
+		out[key] = verdict
 	}
 	return out
 }
@@ -1187,11 +1268,11 @@ func (s *GenerationCandidateService) readRouteCache(ctx context.Context, plans [
 // classification already succeeded, and the only consequence of a lost write is
 // that the next sweep probes this file again — strictly better than failing the
 // item over it.
-func (s *GenerationCandidateService) storeRoute(ctx context.Context, key string, route RoutePrediction) {
+func (s *GenerationCandidateService) storeRoute(ctx context.Context, key string, verdict routeVerdict) {
 	if s.routeCache == nil || key == "" {
 		return
 	}
-	if err := s.routeCache.Set(ctx, key, string(route), routeCacheTTL); err != nil {
+	if err := s.routeCache.Set(ctx, key, encodeRouteVerdict(verdict), routeCacheTTL); err != nil {
 		s.logger.Debug("route cache write failed — the next analysis probes this file again",
 			"key", key, "error", err)
 	}
@@ -1202,9 +1283,9 @@ func (s *GenerationCandidateService) storeRoute(ctx context.Context, key string,
 // translation half stays whole: it has not started for a film whose
 // transcription is unfinished, and the consent list does not count cached
 // translations (2026-09-18 ruling). Zero credit is exactly estimateUSD.
-func estimateUSDWithCredit(route RoutePrediction, minutes, resumedASRMinutes float64, asrRate decimal.Decimal, model string) decimal.Decimal {
+func estimateUSDWithCredit(route RoutePrediction, minutes, resumedASRMinutes float64, cues int, asrRate decimal.Decimal, model string) decimal.Decimal {
 	if route != RouteASR || resumedASRMinutes <= 0 {
-		return estimateUSD(route, minutes, asrRate, model)
+		return estimateUSDByCues(route, minutes, cues, asrRate, model)
 	}
 	mins := decimal.NewFromFloat(minutes)
 	asrMins := decimal.NewFromFloat(max(minutes-resumedASRMinutes, 0))
@@ -1219,6 +1300,13 @@ func estimateUSDWithCredit(route RoutePrediction, minutes, resumedASRMinutes flo
 // rarely exactly $0 — labelling it "free" in the UI is a rounding decision the
 // client makes, not a claim this function makes.
 func estimateUSD(route RoutePrediction, minutes float64, asrRate decimal.Decimal, model string) decimal.Decimal {
+	return estimateUSDByCues(route, minutes, 0, asrRate, model)
+}
+
+// estimateUSDByCues is estimateUSD with the cue count of the track the extract
+// leg would translate (0 = not stated → priced by runtime). The ASR leg
+// ignores it: its cues are not known until speech recognition has run.
+func estimateUSDByCues(route RoutePrediction, minutes float64, cues int, asrRate decimal.Decimal, model string) decimal.Decimal {
 	mins := decimal.NewFromFloat(minutes)
 	switch route {
 	case RouteASR:
@@ -1226,7 +1314,7 @@ func estimateUSD(route RoutePrediction, minutes float64, asrRate decimal.Decimal
 		// is billed per audio minute by a different provider entirely.
 		return roundUSD(mins.Mul(asrRate).Add(mins.Mul(asrLegTranslationRatePerMinute(model))))
 	case RouteExtract:
-		return roundUSD(mins.Mul(translationRatePerMinute(model)))
+		return roundUSD(extractTranslationUSD(minutes, cues, model))
 	default:
 		return decimal.Zero
 	}
@@ -1494,14 +1582,31 @@ func episodeTitle(e models.Episode) string {
 // It also returns the container duration when the probe measured one
 // (sub-6-10a AC #1); 0 means "no number from this call", which includes the
 // persisted-tracks path, a predictor that does not implement
-// RouteDurationPredictor, and a container with no duration header.
-func (s *GenerationCandidateService) classify(ctx context.Context, row candidateRow) (RoutePrediction, bool, float64) {
+// RouteDurationPredictor, and a container with no duration header. The last
+// value is the extract track's stated cue count (RouteCuePredictor), 0 when
+// unknown.
+func (s *GenerationCandidateService) classify(ctx context.Context, row candidateRow) (RoutePrediction, bool, float64, int) {
 	if s.predictor == nil {
-		return "", false, 0
+		return "", false, 0, 0
 	}
+	withCues, cueCapable := s.predictor.(RouteCuePredictor)
 
 	if tracks, ok := row.persistedTracks(); ok {
-		return s.predictor.FromTracks(tracks), true, 0
+		cues := 0
+		if cueCapable {
+			cues = withCues.CuesFromTracks(tracks)
+		}
+		return s.predictor.FromTracks(tracks), true, 0, cues
+	}
+
+	if cueCapable {
+		route, seconds, cues, err := withCues.ProbeWithCues(ctx, row.filePath)
+		if err != nil {
+			s.logger.Warn("route prediction failed — item omitted from the estimate",
+				"media_id", row.id, "media_type", row.mediaType, "file", row.filePath, "error", err)
+			return "", false, 0, 0
+		}
+		return route, true, seconds, cues
 	}
 
 	if withDuration, capable := s.predictor.(RouteDurationPredictor); capable {
@@ -1509,9 +1614,9 @@ func (s *GenerationCandidateService) classify(ctx context.Context, row candidate
 		if err != nil {
 			s.logger.Warn("route prediction failed — item omitted from the estimate",
 				"media_id", row.id, "media_type", row.mediaType, "file", row.filePath, "error", err)
-			return "", false, 0
+			return "", false, 0, 0
 		}
-		return route, true, seconds
+		return route, true, seconds, 0
 	}
 
 	route, err := s.predictor.Probe(ctx, row.filePath)
@@ -1520,9 +1625,9 @@ func (s *GenerationCandidateService) classify(ctx context.Context, row candidate
 		// a file we could not read would be worse than omitting it.
 		s.logger.Warn("route prediction failed — item omitted from the estimate",
 			"media_id", row.id, "media_type", row.mediaType, "file", row.filePath, "error", err)
-		return "", false, 0
+		return "", false, 0, 0
 	}
-	return route, true, 0
+	return route, true, 0, 0
 }
 
 // rememberEpisodeDuration writes a freshly measured episode duration back, so

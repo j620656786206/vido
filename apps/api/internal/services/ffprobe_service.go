@@ -69,6 +69,14 @@ type SubtitleTrack struct {
 	// FileSig is a sidecar's "<size>:<mtime>" (FileSignature) when it was
 	// read, so the next read can keep Language without reopening the file.
 	FileSig string `json:"file_sig,omitempty"`
+	// CueCount is how many subtitles an embedded track holds, as the container
+	// states it — mkvmerge's NUMBER_OF_FRAMES statistics tag, or an MP4
+	// stream's nb_frames — read for free from the probe, never by decoding.
+	// 0 = the container did not say (or a row probed before this field
+	// existed). The translation estimate prices by it
+	// (disc-2026-11-translate-estimate-ignores-cue-density); omitempty keeps
+	// older persisted JSON and untagged tracks byte-identical.
+	CueCount int `json:"cue_count,omitempty"`
 }
 
 // SidecarTracks is one media file's sidecar half; Err when its directory
@@ -208,6 +216,28 @@ type ffprobeStream struct {
 	// Disposition is ffprobe's per-stream flag object; values are 0/1 integers
 	// (`"forced": 1`), not booleans.
 	Disposition map[string]int `json:"disposition,omitempty"`
+	// NbFrames is the stream's frame count as a decimal STRING ("1609"); MP4
+	// fills it for a mov_text track, Matroska leaves it out.
+	NbFrames string `json:"nb_frames,omitempty"`
+}
+
+// streamCueCount is a subtitle stream's cue count as the container states it
+// — CueCount's source. mkvmerge writes NUMBER_OF_FRAMES (sometimes suffixed
+// with a language, NUMBER_OF_FRAMES-eng) as a statistics tag; MP4 has
+// nb_frames. 0 when neither is a positive number.
+func streamCueCount(stream ffprobeStream) int {
+	for key, value := range stream.Tags {
+		if !strings.HasPrefix(strings.ToUpper(key), "NUMBER_OF_FRAMES") {
+			continue
+		}
+		if n, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && n > 0 {
+			return n
+		}
+	}
+	if n, err := strconv.Atoi(strings.TrimSpace(stream.NbFrames)); err == nil && n > 0 {
+		return n
+	}
+	return 0
 }
 
 // ffprobeSideData represents side_data entries (used for Dolby Vision detection)
@@ -263,6 +293,7 @@ func parseFfprobeJSON(output []byte) (*MediaTechInfo, error) {
 				StreamIndex:     stream.Index,
 				Forced:          stream.Disposition["forced"] == 1,
 				HearingImpaired: stream.Disposition["hearing_impaired"] == 1,
+				CueCount:        streamCueCount(stream),
 			})
 		}
 	}

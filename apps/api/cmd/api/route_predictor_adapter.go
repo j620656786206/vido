@@ -22,6 +22,13 @@ type routePredictorAdapter struct {
 	router *subtitle.Router
 }
 
+// Both optional halves are type-asserted at the call sites; a missing method
+// would silently drop the duration or the cue count, so prove them here.
+var (
+	_ services.RouteDurationPredictor = routePredictorAdapter{}
+	_ services.RouteCuePredictor      = routePredictorAdapter{}
+)
+
 // FromTracks classifies an already-persisted track list — no disk access.
 func (a routePredictorAdapter) FromTracks(tracks []services.SubtitleTrack) services.RoutePrediction {
 	return services.RoutePrediction(subtitle.PredictFromTracks(tracks))
@@ -35,6 +42,22 @@ func (a routePredictorAdapter) Probe(ctx context.Context, mediaPath string) (ser
 		return "", err
 	}
 	return services.RoutePrediction(p), nil
+}
+
+// CuesFromTracks satisfies services.RouteCuePredictor: the cue count of the
+// track the extract lane would translate, from an already-known track list.
+func (a routePredictorAdapter) CuesFromTracks(tracks []services.SubtitleTrack) int {
+	return subtitle.PredictCuesFromTracks(tracks)
+}
+
+// ProbeWithCues satisfies services.RouteCuePredictor — route, duration and
+// cue count from ONE probe (disc-2026-11-translate-estimate-ignores-cue-density).
+func (a routePredictorAdapter) ProbeWithCues(ctx context.Context, mediaPath string) (services.RoutePrediction, float64, int, error) {
+	p, seconds, cues, err := a.router.PredictRouteWithCues(ctx, mediaPath)
+	if err != nil {
+		return "", 0, 0, err
+	}
+	return services.RoutePrediction(p), seconds, cues, nil
 }
 
 // ProbeWithDuration satisfies services.RouteDurationPredictor — the optional
