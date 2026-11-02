@@ -56,6 +56,8 @@ interface KeyRowSpec {
    * It is said once, below the rows (C7-D pegsz).
    */
   testable: boolean;
+  /** A visible text field — only for a username, which is not a secret. */
+  plainText?: boolean;
 }
 
 const KEY_ROWS: KeyRowSpec[] = [
@@ -120,6 +122,30 @@ const KEY_ROWS: KeyRowSpec[] = [
     hint: '填了就能在「搜尋字幕」裡找射手網的中文字幕，不花 AI 費用。到 assrt.net 註冊後，在個人頁面拿 Token。每分鐘最多查 5 次，Vido 會自動排隊。儲存後立即生效。',
     testable: false,
   },
+  // disc-2026-11-opensubtitles-keys: searching needs only the key; downloading
+  // logs in with the account, so the three rows go together.
+  {
+    name: 'opensubtitles',
+    label: 'OpenSubtitles API Key（選填）',
+    placeholder: 'OpenSubtitles API Key',
+    hint: '填了就能在「搜尋字幕」裡找 OpenSubtitles 的字幕。到 opensubtitles.com 登入後，在 API Consumers 頁新增一個應用程式拿 Key。要下載字幕還需要下面的帳號和密碼。儲存後立即生效。',
+    testable: false,
+  },
+  {
+    name: 'opensubtitles_username',
+    label: 'OpenSubtitles 帳號',
+    placeholder: '你的 OpenSubtitles 使用者名稱',
+    hint: '下載字幕時用來登入。免費帳號每天能下載的數量有上限。',
+    testable: false,
+    plainText: true,
+  },
+  {
+    name: 'opensubtitles_password',
+    label: 'OpenSubtitles 密碼',
+    placeholder: '你的 OpenSubtitles 密碼',
+    hint: '只存在這台 NAS 上（加密保存），只用來登入 OpenSubtitles，不會顯示出來。',
+    testable: false,
+  },
 ];
 
 const EMPTY_VALUES: Record<KeyName, string> = {
@@ -129,6 +155,9 @@ const EMPTY_VALUES: Record<KeyName, string> = {
   elevenlabs: '',
   openai: '',
   assrt: '',
+  opensubtitles: '',
+  opensubtitles_username: '',
+  opensubtitles_password: '',
 };
 
 /** asr-scribe-b: the three engine choices, in the order the card draws them. */
@@ -562,9 +591,9 @@ export function ApiKeysForm() {
                       <div className="relative flex-1">
                         <input
                           id={inputId}
-                          // Never a text field, and never seeded from the server —
-                          // 2-1a returns masks only, so there is no value to fetch.
-                          type="password"
+                          // Never a text field (a username excepted), and never
+                          // seeded from the server — 2-1a returns masks only.
+                          type={row.plainText ? 'text' : 'password'}
                           autoComplete="off"
                           value={values[row.name]}
                           aria-describedby={hintId}

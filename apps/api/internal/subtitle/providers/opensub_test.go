@@ -24,7 +24,7 @@ func TestOpenSubProvider_Name(t *testing.T) {
 }
 
 func TestOpenSubProvider_Disabled(t *testing.T) {
-	p := NewOpenSubProvider(context.Background(), newMockSecrets(map[string]string{}))
+	p := NewOpenSubProvider(func(context.Context) OpenSubCredentials { return OpenSubCredentials{} })
 	assert.True(t, p.disabled)
 
 	results, err := p.Search(context.Background(), SubtitleQuery{Title: "test"})
@@ -454,4 +454,56 @@ func newTestOpenSubProvider(baseURL string) *OpenSubProvider {
 		rateLimiter: rate.NewLimiter(rate.Limit(openSubRateLimit), openSubRateBurst),
 		testBaseURL: baseURL,
 	}
+}
+
+// disc-2026-11-opensubtitles-keys: credentials are read per call. A key alone
+// searches without logging in; a changed account logs in again; downloading
+// without an account says so instead of failing the login.
+func TestOpenSubProvider_CredentialsReadPerCall(t *testing.T) {
+	var logins, searches int
+	var lastAuth, lastKey string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/login":
+			logins++
+			_, _ = w.Write([]byte(`{"token":"tok","status":200}`))
+		case "/subtitles":
+			searches++
+			lastAuth, lastKey = r.Header.Get("Authorization"), r.Header.Get("Api-Key")
+			_, _ = w.Write([]byte(`{"data":[]}`))
+		}
+	}))
+	defer server.Close()
+
+	creds := OpenSubCredentials{}
+	p := NewOpenSubProvider(func(context.Context) OpenSubCredentials { return creds })
+	p.testBaseURL = server.URL
+	p.rateLimiter = rate.NewLimiter(rate.Inf, 1)
+	ctx := context.Background()
+
+	_, err := p.Search(ctx, SubtitleQuery{Title: "Scorpion"})
+	require.NoError(t, err)
+	assert.Equal(t, 0, searches, "no key → idle")
+
+	creds = OpenSubCredentials{APIKey: "key-1"}
+	_, err = p.Search(ctx, SubtitleQuery{Title: "Scorpion"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, searches)
+	assert.Equal(t, 0, logins, "a key alone searches without logging in")
+	assert.Empty(t, lastAuth)
+	assert.Equal(t, "key-1", lastKey)
+
+	_, err = p.Download(ctx, "123")
+	assert.ErrorContains(t, err, "username and password")
+
+	creds = OpenSubCredentials{APIKey: "key-1", Username: "alex", Password: "pw"}
+	_, err = p.Search(ctx, SubtitleQuery{Title: "Scorpion"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, logins)
+	assert.Equal(t, "Bearer tok", lastAuth)
+
+	creds.Password = "new-pw"
+	_, err = p.Search(ctx, SubtitleQuery{Title: "Scorpion"})
+	require.NoError(t, err)
+	assert.Equal(t, 2, logins, "a changed password logs in again")
 }

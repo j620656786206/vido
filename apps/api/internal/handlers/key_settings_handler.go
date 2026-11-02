@@ -78,6 +78,10 @@ type SaveKeysRequest struct {
 	ElevenLabs *string `json:"elevenlabs"`
 	Gemini     *string `json:"gemini"`
 	Assrt      *string `json:"assrt"`
+
+	OpenSubtitles         *string `json:"opensubtitles"`
+	OpenSubtitlesUsername *string `json:"opensubtitles_username"`
+	OpenSubtitlesPassword *string `json:"opensubtitles_password"`
 	// ASRProvider is the engine choice (asr-scribe-b): "auto" | "elevenlabs" |
 	// "openai". Absent = unchanged.
 	ASRProvider *string `json:"asr_provider"`
@@ -115,18 +119,21 @@ func (h *KeySettingsHandler) GetKeys(c *gin.Context) {
 func (h *KeySettingsHandler) SaveKeys(c *gin.Context) {
 	var req SaveKeysRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "請求格式錯誤：請提供 claude、gemini、tmdb、elevenlabs、openai、assrt 或 asr_provider 其中至少一項")
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "請求格式錯誤：請提供 claude、gemini、tmdb、elevenlabs、openai、assrt、opensubtitles 或 asr_provider 其中至少一項")
 		return
 	}
 
 	updates := map[services.KeyName]string{}
 	for name, value := range map[services.KeyName]*string{
-		services.KeyClaude:     req.Claude,
-		services.KeyTMDb:       req.TMDb,
-		services.KeyOpenAI:     req.OpenAI,
-		services.KeyElevenLabs: req.ElevenLabs,
-		services.KeyGemini:     req.Gemini,
-		services.KeyAssrt:      req.Assrt,
+		services.KeyClaude:                req.Claude,
+		services.KeyTMDb:                  req.TMDb,
+		services.KeyOpenAI:                req.OpenAI,
+		services.KeyElevenLabs:            req.ElevenLabs,
+		services.KeyGemini:                req.Gemini,
+		services.KeyAssrt:                 req.Assrt,
+		services.KeyOpenSubtitles:         req.OpenSubtitles,
+		services.KeyOpenSubtitlesUsername: req.OpenSubtitlesUsername,
+		services.KeyOpenSubtitlesPassword: req.OpenSubtitlesPassword,
 	} {
 		if value != nil {
 			updates[name] = *value

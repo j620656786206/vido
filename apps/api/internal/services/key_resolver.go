@@ -62,6 +62,10 @@ type EnvKeys struct {
 	ElevenLabs string
 	Gemini     string
 	Assrt      string
+	// OpenSubtitles* are OPENSUBTITLES_API_KEY / _USERNAME / _PASSWORD.
+	OpenSubtitles         string
+	OpenSubtitlesUsername string
+	OpenSubtitlesPassword string
 }
 
 // BundledKeys carries the build-time values (config.BundledTMDbKey). Kept apart
@@ -141,6 +145,12 @@ func secretNameFor(name KeyName) (string, bool) {
 		return SecretNameGemini, true
 	case KeyAssrt:
 		return SecretNameAssrt, true
+	case KeyOpenSubtitles:
+		return SecretNameOpenSubtitles, true
+	case KeyOpenSubtitlesUsername:
+		return SecretNameOpenSubtitlesUsername, true
+	case KeyOpenSubtitlesPassword:
+		return SecretNameOpenSubtitlesPassword, true
 	default:
 		return "", false
 	}
@@ -160,6 +170,12 @@ func (r *keyResolver) envValueFor(name KeyName) string {
 		return r.env.Gemini
 	case KeyAssrt:
 		return r.env.Assrt
+	case KeyOpenSubtitles:
+		return r.env.OpenSubtitles
+	case KeyOpenSubtitlesUsername:
+		return r.env.OpenSubtitlesUsername
+	case KeyOpenSubtitlesPassword:
+		return r.env.OpenSubtitlesPassword
 	default:
 		return ""
 	}

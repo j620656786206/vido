@@ -318,6 +318,9 @@ const KEYS_MIXED = {
     { name: 'elevenlabs', configured: true, source: 'secret', masked: 'sk_el…9c2d' },
     { name: 'openai', configured: false, source: 'none' },
     { name: 'assrt', configured: false, source: 'none' },
+    { name: 'opensubtitles', configured: false, source: 'none' },
+    { name: 'opensubtitles_username', configured: false, source: 'none' },
+    { name: 'opensubtitles_password', configured: false, source: 'none' },
   ],
   // asr-scribe-b: the engine selector, with the ElevenLabs key resolving to
   // Scribe under 自動 — the shape a NAS that followed the README has.
@@ -3550,6 +3553,9 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
             { name: 'elevenlabs', configured: false, source: 'none' },
             { name: 'openai', configured: false, source: 'none' },
             { name: 'assrt', configured: false, source: 'none' },
+            { name: 'opensubtitles', configured: false, source: 'none' },
+            { name: 'opensubtitles_username', configured: false, source: 'none' },
+            { name: 'opensubtitles_password', configured: false, source: 'none' },
           ],
           asrProvider: 'auto',
           asrActive: '',
