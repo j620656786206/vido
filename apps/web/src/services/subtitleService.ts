@@ -623,9 +623,55 @@ export interface SubtitleInventory {
   embedded: { status: SubtitleInventoryStatus; tracks: SubtitleEmbeddedTrack[] };
 }
 
+/** POST /subtitles/burned-in/check result (disc-2026-11-burned-in-subs-b1).
+ *  `result` null = not decided this time; `reason` says why and nothing was
+ *  written. */
+export interface BurnedInCheckResult {
+  result: 'zh-Hans' | 'zh-Hant' | 'zh' | 'none' | null;
+  reason?: string;
+  episodesUpdated: number;
+  costUsd: number;
+  checkedEpisodeIds: string[];
+}
+
+/** Which season a burned-in action is about. */
+export interface BurnedInSeason {
+  seriesId: string;
+  season: number;
+}
+
 // --- Service ---
 
 export const subtitleService = {
+  /**
+   * POST /subtitles/burned-in/check — look at the season's picture again
+   * (「重新檢查這季」, ~US$0.002). The server's error text is already plain
+   * zh-TW (no Claude key → 400 with where to set it).
+   */
+  async checkBurnedInSeason({ seriesId, season }: BurnedInSeason): Promise<BurnedInCheckResult> {
+    return fetchApi<BurnedInCheckResult>('/subtitles/burned-in/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ series_id: seriesId, season }),
+    });
+  },
+
+  /**
+   * PUT /subtitles/burned-in/season {value: "none"} — 「這季沒有畫面字幕」:
+   * the whole season's burned-in answer becomes none, free and immediate
+   * (disc-2026-11-burned-in-subs-c1). "none" is the only value the API takes.
+   */
+  async clearBurnedInSeason({
+    seriesId,
+    season,
+  }: BurnedInSeason): Promise<{ episodesUpdated: number }> {
+    return fetchApi<{ episodesUpdated: number }>('/subtitles/burned-in/season', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ series_id: seriesId, season, value: 'none' }),
+    });
+  },
+
   /**
    * GET /{movies|episodes}/:id/subtitles/inventory — what subtitles this ONE
    * title actually has, read on demand (never per episode on a season expand).

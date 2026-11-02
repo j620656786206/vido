@@ -51,9 +51,11 @@ type Episode struct {
 	// (migration 049, disc-2026-11-burned-in-subs-b1): BurnedInZhHant /
 	// BurnedInZhHans / BurnedInZh / BurnedInNone; NULL = never checked or not
 	// decided. Kept out of SubtitleTracks, which a re-probe overwrites, and fed
-	// to ChineseSubtitleVerdict as its fourth input. Not serialised yet — the
-	// screen that shows it is -c's call.
-	BurnedInSubtitle NullString `db:"burned_in_subtitle" json:"-"`
+	// to ChineseSubtitleVerdict as its fourth input. Serialised for the
+	// 管理字幕 dialog's 畫面字幕 row (disc-2026-11-burned-in-subs-c1); absent
+	// when never checked — omitzero, because omitempty never drops a struct
+	// and NullString would otherwise write null.
+	BurnedInSubtitle NullString `db:"burned_in_subtitle" json:"burned_in_subtitle,omitzero"`
 	// BurnedInCheckedAt is when BurnedInSubtitle was written.
 	BurnedInCheckedAt NullTime `db:"burned_in_checked_at" json:"-"`
 

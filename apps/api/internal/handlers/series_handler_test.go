@@ -829,3 +829,38 @@ func TestSeriesHandler_GetSeasonEpisodes(t *testing.T) {
 
 // errorWrap wraps an error so handler errors.As unwrapping is exercised.
 func errorWrap(err error) error { return fmt.Errorf("get season episodes: %w", err) }
+
+// disc-2026-11-burned-in-subs-c1 AC #1: the season list carries each local
+// episode's burned-in answer, and leaves the key out when it was never
+// checked; a burned source rides in chinese_subtitle_sources.
+func TestSeriesHandler_GetSeasonEpisodes_BurnedInSubtitle(t *testing.T) {
+	sources := []services.ChineseSubtitleSource{{Kind: services.ChineseSourceBurned, Language: "zh-Hans"}}
+	resp := &services.SeasonEpisodesResponse{
+		Season: models.SeasonSummary{SeasonNumber: 1},
+		Episodes: []services.MergedEpisode{
+			{EpisodeNumber: 1, HasLocalFile: true, EpisodeID: "e1", ChineseSubtitle: models.ChineseSubtitleZhHans,
+				ChineseSubtitleSources: &sources, BurnedInSubtitle: "zh-Hans"},
+			{EpisodeNumber: 2, HasLocalFile: true, EpisodeID: "e2", ChineseSubtitle: models.ChineseSubtitleNone},
+		},
+	}
+	mockService := new(MockSeriesService)
+	mockService.On("GetSeasonEpisodes", mock.Anything, "series-1", 1).Return(resp, nil)
+	router := setupSeriesTestRouter(NewSeriesHandler(mockService))
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/series/series-1/seasons/1/episodes", nil)
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var body struct {
+		Data struct {
+			Episodes []map[string]any `json:"episodes"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	require.Len(t, body.Data.Episodes, 2)
+	assert.Equal(t, "zh-Hans", body.Data.Episodes[0]["burned_in_subtitle"])
+	assert.Equal(t, []any{map[string]any{"kind": "burned", "language": "zh-Hans", "label": ""}},
+		body.Data.Episodes[0]["chinese_subtitle_sources"])
+	assert.NotContains(t, body.Data.Episodes[1], "burned_in_subtitle", "never checked → no key")
+}

@@ -681,3 +681,83 @@ func TestFileOnDisk(t *testing.T) {
 	assert.False(t, fileOnDisk(filepath.Join(dir, "missing.mkv")))
 	assert.False(t, fileOnDisk(dir), "a directory is not a video file")
 }
+
+// --- OverrideSeason (disc-2026-11-burned-in-subs-c1 AC #3) ---------------------------
+
+func TestOverrideSeason(t *testing.T) {
+	t.Run("none is written for the season, free", func(t *testing.T) {
+		h := newBurnedHarness(t, "")
+		n, err := h.svc.OverrideSeason(context.Background(), "s", 1, models.BurnedInNone)
+		require.NoError(t, err)
+		assert.Equal(t, int64(len(h.store.episodes)), n)
+		assert.Equal(t, []string{models.BurnedInNone}, h.store.writes)
+		assert.Zero(t, h.vision.calls, "no model call")
+		assert.Empty(t, h.frames.at)
+	})
+	t.Run("only none can be set by hand", func(t *testing.T) {
+		for _, v := range []string{models.BurnedInZhHans, models.BurnedInZhHant, models.BurnedInZh, "", "NONE"} {
+			h := newBurnedHarness(t, "")
+			_, err := h.svc.OverrideSeason(context.Background(), "s", 1, v)
+			assert.ErrorIs(t, err, ErrBurnedInOverrideValue, v)
+			assert.Empty(t, h.store.writes, v)
+		}
+	})
+	t.Run("a season with no episodes is not found", func(t *testing.T) {
+		h := newBurnedHarness(t, "")
+		h.store.episodes = nil
+		_, err := h.svc.OverrideSeason(context.Background(), "nope", 1, models.BurnedInNone)
+		assert.ErrorIs(t, err, ErrBurnedInSeasonNotFound)
+		assert.Empty(t, h.store.writes)
+	})
+}
+
+// End to end over the real migration chain: only the season's '[]' episodes
+// are written, with a check time, and the verdict follows.
+func TestOverrideSeason_WritesOnlyTracklessEpisodes(t *testing.T) {
+	db := burnedInLibraryDB(t)
+	ctx := context.Background()
+	_, err := db.Exec(`INSERT INTO series (id, title, first_air_date) VALUES ('s', 'Show', '2020-01-01')`)
+	require.NoError(t, err)
+	for _, e := range []struct {
+		id      string
+		season  int
+		episode int
+		tracks  interface{}
+	}{
+		{"s1e1", 1, 1, `[]`},
+		{"s1e2", 1, 2, `[]`},
+		{"s1e3", 1, 3, `[{"language":"eng","format":"subrip","external":false,"stream_index":2}]`},
+		{"s2e1", 2, 1, `[]`},
+	} {
+		_, err := db.Exec(`INSERT INTO episodes (id, series_id, season_number, episode_number, file_path, subtitle_status, subtitle_tracks, burned_in_subtitle, created_at, updated_at)
+			VALUES (?, 's', ?, ?, ?, 'not_searched', ?, 'zh-Hans', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+			e.id, e.season, e.episode, "/tv/s/"+e.id+".mkv", e.tracks)
+		require.NoError(t, err)
+	}
+
+	repo := repository.NewEpisodeRepository(db)
+	svc := NewBurnedInSubtitleService(repo, &fakeVision{configured: true}, &fakeFrameGrabber{}, burnedConverter{}, nil, nil)
+	n, err := svc.OverrideSeason(ctx, "s", 1, models.BurnedInNone)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), n)
+
+	read := func(id string) (string, bool) {
+		var v sql.NullString
+		var at sql.NullTime
+		require.NoError(t, db.QueryRow(`SELECT burned_in_subtitle, burned_in_checked_at FROM episodes WHERE id = ?`, id).Scan(&v, &at))
+		return v.String, at.Valid
+	}
+	for _, id := range []string{"s1e1", "s1e2"} {
+		v, stamped := read(id)
+		assert.Equal(t, "none", v, id)
+		assert.True(t, stamped, id)
+	}
+	v, _ := read("s1e3")
+	assert.Equal(t, "zh-Hans", v, "an episode with tracks is not touched")
+	v, _ = read("s2e1")
+	assert.Equal(t, "zh-Hans", v, "another season is not touched")
+
+	eps, err := repo.FindBySeasonNumber(ctx, "s", 1)
+	require.NoError(t, err)
+	assert.Equal(t, models.ChineseSubtitleNone, computeEpisodeSubtitle(eps[0], nil).verdict, "the episode is 缺中文 again")
+}

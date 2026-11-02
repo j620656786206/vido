@@ -210,14 +210,25 @@ export interface MergedEpisode {
   /** false = Vido has not read the subtitle tracks inside the file yet, so
    *  the verdict may still change (badge-b, Alexyu 2A). */
   embeddedSubtitlesRead?: boolean;
+  /** What the burned-in check read off this episode's picture: Chinese burned
+   *  in (zh-Hans / zh-Hant / zh = script untold) or none. Absent = never
+   *  checked. Present only alongside hasLocalFile.
+   *  Backend: services.MergedEpisode.burned_in_subtitle
+   *  (disc-2026-11-burned-in-subs-c1). */
+  burnedInSubtitle?: BurnedInSubtitle;
 }
+
+/** episodes.burned_in_subtitle values (disc-2026-11-burned-in-subs-b1). */
+export type BurnedInSubtitle = 'zh-Hans' | 'zh-Hant' | 'zh' | 'none';
 
 /** One Chinese source of an episode's subtitle verdict.
  *  kind: embedded = inside the file, sidecar = a file beside it, vido = the
- *  subtitle Vido placed. label: the track title or the sidecar's filename tag
- *  ("zh-TW"), "" when none. */
+ *  subtitle Vido placed, burned = burned into the picture (畫面字幕,
+ *  disc-2026-11-burned-in-subs-c1). The kind set is open on the wire — a
+ *  consumer must skip a kind it does not know. label: the track title or the
+ *  sidecar's filename tag ("zh-TW"), "" when none. */
 export interface ChineseSubtitleSource {
-  kind: 'embedded' | 'sidecar' | 'vido';
+  kind: 'embedded' | 'sidecar' | 'vido' | 'burned';
   language: 'zh-Hant' | 'zh-Hans' | 'zh-unknown';
   label: string;
 }

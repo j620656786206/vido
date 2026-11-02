@@ -8,13 +8,18 @@ import (
 	"github.com/vido/api/internal/models"
 )
 
-// Implements: disc-2026-10-episode-list-subtitle-badge-a AC #1, #2, #4
+// Implements: disc-2026-10-episode-list-subtitle-badge-a AC #1, #2, #4;
+// disc-2026-11-burned-in-subs-c1 AC #2
 
 // Chinese subtitle source kinds — AC #1 [@contract-v1].
 const (
 	ChineseSourceEmbedded = "embedded" // a track inside the media file
 	ChineseSourceSidecar  = "sidecar"  // a subtitle file beside it
 	ChineseSourceVido     = "vido"     // the subtitle Vido itself placed
+	// ChineseSourceBurned — Chinese burned into the picture (畫面字幕), read
+	// by the burned-in check (disc-2026-11-burned-in-subs-c1). Additive: the
+	// kind is an open string set.
+	ChineseSourceBurned = "burned"
 )
 
 // ChineseSubtitleSource is one Chinese source behind an episode's verdict.
@@ -146,7 +151,25 @@ func episodeChineseSources(ep models.Episode, embedded, sidecars []SubtitleTrack
 			sources = append(sources, ChineseSubtitleSource{Kind: ChineseSourceVido, Language: verdictLanguage(c)})
 		}
 	}
+	// Last: the picture itself. Only a Chinese answer is a source — "none"
+	// and "never checked" add nothing.
+	if lang, ok := burnedSourceLanguage(ep.BurnedInSubtitle.String); ok {
+		sources = append(sources, ChineseSubtitleSource{Kind: ChineseSourceBurned, Language: lang})
+	}
 	return sources
+}
+
+// burnedSourceLanguage maps a burned_in_subtitle value onto the source
+// language vocabulary every other source uses: zh-Hant / zh-Hans, and
+// zh-unknown for Chinese of untold script (stored as "zh").
+func burnedSourceLanguage(burned string) (string, bool) {
+	switch burned {
+	case models.BurnedInZhHant, models.BurnedInZhHans:
+		return burned, true
+	case models.BurnedInZh:
+		return "zh-unknown", true
+	}
+	return "", false
 }
 
 // sidecarTag is the part of a sidecar's name between the video's stem and the

@@ -22,6 +22,14 @@ type fakeBurnedInChecker struct {
 	calls     int
 	gotSeries string
 	gotSeason int
+	gotValue  string
+	updated   int64
+}
+
+func (f *fakeBurnedInChecker) OverrideSeason(_ context.Context, seriesID string, season int, value string) (int64, error) {
+	f.calls++
+	f.gotSeries, f.gotSeason, f.gotValue = seriesID, season, value
+	return f.updated, f.err
 }
 
 func (f *fakeBurnedInChecker) CheckSeason(_ context.Context, seriesID string, season int) (services.BurnedInCheckResult, error) {
@@ -110,5 +118,65 @@ func TestBurnedInCheck_FailuresMapToStatus(t *testing.T) {
 	assert.Equal(t, "AI_PROVIDER_ERROR", body["error"].(map[string]any)["code"])
 
 	w, _ = postBurnedInCheck(t, &fakeBurnedInChecker{err: errors.New("database is locked")}, `{"series_id": "s1", "season": 1}`)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// --- PUT /subtitles/burned-in/season (disc-2026-11-burned-in-subs-c1 AC #3) ---
+
+func putBurnedInSeason(t *testing.T, checker *fakeBurnedInChecker, body string) (*httptest.ResponseRecorder, map[string]any) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	NewBurnedInSubtitleHandler(checker, nil).RegisterRoutes(r.Group("/api/v1"))
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/subtitles/burned-in/season", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out))
+	return w, out
+}
+
+func TestBurnedInOverride_Success(t *testing.T) {
+	checker := &fakeBurnedInChecker{updated: 151}
+	w, body := putBurnedInSeason(t, checker, `{"series_id": "xianni", "season": 1, "value": "none"}`)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "xianni", checker.gotSeries)
+	assert.Equal(t, 1, checker.gotSeason)
+	assert.Equal(t, "none", checker.gotValue)
+	assert.Equal(t, map[string]any{"episodes_updated": float64(151)}, body["data"])
+}
+
+func TestBurnedInOverride_BadParamsAre400(t *testing.T) {
+	for name, body := range map[string]string{
+		"value is a script":  `{"series_id": "s1", "season": 1, "value": "zh-Hans"}`,
+		"value missing":      `{"series_id": "s1", "season": 1}`,
+		"value in caps":      `{"series_id": "s1", "season": 1, "value": "NONE"}`,
+		"season missing":     `{"series_id": "s1", "value": "none"}`,
+		"negative season":    `{"series_id": "s1", "season": -1, "value": "none"}`,
+		"series missing":     `{"season": 1, "value": "none"}`,
+		"not JSON":           `series_id=s1`,
+		"season is a string": `{"series_id": "s1", "season": "1", "value": "none"}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			checker := &fakeBurnedInChecker{}
+			w, out := putBurnedInSeason(t, checker, body)
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			assert.Equal(t, "VALIDATION_ERROR", out["error"].(map[string]any)["code"])
+			assert.Zero(t, checker.calls, "nothing is written on a bad request")
+		})
+	}
+}
+
+func TestBurnedInOverride_UnknownSeasonIs404(t *testing.T) {
+	w, out := putBurnedInSeason(t, &fakeBurnedInChecker{err: services.ErrBurnedInSeasonNotFound},
+		`{"series_id": "nope", "season": 1, "value": "none"}`)
+	require.Equal(t, http.StatusNotFound, w.Code)
+	assert.Equal(t, "DB_NOT_FOUND", out["error"].(map[string]any)["code"])
+}
+
+func TestBurnedInOverride_StoreFailureIs500(t *testing.T) {
+	w, _ := putBurnedInSeason(t, &fakeBurnedInChecker{err: errors.New("database is locked")},
+		`{"series_id": "s1", "season": 1, "value": "none"}`)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }

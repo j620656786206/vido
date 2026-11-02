@@ -62,6 +62,12 @@ type MergedEpisode struct {
 	// subtitle-badge-b, Alexyu 2A: the tooltip says so). Present only
 	// alongside HasLocalFile; additive to contract-v1.
 	EmbeddedSubtitlesRead *bool `json:"embedded_subtitles_read,omitempty"`
+	// BurnedInSubtitle is what the burned-in check read off this episode's
+	// picture: zh-Hans / zh-Hant / zh / none; absent when never checked or not
+	// decided (disc-2026-11-burned-in-subs-c1 AC #1). Present only alongside
+	// HasLocalFile; additive to contract-v1. The 管理字幕 dialog shows its
+	// 畫面字幕 row and the 判斷錯了？ menu from it.
+	BurnedInSubtitle string `json:"burned_in_subtitle,omitempty"`
 }
 
 // episodeTracksRefresher is the season list's write-back (AC #4), satisfied by
@@ -203,6 +209,7 @@ func (s *SeriesService) GetSeasonEpisodes(ctx context.Context, seriesID string, 
 			merged.ChineseSubtitle = v.verdict
 			merged.ChineseSubtitleSources = &v.sources
 			merged.EmbeddedSubtitlesRead = &v.embeddedRead
+			merged.BurnedInSubtitle = local.BurnedInSubtitle.String
 			if v.refresh != "" {
 				s.refreshEpisodeTracks(ctx, local, v.refresh)
 			}

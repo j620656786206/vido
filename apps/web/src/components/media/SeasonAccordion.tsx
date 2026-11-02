@@ -145,7 +145,10 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
           (bugfix-subtitle-dialog-real-inventory).
           onGenerationComplete uses THIS query's own refetch — narrower than
           invalidating by key, and it needs no QueryClient of its own. A failed
-          run refetches too (dsr-6b), so a kept English SRT shows in the dialog. */}
+          run refetches too (dsr-6b), so a kept English SRT shows in the dialog.
+          burnedInSubtitle + seriesId/seasonNumber: the 畫面字幕 row and its
+          判斷錯了？ menu, which invalidates THIS query's key
+          (disc-2026-11-burned-in-subs-c2). */}
       {subtitleEpisode && canManageEpisodeSubtitle(subtitleEpisode) && (
         <ManageSubtitleDialogV2
           mediaId={subtitleEpisode.episodeId}
@@ -156,6 +159,9 @@ function SeasonAccordionItem({ season, seriesId, seriesTitle }: SeasonAccordionI
           mediaFilePath={subtitleEpisode.filePath}
           subtitleStatus={subtitleEpisode.subtitleStatus}
           subtitleLanguage={subtitleEpisode.subtitleLanguage}
+          burnedInSubtitle={subtitleEpisode.burnedInSubtitle}
+          seriesId={seriesId}
+          seasonNumber={season.seasonNumber}
           open={true}
           onOpenChange={(next) => !next && setOpenedEpisode(null)}
           onGenerationStarted={() => live.markStarted(subtitleEpisode.episodeId)}
