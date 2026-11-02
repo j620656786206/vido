@@ -56,8 +56,13 @@ type Config struct {
 	ElevenLabsAPIKey string
 	// AssrtAPIKey is the Assrt (射手網) token for online Chinese subtitle
 	// search — the env fallback behind the settings-page value.
-	AssrtAPIKey   string
-	EncryptionKey string
+	AssrtAPIKey string
+	// OpenSubtitles* are the env fallbacks for the OpenSubtitles API key and
+	// account (search needs the key, downloads need the account too).
+	OpenSubtitlesAPIKey   string
+	OpenSubtitlesUsername string
+	OpenSubtitlesPassword string
+	EncryptionKey         string
 
 	// Auth (V0.1.1 password gate). AuthPassword, when non-empty, turns on a
 	// single-shared-password session gate in front of the whole API; empty keeps
@@ -235,6 +240,9 @@ func Load() (*Config, error) {
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.ElevenLabsAPIKey = cfg.loadString("ELEVENLABS_API_KEY", "")
 	cfg.AssrtAPIKey = cfg.loadString("ASSRT_API_KEY", "")
+	cfg.OpenSubtitlesAPIKey = cfg.loadString("OPENSUBTITLES_API_KEY", "")
+	cfg.OpenSubtitlesUsername = cfg.loadString("OPENSUBTITLES_USERNAME", "")
+	cfg.OpenSubtitlesPassword = cfg.loadString("OPENSUBTITLES_PASSWORD", "")
 	cfg.ASRProvider = cfg.loadString("VIDO_ASR_PROVIDER", "auto")
 	cfg.GeminiMinInterval = time.Duration(cfg.loadInt("VIDO_GEMINI_MIN_INTERVAL", 5)) * time.Second
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
@@ -449,6 +457,9 @@ func (c *Config) LogConfigSources() {
 		"ELEVENLABS_API_KEY_source", c.Sources["ELEVENLABS_API_KEY"].String(),
 		"ASSRT_API_KEY", maskSecret(c.AssrtAPIKey),
 		"ASSRT_API_KEY_source", c.Sources["ASSRT_API_KEY"].String(),
+		"OPENSUBTITLES_API_KEY", maskSecret(c.OpenSubtitlesAPIKey),
+		"OPENSUBTITLES_USERNAME_set", c.OpenSubtitlesUsername != "",
+		"OPENSUBTITLES_PASSWORD_set", c.OpenSubtitlesPassword != "",
 		"VIDO_ASR_PROVIDER", c.ASRProvider,
 		"VIDO_BURNED_IN_MONTHLY_CAP_USD", c.BurnedInMonthlyCapUSD,
 		"VIDO_BURNED_IN_MONTHLY_CAP_USD_source", c.Sources["VIDO_BURNED_IN_MONTHLY_CAP_USD"].String(),

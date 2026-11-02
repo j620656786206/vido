@@ -16,34 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"golang.org/x/time/rate"
-
-	"github.com/vido/api/internal/secrets"
 )
-
-// mockSecretsService implements secrets.SecretsServiceInterface for testing.
-type mockSecretsService struct {
-	secrets map[string]string
-}
-
-func newMockSecrets(kv map[string]string) *mockSecretsService {
-	return &mockSecretsService{secrets: kv}
-}
-
-func (m *mockSecretsService) Retrieve(_ context.Context, name string) (string, error) {
-	v, ok := m.secrets[name]
-	if !ok {
-		return "", secrets.ErrSecretNotFound
-	}
-	return v, nil
-}
-
-func (m *mockSecretsService) Store(context.Context, string, string) error { return nil }
-func (m *mockSecretsService) Delete(context.Context, string) error        { return nil }
-func (m *mockSecretsService) Exists(_ context.Context, name string) (bool, error) {
-	_, ok := m.secrets[name]
-	return ok, nil
-}
-func (m *mockSecretsService) List(context.Context) ([]string, error) { return nil, nil }
 
 // --- Test helpers ---
 

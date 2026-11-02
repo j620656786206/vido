@@ -20,21 +20,6 @@ import (
 	"time"
 )
 
-// envSecrets is a SecretsServiceInterface that serves keys from env vars so the
-// POC can run the key-gated providers when the user supplies credentials.
-type envSecrets struct{ m map[string]string }
-
-func (e envSecrets) Store(context.Context, string, string) error { return nil }
-func (e envSecrets) Retrieve(_ context.Context, name string) (string, error) {
-	if v, ok := e.m[name]; ok && v != "" {
-		return v, nil
-	}
-	return "", fmt.Errorf("secret %q not configured", name)
-}
-func (e envSecrets) Delete(context.Context, string) error         { return nil }
-func (e envSecrets) Exists(context.Context, string) (bool, error) { return false, nil }
-func (e envSecrets) List(context.Context) ([]string, error)       { return nil, nil }
-
 type posterChild struct {
 	title   string
 	year    int
@@ -117,12 +102,14 @@ func TestLiveSubtitlePOC(t *testing.T) {
 
 	// ---- Provider 3: OpenSubtitles (needs API key) ----
 	fmt.Println("\n========== OPENSUBTITLES (needs API key + login) ==========")
-	osSvc := envSecrets{m: map[string]string{
-		openSubAPIKeySecret:   os.Getenv("OPENSUBTITLES_API_KEY"),
-		openSubUsernameSecret: os.Getenv("OPENSUBTITLES_USERNAME"),
-		openSubPasswordSecret: os.Getenv("OPENSUBTITLES_PASSWORD"),
-	}}
-	osp := NewOpenSubProvider(ctx, osSvc)
+	osp := NewOpenSubProvider(func(context.Context) OpenSubCredentials {
+		return OpenSubCredentials{
+			APIKey:   os.Getenv("OPENSUBTITLES_API_KEY"),
+			Username: os.Getenv("OPENSUBTITLES_USERNAME"),
+			Password: os.Getenv("OPENSUBTITLES_PASSWORD"),
+		}
+	})
+	osp.refreshCredentials(ctx)
 	if osp.disabled {
 		fmt.Println("  DISABLED — no OPENSUBTITLES_API_KEY in env. (export OPENSUBTITLES_API_KEY=... to test)")
 	} else {

@@ -233,12 +233,15 @@ func main() {
 	// at boot — that boot-frozen key was why saving a TMDb key in the settings
 	// page (or the setup wizard, dsr-13) changed nothing until a restart.
 	keyResolver := services.NewKeyResolver(secretsService, services.EnvKeys{
-		Claude:     cfg.GetClaudeAPIKey(),
-		TMDb:       cfg.GetTMDbAPIKey(),
-		OpenAI:     cfg.GetOpenAIAPIKey(),
-		ElevenLabs: cfg.ElevenLabsAPIKey,
-		Gemini:     cfg.GetGeminiAPIKey(),
-		Assrt:      cfg.AssrtAPIKey,
+		Claude:                cfg.GetClaudeAPIKey(),
+		TMDb:                  cfg.GetTMDbAPIKey(),
+		OpenAI:                cfg.GetOpenAIAPIKey(),
+		ElevenLabs:            cfg.ElevenLabsAPIKey,
+		Gemini:                cfg.GetGeminiAPIKey(),
+		Assrt:                 cfg.AssrtAPIKey,
+		OpenSubtitles:         cfg.OpenSubtitlesAPIKey,
+		OpenSubtitlesUsername: cfg.OpenSubtitlesUsername,
+		OpenSubtitlesPassword: cfg.OpenSubtitlesPassword,
 	}, slog.Default(), services.WithBundledKeys(services.BundledKeys{TMDb: config.BundledTMDbKey()}))
 	slog.Info("Key resolver initialized", "tmdb_bundled_key_present", config.HasBundledTMDbKey())
 
@@ -655,7 +658,19 @@ func main() {
 		value, _, _ := keyResolver.Get(ctx, services.KeyAssrt)
 		return value
 	})
-	opensubProvider := subtitleproviders.NewOpenSubProvider(ctx, secretsService)
+	// disc-2026-11-opensubtitles-keys: credentials asked for on every call, so
+	// saving them on the settings page takes effect without a restart.
+	opensubProvider := subtitleproviders.NewOpenSubProvider(func(ctx context.Context) subtitleproviders.OpenSubCredentials {
+		get := func(name services.KeyName) string {
+			value, _, _ := keyResolver.Get(ctx, name)
+			return value
+		}
+		return subtitleproviders.OpenSubCredentials{
+			APIKey:   get(services.KeyOpenSubtitles),
+			Username: get(services.KeyOpenSubtitlesUsername),
+			Password: get(services.KeyOpenSubtitlesPassword),
+		}
+	})
 	subtitleProviders := []subtitleproviders.SubtitleProvider{assrtProvider, opensubProvider}
 	subtitleEngine := subtitle.NewEngine(
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,

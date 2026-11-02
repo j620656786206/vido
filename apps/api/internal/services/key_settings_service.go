@@ -85,8 +85,9 @@ func NewKeySettingsService(resolver KeyResolver, secretsService secrets.SecretsS
 		resolver: resolver,
 		secrets:  secretsService,
 		// Stable order so the page does not reshuffle between loads.
-		orderedIDs: []KeyName{KeyClaude, KeyGemini, KeyTMDb, KeyElevenLabs, KeyOpenAI, KeyAssrt},
-		writable:   writable && secretsService != nil,
+		orderedIDs: []KeyName{KeyClaude, KeyGemini, KeyTMDb, KeyElevenLabs, KeyOpenAI, KeyAssrt,
+			KeyOpenSubtitles, KeyOpenSubtitlesUsername, KeyOpenSubtitlesPassword},
+		writable: writable && secretsService != nil,
 	}
 }
 
@@ -143,6 +144,9 @@ func (s *KeySettingsService) List(ctx context.Context) KeySettings {
 		state := KeyState{Name: name, Source: source, Configured: err == nil && value != ""}
 		if state.Configured && source == KeySourceSecret {
 			state.Masked = maskKey(value)
+			if isSecretWord(name) {
+				state.Masked = strings.Repeat("•", 8) // a password shows nothing, not even its length
+			}
 		}
 		out.Keys = append(out.Keys, state)
 	}

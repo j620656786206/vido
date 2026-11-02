@@ -91,6 +91,9 @@ describe('ApiKeysForm — the three source states (AC #1)', () => {
     expect(screen.getByLabelText('雲端聽寫 ElevenLabs（建議）')).toBeInTheDocument();
     expect(screen.getByTestId('key-row-assrt')).toBeInTheDocument();
     expect(screen.getByLabelText('射手網（字幕搜尋，選填）')).toBeInTheDocument();
+    expect(screen.getByLabelText('OpenSubtitles API Key（選填）')).toBeInTheDocument();
+    expect(screen.getByLabelText('OpenSubtitles 帳號')).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('OpenSubtitles 密碼')).toHaveAttribute('type', 'password');
   });
 
   it('the Gemini row says whose quota it spends and never calls it free (gemini-translation-dispatch)', () => {
@@ -265,6 +268,25 @@ describe('ApiKeysForm — saving (AC #1)', () => {
 
     await waitFor(() => expect(h.saveMutate).toHaveBeenCalledTimes(1));
     expect(h.saveMutate.mock.calls[0][0]).toEqual({ assrt: 'assrt-token' });
+  });
+
+  // disc-2026-11-opensubtitles-keys
+  it('PUTs the OpenSubtitles key and account together', async () => {
+    renderForm();
+
+    fireEvent.change(screen.getByLabelText('OpenSubtitles API Key（選填）'), {
+      target: { value: 'os-key' },
+    });
+    fireEvent.change(screen.getByLabelText('OpenSubtitles 帳號'), { target: { value: 'alex' } });
+    fireEvent.change(screen.getByLabelText('OpenSubtitles 密碼'), { target: { value: 'pw' } });
+    fireEvent.click(screen.getByTestId('key-save'));
+
+    await waitFor(() => expect(h.saveMutate).toHaveBeenCalledTimes(1));
+    expect(h.saveMutate.mock.calls[0][0]).toEqual({
+      opensubtitles: 'os-key',
+      opensubtitles_username: 'alex',
+      opensubtitles_password: 'pw',
+    });
   });
 
   it('儲存 stays disabled while nothing has been typed', () => {

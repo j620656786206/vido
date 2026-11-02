@@ -17,18 +17,13 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
-
-	"github.com/vido/api/internal/secrets"
 )
 
 const (
 	openSubBaseURL          = "https://api.opensubtitles.com/api/v1"
-	openSubAPIKeySecret     = "opensubtitles_api_key"
-	openSubUsernameSecret   = "opensubtitles_username"
-	openSubPasswordSecret   = "opensubtitles_password"
 	openSubHTTPTimeout      = 30 * time.Second
-	openSubMaxResponseBytes = 1 << 20  // 1 MB for JSON responses
-	openSubMaxDownloadBytes = 50 << 20 // 50 MB for subtitle files
+	openSubMaxResponseBytes = 1 << 20         // 1 MB for JSON responses
+	openSubMaxDownloadBytes = 50 << 20        // 50 MB for subtitle files
 	openSubTokenBuffer      = 5 * time.Minute // refresh 5 min before expiry
 	openSubHashChunkSize    = 64 * 1024       // 64 KB
 	openSubUserAgent        = "Vido/1.0 (NAS Media Manager)"
@@ -51,36 +46,57 @@ type OpenSubProvider struct {
 	httpClient  *http.Client
 	rateLimiter *rate.Limiter
 	testBaseURL string // override for testing
+	// creds, when set, is asked on every search/download so credentials saved
+	// on the settings page apply without a restart; a change drops the login.
+	creds func(ctx context.Context) OpenSubCredentials
 
 	mu          sync.RWMutex
 	authToken   string
 	tokenExpiry time.Time
 }
 
-// NewOpenSubProvider creates an OpenSubtitles subtitle provider.
-// Disabled mode if API key or credentials are not configured.
-func NewOpenSubProvider(ctx context.Context, secretsSvc secrets.SecretsServiceInterface) *OpenSubProvider {
-	p := &OpenSubProvider{
+// OpenSubCredentials is what OpenSubtitles needs: an API key (an app's
+// "consumer" on opensubtitles.com) for searching, plus the user's account to
+// log in with for downloading.
+type OpenSubCredentials struct {
+	APIKey   string
+	Username string
+	Password string
+}
+
+// NewOpenSubProvider creates an OpenSubtitles provider that reads its
+// credentials from creds on every call. Without an API key it is idle:
+// Search returns no results and Download an error.
+func NewOpenSubProvider(creds func(ctx context.Context) OpenSubCredentials) *OpenSubProvider {
+	return &OpenSubProvider{
 		httpClient:  &http.Client{Timeout: openSubHTTPTimeout},
 		rateLimiter: rate.NewLimiter(rate.Limit(openSubRateLimit), openSubRateBurst),
+		creds:       creds,
+		disabled:    true, // until the first call reads a key
 	}
+}
 
-	apiKey, err := secretsSvc.Retrieve(ctx, openSubAPIKeySecret)
-	if err != nil {
-		slog.Info("OpenSubtitles provider disabled — API key not configured",
-			"secret_key", openSubAPIKeySecret)
-		p.disabled = true
-		return p
+// refreshCredentials reads the current credentials; a change replaces the
+// stored ones and drops the login token, so the next download logs in again.
+// Returns whether the provider is usable (has an API key).
+func (p *OpenSubProvider) refreshCredentials(ctx context.Context) bool {
+	if p.creds == nil {
+		p.mu.RLock()
+		defer p.mu.RUnlock()
+		return !p.disabled
 	}
-	p.apiKey = apiKey
+	c := p.creds(ctx)
+	c.APIKey = strings.TrimSpace(c.APIKey)
+	c.Username = strings.TrimSpace(c.Username)
 
-	username, _ := secretsSvc.Retrieve(ctx, openSubUsernameSecret)
-	password, _ := secretsSvc.Retrieve(ctx, openSubPasswordSecret)
-	p.username = username
-	p.password = password
-
-	slog.Info("OpenSubtitles provider initialized")
-	return p
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if c.APIKey != p.apiKey || c.Username != p.username || c.Password != p.password {
+		p.apiKey, p.username, p.password = c.APIKey, c.Username, c.Password
+		p.authToken, p.tokenExpiry = "", time.Time{}
+	}
+	p.disabled = p.apiKey == ""
+	return !p.disabled
 }
 
 // Name returns the provider identifier.
@@ -95,7 +111,13 @@ func (p *OpenSubProvider) baseURL() string {
 	return openSubBaseURL
 }
 
-// authenticate performs a login to get a JWT token.
+func (p *OpenSubProvider) currentUsername() string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.username
+}
+
+// authenticate performs a login to get a JWT token. Called with p.mu held.
 // Note: rate limiting is handled by callers (searchWithRetry/downloadWithRetry),
 // not here, to avoid double token consumption and mutex contention.
 func (p *OpenSubProvider) authenticate(ctx context.Context) error {
@@ -173,19 +195,19 @@ type openSubSearchResponse struct {
 }
 
 type openSubSearchItem struct {
-	ID         string                 `json:"id"`
-	Attributes openSubSearchAttrs     `json:"attributes"`
+	ID         string             `json:"id"`
+	Attributes openSubSearchAttrs `json:"attributes"`
 }
 
 type openSubSearchAttrs struct {
-	SubtitleID    string               `json:"subtitle_id"`
-	Language      string               `json:"language"`
-	DownloadCount int                  `json:"download_count"`
-	Release       string               `json:"release"`
-	UploadDate    string               `json:"upload_date"`
-	Uploader      *openSubUploader     `json:"uploader"`
-	Files         []openSubFile        `json:"files"`
-	FeatureDetails *openSubFeature     `json:"feature_details"`
+	SubtitleID     string           `json:"subtitle_id"`
+	Language       string           `json:"language"`
+	DownloadCount  int              `json:"download_count"`
+	Release        string           `json:"release"`
+	UploadDate     string           `json:"upload_date"`
+	Uploader       *openSubUploader `json:"uploader"`
+	Files          []openSubFile    `json:"files"`
+	FeatureDetails *openSubFeature  `json:"feature_details"`
 }
 
 type openSubUploader struct {
@@ -207,8 +229,8 @@ func (p *OpenSubProvider) Search(ctx context.Context, query SubtitleQuery) ([]Su
 }
 
 func (p *OpenSubProvider) searchWithRetry(ctx context.Context, query SubtitleQuery, retryCount int) ([]SubtitleResult, error) {
-	if p.disabled {
-		slog.Info("OpenSubtitles search skipped — provider disabled")
+	if !p.refreshCredentials(ctx) {
+		slog.Info("OpenSubtitles search skipped — no API key configured")
 		return nil, nil
 	}
 
@@ -216,8 +238,12 @@ func (p *OpenSubProvider) searchWithRetry(ctx context.Context, query SubtitleQue
 		return nil, fmt.Errorf("opensubtitles: search requires title or IMDB ID")
 	}
 
-	if err := p.ensureAuth(ctx); err != nil {
-		return nil, fmt.Errorf("opensubtitles: auth failed: %w", err)
+	// Searching needs only the API key; log in when an account is set so
+	// the search counts against the user rather than the anonymous tier.
+	if p.currentUsername() != "" {
+		if err := p.ensureAuth(ctx); err != nil {
+			return nil, fmt.Errorf("opensubtitles: auth failed: %w", err)
+		}
 	}
 
 	u, err := url.Parse(p.baseURL() + "/subtitles")
@@ -328,8 +354,11 @@ func (p *OpenSubProvider) Download(ctx context.Context, id string) ([]byte, erro
 }
 
 func (p *OpenSubProvider) downloadWithRetry(ctx context.Context, id string, retryCount int) ([]byte, error) {
-	if p.disabled {
+	if !p.refreshCredentials(ctx) {
 		return nil, fmt.Errorf("opensubtitles: provider is disabled")
+	}
+	if p.currentUsername() == "" {
+		return nil, fmt.Errorf("opensubtitles: downloading needs your OpenSubtitles username and password")
 	}
 
 	if err := p.ensureAuth(ctx); err != nil {
@@ -425,11 +454,13 @@ func (p *OpenSubProvider) doRequest(ctx context.Context, method, reqURL string, 
 	}
 
 	p.mu.RLock()
-	token := p.authToken
+	token, apiKey := p.authToken, p.apiKey
 	p.mu.RUnlock()
 
-	req.Header.Set("Api-Key", p.apiKey)
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Api-Key", apiKey)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", openSubUserAgent)
 

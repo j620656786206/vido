@@ -80,10 +80,33 @@ func TestKeySettings_ListOrderIsStable(t *testing.T) {
 	first := svc.List(context.Background())
 	second := svc.List(context.Background())
 
-	require.Len(t, first.Keys, 6)
+	require.Len(t, first.Keys, 9)
 	assert.Equal(t, first.Keys, second.Keys, "the page must not reshuffle between loads")
 	assert.Equal(t, KeyClaude, first.Keys[0].Name)
-	assert.Equal(t, KeyAssrt, first.Keys[5].Name, "the optional subtitle-search token sits last")
+	assert.Equal(t, KeyAssrt, first.Keys[5].Name, "the optional subtitle-site keys sit last")
+	assert.Equal(t, KeyOpenSubtitlesPassword, first.Keys[8].Name)
+}
+
+// disc-2026-11-opensubtitles-keys: the account is stored under the names the
+// provider has always read; the password is never echoed, not even masked.
+func TestKeySettings_OpenSubtitlesAccount(t *testing.T) {
+	ctx := context.Background()
+	secrets := &fakeSecrets{values: map[string]string{}}
+	svc := settingsWith(t, secrets, EnvKeys{}, true)
+
+	require.NoError(t, svc.Save(ctx, map[KeyName]string{
+		KeyOpenSubtitles:         "osKey1234567890abcdef",
+		KeyOpenSubtitlesUsername: "j620656786206",
+		KeyOpenSubtitlesPassword: "a-long-secret-password",
+	}))
+	assert.Equal(t, "osKey1234567890abcdef", secrets.values["opensubtitles_api_key"])
+	assert.Equal(t, "j620656786206", secrets.values["opensubtitles_username"])
+	assert.Equal(t, "a-long-secret-password", secrets.values["opensubtitles_password"])
+
+	got := svc.List(ctx)
+	assert.Equal(t, "osKey1…cdef", stateOf(got, KeyOpenSubtitles).Masked)
+	assert.Equal(t, "••••••••", stateOf(got, KeyOpenSubtitlesPassword).Masked)
+	assert.NotContains(t, stateOf(got, KeyOpenSubtitlesPassword).Masked, "a-l")
 }
 
 // disc-2026-11-assrt-key-in-settings: the Assrt token is stored under the name

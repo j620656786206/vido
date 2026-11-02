@@ -14,7 +14,16 @@ import { snakeToCamel } from '../utils/caseTransform';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 /** Closed set — mirrors `services.KeyName`; doubles as the PUT body field names. */
-export type KeyName = 'claude' | 'gemini' | 'tmdb' | 'elevenlabs' | 'openai' | 'assrt';
+export type KeyName =
+  | 'claude'
+  | 'gemini'
+  | 'tmdb'
+  | 'elevenlabs'
+  | 'openai'
+  | 'assrt'
+  | 'opensubtitles'
+  | 'opensubtitles_username'
+  | 'opensubtitles_password';
 
 /**
  * Where a key resolved from. `secret` (runtime, user-set) beats `env`
