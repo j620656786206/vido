@@ -33,6 +33,7 @@ type SubtitleHandler struct {
 	seriesRepo     subtitle.SubtitleStatusUpdater
 	batchProcessor *subtitle.BatchProcessor
 	countries      MediaCountryResolver
+	lookup         ManualSubtitleLookup
 }
 
 // NewSubtitleHandler creates a new SubtitleHandler.
@@ -80,7 +81,7 @@ func (h *SubtitleHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // SubtitleSearchRequest is the request body for subtitle search.
 type SubtitleSearchRequest struct {
 	MediaID   string   `json:"media_id" binding:"required"`
-	MediaType string   `json:"media_type" binding:"required,oneof=movie series"`
+	MediaType string   `json:"media_type" binding:"required,oneof=movie series episode"`
 	Providers []string `json:"providers"`
 	Query     string   `json:"query"`
 }
@@ -112,7 +113,7 @@ type SubtitleScoreBreakdownDTO struct {
 // SubtitleDownloadRequest is the request body for subtitle download.
 type SubtitleDownloadRequest struct {
 	MediaID              string  `json:"media_id" binding:"required"`
-	MediaType            string  `json:"media_type" binding:"required,oneof=movie series"`
+	MediaType            string  `json:"media_type" binding:"required,oneof=movie series episode"`
 	MediaFilePath        string  `json:"media_file_path" binding:"required"`
 	SubtitleID           string  `json:"subtitle_id" binding:"required"`
 	Provider             string  `json:"provider" binding:"required"`
@@ -155,11 +156,24 @@ func (h *SubtitleHandler) SearchSubtitles(c *gin.Context) {
 	}
 
 	// Build subtitle query
-	query := providers.SubtitleQuery{
-		Title: req.Query,
-	}
-	if query.Title == "" {
-		query.Title = req.MediaID
+	// No query text → build it from the library (original title, season,
+	// episode). The old fallback searched for the media id itself, a UUID.
+	query := providers.SubtitleQuery{Title: strings.TrimSpace(req.Query)}
+	if query.Title == "" || req.MediaType == "episode" {
+		built, err := h.queryFor(c.Request.Context(), req.MediaType, req.MediaID)
+		if err != nil {
+			slog.Warn("Subtitle search: cannot build a query from the library",
+				"media_type", req.MediaType, "media_id", req.MediaID, "error", err)
+			if query.Title == "" {
+				BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "找不到這部片的資料，請輸入要搜尋的片名")
+				return
+			}
+		} else {
+			if query.Title != "" {
+				built.Title = query.Title // typed text wins; season/episode still apply
+			}
+			query = built
+		}
 	}
 
 	// Search all selected providers in parallel (AC #2)
@@ -186,6 +200,18 @@ func (h *SubtitleHandler) SearchSubtitles(c *gin.Context) {
 		}()
 	}
 	wg.Wait()
+
+	// An episode's results drop subtitles that name a different episode;
+	// season packs (no tag, or a range covering it) stay.
+	if query.Episode > 0 {
+		kept := allResults[:0]
+		for _, r := range allResults {
+			if providers.MatchesEpisode(r.Filename, query.Season, query.Episode) {
+				kept = append(kept, r)
+			}
+		}
+		allResults = kept
+	}
 
 	// Score results
 	scored := h.scorer.Score(allResults, "")
@@ -516,6 +542,10 @@ func (h *SubtitleHandler) updateSubtitleDB(ctx context.Context, mediaID, mediaTy
 	case "series":
 		if h.seriesRepo != nil {
 			return h.seriesRepo.UpdateSubtitleStatus(ctx, mediaID, models.SubtitleStatusFound, path, language, score)
+		}
+	case "episode":
+		if h.lookup.Episodes != nil {
+			return h.lookup.Episodes.UpdateEpisodeSubtitleStatus(ctx, mediaID, models.SubtitleStatusFound, path, language)
 		}
 	}
 	return nil
