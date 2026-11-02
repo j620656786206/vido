@@ -69,7 +69,15 @@ import {
   Radio,
   Settings,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/Dialog';
+import { ProgressRing } from '../ui/ProgressRing';
 import { MOBILE_SHEET_CLOSE, MOBILE_SHEET_CONTENT, SheetGrabber } from '../ui/mobileSheet';
 import { cn } from '../../lib/utils';
 // Shared subtitle-language labels (the detail page uses the same function, dsr-6b).
@@ -147,6 +155,25 @@ const INVENTORY_CHINESE = new Set(['zh-hant', 'zh-hans', 'zh-unknown', 'yue']);
 function isListedEmbeddedLanguage(lang: string): boolean {
   const l = lang.toLowerCase();
   return INVENTORY_CHINESE.has(l) || l === 'en';
+}
+
+/**
+ * The sidecar an online download would overwrite, or null. The placer writes
+ * `<video name>.zh-Hant.<srt|ass>` — every download is converted to
+ * Traditional — and backs the old file up as .bak; Alexyu's ruling
+ * (disc-2026-11-online-sub-download-progress) is to ask before replacing.
+ */
+export function sidecarReplacedByDownload(
+  inventory: SubtitleInventory | undefined,
+  mediaFilePath: string
+): string | null {
+  if (!inventory || inventory.sidecars.status !== 'ok') return null;
+  const fileName = mediaFilePath.split(/[\\/]/).pop() ?? '';
+  const dot = fileName.lastIndexOf('.');
+  const base = dot > 0 ? fileName.slice(0, dot) : fileName;
+  if (!base) return null;
+  const targets = new Set([`${base}.zh-Hant.srt`, `${base}.zh-Hant.ass`]);
+  return inventory.sidecars.files.find((f) => targets.has(f.fileName))?.fileName ?? null;
 }
 
 /**
@@ -721,7 +748,13 @@ export function ManageSubtitleDialogV2({
     onlineSearch.search({ mediaId, mediaType });
   }, [onlineSearch, mediaId, mediaType]);
 
-  const handleFetchDownload = useCallback(
+  // A download that would overwrite a Traditional sidecar waits here for a yes.
+  const [replaceAsk, setReplaceAsk] = useState<{
+    result: SubtitleSearchResult;
+    fileName: string;
+  } | null>(null);
+
+  const startFetchDownload = useCallback(
     (result: SubtitleSearchResult) => {
       onlineSearch.download(
         {
@@ -756,6 +789,15 @@ export function ManageSubtitleDialogV2({
       refreshEstimate,
     ]
   );
+
+  const handleFetchDownload = (result: SubtitleSearchResult) => {
+    const replaced = sidecarReplacedByDownload(inventory.data, mediaFilePath);
+    if (replaced) {
+      setReplaceAsk({ result, fileName: replaced });
+      return;
+    }
+    startFetchDownload(result);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -1128,10 +1170,20 @@ export function ManageSubtitleDialogV2({
                           className="flex min-h-[44px] w-10 shrink-0 items-center justify-center text-[var(--accent-text)] disabled:opacity-50"
                         >
                           {onlineSearch.downloadingIds.has(result.id) ? (
-                            <Loader2
-                              className="h-4 w-4 animate-spin motion-reduce:animate-none"
-                              aria-hidden="true"
-                            />
+                            // The ring fills as the server reports progress
+                            // (a season pack takes ~30 s); before the first
+                            // report it is the plain spinner.
+                            typeof onlineSearch.downloadProgress === 'number' ? (
+                              <ProgressRing
+                                value={onlineSearch.downloadProgress}
+                                label={`下載中 ${Math.round(onlineSearch.downloadProgress)}%`}
+                              />
+                            ) : (
+                              <Loader2
+                                className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                                aria-hidden="true"
+                              />
+                            )
                           ) : (
                             <Download className="h-4 w-4" aria-hidden="true" />
                           )}
@@ -1243,6 +1295,46 @@ export function ManageSubtitleDialogV2({
           onOpenChange={setGlossaryOpen}
         />
       </DialogContent>
+      {/* Replace confirm (disc-2026-11-online-sub-download-progress). z-[80] on
+          BOTH layers, as LogoutButton does: the host is a phone sheet / dialog
+          at z-50, and lifting only the content would leave its scrim under it. */}
+      <Dialog open={replaceAsk !== null} onOpenChange={(next) => !next && setReplaceAsk(null)}>
+        <DialogContent
+          className="z-[80] max-w-sm"
+          overlayClassName="z-[80]"
+          data-testid="replace-confirm"
+        >
+          <DialogHeader>
+            <DialogTitle>要取代現有的繁中字幕嗎？</DialogTitle>
+            <DialogDescription>
+              <span className="break-all font-mono text-xs">{replaceAsk?.fileName}</span>{' '}
+              會被這份取代，舊的會另存成 .bak。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setReplaceAsk(null)}
+              data-testid="replace-cancel"
+              className="min-h-[44px] rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 text-sm font-medium text-[var(--text-primary)] transition-colors duration-[var(--motion-touch)] hover:bg-[var(--bg-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const ask = replaceAsk;
+                setReplaceAsk(null);
+                if (ask) startFetchDownload(ask.result);
+              }}
+              data-testid="replace-confirm-button"
+              className="min-h-[44px] rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-medium text-[var(--text-on-accent)] transition-colors duration-[var(--motion-touch)] hover:bg-[var(--accent-pressed)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
+              取代
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

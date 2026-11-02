@@ -20,6 +20,8 @@ interface SubtitleProgressEvent {
   mediaType: string;
   stage: string;
   message: string;
+  /** 0–100 when the server can measure it (disc-2026-11-online-sub-download-progress). */
+  percent?: number;
 }
 
 export function useSubtitleSearch() {
@@ -36,6 +38,11 @@ export function useSubtitleSearch() {
   const [downloadErrorMap, setDownloadErrorMap] = useState<Record<string, string>>({});
   // SSE subtitle progress (Task 7.5)
   const [downloadStage, setDownloadStage] = useState<string | null>(null);
+  // How far the running download has got, 0–100; null until the server says.
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
+  // The media the running download is for — the event stream carries every
+  // title's progress, so only this one's events may move the ring.
+  const downloadMediaIdRef = useRef<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   // Connect to SSE when any download is in progress
@@ -47,6 +54,7 @@ export function useSubtitleSearch() {
         eventSourceRef.current = null;
       }
       setDownloadStage(null);
+      setDownloadProgress(null);
       return;
     }
 
@@ -60,7 +68,13 @@ export function useSubtitleSearch() {
       try {
         const parsed = JSON.parse(e.data);
         const data = snakeToCamel<SubtitleProgressEvent>(parsed.data || parsed);
+        if (downloadMediaIdRef.current && data.mediaId !== downloadMediaIdRef.current) return;
         setDownloadStage(data.stage);
+        if (typeof data.percent === 'number') {
+          // Never backwards: a late, out-of-order event must not shrink the ring.
+          const pct = Math.min(100, Math.max(0, data.percent));
+          setDownloadProgress((prev) => (prev === null ? pct : Math.max(prev, pct)));
+        }
       } catch {
         // Ignore parse errors
       }
@@ -93,6 +107,8 @@ export function useSubtitleSearch() {
   const downloadMutation = useMutation({
     mutationFn: (params: SubtitleDownloadParams) => subtitleService.downloadSubtitle(params),
     onMutate: (variables) => {
+      downloadMediaIdRef.current = variables.mediaId;
+      setDownloadProgress(null);
       setDownloadingIds((prev) => new Set(prev).add(variables.subtitleId));
     },
     onSuccess: (_data, variables) => {
@@ -206,5 +222,6 @@ export function useSubtitleSearch() {
 
     // SSE progress (Task 7.5)
     downloadStage,
+    downloadProgress,
   };
 }

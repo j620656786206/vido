@@ -366,6 +366,7 @@ func (p *OpenSubProvider) downloadWithRetry(ctx context.Context, id string, retr
 	}
 
 	// Step 1: Get download link
+	ReportProgress(ctx, 0.3)
 	fileID, err := strconv.Atoi(id)
 	if err != nil {
 		return nil, fmt.Errorf("opensubtitles: invalid file ID %q: %w", id, err)
@@ -414,6 +415,7 @@ func (p *OpenSubProvider) downloadWithRetry(ctx context.Context, id string, retr
 	}
 
 	// Step 2: Fetch actual subtitle file
+	ReportProgress(ctx, 0.6)
 	if err := p.rateLimiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("opensubtitles: rate limiter: %w", err)
 	}
@@ -434,7 +436,8 @@ func (p *OpenSubProvider) downloadWithRetry(ctx context.Context, id string, retr
 		return nil, fmt.Errorf("opensubtitles: file download returned HTTP %d", dlFileResp.StatusCode)
 	}
 
-	data, err := io.ReadAll(io.LimitReader(dlFileResp.Body, openSubMaxDownloadBytes))
+	fileBody := &progressReader{r: dlFileResp.Body, ctx: ctx, total: dlFileResp.ContentLength, from: 0.6, to: 1}
+	data, err := io.ReadAll(io.LimitReader(fileBody, openSubMaxDownloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("opensubtitles: read file: %w", err)
 	}
@@ -443,6 +446,7 @@ func (p *OpenSubProvider) downloadWithRetry(ctx context.Context, id string, retr
 		return nil, fmt.Errorf("opensubtitles: downloaded empty file for ID %s", id)
 	}
 
+	ReportProgress(ctx, 1)
 	return data, nil
 }
 

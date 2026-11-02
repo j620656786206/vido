@@ -365,9 +365,20 @@ func TestAssrtProvider_DownloadForFallsBackToThePack(t *testing.T) {
 	defer server.Close()
 	p := newTestAssrtProvider("test-key", server.URL)
 
-	data, err := p.DownloadFor(context.Background(), "7", "/tv/Show/Show.S01E02.mkv")
+	var seen []float64
+	ctx := WithProgress(context.Background(), func(f float64) { seen = append(seen, f) })
+	data, err := p.DownloadFor(ctx, "7", "/tv/Show/Show.S01E02.mkv")
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "第二集")
+
+	// disc-2026-11-online-sub-download-progress: the long pack path reports
+	// all the way through, never going backwards, and ends at 100%.
+	require.NotEmpty(t, seen)
+	for i := 1; i < len(seen); i++ {
+		assert.GreaterOrEqual(t, seen[i], seen[i-1], "progress never goes backwards: %v", seen)
+	}
+	assert.Contains(t, seen, 0.4, "the switch to the pack is reported")
+	assert.Equal(t, 1.0, seen[len(seen)-1])
 }
 
 // A pack whose member names no longer match the listing (GBK-encoded names)
