@@ -1230,6 +1230,9 @@ func main() {
 		// -c: a "chi" track with no telling title gets a few minutes read to
 		// tell 繁 from 简.
 		episodeTracks.SetScriptPeeker(subtitle.NewScriptPeeker(slog.Default()))
+		// disc-2026-11-backfill-subtitle-cue-counts: episodes stored before cue
+		// counts were read get one more probe, so the batch prices by cues.
+		episodeTracks.SetCueCountRule(subtitle.CueCountRule{})
 		scannerService.AppendOnScanComplete(func() { episodeTracks.Trigger(episodeTracksCtx) })
 		episodeTracks.RunAfter(episodeTracksCtx, 60*time.Second)
 		stopEpisodeTracks = func() {
@@ -1248,6 +1251,7 @@ func main() {
 		movieTracksCtx, movieTracksCancel := context.WithCancel(context.Background())
 		defer movieTracksCancel()
 		movieTracks := services.NewMovieSubtitleTracksBackfillService(movieTracksRepo, ffprobeService, slog.Default())
+		movieTracks.SetCueCountRule(subtitle.CueCountRule{}) // disc-2026-11-backfill-subtitle-cue-counts
 		scannerService.AppendOnScanComplete(func() { movieTracks.Trigger(movieTracksCtx) })
 		movieTracks.RunAfter(movieTracksCtx, 75*time.Second)
 		stopMovieTracks = func() {

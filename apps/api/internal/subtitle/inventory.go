@@ -233,11 +233,19 @@ func (SidecarTrackReader) ReadSidecarTracks(mediaPaths []string, known map[strin
 			if info, err := e.Info(); err == nil {
 				sig = services.FileSignature(info)
 			}
-			lang := ""
-			if p, seen := prior[e.Name()]; seen && sig != "" && p.FileSig == sig {
-				lang = p.Language
+			lang, cues := "", 0
+			p, seen := prior[e.Name()]
+			unchanged := seen && sig != "" && p.FileSig == sig
+			if unchanged {
+				lang, cues = p.Language, p.CueCount
 			} else {
 				lang = sidecarLanguage(filepath.Join(dir, e.Name()), tag)
+			}
+			// disc-2026-11-backfill-subtitle-cue-counts: an English .srt is
+			// the file the sidecar lane would translate, so its count is kept
+			// with it — read once per file version, like its language.
+			if lang == "en" && format == "srt" && cues == 0 {
+				cues = sidecarCueCountCapped(filepath.Join(dir, e.Name()))
 			}
 			tracks = append(tracks, services.SubtitleTrack{
 				Language: lang,
@@ -245,6 +253,7 @@ func (SidecarTrackReader) ReadSidecarTracks(mediaPaths []string, known map[strin
 				External: true,
 				FileName: e.Name(),
 				FileSig:  sig,
+				CueCount: cues,
 			})
 		}
 		sort.Slice(tracks, func(i, j int) bool { return tracks[i].FileName < tracks[j].FileName })
@@ -278,6 +287,25 @@ func sidecarLanguage(path, tag string) string {
 	default:
 		return first
 	}
+}
+
+// sidecarCueMaxBytes bounds the count read: an English .srt for a feature runs
+// a few hundred KB, so anything far beyond is not worth reading in full.
+const sidecarCueMaxBytes = 8 << 20
+
+// sidecarCueCountCapped is an English sidecar's cue count for
+// SubtitleTrack.CueCount: the number of cues, or services.CueCountUnstated
+// when the file is unreadable, over the cap, unparseable or empty — read
+// once, so it is not opened again for a count it cannot give.
+func sidecarCueCountCapped(path string) int {
+	info, err := os.Stat(path)
+	if err != nil || info.Size() > sidecarCueMaxBytes {
+		return services.CueCountUnstated
+	}
+	if n, ok := sidecarCueCount(path); ok {
+		return n
+	}
+	return services.CueCountUnstated
 }
 
 func readHead(path string) ([]byte, error) {

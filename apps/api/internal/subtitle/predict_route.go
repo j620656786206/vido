@@ -86,9 +86,43 @@ func (r *Router) PredictRouteWithCues(ctx context.Context, mediaPath string) (Ro
 func PredictCuesFromTracks(tracks []services.SubtitleTrack) int {
 	cues := 0
 	for _, t := range SelectCandidates(tracks) {
-		cues = max(cues, t.CueCount)
+		cues = max(cues, t.CueCount) // -1 (read, unstated) stays 0 = unknown
 	}
 	return cues
+}
+
+// NeedsCueCount reports whether a stored track list lacks the count the
+// estimate needs and a probe could still supply it
+// (disc-2026-11-backfill-subtitle-cue-counts): the tracks the extract lane
+// would translate are ENGLISH (SelectCandidates picks Chinese first, and a
+// Chinese track is delivered, not translated) and at least one of them was
+// stored before counts were read (CueCount 0). A track read since carries
+// its count or -1, so this is true at most once per file.
+func NeedsCueCount(tracks []services.SubtitleTrack) bool {
+	candidates := SelectCandidates(tracks)
+	if len(candidates) == 0 || isChineseTag(candidates[0].Language) {
+		return false
+	}
+	for _, t := range candidates {
+		if t.CueCount == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// CueCountRule hands the run-time selection rule to the services-side
+// backfills (services.CueCountRule), which cannot import this package.
+type CueCountRule struct{}
+
+var _ services.CueCountRule = CueCountRule{}
+
+// NeedsCueCount — see the package function.
+func (CueCountRule) NeedsCueCount(tracks []services.SubtitleTrack) bool { return NeedsCueCount(tracks) }
+
+// CuesFromTracks — PredictCuesFromTracks.
+func (CueCountRule) CuesFromTracks(tracks []services.SubtitleTrack) int {
+	return PredictCuesFromTracks(tracks)
 }
 
 // PredictFromTracks is the pure classifier over an already-known track list.

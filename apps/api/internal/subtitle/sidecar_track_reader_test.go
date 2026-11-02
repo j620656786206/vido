@@ -93,3 +93,43 @@ func TestSidecarTrackReader_ReusesStoredLanguageOfUnchangedFiles(t *testing.T) {
 	fresh := SidecarTrackReader{}.ReadSidecarTracks([]string{media}, map[string][]services.SubtitleTrack{media: {stored}})[media]
 	assert.Equal(t, LangTraditional, fresh.Tracks[0].Language)
 }
+
+// disc-2026-11-backfill-subtitle-cue-counts AC #4 (item 4): the sweep already
+// stores the sidecars, so an English .srt carries its cue count — read once
+// per file version, like its language; a Chinese sidecar is not counted.
+func TestSidecarTrackReader_CountsEnglishSidecarCues(t *testing.T) {
+	dir := t.TempDir()
+	media := filepath.Join(dir, "X.S01E01.mkv")
+	writeFile(t, dir, "X.S01E01.mkv", "video")
+	writeFile(t, dir, "X.S01E01.en.srt", "1\n00:00:01,000 --> 00:00:02,000\nHello\n\n2\n00:00:03,000 --> 00:00:04,000\nThere\n\n3\n00:00:05,000 --> 00:00:06,000\nFriend\n")
+	writeFile(t, dir, "X.S01E01.zh-TW.srt", invTraditional)
+
+	got := SidecarTrackReader{}.ReadSidecarTracks([]string{media}, nil)[media]
+	require.Len(t, got.Tracks, 2)
+	byName := map[string]services.SubtitleTrack{}
+	for _, tr := range got.Tracks {
+		byName[tr.FileName] = tr
+	}
+	assert.Equal(t, 3, byName["X.S01E01.en.srt"].CueCount)
+	assert.Zero(t, byName["X.S01E01.zh-TW.srt"].CueCount, "a Chinese sidecar is delivered, not translated — not counted")
+
+	// Unchanged file: the stored count is reused (here a pretend 99 proves
+	// the file was not reopened).
+	stored := byName["X.S01E01.en.srt"]
+	stored.CueCount = 99
+	again := SidecarTrackReader{}.ReadSidecarTracks([]string{media}, map[string][]services.SubtitleTrack{media: {stored}})[media]
+	for _, tr := range again.Tracks {
+		if tr.FileName == "X.S01E01.en.srt" {
+			assert.Equal(t, 99, tr.CueCount)
+		}
+	}
+
+	// An English sidecar with no cues is read once and remembered as -1.
+	writeFile(t, dir, "X.S01E01.en.srt", "not a subtitle")
+	empty := SidecarTrackReader{}.ReadSidecarTracks([]string{media}, nil)[media]
+	for _, tr := range empty.Tracks {
+		if tr.FileName == "X.S01E01.en.srt" {
+			assert.Equal(t, services.CueCountUnstated, tr.CueCount)
+		}
+	}
+}

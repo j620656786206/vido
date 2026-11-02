@@ -29,13 +29,22 @@ import (
 	"github.com/vido/api/internal/models"
 )
 
-// Implements: disc-2026-10-movie-subtitle-tracks-unknown-refresh AC #1–#7
+// Implements: disc-2026-10-movie-subtitle-tracks-unknown-refresh AC #1–#7;
+// disc-2026-11-backfill-subtitle-cue-counts AC #3
 
 // MovieSubtitleTracksBackfillRepo is the slice of the movie repository the
 // backfill needs. *repository.MovieRepository satisfies it.
 type MovieSubtitleTracksBackfillRepo interface {
 	FindMissingSubtitleTracks(ctx context.Context, afterID string, limit int) ([]models.Movie, error)
 	UpdateSubtitleTracksIfMissing(ctx context.Context, id, tracksJSON string) (bool, error)
+}
+
+// MovieCueCountRepo is the OPTIONAL slice the cue-count backfill needs
+// (disc-2026-11-backfill-subtitle-cue-counts); *repository.MovieRepository
+// satisfies it. A repo without it simply skips that phase.
+type MovieCueCountRepo interface {
+	FindMoviesMissingCueCounts(ctx context.Context, afterID string, limit int) ([]models.Movie, error)
+	ReplaceSubtitleTracks(ctx context.Context, id, previous, next string) (bool, error)
 }
 
 // movieTracksBackfillPage is how many rows one listing returns; a pass walks
@@ -52,6 +61,8 @@ type MovieSubtitleTracksBackfillService struct {
 	// sidecars lists the subtitle files beside a video; DetectExternalSubtitles
 	// in production, the same reader the scan uses.
 	sidecars func(videoPath string) []SubtitleTrack
+	// cueRule turns on the cue-count phase; nil = off.
+	cueRule CueCountRule
 
 	mu      sync.Mutex
 	wg      sync.WaitGroup
@@ -79,6 +90,14 @@ func NewMovieSubtitleTracksBackfillService(repo MovieSubtitleTracksBackfillRepo,
 	}
 }
 
+// SetCueCountRule turns on the cue-count phase: a movie whose stored tracks
+// were read before counts existed, and whose English track is what the
+// extract lane would translate, is probed again once
+// (disc-2026-11-backfill-subtitle-cue-counts). nil = off.
+func (s *MovieSubtitleTracksBackfillService) SetCueCountRule(r CueCountRule) {
+	s.cueRule = r
+}
+
 // MovieTracksBackfillResult is what one pass did, for the log line and tests.
 type MovieTracksBackfillResult struct {
 	Filled  int // movies that now have subtitle tracks (possibly `[]`)
@@ -86,6 +105,10 @@ type MovieTracksBackfillResult struct {
 	Skipped int // probe failed before on the same file, or a scan filled it first
 	Missing int // file not there — share not mounted yet, or deleted
 	Total   int // movies listed as unknown
+	// CuesFilled / CuesUnstated: movies re-read for a cue count — it came
+	// back, or the container states none (stored as -1, not read again).
+	CuesFilled   int
+	CuesUnstated int
 }
 
 // Run does one pass. Fail-soft per movie; the pass never returns an error.
@@ -122,13 +145,105 @@ func (s *MovieSubtitleTracksBackfillService) Run(ctx context.Context) MovieTrack
 		}
 		afterID = page[len(page)-1].ID
 	}
-	if res.Total == 0 {
+	reread := s.backfillCues(ctx, &res)
+	if res.Total == 0 && reread == 0 {
 		return res
 	}
 	s.logger.Info("movie subtitle tracks backfill: pass finished",
 		"filled", res.Filled, "failed", res.Failed, "skipped", res.Skipped, "missing_files", res.Missing,
+		"cue_counts_filled", res.CuesFilled, "cue_counts_unstated", res.CuesUnstated,
 		"took", time.Since(started).Round(time.Second).String())
 	return res
+}
+
+// backfillCues is the cue-count phase: movies stored before counts were read
+// whose English track is what the extract lane would translate get one more
+// probe, written back with compare-and-set. Same per-file failure memory and
+// the same embedded+sidecar merge as fill. Returns how many movies it
+// probed (for the pass log).
+func (s *MovieSubtitleTracksBackfillService) backfillCues(ctx context.Context, res *MovieTracksBackfillResult) int {
+	repo, ok := s.repo.(MovieCueCountRepo)
+	if !ok || s.cueRule == nil {
+		return 0
+	}
+	probed := 0
+	afterID := ""
+	for {
+		page, err := repo.FindMoviesMissingCueCounts(ctx, afterID, movieTracksBackfillPage)
+		if err != nil {
+			if ctx.Err() == nil {
+				s.logger.Warn("movie subtitle tracks backfill: listing movies without cue counts failed", "error", err)
+			}
+			return probed
+		}
+		for _, m := range page {
+			if ctx.Err() != nil {
+				return probed
+			}
+			var stored []SubtitleTrack
+			if json.Unmarshal([]byte(m.SubtitleTracks.String), &stored) != nil || !s.cueRule.NeedsCueCount(stored) {
+				continue // no English track to translate (Chinese, image-only, und) — nothing to count
+			}
+			if s.refillCues(ctx, repo, m, res) {
+				probed++
+			}
+		}
+		if len(page) < movieTracksBackfillPage {
+			return probed
+		}
+		afterID = page[len(page)-1].ID
+	}
+}
+
+// refillCues re-probes one movie for its cue count; true when a probe ran.
+func (s *MovieSubtitleTracksBackfillService) refillCues(ctx context.Context, repo MovieCueCountRepo, m models.Movie, res *MovieTracksBackfillResult) bool {
+	path := m.FilePath.String
+	info, err := s.stat(path)
+	if err != nil {
+		res.Missing++
+		return false
+	}
+	sig := FileSignature(info)
+	s.mu.Lock()
+	failedSig, failedBefore := s.failed[m.ID]
+	s.mu.Unlock()
+	if failedBefore && failedSig == sig {
+		res.Skipped++
+		return false
+	}
+	tech, err := s.prober.Probe(ctx, path)
+	if err != nil || tech == nil {
+		if ctx.Err() != nil {
+			return false
+		}
+		res.Failed++
+		s.rememberFailure(m.ID, sig)
+		s.logger.Warn("movie subtitle tracks backfill: cue-count probe failed", "movie_id", m.ID, "file", path, "error", err)
+		return true
+	}
+	tracks := MergeSubtitleTracks(tech.SubtitleTracks, s.sidecars(path))
+	raw, err := json.Marshal(tracks)
+	if err != nil {
+		res.Failed++
+		s.rememberFailure(m.ID, sig)
+		return true
+	}
+	written, err := repo.ReplaceSubtitleTracks(ctx, m.ID, m.SubtitleTracks.String, string(raw))
+	if err != nil {
+		res.Failed++
+		s.logger.Warn("movie subtitle tracks backfill: cue-count write failed", "movie_id", m.ID, "error", err)
+		return true
+	}
+	if !written {
+		res.Skipped++ // a scan re-read the movie meanwhile — keep its answer
+		return true
+	}
+	if s.cueRule.CuesFromTracks(tracks) > 0 {
+		res.CuesFilled++
+	} else {
+		res.CuesUnstated++
+	}
+	return true
 }
 
 func (s *MovieSubtitleTracksBackfillService) fill(ctx context.Context, m models.Movie, res *MovieTracksBackfillResult) {
