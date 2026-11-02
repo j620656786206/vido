@@ -326,7 +326,8 @@ func (p *AssrtProvider) DownloadFor(ctx context.Context, id, mediaFilePath strin
 	}
 
 	// Step 1: Get subtitle detail to find download URL
-	if err := p.rateLimiter.Wait(ctx); err != nil {
+	ReportProgress(ctx, 0.05)
+	if err := waitWithProgress(ctx, p.rateLimiter, 0.05, 0.2); err != nil {
 		return nil, fmt.Errorf("assrt rate limiter: %w", err)
 	}
 
@@ -376,9 +377,11 @@ func (p *AssrtProvider) DownloadFor(ctx context.Context, id, mediaFilePath strin
 	if err != nil {
 		return nil, fmt.Errorf("assrt: subtitle %s: %w", id, err)
 	}
+	ReportProgress(ctx, 0.25)
 
-	data, fetchErr := p.fetchFile(ctx, file.URL)
+	data, fetchErr := p.fetchFile(ctx, file.URL, 0.25, 0.4)
 	if fetchErr == nil {
+		ReportProgress(ctx, 1)
 		return data, nil
 	}
 	// Assrt extracts one file from a pack on the fly, but not from RAR packs:
@@ -391,7 +394,8 @@ func (p *AssrtProvider) DownloadFor(ctx context.Context, id, mediaFilePath strin
 	}
 	slog.Info("Assrt single-file download failed, extracting from the pack",
 		"id", id, "file", file.Filename, "error", fetchErr)
-	archive, err := p.fetchFile(ctx, packURL)
+	ReportProgress(ctx, 0.4)
+	archive, err := p.fetchFile(ctx, packURL, 0.4, 0.9)
 	if err != nil {
 		return nil, fmt.Errorf("assrt: subtitle %s: file failed (%v), pack failed: %w", id, fetchErr, err)
 	}
@@ -399,15 +403,20 @@ func (p *AssrtProvider) DownloadFor(ctx context.Context, id, mediaFilePath strin
 	if err != nil {
 		return nil, fmt.Errorf("assrt: subtitle %s: %w", id, err)
 	}
+	ReportProgress(ctx, 1)
 	return data, nil
 }
 
-// fetchFile downloads one file from Assrt's file server. A 200 that carries
-// Assrt's XML/HTML error page instead of a file counts as a failure.
-func (p *AssrtProvider) fetchFile(ctx context.Context, fileURL string) ([]byte, error) {
-	if err := p.rateLimiter.Wait(ctx); err != nil {
+// fetchFile downloads one file from Assrt's file server, reporting the body's
+// progress as from→to of the whole download. A 200 that carries Assrt's
+// XML/HTML error page instead of a file counts as a failure.
+func (p *AssrtProvider) fetchFile(ctx context.Context, fileURL string, from, to float64) ([]byte, error) {
+	// The quota wait takes the first part of the span, the body the rest.
+	mid := from + (to-from)*0.4
+	if err := waitWithProgress(ctx, p.rateLimiter, from, mid); err != nil {
 		return nil, fmt.Errorf("assrt rate limiter: %w", err)
 	}
+	from = mid
 
 	dlReq, err := http.NewRequestWithContext(ctx, http.MethodGet, fileURL, nil)
 	if err != nil {
@@ -425,7 +434,8 @@ func (p *AssrtProvider) fetchFile(ctx context.Context, fileURL string) ([]byte, 
 		return nil, fmt.Errorf("assrt: download returned HTTP %d", dlResp.StatusCode)
 	}
 
-	data, err := io.ReadAll(io.LimitReader(dlResp.Body, assrtMaxDownloadBytes))
+	body := &progressReader{r: dlResp.Body, ctx: ctx, total: dlResp.ContentLength, from: from, to: to}
+	data, err := io.ReadAll(io.LimitReader(body, assrtMaxDownloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("assrt: read download response: %w", err)
 	}

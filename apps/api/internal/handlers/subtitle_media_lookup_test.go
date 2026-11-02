@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/subtitle"
 	"github.com/vido/api/internal/subtitle/providers"
 )
@@ -192,4 +193,44 @@ func TestCountriesFor_EpisodeUsesItsShow(t *testing.T) {
 	assert.Equal(t, "series", gotType)
 	assert.Equal(t, "s-scorpion", gotID)
 	assert.Nil(t, h.countriesFor(context.Background(), "episode", "unknown"))
+}
+
+// disc-2026-11-online-sub-download-progress
+
+type progressReportingProvider struct{ handlerMockProvider }
+
+func (p *progressReportingProvider) DownloadFor(ctx context.Context, _ string, _ string) ([]byte, error) {
+	providers.ReportProgress(ctx, 0.5)
+	providers.ReportProgress(ctx, 1)
+	return p.downloadData, nil
+}
+
+func TestDownload_BroadcastsPercent(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mediaPath := t.TempDir() + "/Film.mkv"
+	require.NoError(t, os.WriteFile(mediaPath, []byte("fake"), 0o644))
+
+	hub := sse.NewHub()
+	var percents []int
+	hub.AddObserver(func(ev sse.Event) {
+		if m, ok := ev.Data.(map[string]any); ok {
+			if p, ok := m["percent"].(int); ok {
+				percents = append(percents, p)
+			}
+		}
+	})
+	prov := &progressReportingProvider{handlerMockProvider{name: "assrt", downloadData: []byte("1\n00:00:01,000 --> 00:00:03,000\nhello\n")}}
+	h := NewSubtitleHandler([]providers.SubtitleProvider{prov},
+		subtitle.NewScorer(subtitle.NewDefaultScorerConfig()), nil, subtitle.NewPlacer(subtitle.DefaultPlacerConfig()), hub, nil, nil)
+	router := gin.New()
+	h.RegisterRoutes(router.Group("/api/v1"))
+
+	body, _ := json.Marshal(SubtitleDownloadRequest{MediaID: "m", MediaType: "movie", MediaFilePath: mediaPath, SubtitleID: "1", Provider: "assrt"})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/download", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, []int{5, 45, 85, 95, 100}, percents)
 }

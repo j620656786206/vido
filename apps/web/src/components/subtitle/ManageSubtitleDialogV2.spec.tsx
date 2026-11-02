@@ -105,7 +105,7 @@ vi.mock('./GlossaryPanelV2', () => ({
     ) : null,
 }));
 
-import { ManageSubtitleDialogV2 } from './ManageSubtitleDialogV2';
+import { ManageSubtitleDialogV2, sidecarReplacedByDownload } from './ManageSubtitleDialogV2';
 import {
   transcriptionService,
   type TranscriptionEstimate,
@@ -1976,5 +1976,128 @@ describe('ManageSubtitleDialogV2 — 畫面字幕 (disc-2026-11-burned-in-subs-c
     renderEpisodeDialog({ burnedInSubtitle: 'zh-Hans', seriesId: SERIES_UUID, seasonNumber: 1 });
     expect(await screen.findByTestId('subtitle-inventory-error')).toBeInTheDocument();
     expect(screen.getByTestId('subtitle-track-burned-in')).toBeInTheDocument();
+  });
+});
+
+// ── disc-2026-11-online-sub-download-progress ───────────────────────────────
+// Alexyu: the spinner itself shows how far the download is (no extra text), and
+// a download that would replace a Traditional sidecar asks first.
+
+describe('ManageSubtitleDialogV2 — online download progress and replace confirm', () => {
+  const result = {
+    id: 's1',
+    source: 'assrt',
+    filename: '天蝎 第一季 WEB精校版（全）/Scorpion S01E01-E22',
+    language: 'zh-Hant',
+    downloadUrl: '',
+    downloads: 0,
+    group: '',
+    resolution: '',
+    format: '',
+    score: 0.66,
+    scoreBreakdown: { language: 1, resolution: 0, sourceTrust: 0, group: 0, downloads: 0 },
+  };
+  const ownZhHant = inventoryOf({
+    files: [{ fileName: 'st.zh-Hant.srt', language: 'zh-Hant', format: 'srt', isVidoOutput: true }],
+  });
+
+  beforeEach(() => {
+    h.fetchHook.results = [result];
+    h.fetchHook.download = vi.fn();
+    h.fetchHook.downloadingIds = new Set<string>();
+    (h.fetchHook as { downloadProgress?: number | null }).downloadProgress = null;
+  });
+
+  async function openFetch() {
+    fireEvent.click(await screen.findByTestId('toggle-fetch'));
+  }
+
+  it('asks before replacing the Traditional sidecar; 取消 downloads nothing, 取代 downloads', async () => {
+    inventoryOverride = () => Promise.resolve(ownZhHant);
+    renderDialog();
+    await screen.findByTestId('subtitle-track-file-st.zh-Hant.srt');
+    await openFetch();
+
+    fireEvent.click(screen.getByTestId('fetch-download-s1'));
+    const ask = await screen.findByTestId('replace-confirm');
+    expect(ask).toHaveTextContent('要取代現有的繁中字幕嗎？');
+    expect(ask).toHaveTextContent('st.zh-Hant.srt');
+    expect(ask).toHaveTextContent('.bak');
+    expect(h.fetchHook.download).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('replace-cancel'));
+    await waitFor(() => expect(screen.queryByTestId('replace-confirm')).toBeNull());
+    expect(h.fetchHook.download).not.toHaveBeenCalled();
+    expect(screen.getByTestId('manage-subtitle-dialog-v2')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('fetch-download-s1'));
+    fireEvent.click(await screen.findByTestId('replace-confirm-button'));
+    expect(h.fetchHook.download).toHaveBeenCalledTimes(1);
+    expect(h.fetchHook.download.mock.calls[0][0]).toMatchObject({
+      subtitleId: 's1',
+      mediaFilePath: '/media/movies/st.mkv',
+    });
+    expect(screen.getByTestId('manage-subtitle-dialog-v2')).toBeInTheDocument();
+  });
+
+  it('downloads straight away when nothing would be replaced', async () => {
+    inventoryOverride = () =>
+      Promise.resolve(
+        inventoryOf({
+          files: [
+            { fileName: 'st.zh-TW.srt', language: 'zh-Hant', format: 'srt', isVidoOutput: false },
+          ],
+        })
+      );
+    renderDialog();
+    await screen.findByTestId('subtitle-track-file-st.zh-TW.srt');
+    await openFetch();
+
+    fireEvent.click(screen.getByTestId('fetch-download-s1'));
+    expect(h.fetchHook.download).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('replace-confirm')).toBeNull();
+  });
+
+  it('fills the ring with the reported progress instead of adding text', async () => {
+    h.fetchHook.downloadingIds = new Set(['s1']);
+    (h.fetchHook as { downloadProgress?: number | null }).downloadProgress = 40;
+    renderDialog();
+    await openFetch();
+
+    const ring = screen.getByRole('progressbar', { name: '下載中 40%' });
+    expect(ring).toHaveAttribute('aria-valuenow', '40');
+    expect(screen.getByTestId('fetch-result-s1')).not.toHaveTextContent('40%');
+  });
+});
+
+describe('sidecarReplacedByDownload', () => {
+  it('names the sidecar the placer would overwrite', () => {
+    const inv = inventoryOf({
+      files: [
+        {
+          fileName: 'Scorpion.S01E02 Antivirus.zh-TW.hi.srt',
+          language: 'zh-Hant',
+          format: 'srt',
+          isVidoOutput: false,
+        },
+        {
+          fileName: 'Scorpion.S01E02 Antivirus.zh-Hant.srt',
+          language: 'zh-Hant',
+          format: 'srt',
+          isVidoOutput: true,
+        },
+      ],
+    });
+    expect(
+      sidecarReplacedByDownload(inv, '/media/tv/Scorpion/Season 1/Scorpion.S01E02 Antivirus.mkv')
+    ).toBe('Scorpion.S01E02 Antivirus.zh-Hant.srt');
+    expect(sidecarReplacedByDownload(inv, '/media/tv/Other.mkv')).toBeNull();
+    expect(sidecarReplacedByDownload(undefined, '/x.mkv')).toBeNull();
+    expect(
+      sidecarReplacedByDownload(
+        inventoryOf({ files: inv.sidecars.files, sidecarStatus: 'error' }),
+        '/media/tv/Scorpion/Season 1/Scorpion.S01E02 Antivirus.mkv'
+      )
+    ).toBeNull();
   });
 });

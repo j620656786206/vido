@@ -261,11 +261,19 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 	}
 
 	// Broadcast SSE: downloading (AC #6)
-	h.broadcastStatus(req.MediaID, req.MediaType, "downloading",
-		fmt.Sprintf("Downloading subtitle from %s...", req.Provider))
+	downloadMsg := fmt.Sprintf("Downloading subtitle from %s...", req.Provider)
+	h.broadcastProgress(req.MediaID, req.MediaType, "downloading", downloadMsg, manualDownloadFrom)
 
-	// Download subtitle content
-	data, err := providers.DownloadFor(c.Request.Context(), provider, req.SubtitleID, req.MediaFilePath)
+	// Download subtitle content; the provider reports its own progress.
+	lastPercent := manualDownloadFrom
+	ctx := providers.WithProgress(c.Request.Context(), func(f float64) {
+		pct := manualDownloadFrom + int(f*float64(manualDownloadTo-manualDownloadFrom))
+		if pct > lastPercent {
+			lastPercent = pct
+			h.broadcastProgress(req.MediaID, req.MediaType, "downloading", downloadMsg, pct)
+		}
+	})
+	data, err := providers.DownloadFor(ctx, provider, req.SubtitleID, req.MediaFilePath)
 	if err != nil {
 		slog.Error("Manual subtitle download failed",
 			"provider", req.Provider,
@@ -287,8 +295,8 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 	shouldConvert := h.shouldConvert(detection.Language, req.ConvertToTraditional)
 
 	if shouldConvert && h.converter != nil && h.converter.IsAvailable() {
-		h.broadcastStatus(req.MediaID, req.MediaType, "converting",
-			"Converting simplified → traditional...")
+		h.broadcastProgress(req.MediaID, req.MediaType, "converting",
+			"Converting simplified → traditional...", 90)
 		// Script, then the Taiwan vocabulary (mainland / HK / MO titles keep theirs) —
 		// the same finishing step as every automatic path.
 		countries := h.countriesFor(c.Request.Context(), req.MediaType, req.MediaID)
@@ -303,7 +311,7 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 	}
 
 	// Place the subtitle file (AC #5, #8)
-	h.broadcastStatus(req.MediaID, req.MediaType, "placing", "Placing subtitle file...")
+	h.broadcastProgress(req.MediaID, req.MediaType, "placing", "Placing subtitle file...", 95)
 
 	placeResult, err := h.placer.Place(subtitle.PlaceRequest{
 		MediaFilePath: req.MediaFilePath,
@@ -329,7 +337,7 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 		// Non-fatal: file is placed, DB update failed — log but still return success
 	}
 
-	h.broadcastStatus(req.MediaID, req.MediaType, "complete", "Subtitle downloaded successfully!")
+	h.broadcastProgress(req.MediaID, req.MediaType, "complete", "Subtitle downloaded successfully!", 100)
 
 	SuccessResponse(c, map[string]interface{}{
 		"subtitle_path": placeResult.SubtitlePath,
@@ -516,19 +524,34 @@ func (h *SubtitleHandler) shouldConvert(detectedLang string, userOverride *bool)
 
 // broadcastStatus sends an SSE event for subtitle processing progress.
 func (h *SubtitleHandler) broadcastStatus(mediaID, mediaType, stage, message string) {
+	h.broadcastProgress(mediaID, mediaType, stage, message, -1)
+}
+
+// broadcastProgress is broadcastStatus with how far the download has got,
+// 0–100; a negative percent leaves the field out (stages with no measure).
+// disc-2026-11-online-sub-download-progress: the download button's ring.
+func (h *SubtitleHandler) broadcastProgress(mediaID, mediaType, stage, message string, percent int) {
 	if h.sseHub == nil {
 		return
 	}
-	h.sseHub.Broadcast(sse.Event{
-		Type: sse.EventSubtitleProgress,
-		Data: map[string]string{
-			"media_id":   mediaID,
-			"media_type": mediaType,
-			"stage":      stage,
-			"message":    message,
-		},
-	})
+	data := map[string]any{
+		"media_id":   mediaID,
+		"media_type": mediaType,
+		"stage":      stage,
+		"message":    message,
+	}
+	if percent >= 0 {
+		data["percent"] = percent
+	}
+	h.sseHub.Broadcast(sse.Event{Type: sse.EventSubtitleProgress, Data: data})
 }
+
+// Where the download's own progress sits in the whole manual download: the
+// provider's 0–1 maps onto 5–85%, converting is 90, placing 95.
+const (
+	manualDownloadFrom = 5
+	manualDownloadTo   = 85
+)
 
 // --- DB Update ---
 
