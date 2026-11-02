@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/vido/api/internal/crypto"
 )
@@ -94,12 +95,23 @@ func NewSecretsServiceWithKeyDerivation(repo SecretsRepositoryInterface) (*Secre
 	}, nil
 }
 
+// maskForLog hides a password completely: first4…last4 identifies an API key
+// without making it usable, but on a password it hands out 8 of its
+// characters (disc-2026-11-secret-log-password — the OpenSubtitles and
+// qBittorrent passwords were logged that way).
+func maskForLog(name, value string) string {
+	if strings.Contains(strings.ToLower(name), "password") {
+		return MaskSecretFull(value)
+	}
+	return MaskSecret(value)
+}
+
 // Store encrypts and saves a secret with the given name.
 // The secret is encrypted using AES-256-GCM before storage.
 func (s *SecretsService) Store(ctx context.Context, name string, value string) error {
 	slog.Info("Storing secret",
 		"name", name,
-		"value", MaskSecret(value),
+		"value", maskForLog(name, value),
 	)
 
 	// Encrypt the value

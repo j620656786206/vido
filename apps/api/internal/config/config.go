@@ -467,7 +467,7 @@ func (c *Config) LogConfigSources() {
 		"AI_PROVIDER_source", c.Sources["AI_PROVIDER"].String(),
 		"ENCRYPTION_KEY", maskSecret(c.EncryptionKey),
 		"ENCRYPTION_KEY_source", c.Sources["ENCRYPTION_KEY"].String(),
-		"VIDO_AUTH_PASSWORD", maskSecret(c.AuthPassword),
+		"VIDO_AUTH_PASSWORD", maskPassword(c.AuthPassword),
 		"VIDO_AUTH_PASSWORD_source", c.Sources["VIDO_AUTH_PASSWORD"].String(),
 		"VIDO_SESSION_SECRET", maskSecret(c.SessionSecret),
 		"VIDO_SESSION_SECRET_source", c.Sources["VIDO_SESSION_SECRET"].String(),
@@ -504,6 +504,15 @@ func maskSecret(s string) string {
 		return "****"
 	}
 	return s[:4] + "****" + s[len(s)-4:]
+}
+
+// maskPassword shows only whether a password is set: first4…last4 would hand
+// out 8 of its characters (disc-2026-11-secret-log-password).
+func maskPassword(s string) string {
+	if s == "" {
+		return "(not set)"
+	}
+	return "****"
 }
 
 // IsDevelopment returns true if running in development mode
