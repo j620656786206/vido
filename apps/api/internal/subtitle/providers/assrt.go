@@ -241,9 +241,14 @@ func (p *AssrtProvider) Search(ctx context.Context, query SubtitleQuery) ([]Subt
 
 	q := u.Query()
 	q.Set("token", token)
-	if query.Year > 0 {
+	switch {
+	case query.Season > 0:
+		// A season tag finds both season packs and single episodes; a year
+		// would only narrow a show's index rows to nothing.
+		q.Set("q", fmt.Sprintf("%s S%02d", query.Title, query.Season))
+	case query.Year > 0:
 		q.Set("q", fmt.Sprintf("%s %d", query.Title, query.Year))
-	} else {
+	default:
 		q.Set("q", query.Title)
 	}
 	u.RawQuery = q.Encode()

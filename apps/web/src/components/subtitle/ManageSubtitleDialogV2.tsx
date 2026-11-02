@@ -715,18 +715,14 @@ export function ManageSubtitleDialogV2({
   const dialogTitle = inProgressView ? `生成字幕 — ${mediaTitle}` : `管理字幕 — ${mediaTitle}`;
 
   const handleFetchSearch = useCallback(() => {
-    // CR H1 — red line 2 enforced by the TYPE SYSTEM, not just by hiding the
-    // control: the search endpoints bind `oneof=movie series`, so an episode
-    // would 400. This early return also narrows `mediaType` for the call below.
-    if (mediaType === 'episode') return;
-    onlineSearch.search({ mediaId, mediaType, query: mediaTitle });
-  }, [onlineSearch, mediaId, mediaType, mediaTitle]);
+    // disc-2026-11-online-subs-for-episodes: no query text — the server builds
+    // it from the library (original title, season, episode). The Taiwan title
+    // this used to send finds nothing on the subtitle sites (「天蠍行動」).
+    onlineSearch.search({ mediaId, mediaType });
+  }, [onlineSearch, mediaId, mediaType]);
 
   const handleFetchDownload = useCallback(
     (result: SubtitleSearchResult) => {
-      // CR H1 — same narrowing as handleFetchSearch: unreachable for an
-      // episode (the control is hidden), and now un-typeable too.
-      if (mediaType === 'episode') return;
       onlineSearch.download(
         {
           mediaId,
@@ -1062,9 +1058,9 @@ export function ManageSubtitleDialogV2({
 
               {/* Phone: the idle sheet has no footer (F1-M V5LMv), so its
                   online-search toggle lives here — after the glossary row and
-                  BEFORE the panel, so the panel opens under its trigger. Same
-                  gate as the footer control (an episode would 400). */}
-              {!isLoading && !isEpisode && (
+                  BEFORE the panel, so the panel opens under its trigger.
+                  Episodes too since disc-2026-11-online-subs-for-episodes. */}
+              {!isLoading && (
                 <button
                   type="button"
                   onClick={() => setFetchOpen((v) => !v)}
@@ -1172,9 +1168,9 @@ export function ManageSubtitleDialogV2({
             inProgressView && 'max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
           )}
         >
-          {/* Red line 2: the search endpoints bind `oneof=movie series`, so an
-              episode would 400. Capability honor — don't draw a dead control. */}
-          {!inProgressView && !isLoading && !isEpisode ? (
+          {/* The search endpoints take episodes since
+              disc-2026-11-online-subs-for-episodes (9R-10c red line 2 lifted). */}
+          {!inProgressView && !isLoading ? (
             <button
               type="button"
               onClick={() => setFetchOpen((v) => !v)}

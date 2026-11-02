@@ -24,7 +24,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 export interface SubtitleSearchParams {
   mediaId: string;
-  mediaType: 'movie' | 'series';
+  mediaType: 'movie' | 'series' | 'episode';
   providers?: string[];
   query?: string;
 }
@@ -53,7 +53,7 @@ export interface SubtitleSearchResult {
 
 export interface SubtitleDownloadParams {
   mediaId: string;
-  mediaType: 'movie' | 'series';
+  mediaType: 'movie' | 'series' | 'episode';
   mediaFilePath: string;
   subtitleId: string;
   provider: string;
