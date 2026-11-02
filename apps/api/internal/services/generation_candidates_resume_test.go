@@ -87,7 +87,7 @@ func TestAnalyze_StoredTranscriptionComesOffTheASRQuote(t *testing.T) {
 	a, b, c := candidateByID(t, res, uuidA), candidateByID(t, res, uuidB), candidateByID(t, res, uuidC)
 
 	assert.Equal(t, 4.0, a.ResumedASRMinutes)
-	assert.Equal(t, estimateUSDWithCredit(RouteASR, 60, 4, rate, model).InexactFloat64(), a.EstimatedUSD)
+	assert.Equal(t, estimateUSDWithCredit(RouteASR, 60, 4, 0, rate, model).InexactFloat64(), a.EstimatedUSD)
 	assert.Less(t, a.EstimatedUSD, b.EstimatedUSD, "same length, A has 4 minutes already transcribed")
 	assert.Equal(t, 60.0, a.RuntimeMinutes, "runtime_minutes still means the whole film")
 
@@ -163,11 +163,11 @@ func TestEstimateUSDWithCredit(t *testing.T) {
 	rate := ai.EstimatedASRPerMinute(false)
 	model := ai.DefaultClaudeModel
 	full := estimateUSD(RouteASR, 60, rate, model)
-	assert.True(t, estimateUSDWithCredit(RouteASR, 60, 0, rate, model).Equal(full), "no credit is the old price")
-	assert.True(t, estimateUSDWithCredit(RouteExtract, 60, 30, rate, model).Equal(estimateUSD(RouteExtract, 60, rate, model)),
+	assert.True(t, estimateUSDWithCredit(RouteASR, 60, 0, 0, rate, model).Equal(full), "no credit is the old price")
+	assert.True(t, estimateUSDWithCredit(RouteExtract, 60, 30, 0, rate, model).Equal(estimateUSD(RouteExtract, 60, rate, model)),
 		"credit only ever touches the ASR route")
 	// All 60 minutes transcribed: only the translation half is left.
-	all := estimateUSDWithCredit(RouteASR, 60, 60, rate, model)
+	all := estimateUSDWithCredit(RouteASR, 60, 60, 0, rate, model)
 	assert.True(t, all.Equal(roundUSD(decimal.NewFromInt(60).Mul(asrLegTranslationRatePerMinute(model)))))
-	assert.True(t, estimateUSDWithCredit(RouteASR, 60, 90, rate, model).Equal(all), "never below zero audio")
+	assert.True(t, estimateUSDWithCredit(RouteASR, 60, 90, 0, rate, model).Equal(all), "never below zero audio")
 }

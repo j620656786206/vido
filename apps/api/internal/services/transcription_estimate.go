@@ -2,7 +2,10 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/shopspring/decimal"
 
@@ -172,6 +175,9 @@ type TranscriptionEstimateService struct {
 	routes RoutePredictor
 	// sidecars reports the English-sidecar check; nil = not consulted.
 	sidecars SidecarAlignmentSource
+	// readFile reads an aligned English sidecar to count its cues;
+	// readSidecarCapped in production, injectable for tests.
+	readFile func(path string) ([]byte, error)
 	logger   *slog.Logger
 }
 
@@ -187,6 +193,7 @@ func NewTranscriptionEstimateService(plan transcriptionPlanSource, effectiveMode
 		plan:           plan,
 		effectiveModel: effectiveModel,
 		selfHostedASR:  selfHostedASR,
+		readFile:       readSidecarCapped,
 		logger:         logger.With("service", "transcription_estimate"),
 	}
 }
@@ -251,16 +258,16 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 	// Route first from what is already known (the persisted track list), then
 	// from the ladder's own probe when it runs, and only then with a probe of
 	// our own — one ffprobe at most.
-	route := s.routeFromTracks(target)
+	route, cues := s.routeFromTracks(target)
 	minutes, known, source, probed, ladderProbed := s.runtimeMinutes(ctx, target)
 	if route == "" {
-		route = probed
+		route, cues = probed.route, probed.cues
 	}
 	// Our own probe only when the ladder did not touch the file at all: a
 	// ladder probe that FAILED must not be repeated — the dialog would wait
 	// out two timeouts on a sleeping disk (CR L2).
 	if route == "" && !ladderProbed && s.routes != nil && target.FilePath != "" {
-		route = s.probeRoute(ctx, target)
+		route, cues = s.probeRoute(ctx, target)
 	}
 
 	// No usable embedded track: the router tries the English subtitle beside
@@ -296,8 +303,22 @@ func (s *TranscriptionEstimateService) Estimate(ctx context.Context, target Tran
 		credit.translatedShare = s.plan.cachedTranslationShare(ai.WithModelID(ctx, model), target.MediaType, target.MediaID)
 	}
 
+	if plan == TranscriptionPlanSidecar {
+		// The sidecar is what gets translated, so its cues price the quote.
+		cues = s.sidecarCues(target.FilePath, sidecar.FileName)
+	}
+
 	asrRate, asrProvider := s.asrRateFor(ctx)
-	usd := s.priceUSD(plan, translate, minutes, model, credit, asrRate)
+	usd := s.priceUSD(plan, translate, minutes, cues, model, credit, asrRate)
+	if plan == TranscriptionPlanExtract || plan == TranscriptionPlanSidecar {
+		basis := "runtime"
+		if cues > 0 {
+			basis = "cues"
+		}
+		s.logger.Debug("translation quote basis",
+			"media_id", target.MediaID, "plan", plan, "basis", basis, "cues", cues,
+			"runtime_minutes", minutes, "model", model, "estimated_usd", usd.String())
+	}
 
 	routeOut := string(route)
 	if plan == TranscriptionPlanSidecar {
@@ -338,14 +359,17 @@ type resumeCredit struct {
 // come off the speech-recognition half only (the translation of a film whose
 // transcription is unfinished has not started), and the cached share comes off
 // a translate-only resume.
-func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, minutes float64, model string, credit resumeCredit, asrRate decimal.Decimal) decimal.Decimal {
+//
+// cues is the stated cue count of what the extract / sidecar lane translates
+// (0 = unknown → priced by runtime); the ASR plans ignore it.
+func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, minutes float64, cues int, model string, credit resumeCredit, asrRate decimal.Decimal) decimal.Decimal {
 	mins := decimal.NewFromFloat(minutes)
 	asrMins := decimal.NewFromFloat(max(minutes-credit.asrMinutes, 0))
 	switch {
 	case plan == TranscriptionPlanSidecar && translate:
 		// The sidecar runs the pipeline's translate lane — the same lane and
 		// price as an embedded English track.
-		return estimateUSD(RouteExtract, minutes, asrRate, model)
+		return estimateUSDByCues(RouteExtract, minutes, cues, asrRate, model)
 	case plan == TranscriptionPlanSidecar:
 		// No key: the translate verdict fails before any paid call.
 		return decimal.Zero
@@ -353,7 +377,7 @@ func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, min
 		// The batch consent list's extract price — LLM translation of the
 		// track, no speech recognition. A Chinese track ends up free; quoting
 		// the translation is the honest upper bound ("寧可往上給").
-		return estimateUSD(RouteExtract, minutes, asrRate, model)
+		return estimateUSDByCues(RouteExtract, minutes, cues, asrRate, model)
 	case plan == TranscriptionPlanExtract:
 		// Deliver / convert are free, and a translate verdict fails before any
 		// paid call without a key — nothing is billed either way.
@@ -388,7 +412,7 @@ func (s *TranscriptionEstimateService) priceUSD(plan string, translate bool, min
 // The probe also classifies the file; that route is returned alongside (""
 // when no probe ran or it failed) so Estimate never probes twice, and
 // ladderProbed says whether the file was touched at all.
-func (s *TranscriptionEstimateService) runtimeMinutes(ctx context.Context, target TranscriptionEstimateTarget) (minutes float64, known bool, source string, probedRoute RoutePrediction, ladderProbed bool) {
+func (s *TranscriptionEstimateService) runtimeMinutes(ctx context.Context, target TranscriptionEstimateTarget) (minutes float64, known bool, source string, probed routeVerdict, ladderProbed bool) {
 	row := candidateRow{
 		id:              target.MediaID,
 		mediaType:       target.MediaType,
@@ -399,9 +423,17 @@ func (s *TranscriptionEstimateService) runtimeMinutes(ctx context.Context, targe
 	stored := row.durationSeconds.Valid && row.durationSeconds.Int64 > 0
 	if !stored && s.prober != nil && target.FilePath != "" {
 		ladderProbed = true
-		route, seconds, err := s.prober.ProbeWithDuration(ctx, target.FilePath)
+		var route RoutePrediction
+		var seconds float64
+		var cues int
+		var err error
+		if withCues, ok := s.prober.(RouteCuePredictor); ok {
+			route, seconds, cues, err = withCues.ProbeWithCues(ctx, target.FilePath)
+		} else {
+			route, seconds, err = s.prober.ProbeWithDuration(ctx, target.FilePath)
+		}
 		if err == nil && s.routes != nil {
-			probedRoute = route
+			probed = routeVerdict{route: route, cues: cues}
 		}
 		switch {
 		case err != nil && ctx.Err() != nil:
@@ -420,36 +452,80 @@ func (s *TranscriptionEstimateService) runtimeMinutes(ctx context.Context, targe
 		}
 	}
 	minutes, known, source = row.runtimeMinutes()
-	return minutes, known, source, probedRoute, ladderProbed
+	return minutes, known, source, probed, ladderProbed
 }
 
 // routeFromTracks classifies the persisted track list, when there is one and
-// routing is on. "" = not decidable from the row alone.
-func (s *TranscriptionEstimateService) routeFromTracks(target TranscriptionEstimateTarget) RoutePrediction {
+// routing is on, with the extract track's stated cue count (0 = unknown).
+// "" = not decidable from the row alone.
+func (s *TranscriptionEstimateService) routeFromTracks(target TranscriptionEstimateTarget) (RoutePrediction, int) {
 	if s.routes == nil {
-		return ""
+		return "", 0
 	}
 	tracks, ok := parsePersistedTracks(target.SubtitleTracksJSON)
 	if !ok {
-		return ""
+		return "", 0
 	}
-	return s.routes.FromTracks(tracks)
+	cues := 0
+	if withCues, capable := s.routes.(RouteCuePredictor); capable {
+		cues = withCues.CuesFromTracks(tracks)
+	}
+	return s.routes.FromTracks(tracks), cues
+}
+
+// sidecarMaxBytes bounds the sidecar read: an English .srt for a feature runs
+// a few hundred KB; anything far beyond is not a subtitle worth counting.
+const sidecarMaxBytes = 8 << 20
+
+// sidecarCues counts the cues of the aligned English sidecar beside
+// mediaPath — a file read, nothing decoded. 0 when it cannot be read; the
+// quote then prices by runtime.
+func (s *TranscriptionEstimateService) sidecarCues(mediaPath, fileName string) int {
+	if s.readFile == nil || mediaPath == "" || fileName == "" || filepath.Base(fileName) != fileName {
+		return 0
+	}
+	path := filepath.Join(filepath.Dir(mediaPath), fileName)
+	raw, err := s.readFile(path)
+	if err != nil {
+		s.logger.Debug("sidecar cue count unavailable — quoting by runtime", "file", path, "error", err)
+		return 0
+	}
+	return countSRTCues(string(raw))
+}
+
+// readSidecarCapped is os.ReadFile refusing anything over sidecarMaxBytes.
+func readSidecarCapped(path string) ([]byte, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.Size() > sidecarMaxBytes {
+		return nil, fmt.Errorf("%s is %d bytes, over the %d-byte cap", path, info.Size(), sidecarMaxBytes)
+	}
+	return os.ReadFile(path)
 }
 
 // probeRoute is the one extra ffprobe a routed quote may need: a stored
 // duration kept the ladder from probing, and the row had no track list. A
 // failure leaves the route unknown — the quote then stays the speech-
 // recognition one, which is the safe (higher) direction.
-func (s *TranscriptionEstimateService) probeRoute(ctx context.Context, target TranscriptionEstimateTarget) RoutePrediction {
-	route, err := s.routes.Probe(ctx, target.FilePath)
+func (s *TranscriptionEstimateService) probeRoute(ctx context.Context, target TranscriptionEstimateTarget) (RoutePrediction, int) {
+	var route RoutePrediction
+	var cues int
+	var err error
+	if withCues, ok := s.routes.(RouteCuePredictor); ok {
+		route, _, cues, err = withCues.ProbeWithCues(ctx, target.FilePath)
+	} else {
+		route, err = s.routes.Probe(ctx, target.FilePath)
+	}
 	if err != nil {
 		if ctx.Err() == nil {
 			s.logger.Warn("route probe failed — quoting the speech-recognition lane",
 				"media_id", target.MediaID, "media_type", target.MediaType, "error", err)
 		}
-		return ""
+		return "", 0
 	}
-	return route
+	return route, cues
 }
 
 // rememberEpisodeDuration mirrors GenerationCandidateService's rule: episodes

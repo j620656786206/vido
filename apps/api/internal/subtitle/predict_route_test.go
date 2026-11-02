@@ -104,3 +104,52 @@ func TestPredictFromTracks_IsUsableWithoutProbing(t *testing.T) {
 	assert.Equal(t, PredictSkip,
 		PredictFromTracks([]services.SubtitleTrack{{Language: "und", Format: "subrip"}}))
 }
+
+// disc-2026-11-translate-estimate-ignores-cue-density AC #1: the cue count the
+// estimate prices by is the stated count of the track the extract lane would
+// translate — the largest among SelectCandidates' picks — read from the same
+// probe as the route.
+func TestPredictCuesFromTracks(t *testing.T) {
+	eng := func(cues int, title string) services.SubtitleTrack {
+		return services.SubtitleTrack{Language: "eng", Format: "subrip", Title: title, CueCount: cues}
+	}
+	tests := []struct {
+		name   string
+		tracks []services.SubtitleTrack
+		want   int
+	}{
+		{"one English track", []services.SubtitleTrack{eng(1609, "")}, 1609},
+		{"full and SDH: the larger", []services.SubtitleTrack{eng(1502, "English"), eng(1720, "English [SDH]")}, 1720},
+		{"no stated count", []services.SubtitleTrack{eng(0, "")}, 0},
+		{"image track is not a candidate", []services.SubtitleTrack{{Language: "eng", Format: "hdmv_pgs_subtitle", CueCount: 900}}, 0},
+		{"a sidecar is not a candidate", []services.SubtitleTrack{{Language: "eng", Format: "srt", External: true, CueCount: 900}}, 0},
+		{"und is not a candidate", []services.SubtitleTrack{{Language: "und", Format: "subrip", CueCount: 900}}, 0},
+		{"Chinese wins the selection, as at run time", []services.SubtitleTrack{
+			eng(1609, ""), {Language: "chi", Format: "subrip", CueCount: 800},
+		}, 800},
+		{"no tracks", nil, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, PredictCuesFromTracks(tt.tracks))
+		})
+	}
+}
+
+func TestPredictRouteWithCues_OneProbe(t *testing.T) {
+	tracks := []services.SubtitleTrack{{Language: "eng", Format: "subrip", StreamIndex: 3, CueCount: 1609}}
+	r, prober, extractor := predictRouter(t, tracks, nil)
+	prober.info.DurationSeconds = 2464
+
+	route, seconds, cues, err := r.PredictRouteWithCues(context.Background(), "/tv/scorpion.s01e02.mkv")
+	require.NoError(t, err)
+	assert.Equal(t, PredictExtract, route)
+	assert.Equal(t, 2464.0, seconds)
+	assert.Equal(t, 1609, cues)
+	assert.Equal(t, 1, prober.callCount, "route, length and count come from one probe")
+	assert.Zero(t, extractor.callCount, "never extracts")
+
+	failing, _, _ := predictRouter(t, nil, errors.New("disk asleep"))
+	_, _, _, err = failing.PredictRouteWithCues(context.Background(), "/x.mkv")
+	assert.Error(t, err)
+}

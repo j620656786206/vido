@@ -58,14 +58,37 @@ func (r *Router) PredictRoute(ctx context.Context, mediaPath string) (RoutePredi
 // The duration is 0 when the container has no duration header. Callers must
 // treat 0 as "unknown", never as a length.
 func (r *Router) PredictRouteWithDuration(ctx context.Context, mediaPath string) (RoutePrediction, float64, error) {
+	route, seconds, _, err := r.PredictRouteWithCues(ctx, mediaPath)
+	return route, seconds, err
+}
+
+// PredictRouteWithCues is PredictRouteWithDuration plus the cue count of the
+// track the extract lane would translate (PredictCuesFromTracks), from the
+// same single probe (disc-2026-11-translate-estimate-ignores-cue-density).
+func (r *Router) PredictRouteWithCues(ctx context.Context, mediaPath string) (RoutePrediction, float64, int, error) {
 	info, err := r.prober.Probe(ctx, mediaPath)
 	if err != nil {
-		return "", 0, fmt.Errorf("predict route for %s: %w", mediaPath, err)
+		return "", 0, 0, fmt.Errorf("predict route for %s: %w", mediaPath, err)
 	}
 	if info == nil {
-		return "", 0, fmt.Errorf("predict route for %s: probe returned no tech info", mediaPath)
+		return "", 0, 0, fmt.Errorf("predict route for %s: probe returned no tech info", mediaPath)
 	}
-	return PredictFromTracks(info.SubtitleTracks), info.DurationSeconds, nil
+	return PredictFromTracks(info.SubtitleTracks), info.DurationSeconds, PredictCuesFromTracks(info.SubtitleTracks), nil
+}
+
+// PredictCuesFromTracks is how many subtitles the extract lane would
+// translate, as the container states it (SubtitleTrack.CueCount): the largest
+// count among the tracks SelectCandidates would hand the pipeline. The
+// largest, not the first — the pipeline may settle on the full or the SDH
+// English track, and the estimate must not quote the smaller one
+// (disc-2026-11-translate-estimate-ignores-cue-density: never under-quote).
+// 0 when no candidate states a count — the estimate then prices by runtime.
+func PredictCuesFromTracks(tracks []services.SubtitleTrack) int {
+	cues := 0
+	for _, t := range SelectCandidates(tracks) {
+		cues = max(cues, t.CueCount)
+	}
+	return cues
 }
 
 // PredictFromTracks is the pure classifier over an already-known track list.

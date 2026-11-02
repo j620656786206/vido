@@ -835,24 +835,28 @@ func TestAnalyze_WithoutACatalogStillQuotesTheDefault(t *testing.T) {
 
 func TestTranslationRate_IsMeasuredForEvaluatedModelsAndScaledOtherwise(t *testing.T) {
 	// Rates are decimals now; compare as float64 at the assertion boundary so
-	// the eval-1 arithmetic in these comments stays readable.
+	// the arithmetic in these comments stays readable.
 	haiku := translationRatePerMinute("claude-haiku-4-5").InexactFloat64()
 	sonnet := translationRatePerMinute("claude-sonnet-5").InexactFloat64()
 
-	// eval-1 billed $2.229 (Haiku) for 12h20m = 740 min; Sonnet re-measured
-	// 2026-10-15 at 50 cues, thinking off: S01E04–06 billed $0.486 for 1,461
-	// cues, × eval-1's 10,304 cues over 740 minutes.
-	assert.InDelta(t, 2.229/740, haiku, 0.0001)
-	assert.InDelta(t, (0.159795+0.132408+0.193857)/(474+414+573)*10304/740, sonnet, 0.0001)
+	// disc-2026-11-translate-estimate-ignores-cue-density (Bob): the runtime
+	// rate is now the fallback, Sonnet at $0.0085 a minute (production's runs
+	// billed $0.005–$0.0118, mean $0.0072). Every other measured figure moves
+	// by the same factor as Sonnet's old $0.00462 did, rounded up.
+	lift := 0.0085 / 0.00462
+	assert.Equal(t, 0.0085, sonnet)
+	assert.InDelta(t, 2.229/740*lift, haiku, 0.0001, "eval-1's Haiku measurement, lifted the same way")
+	assert.Equal(t, 0.00554, haiku)
 
 	// The old flat 0.0004 under-quoted a 90-minute film by ~7×; that is the
 	// bug this recalibration exists to remove.
 	assert.Greater(t, haiku*90, 0.20, "a 90-minute film on the cheap model really does cost more than a quarter")
 
 	// An unmeasured model is scaled from the anchor: Sonnet's 10-cue eval-1
-	// rate, because an unmeasured model still sends 10 cues per request.
+	// rate (lifted likewise), because an unmeasured model still sends 10 cues
+	// per request.
 	anchor := translationAnchorUSDPerMinute.InexactFloat64()
-	assert.InDelta(t, 5.951/740, anchor, 0.0001)
+	assert.InDelta(t, 5.951/740*lift, anchor, 0.0001)
 	opus := translationRatePerMinute("claude-opus-4-8").InexactFloat64()
 	assert.Greater(t, opus, sonnet, "Opus is priced above Sonnet, so its quote must be too")
 	assert.InDelta(t, anchor*(5.0+25.0)/(3.0+15.0), opus, 0.0001)

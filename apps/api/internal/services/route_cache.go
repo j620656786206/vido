@@ -9,7 +9,8 @@ package services
 // every restart, even when not one byte changed. This file makes the second
 // sweep cheap by remembering the verdict against the file's identity.
 //
-// It caches the VERDICT, not the tracks: storing tracks would be rebuilding a
+// It caches the VERDICT (plus, since v2, the extract track's cue count), not
+// the tracks: storing tracks would be rebuilding a
 // tech-info table for episodes, which is a different story
 // (`backlog-episode-tech-info-parity`).
 
@@ -17,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/vido/api/internal/repository"
@@ -69,8 +72,47 @@ const (
 	// This is the sub-1-5b segment-cache split applied to a different axis:
 	// the key PREFIX versions the key FORMAT, RunVersion versions the key's
 	// INPUTS; here the version tags the LOGIC that produced the value.
-	routeVersion = 1
+	//
+	// v2 (disc-2026-11-translate-estimate-ignores-cue-density): the stored
+	// VALUE gained the extract track's cue count ("extract|1609"). v1 entries
+	// hold the route alone; reading them would price every cached episode by
+	// runtime for up to routeCacheTTL, so they are stranded and re-probed once.
+	routeVersion = 2
 )
+
+// routeVerdict is what one cache entry holds: the route, and for an extract
+// route the stated cue count of the track it would translate (0 = unknown).
+type routeVerdict struct {
+	route RoutePrediction
+	cues  int
+}
+
+// encodeRouteVerdict writes "route" or, with a cue count, "route|cues".
+func encodeRouteVerdict(v routeVerdict) string {
+	if v.cues > 0 {
+		return fmt.Sprintf("%s|%d", v.route, v.cues)
+	}
+	return string(v.route)
+}
+
+// decodeRouteVerdict reads encodeRouteVerdict's output; ok is false for
+// anything this build does not understand (an unknown route, a malformed or
+// negative count), which the caller treats as a miss.
+func decodeRouteVerdict(value string) (routeVerdict, bool) {
+	route, count, hasCount := strings.Cut(value, "|")
+	v := routeVerdict{route: RoutePrediction(route)}
+	if !isKnownRoute(v.route) {
+		return routeVerdict{}, false
+	}
+	if hasCount {
+		n, err := strconv.Atoi(count)
+		if err != nil || n < 0 {
+			return routeVerdict{}, false
+		}
+		v.cues = n
+	}
+	return v, true
+}
 
 // routeCacheKey is the [@contract-v1] key format:
 //
