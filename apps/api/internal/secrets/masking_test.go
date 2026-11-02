@@ -204,3 +204,16 @@ func TestSensitivePatterns(t *testing.T) {
 		assert.True(t, found, "Expected pattern %q to be in sensitive patterns", pattern)
 	}
 }
+
+// disc-2026-11-secret-log-password: a password is never partly logged.
+func TestMaskForLog(t *testing.T) {
+	if got := maskForLog("opensubtitles_password", "a-long-secret-password"); got != "****" {
+		t.Errorf("password masked as %q", got)
+	}
+	if got := maskForLog("qbittorrent.password", "hunter2hunter2"); got != "****" {
+		t.Errorf("password masked as %q", got)
+	}
+	if got := maskForLog("assrt_api_key", "0123456789abcdef"); got != "0123****cdef" {
+		t.Errorf("api key masked as %q", got)
+	}
+}

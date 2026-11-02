@@ -1191,3 +1191,14 @@ func TestLoad_BurnedInMonthlyCapUSD(t *testing.T) {
 		})
 	}
 }
+
+// disc-2026-11-secret-log-password: the boot log never shows part of the
+// login password.
+func TestMaskPassword(t *testing.T) {
+	if got := maskPassword("kz8vSomethingLongTW2R"); got != "****" {
+		t.Errorf("maskPassword = %q", got)
+	}
+	if got := maskPassword(""); got != "(not set)" {
+		t.Errorf("maskPassword(empty) = %q", got)
+	}
+}
