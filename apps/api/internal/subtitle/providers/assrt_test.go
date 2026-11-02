@@ -125,6 +125,22 @@ func TestAssrtProvider_SearchLiveShapes(t *testing.T) {
 	assert.Empty(t, results)
 }
 
+// disc-2026-11-online-subs-for-episodes: a season query is "Title Sxx" with no
+// year — 「Scorpion S01」 finds the 天蝎 pack, 「Scorpion 2014」 finds nothing.
+func TestAssrtProvider_SearchSeasonQuery(t *testing.T) {
+	var gotQ string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQ = r.URL.Query().Get("q")
+		_, _ = w.Write([]byte(`{"status":0,"sub":{"subs":{}}}`))
+	}))
+	defer server.Close()
+	p := newTestAssrtProvider("test-key", server.URL)
+
+	_, err := p.Search(context.Background(), SubtitleQuery{Title: "Scorpion", Year: 2014, Season: 1, Episode: 2})
+	require.NoError(t, err)
+	assert.Equal(t, "Scorpion S01", gotQ)
+}
+
 func TestAssrtProvider_SearchEmptyTitle(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("should not reach server with empty title")

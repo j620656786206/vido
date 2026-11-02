@@ -74,6 +74,13 @@ func (h *SubtitleHandler) countriesFor(ctx context.Context, mediaType, mediaID s
 	if h.countries == nil {
 		return nil
 	}
+	if mediaType == "episode" {
+		// An episode carries no countries of its own; its show does.
+		mediaType, mediaID = "series", h.seriesOfEpisode(ctx, mediaID)
+		if mediaID == "" {
+			return nil
+		}
+	}
 	codes, err := h.countries(ctx, mediaType, mediaID)
 	if err != nil {
 		slog.Warn("Production-country lookup failed — converting with Taiwan wording",

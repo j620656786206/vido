@@ -673,10 +673,10 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     expect(screen.getByTestId('fetch-section')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('fetch-search'));
+    // No query text: the server builds it from the library (original title).
     expect(h.fetchHook.search).toHaveBeenCalledWith({
       mediaId: MOVIE_UUID,
       mediaType: 'movie',
-      query: '怪奇物語',
     });
 
     const row = screen.getByTestId('fetch-result-s1');
@@ -911,12 +911,16 @@ describe('ManageSubtitleDialogV2 — episode mode (9R-10c)', () => {
     expect(h.glossaryQueriedId).toBe(MOVIE_UUID);
   });
 
-  // RED LINE 2. The search endpoints bind `oneof=movie series`; an episode
-  // would 400. Capability honor: don't draw a control that cannot work.
-  it('hides the dormant online-search secondary', async () => {
+  // disc-2026-11-online-subs-for-episodes lifted red line 2: the search
+  // endpoints take an episode and build its query (show title + SxxEyy).
+  it('offers online search for an episode and searches by the episode id', async () => {
     renderEpisodeDialog();
-    await screen.findByTestId('manage-subtitle-dialog-v2');
-    expect(screen.queryByTestId('toggle-fetch')).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId('toggle-fetch'));
+    fireEvent.click(screen.getByTestId('fetch-search'));
+    expect(h.fetchHook.search).toHaveBeenCalledWith({
+      mediaId: EPISODE_UUID,
+      mediaType: 'episode',
+    });
   });
 
   it('keeps the online-search secondary for movies', async () => {
@@ -1503,10 +1507,9 @@ describe('ManageSubtitleDialogV2 — phone sheet (dsr-6f-1)', () => {
     expect(screen.queryByTestId('fetch-section')).toBeNull();
   });
 
-  it('an episode gets no online-search control on a phone either', async () => {
+  it('an episode gets the online-search control on a phone too', async () => {
     renderEpisodeDialog();
-    await screen.findByTestId('manage-subtitle-dialog-v2');
-    expect(screen.queryByTestId('toggle-fetch-mobile')).toBeNull();
+    expect(await screen.findByTestId('toggle-fetch-mobile')).toBeInTheDocument();
   });
 
   it('the generate button is full width and its helper centred under it', async () => {
