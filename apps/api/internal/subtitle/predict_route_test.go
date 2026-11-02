@@ -153,3 +153,35 @@ func TestPredictRouteWithCues_OneProbe(t *testing.T) {
 	_, _, _, err = failing.PredictRouteWithCues(context.Background(), "/x.mkv")
 	assert.Error(t, err)
 }
+
+// disc-2026-11-backfill-subtitle-cue-counts AC #1/#4: a stored track list is
+// re-read for a cue count only when the extract lane would translate an
+// English track whose count was never read (0); -1 means read, unstated.
+func TestNeedsCueCount(t *testing.T) {
+	eng := func(cues int) services.SubtitleTrack {
+		return services.SubtitleTrack{Language: "eng", Format: "subrip", CueCount: cues}
+	}
+	tests := []struct {
+		name   string
+		tracks []services.SubtitleTrack
+		want   bool
+	}{
+		{"English, never counted", []services.SubtitleTrack{eng(0)}, true},
+		{"English, counted", []services.SubtitleTrack{eng(1609)}, false},
+		{"English, read and unstated", []services.SubtitleTrack{eng(services.CueCountUnstated)}, false},
+		{"two English, one never counted", []services.SubtitleTrack{eng(1502), eng(0)}, true},
+		{"Chinese text track wins — delivered, not translated", []services.SubtitleTrack{eng(0), {Language: "chi", Format: "subrip"}}, false},
+		{"image track only", []services.SubtitleTrack{{Language: "eng", Format: "hdmv_pgs_subtitle"}}, false},
+		{"und text track", []services.SubtitleTrack{{Language: "und", Format: "subrip"}}, false},
+		{"English sidecar only", []services.SubtitleTrack{{Language: "en", Format: "srt", External: true}}, false},
+		{"no tracks", []services.SubtitleTrack{}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, NeedsCueCount(tt.tracks))
+			assert.Equal(t, tt.want, CueCountRule{}.NeedsCueCount(tt.tracks))
+		})
+	}
+	assert.Equal(t, 0, PredictCuesFromTracks([]services.SubtitleTrack{eng(services.CueCountUnstated)}),
+		"-1 is 'unknown' to the estimate, never a negative price")
+}

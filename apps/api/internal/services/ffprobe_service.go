@@ -69,13 +69,20 @@ type SubtitleTrack struct {
 	// FileSig is a sidecar's "<size>:<mtime>" (FileSignature) when it was
 	// read, so the next read can keep Language without reopening the file.
 	FileSig string `json:"file_sig,omitempty"`
-	// CueCount is how many subtitles an embedded track holds, as the container
-	// states it — mkvmerge's NUMBER_OF_FRAMES statistics tag, or an MP4
-	// stream's nb_frames — read for free from the probe, never by decoding.
-	// 0 = the container did not say (or a row probed before this field
-	// existed). The translation estimate prices by it
-	// (disc-2026-11-translate-estimate-ignores-cue-density); omitempty keeps
-	// older persisted JSON and untagged tracks byte-identical.
+	// CueCount is how many subtitles a track holds — for an embedded track as
+	// the container states it (mkvmerge's NUMBER_OF_FRAMES statistics tag, or
+	// an MP4 stream's nb_frames), read for free from the probe, never by
+	// decoding; for an English sidecar, its cue count. The translation
+	// estimate prices by it (disc-2026-11-translate-estimate-ignores-cue-density).
+	//
+	//   > 0  the count
+	//   -1   read, and nothing stated it (disc-2026-11-backfill-subtitle-cue-counts):
+	//        the backfill must not read this track again
+	//   0    never read — a row stored before the field existed; the backfill
+	//        re-probes it once
+	//
+	// Every consumer treats <= 0 as "unknown". omitempty keeps rows stored
+	// before the field byte-identical.
 	CueCount int `json:"cue_count,omitempty"`
 }
 
@@ -224,7 +231,8 @@ type ffprobeStream struct {
 // streamCueCount is a subtitle stream's cue count as the container states it
 // — CueCount's source. mkvmerge writes NUMBER_OF_FRAMES (sometimes suffixed
 // with a language, NUMBER_OF_FRAMES-eng) as a statistics tag; MP4 has
-// nb_frames. 0 when neither is a positive number.
+// nb_frames. CueCountUnstated when neither is a positive number: the stream
+// WAS read, so the backfill never re-reads it for a count it cannot get.
 func streamCueCount(stream ffprobeStream) int {
 	for key, value := range stream.Tags {
 		if !strings.HasPrefix(strings.ToUpper(key), "NUMBER_OF_FRAMES") {
@@ -237,8 +245,12 @@ func streamCueCount(stream ffprobeStream) int {
 	if n, err := strconv.Atoi(strings.TrimSpace(stream.NbFrames)); err == nil && n > 0 {
 		return n
 	}
-	return 0
+	return CueCountUnstated
 }
+
+// CueCountUnstated is SubtitleTrack.CueCount for a track that was read and
+// whose count nothing states (disc-2026-11-backfill-subtitle-cue-counts).
+const CueCountUnstated = -1
 
 // ffprobeSideData represents side_data entries (used for Dolby Vision detection)
 type ffprobeSideData struct {

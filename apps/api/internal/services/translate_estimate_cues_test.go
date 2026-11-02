@@ -302,13 +302,14 @@ func TestStreamCueCount(t *testing.T) {
 		stream ffprobeStream
 		want   int
 	}{
-		"mkvmerge statistics tag":      {ffprobeStream{Tags: map[string]string{"NUMBER_OF_FRAMES": "1609"}}, 1609},
-		"language-suffixed tag":        {ffprobeStream{Tags: map[string]string{"NUMBER_OF_FRAMES-eng": "1502"}}, 1502},
-		"MP4 nb_frames":                {ffprobeStream{NbFrames: "812"}, 812},
-		"tag wins over nb_frames":      {ffprobeStream{Tags: map[string]string{"NUMBER_OF_FRAMES": "10"}, NbFrames: "20"}, 10},
-		"nothing stated":               {ffprobeStream{Tags: map[string]string{"title": "English"}}, 0},
-		"garbage":                      {ffprobeStream{Tags: map[string]string{"NUMBER_OF_FRAMES": "many"}, NbFrames: "N/A"}, 0},
-		"zero is not a count":          {ffprobeStream{NbFrames: "0"}, 0},
+		"mkvmerge statistics tag": {ffprobeStream{Tags: map[string]string{"NUMBER_OF_FRAMES": "1609"}}, 1609},
+		"language-suffixed tag":   {ffprobeStream{Tags: map[string]string{"NUMBER_OF_FRAMES-eng": "1502"}}, 1502},
+		"MP4 nb_frames":           {ffprobeStream{NbFrames: "812"}, 812},
+		"tag wins over nb_frames": {ffprobeStream{Tags: map[string]string{"NUMBER_OF_FRAMES": "10"}, NbFrames: "20"}, 10},
+		// Read, nothing stated: -1, so the backfill never reads it again.
+		"nothing stated":               {ffprobeStream{Tags: map[string]string{"title": "English"}}, CueCountUnstated},
+		"garbage":                      {ffprobeStream{Tags: map[string]string{"NUMBER_OF_FRAMES": "many"}, NbFrames: "N/A"}, CueCountUnstated},
+		"zero is not a count":          {ffprobeStream{NbFrames: "0"}, CueCountUnstated},
 		"lower-case key (other muxer)": {ffprobeStream{Tags: map[string]string{"number_of_frames": "77"}}, 77},
 	} {
 		t.Run(name, func(t *testing.T) { assert.Equal(t, tc.want, streamCueCount(tc.stream)) })
@@ -326,7 +327,7 @@ func TestParseFfprobeJSON_SubtitleCueCount(t *testing.T) {
 	require.Len(t, info.SubtitleTracks, 3)
 	assert.Equal(t, 1609, info.SubtitleTracks[0].CueCount)
 	assert.Equal(t, 812, info.SubtitleTracks[1].CueCount)
-	assert.Zero(t, info.SubtitleTracks[2].CueCount)
+	assert.Equal(t, CueCountUnstated, info.SubtitleTracks[2].CueCount, "read, nothing stated")
 }
 
 func TestSubtitleTrackJSON_CueCountIsAdditive(t *testing.T) {

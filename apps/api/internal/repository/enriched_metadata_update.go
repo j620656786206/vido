@@ -312,6 +312,60 @@ func (r *MovieRepository) FindMissingSubtitleTracks(ctx context.Context, afterID
 	return movies, nil
 }
 
+// FindMoviesMissingCueCounts lists movies with a file whose stored
+// subtitle_tracks were read before cue counts existed
+// (disc-2026-11-backfill-subtitle-cue-counts): a non-empty track list with no
+// "cue_count" key anywhere. Every track probed since carries one (its count,
+// or -1 for read-but-unstated), so a row leaves this list after one re-probe.
+// The caller still applies the run-time selection rule — this is only the
+// cheap SQL half. Paged by id, like FindMissingSubtitleTracks.
+func (r *MovieRepository) FindMoviesMissingCueCounts(ctx context.Context, afterID string, limit int) ([]models.Movie, error) {
+	query := fmt.Sprintf(`SELECT %s FROM movies
+		WHERE file_path IS NOT NULL AND file_path != ''
+		  AND subtitle_tracks IS NOT NULL AND subtitle_tracks NOT IN ('', '[]')
+		  AND subtitle_tracks NOT LIKE '%%"cue_count"%%'
+		  AND is_removed = 0
+		  AND id > ?
+		ORDER BY id ASC LIMIT ?`, movieSelectColumns)
+	rows, err := r.db.QueryContext(ctx, query, afterID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query movies missing cue counts: %w", err)
+	}
+	defer rows.Close()
+	var movies []models.Movie
+	for rows.Next() {
+		movie, err := scanMovie(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		movies = append(movies, movie)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies missing cue counts: %w", err)
+	}
+	return movies, nil
+}
+
+// ReplaceSubtitleTracks writes subtitle_tracks only if it still holds
+// `previous` — the cue-count backfill's compare-and-set, so a scan that
+// re-probed the movie meanwhile is never overwritten with an older read.
+// updated_at is left alone (a derived field, not an edit).
+func (r *MovieRepository) ReplaceSubtitleTracks(ctx context.Context, id, previous, next string) (written bool, err error) {
+	if id == "" {
+		return false, fmt.Errorf("movie id cannot be empty")
+	}
+	result, err := r.db.ExecContext(ctx,
+		`UPDATE movies SET subtitle_tracks = ? WHERE id = ? AND subtitle_tracks = ?`, next, id, previous)
+	if err != nil {
+		return false, fmt.Errorf("failed to replace movie subtitle tracks: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to read rows affected: %w", err)
+	}
+	return n == 1, nil
+}
+
 // UpdateSubtitleTracksIfMissing writes subtitle_tracks ONLY while the row
 // still has none, so a scan that stored a value while the backfill was
 // probing is never overwritten. written=false means another writer got there

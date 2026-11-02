@@ -29,7 +29,8 @@ import (
 	"github.com/vido/api/internal/models"
 )
 
-// Implements: disc-2026-10-episode-list-subtitle-badge-a AC #5
+// Implements: disc-2026-10-episode-list-subtitle-badge-a AC #5;
+// disc-2026-11-backfill-subtitle-cue-counts AC #1, #2, #4
 
 // EpisodeSubtitleTracksRepo is the slice of the episode repository the sweep
 // needs. *repository.EpisodeRepository satisfies it.
@@ -54,6 +55,17 @@ type TrackScriptPeeker interface {
 	PeekScript(ctx context.Context, mediaPath string, streamIndex int) (string, error)
 }
 
+// CueCountRule is the run-time track selection the cue-count backfill needs
+// (disc-2026-11-backfill-subtitle-cue-counts) — subtitle.CueCountRule in
+// production; injected because services cannot import subtitle (Rule 19).
+type CueCountRule interface {
+	// NeedsCueCount: the tracks the extract lane would translate are English
+	// and one of them was stored before counts were read (CueCount 0).
+	NeedsCueCount(tracks []SubtitleTrack) bool
+	// CuesFromTracks is the count the estimate would price by; <= 0 = unknown.
+	CuesFromTracks(tracks []SubtitleTrack) int
+}
+
 // episodeTracksProgressEvery is how often (in probed episodes) a pass logs.
 const episodeTracksProgressEvery = 25
 
@@ -63,6 +75,7 @@ type EpisodeSubtitleTracksService struct {
 	prober   EpisodeTrackProber
 	sidecars SidecarTrackReader
 	peeker   TrackScriptPeeker
+	cueRule  CueCountRule
 	logger   *slog.Logger
 	stat     func(string) (os.FileInfo, error)
 
@@ -99,6 +112,13 @@ func (s *EpisodeSubtitleTracksService) SetScriptPeeker(p TrackScriptPeeker) {
 	s.peeker = p
 }
 
+// SetCueCountRule turns on the cue-count backfill: an episode stored before
+// counts were read is probed again once, same file or not
+// (disc-2026-11-backfill-subtitle-cue-counts). nil = off.
+func (s *EpisodeSubtitleTracksService) SetCueCountRule(r CueCountRule) {
+	s.cueRule = r
+}
+
 // EpisodeTracksSweepResult is what one pass did, for the log line and tests.
 type EpisodeTracksSweepResult struct {
 	Probed  int // episodes whose tracks were read and stored
@@ -111,6 +131,10 @@ type EpisodeTracksSweepResult struct {
 	// without a detected script).
 	Peeked     int
 	PeekFailed int
+	// CuesFilled / CuesUnstated count episodes re-read for a cue count: it
+	// came back, or the container states none (stored as -1, not read again).
+	CuesFilled   int
+	CuesUnstated int
 }
 
 // FileSignature is the "<size>:<mtime unix nanos>" an episode's stored tracks
@@ -144,7 +168,9 @@ func (s *EpisodeSubtitleTracksService) Run(ctx context.Context) EpisodeTracksSwe
 			continue
 		}
 		sig := FileSignature(info)
-		if ep.SubtitleTracks.Valid && ep.SubtitleTracksFileSig.String == sig && !s.needsPeek(ep) {
+		unchanged := ep.SubtitleTracks.Valid && ep.SubtitleTracksFileSig.String == sig
+		forCues := unchanged && s.needsCues(ep)
+		if unchanged && !s.needsPeek(ep) && !forCues {
 			res.Skipped++
 			continue
 		}
@@ -155,7 +181,7 @@ func (s *EpisodeSubtitleTracksService) Run(ctx context.Context) EpisodeTracksSwe
 			res.Skipped++
 			continue
 		}
-		work = append(work, episodeTracksTodo{ep: ep, sig: sig})
+		work = append(work, episodeTracksTodo{ep: ep, sig: sig, forCues: forCues})
 	}
 	if len(work) == 0 {
 		if res.Missing > 0 {
@@ -218,6 +244,13 @@ func (s *EpisodeSubtitleTracksService) Run(ctx context.Context) EpisodeTracksSwe
 			s.logger.Warn("episode subtitle tracks: write failed", "episode_id", w.ep.ID, "error", err)
 			continue
 		}
+		if w.forCues {
+			if s.cueRule.CuesFromTracks(tracks) > 0 {
+				res.CuesFilled++
+			} else {
+				res.CuesUnstated++
+			}
+		}
 		if res.PeekFailed > peekFailedBefore {
 			// Stored without that track's script; needsPeek would queue the
 			// episode again every pass — try once per process, like a probe.
@@ -239,7 +272,9 @@ func (s *EpisodeSubtitleTracksService) Run(ctx context.Context) EpisodeTracksSwe
 
 	s.logger.Info("episode subtitle tracks: pass finished",
 		"probed", res.Probed, "failed", res.Failed, "skipped", res.Skipped, "missing_files", res.Missing,
-		"scripts_peeked", res.Peeked, "peeks_failed", res.PeekFailed, "took", time.Since(started).Round(time.Second).String())
+		"scripts_peeked", res.Peeked, "peeks_failed", res.PeekFailed,
+		"cue_counts_filled", res.CuesFilled, "cue_counts_unstated", res.CuesUnstated,
+		"took", time.Since(started).Round(time.Second).String())
 	return res
 }
 
@@ -289,11 +324,27 @@ func (s *EpisodeSubtitleTracksService) needsPeek(ep models.Episode) bool {
 	return false
 }
 
+// needsCues reports whether an episode's unchanged stored tracks lack the cue
+// count of the English track the extract lane would translate — stored before
+// counts were read. After the re-probe that track carries its count or -1
+// (read, unstated), so this is true once (disc-2026-11-backfill-subtitle-cue-counts).
+func (s *EpisodeSubtitleTracksService) needsCues(ep models.Episode) bool {
+	if s.cueRule == nil {
+		return false
+	}
+	var stored []SubtitleTrack
+	if json.Unmarshal([]byte(ep.SubtitleTracks.String), &stored) != nil {
+		return false
+	}
+	return s.cueRule.NeedsCueCount(stored)
+}
+
 // episodeTracksTodo is one episode a pass will probe, with the signature of
-// the file it found.
+// the file it found. forCues: re-read only for a cue count (same file).
 type episodeTracksTodo struct {
-	ep  models.Episode
-	sig string
+	ep      models.Episode
+	sig     string
+	forCues bool
 }
 
 // readSidecars reads the sidecars of the leading run of upcoming episodes that
