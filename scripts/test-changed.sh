@@ -46,7 +46,7 @@ while IFS= read -r file; do
       ;;
 
     # Critical config changes: run ALL tests
-    package.json|package-lock.json|playwright.config.ts|tsconfig*.json|.github/workflows/*)
+    package.json|pnpm-lock.yaml|playwright.config.ts|tsconfig*.json|.github/workflows/*)
       echo "⚠️  Critical file changed: $file"
       RUN_ALL_TESTS=true
       ;;
