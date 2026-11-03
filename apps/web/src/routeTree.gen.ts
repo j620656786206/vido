@@ -9,70 +9,40 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SetupRouteImport } from './routes/setup'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SearchRouteImport } from './routes/search'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as LibraryRouteImport } from './routes/library'
-import { Route as DownloadsRouteImport } from './routes/downloads'
-import { Route as DiscoverRouteImport } from './routes/discover'
-import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SettingsIndexRouteImport } from './routes/settings/index'
-import { Route as LibraryIndexRouteImport } from './routes/library/index'
-import { Route as TestManualSearchRouteImport } from './routes/test/manual-search'
-import { Route as TestGalleryRouteImport } from './routes/test/gallery'
-import { Route as SettingsSubtitleRouteImport } from './routes/settings/subtitle'
-import { Route as SettingsStatusRouteImport } from './routes/settings/status'
-import { Route as SettingsScannerRouteImport } from './routes/settings/scanner'
-import { Route as SettingsQbittorrentRouteImport } from './routes/settings/qbittorrent'
-import { Route as SettingsPerformanceRouteImport } from './routes/settings/performance'
-import { Route as SettingsLogsRouteImport } from './routes/settings/logs'
-import { Route as SettingsKeysRouteImport } from './routes/settings/keys'
-import { Route as SettingsHomepageRouteImport } from './routes/settings/homepage'
-import { Route as SettingsExportRouteImport } from './routes/settings/export'
-import { Route as SettingsConnectionRouteImport } from './routes/settings/connection'
-import { Route as SettingsCacheRouteImport } from './routes/settings/cache'
-import { Route as SettingsBackupRouteImport } from './routes/settings/backup'
-import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
-import { Route as LibraryTvRouteImport } from './routes/library/tv'
-import { Route as LibraryMoviesRouteImport } from './routes/library/movies'
+import { Route as ActivityRouteImport } from './routes/activity'
+import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as DownloadsRouteImport } from './routes/downloads'
+import { Route as LibraryRouteImport } from './routes/library'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as ActivitySpendRouteImport } from './routes/activity_.spend'
+import { Route as LibraryIndexRouteImport } from './routes/library/index'
+import { Route as LibraryMoviesRouteImport } from './routes/library/movies'
+import { Route as LibraryTvRouteImport } from './routes/library/tv'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
+import { Route as SettingsBackupRouteImport } from './routes/settings/backup'
+import { Route as SettingsCacheRouteImport } from './routes/settings/cache'
+import { Route as SettingsConnectionRouteImport } from './routes/settings/connection'
+import { Route as SettingsExportRouteImport } from './routes/settings/export'
+import { Route as SettingsHomepageRouteImport } from './routes/settings/homepage'
+import { Route as SettingsKeysRouteImport } from './routes/settings/keys'
+import { Route as SettingsLogsRouteImport } from './routes/settings/logs'
+import { Route as SettingsPerformanceRouteImport } from './routes/settings/performance'
+import { Route as SettingsQbittorrentRouteImport } from './routes/settings/qbittorrent'
+import { Route as SettingsScannerRouteImport } from './routes/settings/scanner'
+import { Route as SettingsStatusRouteImport } from './routes/settings/status'
+import { Route as SettingsSubtitleRouteImport } from './routes/settings/subtitle'
+import { Route as TestGalleryRouteImport } from './routes/test/gallery'
+import { Route as TestManualSearchRouteImport } from './routes/test/manual-search'
 import { Route as MediaTypeIdRouteImport } from './routes/media/$type.$id'
 
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LibraryRoute = LibraryRouteImport.update({
-  id: '/library',
-  path: '/library',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DownloadsRoute = DownloadsRouteImport.update({
-  id: '/downloads',
-  path: '/downloads',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DiscoverRoute = DiscoverRouteImport.update({
-  id: '/discover',
-  path: '/discover',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ActivityRoute = ActivityRouteImport.update({
@@ -80,99 +50,49 @@ const ActivityRoute = ActivityRouteImport.update({
   path: '/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsIndexRoute = SettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SettingsRoute,
+const DownloadsRoute = DownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivitySpendRoute = ActivitySpendRouteImport.update({
+  id: '/activity_/spend',
+  path: '/activity/spend',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LibraryIndexRoute = LibraryIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => LibraryRoute,
-} as any)
-const TestManualSearchRoute = TestManualSearchRouteImport.update({
-  id: '/test/manual-search',
-  path: '/test/manual-search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestGalleryRoute = TestGalleryRouteImport.update({
-  id: '/test/gallery',
-  path: '/test/gallery',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsSubtitleRoute = SettingsSubtitleRouteImport.update({
-  id: '/subtitle',
-  path: '/subtitle',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsStatusRoute = SettingsStatusRouteImport.update({
-  id: '/status',
-  path: '/status',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsScannerRoute = SettingsScannerRouteImport.update({
-  id: '/scanner',
-  path: '/scanner',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsQbittorrentRoute = SettingsQbittorrentRouteImport.update({
-  id: '/qbittorrent',
-  path: '/qbittorrent',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsPerformanceRoute = SettingsPerformanceRouteImport.update({
-  id: '/performance',
-  path: '/performance',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsLogsRoute = SettingsLogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsKeysRoute = SettingsKeysRouteImport.update({
-  id: '/keys',
-  path: '/keys',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsHomepageRoute = SettingsHomepageRouteImport.update({
-  id: '/homepage',
-  path: '/homepage',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsExportRoute = SettingsExportRouteImport.update({
-  id: '/export',
-  path: '/export',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsConnectionRoute = SettingsConnectionRouteImport.update({
-  id: '/connection',
-  path: '/connection',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsCacheRoute = SettingsCacheRouteImport.update({
-  id: '/cache',
-  path: '/cache',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsBackupRoute = SettingsBackupRouteImport.update({
-  id: '/backup',
-  path: '/backup',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
-  id: '/appearance',
-  path: '/appearance',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const LibraryTvRoute = LibraryTvRouteImport.update({
-  id: '/tv',
-  path: '/tv',
   getParentRoute: () => LibraryRoute,
 } as any)
 const LibraryMoviesRoute = LibraryMoviesRouteImport.update({
@@ -180,9 +100,89 @@ const LibraryMoviesRoute = LibraryMoviesRouteImport.update({
   path: '/movies',
   getParentRoute: () => LibraryRoute,
 } as any)
-const ActivitySpendRoute = ActivitySpendRouteImport.update({
-  id: '/activity_/spend',
-  path: '/activity/spend',
+const LibraryTvRoute = LibraryTvRouteImport.update({
+  id: '/tv',
+  path: '/tv',
+  getParentRoute: () => LibraryRoute,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsBackupRoute = SettingsBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsCacheRoute = SettingsCacheRouteImport.update({
+  id: '/cache',
+  path: '/cache',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsConnectionRoute = SettingsConnectionRouteImport.update({
+  id: '/connection',
+  path: '/connection',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsExportRoute = SettingsExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsHomepageRoute = SettingsHomepageRouteImport.update({
+  id: '/homepage',
+  path: '/homepage',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsKeysRoute = SettingsKeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsLogsRoute = SettingsLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsPerformanceRoute = SettingsPerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsQbittorrentRoute = SettingsQbittorrentRouteImport.update({
+  id: '/qbittorrent',
+  path: '/qbittorrent',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsScannerRoute = SettingsScannerRouteImport.update({
+  id: '/scanner',
+  path: '/scanner',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsStatusRoute = SettingsStatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsSubtitleRoute = SettingsSubtitleRouteImport.update({
+  id: '/subtitle',
+  path: '/subtitle',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const TestGalleryRoute = TestGalleryRouteImport.update({
+  id: '/test/gallery',
+  path: '/test/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestManualSearchRoute = TestManualSearchRouteImport.update({
+  id: '/test/manual-search',
+  path: '/test/manual-search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MediaTypeIdRoute = MediaTypeIdRouteImport.update({
@@ -401,53 +401,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/library': {
-      id: '/library'
-      path: '/library'
-      fullPath: '/library'
-      preLoaderRoute: typeof LibraryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/downloads': {
-      id: '/downloads'
-      path: '/downloads'
-      fullPath: '/downloads'
-      preLoaderRoute: typeof DownloadsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/discover': {
-      id: '/discover'
-      path: '/discover'
-      fullPath: '/discover'
-      preLoaderRoute: typeof DiscoverRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/activity': {
@@ -457,137 +415,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ActivityRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/': {
-      id: '/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof SettingsRoute
+    '/downloads': {
+      id: '/downloads'
+      path: '/downloads'
+      fullPath: '/downloads'
+      preLoaderRoute: typeof DownloadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity_/spend': {
+      id: '/activity_/spend'
+      path: '/activity/spend'
+      fullPath: '/activity/spend'
+      preLoaderRoute: typeof ActivitySpendRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/library/': {
       id: '/library/'
       path: '/'
       fullPath: '/library/'
       preLoaderRoute: typeof LibraryIndexRouteImport
-      parentRoute: typeof LibraryRoute
-    }
-    '/test/manual-search': {
-      id: '/test/manual-search'
-      path: '/test/manual-search'
-      fullPath: '/test/manual-search'
-      preLoaderRoute: typeof TestManualSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test/gallery': {
-      id: '/test/gallery'
-      path: '/test/gallery'
-      fullPath: '/test/gallery'
-      preLoaderRoute: typeof TestGalleryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/subtitle': {
-      id: '/settings/subtitle'
-      path: '/subtitle'
-      fullPath: '/settings/subtitle'
-      preLoaderRoute: typeof SettingsSubtitleRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/status': {
-      id: '/settings/status'
-      path: '/status'
-      fullPath: '/settings/status'
-      preLoaderRoute: typeof SettingsStatusRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/scanner': {
-      id: '/settings/scanner'
-      path: '/scanner'
-      fullPath: '/settings/scanner'
-      preLoaderRoute: typeof SettingsScannerRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/qbittorrent': {
-      id: '/settings/qbittorrent'
-      path: '/qbittorrent'
-      fullPath: '/settings/qbittorrent'
-      preLoaderRoute: typeof SettingsQbittorrentRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/performance': {
-      id: '/settings/performance'
-      path: '/performance'
-      fullPath: '/settings/performance'
-      preLoaderRoute: typeof SettingsPerformanceRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/logs': {
-      id: '/settings/logs'
-      path: '/logs'
-      fullPath: '/settings/logs'
-      preLoaderRoute: typeof SettingsLogsRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/keys': {
-      id: '/settings/keys'
-      path: '/keys'
-      fullPath: '/settings/keys'
-      preLoaderRoute: typeof SettingsKeysRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/homepage': {
-      id: '/settings/homepage'
-      path: '/homepage'
-      fullPath: '/settings/homepage'
-      preLoaderRoute: typeof SettingsHomepageRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/export': {
-      id: '/settings/export'
-      path: '/export'
-      fullPath: '/settings/export'
-      preLoaderRoute: typeof SettingsExportRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/connection': {
-      id: '/settings/connection'
-      path: '/connection'
-      fullPath: '/settings/connection'
-      preLoaderRoute: typeof SettingsConnectionRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/cache': {
-      id: '/settings/cache'
-      path: '/cache'
-      fullPath: '/settings/cache'
-      preLoaderRoute: typeof SettingsCacheRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/backup': {
-      id: '/settings/backup'
-      path: '/backup'
-      fullPath: '/settings/backup'
-      preLoaderRoute: typeof SettingsBackupRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/appearance': {
-      id: '/settings/appearance'
-      path: '/appearance'
-      fullPath: '/settings/appearance'
-      preLoaderRoute: typeof SettingsAppearanceRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/library/tv': {
-      id: '/library/tv'
-      path: '/tv'
-      fullPath: '/library/tv'
-      preLoaderRoute: typeof LibraryTvRouteImport
       parentRoute: typeof LibraryRoute
     }
     '/library/movies': {
@@ -597,11 +485,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LibraryMoviesRouteImport
       parentRoute: typeof LibraryRoute
     }
-    '/activity_/spend': {
-      id: '/activity_/spend'
-      path: '/activity/spend'
-      fullPath: '/activity/spend'
-      preLoaderRoute: typeof ActivitySpendRouteImport
+    '/library/tv': {
+      id: '/library/tv'
+      path: '/tv'
+      fullPath: '/library/tv'
+      preLoaderRoute: typeof LibraryTvRouteImport
+      parentRoute: typeof LibraryRoute
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/appearance': {
+      id: '/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof SettingsAppearanceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/backup': {
+      id: '/settings/backup'
+      path: '/backup'
+      fullPath: '/settings/backup'
+      preLoaderRoute: typeof SettingsBackupRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/cache': {
+      id: '/settings/cache'
+      path: '/cache'
+      fullPath: '/settings/cache'
+      preLoaderRoute: typeof SettingsCacheRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/connection': {
+      id: '/settings/connection'
+      path: '/connection'
+      fullPath: '/settings/connection'
+      preLoaderRoute: typeof SettingsConnectionRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/export': {
+      id: '/settings/export'
+      path: '/export'
+      fullPath: '/settings/export'
+      preLoaderRoute: typeof SettingsExportRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/homepage': {
+      id: '/settings/homepage'
+      path: '/homepage'
+      fullPath: '/settings/homepage'
+      preLoaderRoute: typeof SettingsHomepageRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/keys': {
+      id: '/settings/keys'
+      path: '/keys'
+      fullPath: '/settings/keys'
+      preLoaderRoute: typeof SettingsKeysRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/logs': {
+      id: '/settings/logs'
+      path: '/logs'
+      fullPath: '/settings/logs'
+      preLoaderRoute: typeof SettingsLogsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/performance': {
+      id: '/settings/performance'
+      path: '/performance'
+      fullPath: '/settings/performance'
+      preLoaderRoute: typeof SettingsPerformanceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/qbittorrent': {
+      id: '/settings/qbittorrent'
+      path: '/qbittorrent'
+      fullPath: '/settings/qbittorrent'
+      preLoaderRoute: typeof SettingsQbittorrentRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/scanner': {
+      id: '/settings/scanner'
+      path: '/scanner'
+      fullPath: '/settings/scanner'
+      preLoaderRoute: typeof SettingsScannerRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/status': {
+      id: '/settings/status'
+      path: '/status'
+      fullPath: '/settings/status'
+      preLoaderRoute: typeof SettingsStatusRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/subtitle': {
+      id: '/settings/subtitle'
+      path: '/subtitle'
+      fullPath: '/settings/subtitle'
+      preLoaderRoute: typeof SettingsSubtitleRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/test/gallery': {
+      id: '/test/gallery'
+      path: '/test/gallery'
+      fullPath: '/test/gallery'
+      preLoaderRoute: typeof TestGalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test/manual-search': {
+      id: '/test/manual-search'
+      path: '/test/manual-search'
+      fullPath: '/test/manual-search'
+      preLoaderRoute: typeof TestManualSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/media/$type/$id': {

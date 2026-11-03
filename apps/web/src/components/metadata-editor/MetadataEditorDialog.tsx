@@ -39,7 +39,10 @@ const metadataSchema = z.object({
   overview: z.string().optional(),
 });
 
-export type MetadataFormData = z.infer<typeof metadataSchema>;
+export type MetadataFormData = z.output<typeof metadataSchema>;
+// What the inputs hold before validation: `year` can still be NaN from a cleared
+// number input, so its type is `unknown` until the preprocess step runs.
+type MetadataFormInput = z.input<typeof metadataSchema>;
 
 export interface MediaMetadata {
   id: string;
@@ -177,7 +180,7 @@ function EditorBody({
     formState: { errors, isDirty, dirtyFields },
     watch,
     setValue,
-  } = useForm<MetadataFormData>({
+  } = useForm<MetadataFormInput, unknown, MetadataFormData>({
     resolver: zodResolver(metadataSchema),
     defaultValues: toFormValues(initialData),
   });

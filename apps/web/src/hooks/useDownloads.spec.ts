@@ -103,6 +103,7 @@ describe('useDownloads', () => {
   });
 
   afterEach(() => {
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -169,6 +170,7 @@ describe('useDownloadCounts', () => {
   });
 
   afterEach(() => {
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -197,6 +199,7 @@ describe('useDownloads - error handling', () => {
   });
 
   afterEach(() => {
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -219,6 +222,7 @@ describe('useDownloadCounts - error handling', () => {
   });
 
   afterEach(() => {
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -244,6 +248,7 @@ describe('useDownloads - qBT config gate (bugfix-10-2)', () => {
   });
 
   afterEach(() => {
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 

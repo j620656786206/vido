@@ -9,6 +9,7 @@ describe('tmdbService', () => {
   });
 
   afterEach(() => {
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
