@@ -18,6 +18,8 @@ out-tsc
 
 # dependencies
 node_modules
+# pnpm is the package manager (pnpm-lock.yaml); an npm lockfile here is a stray from `npm install`
+package-lock.json
 
 # Environment files
 .env
