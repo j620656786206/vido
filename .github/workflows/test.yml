@@ -53,7 +53,7 @@ jobs:
   # =============================================================================
   lint:
     name: Lint & Format Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest 2026-11 起變成 26.04，Playwright 還不支援
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -159,7 +159,7 @@ jobs:
   # =============================================================================
   test-unit:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest 2026-11 起變成 26.04，Playwright 還不支援
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -200,7 +200,7 @@ jobs:
   # =============================================================================
   test-go:
     name: Go Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest 2026-11 起變成 26.04，Playwright 還不支援
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -231,7 +231,7 @@ jobs:
   # Spec: _bmad-output/implementation-artifacts/tech-spec-ci-smoke-gate-nx-serve.md
   serve-smoke:
     name: Serve Smoke Gate (nx serve api)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest 2026-11 起變成 26.04，Playwright 還不支援
     timeout-minutes: 5
     steps:
       - name: Checkout code
@@ -308,7 +308,7 @@ jobs:
   # =============================================================================
   build:
     name: Build Frontend & Backend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest 2026-11 起變成 26.04，Playwright 還不支援
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -359,7 +359,7 @@ jobs:
   test-e2e-sharded:
     name: E2E Tests (Shard ${{ matrix.shard }}/4)
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest 2026-11 起變成 26.04，Playwright 還不支援
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -535,7 +535,7 @@ jobs:
   merge-test-results:
     name: Merge Test Results
     needs: test-e2e-sharded
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest 2026-11 起變成 26.04，Playwright 還不支援
     if: always() && needs.test-e2e-sharded.result == 'failure'
     steps:
       - name: Checkout code
