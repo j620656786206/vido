@@ -25,6 +25,7 @@ WORKDIR /app
 
 # Copy package files and workspace config for dependency installation
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 COPY libs/shared-types/package.json ./libs/shared-types/
 
 # Install dependencies (frozen lockfile for reproducible builds)
